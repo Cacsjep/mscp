@@ -16,6 +16,9 @@
   !define OUTDIR "."
 !endif
 
+; ── Log file location ──
+!define LOG_FILE "$TEMP\MSCPlugins-install.log"
+
 ; ── General ──
 Name "MSC Plugins v${VERSION}"
 OutFile "${OUTDIR}\MSCPlugins-v${VERSION}-Setup.exe"
@@ -50,31 +53,31 @@ Var ES_WAS_RUNNING       ; "1" if Event Server was running before install
 Var STOP_SC              ; "1" if we need to close Smart Client
 Var STOP_RS              ; "1" if we need to stop Recording Server
 Var STOP_ES              ; "1" if we need to stop Event Server + Management Client
-
-; ── MUI Settings ──
-!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
-!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
-!define MUI_ABORTWARNING
-
-!define MUI_WELCOMEPAGE_TEXT "This installer will install the selected Milestone XProtect™ community plugins and drivers.$\r$\n$\r$\nDepending on the components you select, the installer may need to stop running Milestone services and applications. They will be restarted automatically after installation.$\r$\n$\r$\nClick Next to continue."
-
-; ── Pages ──
-!insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "license.txt"
-; ComponentsLeave callback captures which services need to be stopped
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE ComponentsLeave
-!insertmacro MUI_PAGE_COMPONENTS
-!insertmacro MUI_PAGE_INSTFILES
-!insertmacro MUI_PAGE_FINISH
-
-!insertmacro MUI_UNPAGE_CONFIRM
-!insertmacro MUI_UNPAGE_INSTFILES
-
-; ── Language ──
-!insertmacro MUI_LANGUAGE "English"
+Var LOG_HANDLE           ; file handle for install log
 
 ; ══════════════════════════════════════════════════════════════
-; Macros
+; Logging macros -- write to %TEMP%\MSCPlugins-install.log
+; ══════════════════════════════════════════════════════════════
+!macro _LogOpen
+  FileOpen $LOG_HANDLE "${LOG_FILE}" w
+  !insertmacro _LogMsg "MSCPlugins installer v${VERSION} started"
+!macroend
+
+!macro _LogMsg MSG
+  ${If} $LOG_HANDLE != ""
+    FileWrite $LOG_HANDLE "${MSG}$\r$\n"
+  ${EndIf}
+  DetailPrint "${MSG}"
+!macroend
+
+!macro _LogClose
+  !insertmacro _LogMsg "Installer finished."
+  FileClose $LOG_HANDLE
+  StrCpy $LOG_HANDLE ""
+!macroend
+
+; ══════════════════════════════════════════════════════════════
+; Process / service check macros
 ; ══════════════════════════════════════════════════════════════
 
 ; Check if a process is running
@@ -103,81 +106,88 @@ Var STOP_ES              ; "1" if we need to stop Event Server + Management Clie
   ${EndIf}
 !macroend
 
+; ── MUI Settings ──
+!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
+!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
+!define MUI_ABORTWARNING
+
+!define MUI_WELCOMEPAGE_TEXT "This installer will install the selected Milestone XProtect™ community plugins and drivers.$\r$\n$\r$\nDepending on the components you select, the installer may need to stop running Milestone services and applications. They will be restarted automatically after installation.$\r$\n$\r$\nClick Next to continue."
+
+; ── Pages ──
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_LICENSE "license.txt"
+; ComponentsLeave callback captures which services need to be stopped
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE ComponentsLeave
+!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
+
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+
+; ── Language ──
+!insertmacro MUI_LANGUAGE "English"
+
+; ══════════════════════════════════════════════════════════════
+; .onInit -- set safe defaults (critical for silent /S mode
+;   where page callbacks never run)
+; ══════════════════════════════════════════════════════════════
+Function .onInit
+  ; Default: stop everything. ComponentsLeave will narrow this
+  ; down in interactive mode based on the actual selection.
+  StrCpy $STOP_SC "1"
+  StrCpy $STOP_RS "1"
+  StrCpy $STOP_ES "1"
+FunctionEnd
+
 ; ══════════════════════════════════════════════════════════════
 ; Pre-install: Stop services/processes based on selected components
 ; (hidden section -- always runs first)
-;
-; $STOP_SC / $STOP_RS / $STOP_ES are set by ComponentsLeave
-; which runs before any section executes.
 ; ══════════════════════════════════════════════════════════════
 Section "-StopServices"
+
+  !insertmacro _LogOpen
 
   StrCpy $RS_WAS_RUNNING "0"
   StrCpy $ES_WAS_RUNNING "0"
 
+  !insertmacro _LogMsg "STOP_SC=$STOP_SC  STOP_RS=$STOP_RS  STOP_ES=$STOP_ES"
+
   ; ── Smart Client plugins selected → close Smart Client ──
   ${If} $STOP_SC == "1"
-    DetailPrint "Closing XProtect™ Smart Client..."
+    !insertmacro _LogMsg "Closing Smart Client (${SC_PROCESS})..."
     nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}" 2>nul'
     Pop $0
+    !insertmacro _LogMsg "taskkill Smart Client exit code: $0"
     Sleep 2000
   ${EndIf}
 
-  ; ── Device Drivers selected → stop Recording Server, wait for DFP ──
+  ; ── Device Drivers selected → stop Recording Server ──
   ${If} $STOP_RS == "1"
     !insertmacro _CheckServiceRunning "${RS_SERVICE}" $RS_WAS_RUNNING
+    !insertmacro _LogMsg "Recording Server was running: $RS_WAS_RUNNING"
     ${If} $RS_WAS_RUNNING == "1"
-      DetailPrint "Stopping ${RS_SERVICE}..."
+      !insertmacro _LogMsg "Stopping ${RS_SERVICE}..."
       nsExec::ExecToLog 'net stop "${RS_SERVICE}" /y'
       Pop $0
+      !insertmacro _LogMsg "net stop Recording Server exit code: $0"
     ${EndIf}
-
-    ; Wait for DriverFrameworkProcess to shut down gracefully (up to 60 s)
-    ;   This child process of the Recording Server holds locks on driver DLLs.
-    ;   Stopping the service should cause it to exit on its own.
-    DetailPrint "Waiting for Driver Framework Process to shut down..."
-    StrCpy $R0 0
-
-    _dfp_wait:
-      !insertmacro _CheckProcessRunning "${DFP_PROCESS}" $R1
-      ${If} $R1 == "0"
-        Goto _dfp_done
-      ${EndIf}
-      ${If} $R0 >= 12
-        Goto _dfp_timeout
-      ${EndIf}
-      DetailPrint "Waiting for ${DFP_PROCESS} to exit ($R0/12)..."
-      Sleep 5000
-      IntOp $R0 $R0 + 1
-      Goto _dfp_wait
-
-    _dfp_timeout:
-      MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION \
-        "The Recording Server driver process is still running after 60 seconds.$\r$\n$\r$\nThe ${RS_SERVICE} may not have shut down completely.$\r$\nDriver files are still locked and cannot be updated.$\r$\n$\r$\nPlease check that the Recording Server service is fully stopped, then click Retry.$\r$\nClick Cancel to abort the installation." \
-        IDRETRY _dfp_retry
-      ; Cancel clicked
-      Abort "Installation cancelled - Recording Server driver process still running."
-
-    _dfp_retry:
-      StrCpy $R0 0
-      Goto _dfp_wait
-
-    _dfp_done:
-      DetailPrint "Driver Framework Process stopped."
-      Sleep 2000
   ${EndIf}
 
   ; ── Admin Plugins selected → close Management Client + stop Event Server ──
   ${If} $STOP_ES == "1"
-    DetailPrint "Closing XProtect™ Management Client..."
+    !insertmacro _LogMsg "Closing Management Client (${MC_PROCESS})..."
     nsExec::ExecToLog 'taskkill /F /IM "${MC_PROCESS}" 2>nul'
     Pop $0
+    !insertmacro _LogMsg "taskkill Management Client exit code: $0"
 
     !insertmacro _CheckServiceRunning "${ES_SERVICE}" $ES_WAS_RUNNING
+    !insertmacro _LogMsg "Event Server was running: $ES_WAS_RUNNING"
     ${If} $ES_WAS_RUNNING == "1"
-      DetailPrint "Stopping ${ES_SERVICE}..."
+      !insertmacro _LogMsg "Stopping ${ES_SERVICE}..."
       nsExec::ExecToLog 'net stop "${ES_SERVICE}" /y'
       Pop $0
+      !insertmacro _LogMsg "net stop Event Server exit code: $0"
       Sleep 2000
     ${EndIf}
   ${EndIf}
@@ -192,8 +202,9 @@ SectionGroup "Smart Client Plugins" SEC_SC_GROUP
 
   Section "Weather Plugin" SEC_WEATHER
     SetOutPath "$INSTDIR\MIPPlugins\Weather"
-    DetailPrint "Installing Weather Plugin..."
+    !insertmacro _LogMsg "Installing Weather Plugin to $INSTDIR\MIPPlugins\Weather..."
     File /r "${WEATHER_DIR}\*.*"
+    !insertmacro _LogMsg "Weather Plugin installed."
 
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
       "DisplayName" "Weather Plugin v${VERSION}"
@@ -211,8 +222,9 @@ SectionGroup "Smart Client Plugins" SEC_SC_GROUP
 
   Section "RDP Plugin" SEC_RDP
     SetOutPath "$INSTDIR\MIPPlugins\RDP"
-    DetailPrint "Installing RDP Plugin..."
+    !insertmacro _LogMsg "Installing RDP Plugin to $INSTDIR\MIPPlugins\RDP..."
     File /r "${RDP_DIR}\*.*"
+    !insertmacro _LogMsg "RDP Plugin installed."
 
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
       "DisplayName" "RDP Plugin v${VERSION}"
@@ -237,9 +249,44 @@ SectionGroupEnd
 SectionGroup "Device Drivers" SEC_DD_GROUP
 
   Section "RTMP Push Driver" SEC_RTMPDRIVER
+    ; ── Gate: wait for DriverFrameworkProcess to exit before copying ──
+    ;    The Recording Server was stopped in -StopServices, but the
+    ;    child process may take time to release file locks on driver DLLs.
+    !insertmacro _CheckProcessRunning "${DFP_PROCESS}" $R1
+    !insertmacro _LogMsg "DriverFrameworkProcess running: $R1"
+
+    ${If} $R1 == "1"
+      !insertmacro _LogMsg "Waiting up to 60 s for ${DFP_PROCESS} to exit..."
+      StrCpy $R0 0
+
+      _dfp_wait:
+        Sleep 5000
+        IntOp $R0 $R0 + 1
+        !insertmacro _CheckProcessRunning "${DFP_PROCESS}" $R1
+        !insertmacro _LogMsg "  poll $R0/12 -- running: $R1"
+        ${If} $R1 == "0"
+          Goto _dfp_done
+        ${EndIf}
+        ${If} $R0 >= 12
+          Goto _dfp_timeout
+        ${EndIf}
+        Goto _dfp_wait
+
+      _dfp_timeout:
+        !insertmacro _LogMsg "TIMEOUT: ${DFP_PROCESS} still running after 60 s -- aborting."
+        MessageBox MB_OK|MB_ICONSTOP \
+          "The Recording Server driver process (${DFP_PROCESS}) is still running after 60 seconds.$\r$\n$\r$\nThe ${RS_SERVICE} may not have shut down completely.$\r$\nDriver files are locked and the RTMP Driver cannot be installed.$\r$\n$\r$\nPlease stop the Recording Server manually and run the installer again."
+        Abort "Installation aborted - driver files locked by Recording Server."
+
+      _dfp_done:
+        !insertmacro _LogMsg "DriverFrameworkProcess exited."
+        Sleep 2000
+    ${EndIf}
+
     SetOutPath "$INSTDIR\MIPDrivers\RTMPDriver"
-    DetailPrint "Installing RTMP Push Driver..."
+    !insertmacro _LogMsg "Installing RTMP Push Driver to $INSTDIR\MIPDrivers\RTMPDriver..."
     File /r "${RTMPDRIVER_DIR}\*.*"
+    !insertmacro _LogMsg "RTMP Push Driver installed."
 
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
       "DisplayName" "RTMPDriver v${VERSION}"
@@ -265,8 +312,9 @@ SectionGroup "Admin Plugins" SEC_AP_GROUP
 
   Section "RTMP Streamer Plugin" SEC_RTMPSTREAMER
     SetOutPath "$INSTDIR\MIPPlugins\RTMPStreamer"
-    DetailPrint "Installing RTMP Streamer Plugin..."
+    !insertmacro _LogMsg "Installing RTMP Streamer Plugin to $INSTDIR\MIPPlugins\RTMPStreamer..."
     File /r "${RTMPSTREAMER_DIR}\*.*"
+    !insertmacro _LogMsg "RTMP Streamer Plugin installed."
 
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
       "DisplayName" "RTMPStreamer v${VERSION}"
@@ -310,19 +358,21 @@ SectionEnd
 Section "-RestartServices"
   ${If} $STOP_RS == "1"
   ${AndIf} $RS_WAS_RUNNING == "1"
-    DetailPrint "Starting ${RS_SERVICE}..."
+    !insertmacro _LogMsg "Starting ${RS_SERVICE}..."
     nsExec::ExecToLog 'net start "${RS_SERVICE}"'
     Pop $0
+    !insertmacro _LogMsg "net start Recording Server exit code: $0"
   ${EndIf}
 
   ${If} $STOP_ES == "1"
   ${AndIf} $ES_WAS_RUNNING == "1"
-    DetailPrint "Starting ${ES_SERVICE}..."
+    !insertmacro _LogMsg "Starting ${ES_SERVICE}..."
     nsExec::ExecToLog 'net start "${ES_SERVICE}"'
     Pop $0
+    !insertmacro _LogMsg "net start Event Server exit code: $0"
   ${EndIf}
 
-  DetailPrint "Installation complete."
+  !insertmacro _LogClose
 SectionEnd
 
 ; ── Component descriptions ──
@@ -338,9 +388,8 @@ SectionEnd
 
 ; ══════════════════════════════════════════════════════════════
 ; ComponentsLeave callback
-;   Runs when the user clicks Next on the Components page,
-;   BEFORE any sections execute. Sets $STOP_* variables so
-;   -StopServices knows what to stop.
+;   Runs when the user clicks Next on the Components page (interactive only).
+;   Narrows down $STOP_* from the "stop all" default set in .onInit.
 ; ══════════════════════════════════════════════════════════════
 Function ComponentsLeave
   StrCpy $STOP_SC "0"
