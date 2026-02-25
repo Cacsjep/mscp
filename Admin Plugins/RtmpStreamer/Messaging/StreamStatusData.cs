@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 
-namespace RtmpStreamer.Messaging
+namespace RTMPStreamer.Messaging
 {
     internal static class StreamMessageIds
     {
-        public const string StatusUpdate = "RtmpStreamer.StatusUpdate";
-        public const string StatusRequest = "RtmpStreamer.StatusRequest";
-        public const string StatusResponse = "RtmpStreamer.StatusResponse";
+        public const string StatusUpdate = "RTMPStreamer.StatusUpdate";
+        public const string StatusRequest = "RTMPStreamer.StatusRequest";
+        public const string StatusResponse = "RTMPStreamer.StatusResponse";
     }
 
     [Serializable]

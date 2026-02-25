@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace RtmpStreamer.Rtmp
+namespace RTMPStreamer.Rtmp
 {
     /// <summary>
     /// Writes RTMP chunked messages to a stream.

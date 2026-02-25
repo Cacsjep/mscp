@@ -6,14 +6,14 @@ using VideoOS.Platform;
 using VideoOS.Platform.Admin;
 using VideoOS.Platform.Messaging;
 
-namespace RtmpStreamer.Admin
+namespace RTMPStreamer.Admin
 {
-    public class RtmpStreamerItemManager : ItemManager
+    public class RTMPStreamerItemManager : ItemManager
     {
         private StreamConfigUserControl _userControl;
         private readonly Guid _kind;
 
-        public RtmpStreamerItemManager(Guid kind)
+        public RTMPStreamerItemManager(Guid kind)
         {
             _kind = kind;
         }
@@ -85,7 +85,7 @@ namespace RtmpStreamer.Admin
                 }
 
                 _userControl.UpdateItem(CurrentItem);
-                Configuration.Instance.SaveItemConfiguration(RtmpStreamerDefinition.PluginId, CurrentItem);
+                Configuration.Instance.SaveItemConfiguration(RTMPStreamerDefinition.PluginId, CurrentItem);
             }
             return true;
         }
@@ -138,19 +138,19 @@ namespace RtmpStreamer.Admin
         public override List<Item> GetItems()
         {
             return Configuration.Instance.GetItemConfigurations(
-                RtmpStreamerDefinition.PluginId, null, _kind);
+                RTMPStreamerDefinition.PluginId, null, _kind);
         }
 
         public override List<Item> GetItems(Item parentItem)
         {
             return Configuration.Instance.GetItemConfigurations(
-                RtmpStreamerDefinition.PluginId, parentItem, _kind);
+                RTMPStreamerDefinition.PluginId, parentItem, _kind);
         }
 
         public override Item GetItem(FQID fqid)
         {
             return Configuration.Instance.GetItemConfiguration(
-                RtmpStreamerDefinition.PluginId, _kind, fqid.ObjectId);
+                RTMPStreamerDefinition.PluginId, _kind, fqid.ObjectId);
         }
 
         public override Item CreateItem(Item parentItem, FQID suggestedFQID)
@@ -162,7 +162,7 @@ namespace RtmpStreamer.Admin
             if (_userControl != null)
                 _userControl.FillContent(CurrentItem);
 
-            Configuration.Instance.SaveItemConfiguration(RtmpStreamerDefinition.PluginId, CurrentItem);
+            Configuration.Instance.SaveItemConfiguration(RTMPStreamerDefinition.PluginId, CurrentItem);
             return CurrentItem;
         }
 
@@ -170,7 +170,7 @@ namespace RtmpStreamer.Admin
         {
             if (item != null)
             {
-                Configuration.Instance.DeleteItemConfiguration(RtmpStreamerDefinition.PluginId, item);
+                Configuration.Instance.DeleteItemConfiguration(RTMPStreamerDefinition.PluginId, item);
             }
         }
 

@@ -461,7 +461,7 @@ Only **H.264** works for RTMP. H.265 requires Enhanced RTMP (not widely supporte
 
 ```xml
 <plugin>
-   <file name="RtmpStreamer.dll"/>
+   <file name="RTMPStreamer.dll"/>
    <load env="Service, Administration"/>
 </plugin>
 ```

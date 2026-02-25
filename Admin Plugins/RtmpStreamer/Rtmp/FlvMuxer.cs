@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace RtmpStreamer.Rtmp
+namespace RTMPStreamer.Rtmp
 {
     /// <summary>
     /// Converts H.264 Annex B data into FLV video tag payloads for RTMP streaming.

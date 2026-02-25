@@ -1,7 +1,7 @@
 using System;
 using VideoOS.Platform;
 
-namespace RtmpStreamer
+namespace RTMPStreamer
 {
     /// <summary>
     /// Centralized logging helper using the Milestone SDK logging API.
@@ -9,7 +9,7 @@ namespace RtmpStreamer
     /// </summary>
     internal static class PluginLog
     {
-        private const string Category = "RtmpStreamer";
+        private const string Category = "RTMPStreamer";
 
         public static void Info(string message)
         {

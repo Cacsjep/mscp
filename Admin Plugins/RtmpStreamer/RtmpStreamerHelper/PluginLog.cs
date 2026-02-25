@@ -1,6 +1,6 @@
 using System;
 
-namespace RtmpStreamer
+namespace RTMPStreamer
 {
     /// <summary>
     /// Logging for the standalone helper process.

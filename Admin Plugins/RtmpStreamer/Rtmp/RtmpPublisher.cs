@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
-namespace RtmpStreamer.Rtmp
+namespace RTMPStreamer.Rtmp
 {
     /// <summary>
     /// RTMP client that connects to an RTMP server (YouTube, Twitch, etc.)

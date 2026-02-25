@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
-using RtmpStreamer.Rtmp;
+using RTMPStreamer.Rtmp;
 using VideoOS.Platform;
 
-namespace RtmpStreamer.Streaming
+namespace RTMPStreamer.Streaming
 {
     /// <summary>
     /// Orchestrates streaming from one camera to one RTMP destination.

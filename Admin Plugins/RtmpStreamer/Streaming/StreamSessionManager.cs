@@ -5,7 +5,7 @@ using System.Linq;
 using System.Xml.Linq;
 using VideoOS.Platform;
 
-namespace RtmpStreamer.Streaming
+namespace RTMPStreamer.Streaming
 {
     /// <summary>
     /// Manages multiple concurrent StreamSessions. Handles configuration

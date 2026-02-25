@@ -1,4 +1,4 @@
-namespace RtmpStreamer.Admin
+namespace RTMPStreamer.Admin
 {
     partial class StreamConfigUserControl
     {

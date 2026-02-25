@@ -1,6 +1,6 @@
 using System;
 
-namespace RtmpStreamer.Streaming
+namespace RTMPStreamer.Streaming
 {
     /// <summary>
     /// Parses Milestone GenericByteData video stream packets.

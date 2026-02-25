@@ -1,4 +1,4 @@
-using RtmpStreamer.Messaging;
+using RTMPStreamer.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,7 +9,7 @@ using VideoOS.Platform;
 using VideoOS.Platform.Messaging;
 using VideoOS.Platform.UI;
 
-namespace RtmpStreamer.Admin
+namespace RTMPStreamer.Admin
 {
     public partial class StreamConfigUserControl : UserControl
     {

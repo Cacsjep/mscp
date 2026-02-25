@@ -5,14 +5,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
-using RtmpStreamer.Messaging;
+using RTMPStreamer.Messaging;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
 using VideoOS.Platform.Messaging;
 
-namespace RtmpStreamer.Background
+namespace RTMPStreamer.Background
 {
-    public class RtmpStreamerBackgroundPlugin : BackgroundPlugin
+    public class RTMPStreamerBackgroundPlugin : BackgroundPlugin
     {
         private object _configMessageObj;
         private readonly ConcurrentDictionary<Guid, HelperProcess> _helpers = new ConcurrentDictionary<Guid, HelperProcess>();
@@ -26,7 +26,7 @@ namespace RtmpStreamer.Background
         private MessageCommunication _mc;
         private object _statusRequestFilter;
 
-        public override Guid Id => RtmpStreamerDefinition.BackgroundPluginId;
+        public override Guid Id => RTMPStreamerDefinition.BackgroundPluginId;
         public override string Name => "RTMP Streamer Background";
 
         public override System.Collections.Generic.List<EnvironmentType> TargetEnvironments
@@ -39,7 +39,7 @@ namespace RtmpStreamer.Background
             PluginLog.Info("Background plugin initializing");
 
             var pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            _helperExePath = Path.Combine(pluginDir, "RtmpStreamerHelper.exe");
+            _helperExePath = Path.Combine(pluginDir, "RTMPStreamerHelper.exe");
 
             if (!File.Exists(_helperExePath))
             {
@@ -68,7 +68,7 @@ namespace RtmpStreamer.Background
                 OnConfigurationChanged,
                 new MessageIdAndRelatedKindFilter(
                     MessageId.Server.ConfigurationChangedIndication,
-                    RtmpStreamerDefinition.PluginKindId));
+                    RTMPStreamerDefinition.PluginKindId));
 
             SystemLog.Register();
 
@@ -125,7 +125,7 @@ namespace RtmpStreamer.Background
             try
             {
                 var items = Configuration.Instance.GetItemConfigurations(
-                    RtmpStreamerDefinition.PluginId, null, RtmpStreamerDefinition.PluginKindId);
+                    RTMPStreamerDefinition.PluginId, null, RTMPStreamerDefinition.PluginKindId);
 
                 foreach (var item in items)
                 {
@@ -315,7 +315,7 @@ namespace RtmpStreamer.Background
             {
                 var sb = new System.Text.StringBuilder();
                 var items = Configuration.Instance.GetItemConfigurations(
-                    RtmpStreamerDefinition.PluginId, null, RtmpStreamerDefinition.PluginKindId);
+                    RTMPStreamerDefinition.PluginId, null, RTMPStreamerDefinition.PluginKindId);
 
                 foreach (var item in items)
                 {

@@ -15,7 +15,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [Weather](Smart%20Client%20Plugins/Weather) | Smart Client | Live weather display in Smart Client view items (Open-Meteo) |
 | [RDP](Smart%20Client%20Plugins/RDP) | Smart Client | Embedded RDP sessions in Smart Client view items |
 | [Rtmp](Device%20Drivers/Rtmp) | Device Driver | Receive RTMP/RTMPS push streams (H.264) directly into XProtect™ |
-| [RtmpStreamer](Admin%20Plugins/RtmpStreamer) | Admin Plugin | Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.) |
+| [RTMPStreamer](Admin%20Plugins/RTMPStreamer) | Admin Plugin | Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.) |
 
 ## Installation
 
@@ -35,7 +35,7 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 | Weather | `C:\Program Files\Milestone\MIPPlugins\Weather\` |
 | RDP | `C:\Program Files\Milestone\MIPPlugins\RDP\` |
 | RTMPDriver | `C:\Program Files\Milestone\MIPDrivers\RTMPDriver\` |
-| RtmpStreamer | `C:\Program Files\Milestone\MIPPlugins\RtmpStreamer\` |
+| RTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\` |
 
 > [!NOTE]
 > Always **unblock** downloaded ZIP files before extracting (right-click -> Properties -> Unblock). Windows marks downloaded files as untrusted and will block the DLLs from loading if you skip this step.
@@ -57,7 +57,7 @@ mscp/
 ├── Device Drivers/
 │   └── Rtmp/                      RTMP push stream driver
 ├── Admin Plugins/
-│   └── RtmpStreamer/              RTMP outbound streaming plugin
+│   └── RTMPStreamer/              RTMP outbound streaming plugin
 ├── MSCPlugins.sln                 Visual Studio solution (all projects)
 ├── installer/
 │   └── MSCPlugins.nsi             Unified NSIS installer script
@@ -152,7 +152,7 @@ Copy-Item -Path (Join-Path $root 'Smart Client Plugins\YourPlugin\bin\Release\ne
 Add `'YourPlugin'` to the `$artifacts` array so a ZIP is created:
 
 ```powershell
-$artifacts = @('Weather', 'RDP', 'RTMPDriver', 'RtmpStreamer', 'YourPlugin')
+$artifacts = @('Weather', 'RDP', 'RTMPDriver', 'RTMPStreamer', 'YourPlugin')
 ```
 
 Update the NSIS variables section to pass your staging directory:
@@ -183,7 +183,7 @@ In the `release` job, add your plugin name to the extract loop and the collect/r
 
 ```yaml
 # Extract staging directories
-foreach ($name in @('Weather', 'RDP', 'RTMPDriver', 'RtmpStreamer', 'YourPlugin')) {
+foreach ($name in @('Weather', 'RDP', 'RTMPDriver', 'RTMPStreamer', 'YourPlugin')) {
 
 # Collect release files
 Copy-Item artifacts\YourPlugin\*.zip -Destination .

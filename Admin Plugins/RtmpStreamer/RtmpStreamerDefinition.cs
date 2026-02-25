@@ -6,9 +6,9 @@ using VideoOS.Platform;
 using VideoOS.Platform.Admin;
 using VideoOS.Platform.Background;
 
-namespace RtmpStreamer
+namespace RTMPStreamer
 {
-    public class RtmpStreamerDefinition : PluginDefinition
+    public class RTMPStreamerDefinition : PluginDefinition
     {
         internal static readonly Guid PluginId = new Guid("ABA1B2C3-D4E5-6789-ABCD-EF0123456789");
         internal static readonly Guid PluginKindId = new Guid("ABA1B2C3-D4E5-6789-ABCD-EF0123456780");
@@ -37,7 +37,7 @@ namespace RtmpStreamer
 
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.Service)
             {
-                _backgroundPlugins.Add(new Background.RtmpStreamerBackgroundPlugin());
+                _backgroundPlugins.Add(new Background.RTMPStreamerBackgroundPlugin());
             }
         }
 
@@ -65,7 +65,7 @@ namespace RtmpStreamer
                             Category.Text,
                             true,                   // includeInExport
                             ItemsAllowed.Many,
-                            new Admin.RtmpStreamerItemManager(PluginKindId),
+                            new Admin.RTMPStreamerItemManager(PluginKindId),
                             null
                         )
                     };

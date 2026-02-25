@@ -1,4 +1,4 @@
-namespace RtmpStreamer.Rtmp
+namespace RTMPStreamer.Rtmp
 {
     /// <summary>
     /// Provides pre-computed constants for generating a silent AAC-LC audio track.

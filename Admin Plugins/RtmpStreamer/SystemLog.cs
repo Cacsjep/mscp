@@ -3,7 +3,7 @@ using VideoOS.Platform;
 using VideoOS.Platform.Admin;
 using VideoOS.Platform.Log;
 
-namespace RtmpStreamer
+namespace RTMPStreamer
 {
     /// <summary>
     /// Writes entries to the Milestone System Log visible in Management Client.
@@ -11,8 +11,8 @@ namespace RtmpStreamer
     /// </summary>
     internal static class SystemLog
     {
-        private const string AppId = "RtmpStreamer";
-        private const string ComponentId = "RtmpStreamer";
+        private const string AppId = "RTMPStreamer";
+        private const string ComponentId = "RTMPStreamer";
         private const string Version = "1.0";
         private const string Culture = "en-US";
         private const string ResourceType = "text";

@@ -2,7 +2,7 @@ using System;
 using VideoOS.Platform;
 using VideoOS.Platform.Live;
 
-namespace RtmpStreamer.Streaming
+namespace RTMPStreamer.Streaming
 {
     /// <summary>
     /// Wraps RawLiveSource to receive raw H.264 Annex B frames from a Milestone camera.

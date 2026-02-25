@@ -3,11 +3,11 @@ using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Threading;
-using RtmpStreamer;
-using RtmpStreamer.Streaming;
+using RTMPStreamer;
+using RTMPStreamer.Streaming;
 using VideoOS.Platform;
 
-namespace RtmpStreamerHelper
+namespace RTMPStreamerHelper
 {
     class Program
     {
@@ -17,7 +17,7 @@ namespace RtmpStreamerHelper
         {
             if (args.Length < 3)
             {
-                Console.Error.WriteLine("Usage: RtmpStreamerHelper <serverUri> <cameraId> <rtmpUrl> [milestoneDir]");
+                Console.Error.WriteLine("Usage: RTMPStreamerHelper <serverUri> <cameraId> <rtmpUrl> [milestoneDir]");
                 return 1;
             }
 

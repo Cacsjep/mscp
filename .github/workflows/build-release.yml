@@ -37,11 +37,11 @@ jobs:
             stage_to: RTMPDriver
             extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
 
-          - name: RtmpStreamer
-            projects: Admin Plugins\RtmpStreamer\RtmpStreamer.csproj;Admin Plugins\RtmpStreamer\RtmpStreamerHelper\RtmpStreamerHelper.csproj
+          - name: RTMPStreamer
+            projects: Admin Plugins\RTMPStreamer\RTMPStreamer.csproj;Admin Plugins\RTMPStreamer\RTMPStreamerHelper\RTMPStreamerHelper.csproj
             platform: x64
-            stage_from: Admin Plugins\RtmpStreamer\bin\x64\Release
-            stage_to: RtmpStreamer
+            stage_from: Admin Plugins\RTMPStreamer\bin\x64\Release
+            stage_to: RTMPStreamer
             extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
 
     steps:
@@ -72,11 +72,11 @@ jobs:
           Copy-Item -Path "${{ matrix.stage_from }}\*" -Destination staging\${{ matrix.stage_to }} -Recurse
         shell: pwsh
 
-      - name: Stage RtmpStreamer extras
-        if: matrix.name == 'RtmpStreamer'
+      - name: Stage RTMPStreamer extras
+        if: matrix.name == 'RTMPStreamer'
         run: |
-          Copy-Item -Path "Admin Plugins\RtmpStreamer\RtmpStreamerHelper\bin\x64\Release\*" -Destination staging\RtmpStreamer -Recurse -Force
-          Copy-Item -Path "Admin Plugins\RtmpStreamer\plugin.def" -Destination staging\RtmpStreamer -Force
+          Copy-Item -Path "Admin Plugins\RTMPStreamer\RTMPStreamerHelper\bin\x64\Release\*" -Destination staging\RTMPStreamer -Recurse -Force
+          Copy-Item -Path "Admin Plugins\RTMPStreamer\plugin.def" -Destination staging\RTMPStreamer -Force
         shell: pwsh
 
       - name: Create ZIP
@@ -105,7 +105,7 @@ jobs:
 
       - name: Extract staging directories
         run: |
-          foreach ($name in @('Weather', 'RDP', 'RTMPDriver', 'RtmpStreamer')) {
+          foreach ($name in @('Weather', 'RDP', 'RTMPDriver', 'RTMPStreamer')) {
             $zip = Get-ChildItem "artifacts\$name\*.zip" | Select-Object -First 1
             Expand-Archive -Path $zip.FullName -DestinationPath staging -Force
           }
@@ -121,7 +121,7 @@ jobs:
           $weatherDir  = (Resolve-Path 'staging\Weather').Path
           $rdpDir      = (Resolve-Path 'staging\RDP').Path
           $driverDir   = (Resolve-Path 'staging\RTMPDriver').Path
-          $streamerDir = (Resolve-Path 'staging\RtmpStreamer').Path
+          $streamerDir = (Resolve-Path 'staging\RTMPStreamer').Path
           $outDir = (Resolve-Path '.').Path
           & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" `
             /DVERSION=$version `
@@ -138,7 +138,7 @@ jobs:
           Copy-Item artifacts\Weather\*.zip -Destination .
           Copy-Item artifacts\RDP\*.zip -Destination .
           Copy-Item artifacts\RTMPDriver\*.zip -Destination .
-          Copy-Item artifacts\RtmpStreamer\*.zip -Destination .
+          Copy-Item artifacts\RTMPStreamer\*.zip -Destination .
         shell: pwsh
 
       - name: Create GitHub Release
@@ -148,6 +148,6 @@ jobs:
             Weather-${{ github.ref_name }}.zip
             RDP-${{ github.ref_name }}.zip
             RTMPDriver-${{ github.ref_name }}.zip
-            RtmpStreamer-${{ github.ref_name }}.zip
+            RTMPStreamer-${{ github.ref_name }}.zip
             MSCPlugins-${{ github.ref_name }}-Setup.exe
           generate_release_notes: true

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace RtmpStreamer.Rtmp
+namespace RTMPStreamer.Rtmp
 {
     /// <summary>
     /// Minimal AMF0 reader for RTMP command parsing.

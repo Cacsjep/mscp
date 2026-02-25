@@ -1,5 +1,5 @@
 ; MSCPlugins Unified NSIS Installer Script
-; Installs Milestone XProtect Community Plugins & Drivers
+; Installs Milestone XProtect™ Community Plugins & Drivers
 
 !include "MUI2.nsh"
 !include "nsDialogs.nsh"
@@ -34,24 +34,35 @@ BrandingText "MSC Community Plugins v${VERSION}"
   !define RTMPDRIVER_DIR "..\build\staging\RTMPDriver"
 !endif
 !ifndef RTMPSTREAMER_DIR
-  !define RTMPSTREAMER_DIR "..\build\staging\RtmpStreamer"
+  !define RTMPSTREAMER_DIR "..\build\staging\RTMPStreamer"
 !endif
 
 ; ── Process / service names ──
-!define SC_PROCESS "Client.exe"
-!define RS_SERVICE "Milestone XProtect Recording Server"
-!define ES_SERVICE "MilestoneEventServerService"
+!define SC_PROCESS  "Client.exe"
+!define MC_PROCESS  "VideoOS.Platform.Administration.exe"
+!define DFP_PROCESS "VideoOS.IO.Drivers.DriverFrameworkProcess.exe"
+!define RS_SERVICE  "Milestone XProtect Recording Server"
+!define ES_SERVICE  "MilestoneEventServerService"
+
+; ── Variables ──
+Var RS_WAS_RUNNING       ; "1" if Recording Server was running before install
+Var ES_WAS_RUNNING       ; "1" if Event Server was running before install
+Var STOP_SC              ; "1" if we need to close Smart Client
+Var STOP_RS              ; "1" if we need to stop Recording Server
+Var STOP_ES              ; "1" if we need to stop Event Server + Management Client
 
 ; ── MUI Settings ──
 !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
 !define MUI_ABORTWARNING
 
-!define MUI_WELCOMEPAGE_TEXT "This installer will install the selected Milestone XProtect$\u2122 community plugins and drivers.$\r$\n$\r$\nRunning services will be stopped as needed and restarted after installation.$\r$\n$\r$\nClick Next to continue."
+!define MUI_WELCOMEPAGE_TEXT "This installer will install the selected Milestone XProtect™ community plugins and drivers.$\r$\n$\r$\nDepending on the components you select, the installer may need to stop running Milestone services and applications. They will be restarted automatically after installation.$\r$\n$\r$\nClick Next to continue."
 
 ; ── Pages ──
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "license.txt"
+; ComponentsLeave callback captures which services need to be stopped
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE ComponentsLeave
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
@@ -63,22 +74,127 @@ BrandingText "MSC Community Plugins v${VERSION}"
 !insertmacro MUI_LANGUAGE "English"
 
 ; ══════════════════════════════════════════════════════════════
+; Macros
+; ══════════════════════════════════════════════════════════════
+
+; Check if a process is running
+;   ${RESULT_VAR} = "1" if running, "0" if not
+!macro _CheckProcessRunning PROC_NAME RESULT_VAR
+  nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq ${PROC_NAME}" 2>nul | findstr /I /C:"${PROC_NAME}"'
+  Pop ${RESULT_VAR}
+  Pop $9
+  ${If} ${RESULT_VAR} == 0
+    StrCpy ${RESULT_VAR} "1"
+  ${Else}
+    StrCpy ${RESULT_VAR} "0"
+  ${EndIf}
+!macroend
+
+; Check if a Windows service is running
+;   ${RESULT_VAR} = "1" if running, "0" if not / not installed
+!macro _CheckServiceRunning SVC_NAME RESULT_VAR
+  nsExec::ExecToStack 'cmd /c sc query "${SVC_NAME}" 2>nul | findstr /C:"RUNNING"'
+  Pop ${RESULT_VAR}
+  Pop $9
+  ${If} ${RESULT_VAR} == 0
+    StrCpy ${RESULT_VAR} "1"
+  ${Else}
+    StrCpy ${RESULT_VAR} "0"
+  ${EndIf}
+!macroend
+
+; ══════════════════════════════════════════════════════════════
+; Pre-install: Stop services/processes based on selected components
+; (hidden section -- always runs first)
+;
+; $STOP_SC / $STOP_RS / $STOP_ES are set by ComponentsLeave
+; which runs before any section executes.
+; ══════════════════════════════════════════════════════════════
+Section "-StopServices"
+
+  StrCpy $RS_WAS_RUNNING "0"
+  StrCpy $ES_WAS_RUNNING "0"
+
+  ; ── Smart Client plugins selected → close Smart Client ──
+  ${If} $STOP_SC == "1"
+    DetailPrint "Closing XProtect™ Smart Client..."
+    nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}" 2>nul'
+    Pop $0
+    Sleep 2000
+  ${EndIf}
+
+  ; ── Device Drivers selected → stop Recording Server, wait for DFP ──
+  ${If} $STOP_RS == "1"
+    !insertmacro _CheckServiceRunning "${RS_SERVICE}" $RS_WAS_RUNNING
+    ${If} $RS_WAS_RUNNING == "1"
+      DetailPrint "Stopping ${RS_SERVICE}..."
+      nsExec::ExecToLog 'net stop "${RS_SERVICE}" /y'
+      Pop $0
+    ${EndIf}
+
+    ; Wait for DriverFrameworkProcess to shut down gracefully (up to 60 s)
+    ;   This child process of the Recording Server holds locks on driver DLLs.
+    ;   Stopping the service should cause it to exit on its own.
+    DetailPrint "Waiting for Driver Framework Process to shut down..."
+    StrCpy $R0 0
+
+    _dfp_wait:
+      !insertmacro _CheckProcessRunning "${DFP_PROCESS}" $R1
+      ${If} $R1 == "0"
+        Goto _dfp_done
+      ${EndIf}
+      ${If} $R0 >= 12
+        Goto _dfp_timeout
+      ${EndIf}
+      DetailPrint "Waiting for ${DFP_PROCESS} to exit ($R0/12)..."
+      Sleep 5000
+      IntOp $R0 $R0 + 1
+      Goto _dfp_wait
+
+    _dfp_timeout:
+      MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION \
+        "The Recording Server driver process is still running after 60 seconds.$\r$\n$\r$\nThe ${RS_SERVICE} may not have shut down completely.$\r$\nDriver files are still locked and cannot be updated.$\r$\n$\r$\nPlease check that the Recording Server service is fully stopped, then click Retry.$\r$\nClick Cancel to abort the installation." \
+        IDRETRY _dfp_retry
+      ; Cancel clicked
+      Abort "Installation cancelled - Recording Server driver process still running."
+
+    _dfp_retry:
+      StrCpy $R0 0
+      Goto _dfp_wait
+
+    _dfp_done:
+      DetailPrint "Driver Framework Process stopped."
+      Sleep 2000
+  ${EndIf}
+
+  ; ── Admin Plugins selected → close Management Client + stop Event Server ──
+  ${If} $STOP_ES == "1"
+    DetailPrint "Closing XProtect™ Management Client..."
+    nsExec::ExecToLog 'taskkill /F /IM "${MC_PROCESS}" 2>nul'
+    Pop $0
+
+    !insertmacro _CheckServiceRunning "${ES_SERVICE}" $ES_WAS_RUNNING
+    ${If} $ES_WAS_RUNNING == "1"
+      DetailPrint "Stopping ${ES_SERVICE}..."
+      nsExec::ExecToLog 'net stop "${ES_SERVICE}" /y'
+      Pop $0
+      Sleep 2000
+    ${EndIf}
+  ${EndIf}
+
+SectionEnd
+
+; ══════════════════════════════════════════════════════════════
 ; Smart Client Plugins
 ; ══════════════════════════════════════════════════════════════
 
 SectionGroup "Smart Client Plugins" SEC_SC_GROUP
 
   Section "Weather Plugin" SEC_WEATHER
-    DetailPrint "Closing Smart Client..."
-    nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}"'
-    Pop $0
-    Sleep 2000
-
     SetOutPath "$INSTDIR\MIPPlugins\Weather"
     DetailPrint "Installing Weather Plugin..."
     File /r "${WEATHER_DIR}\*.*"
 
-    ; Registry
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
       "DisplayName" "Weather Plugin v${VERSION}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
@@ -94,16 +210,10 @@ SectionGroup "Smart Client Plugins" SEC_SC_GROUP
   SectionEnd
 
   Section "RDP Plugin" SEC_RDP
-    DetailPrint "Closing Smart Client..."
-    nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}"'
-    Pop $0
-    Sleep 2000
-
     SetOutPath "$INSTDIR\MIPPlugins\RDP"
     DetailPrint "Installing RDP Plugin..."
     File /r "${RDP_DIR}\*.*"
 
-    ; Registry
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
       "DisplayName" "RDP Plugin v${VERSION}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
@@ -127,16 +237,10 @@ SectionGroupEnd
 SectionGroup "Device Drivers" SEC_DD_GROUP
 
   Section "RTMP Push Driver" SEC_RTMPDRIVER
-    DetailPrint "Stopping ${RS_SERVICE}..."
-    nsExec::ExecToLog 'net stop "${RS_SERVICE}"'
-    Pop $0
-    Sleep 2000
-
     SetOutPath "$INSTDIR\MIPDrivers\RTMPDriver"
     DetailPrint "Installing RTMP Push Driver..."
     File /r "${RTMPDRIVER_DIR}\*.*"
 
-    ; Registry
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
       "DisplayName" "RTMPDriver v${VERSION}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
@@ -149,10 +253,6 @@ SectionGroup "Device Drivers" SEC_DD_GROUP
       "NoModify" 1
     WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
       "NoRepair" 1
-
-    DetailPrint "Starting ${RS_SERVICE}..."
-    nsExec::ExecToLog 'net start "${RS_SERVICE}"'
-    Pop $0
   SectionEnd
 
 SectionGroupEnd
@@ -164,38 +264,28 @@ SectionGroupEnd
 SectionGroup "Admin Plugins" SEC_AP_GROUP
 
   Section "RTMP Streamer Plugin" SEC_RTMPSTREAMER
-    DetailPrint "Stopping ${ES_SERVICE}..."
-    nsExec::ExecToLog 'net stop "${ES_SERVICE}"'
-    Pop $0
-    Sleep 2000
-
-    SetOutPath "$INSTDIR\MIPPlugins\RtmpStreamer"
+    SetOutPath "$INSTDIR\MIPPlugins\RTMPStreamer"
     DetailPrint "Installing RTMP Streamer Plugin..."
     File /r "${RTMPSTREAMER_DIR}\*.*"
 
-    ; Registry
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RtmpStreamer" \
-      "DisplayName" "RtmpStreamer v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RtmpStreamer" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\RtmpStreamer\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RtmpStreamer" \
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
+      "DisplayName" "RTMPStreamer v${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
+      "UninstallString" "$\"$INSTDIR\MIPPlugins\RTMPStreamer\Uninstall.exe$\""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
       "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RtmpStreamer" \
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
       "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RtmpStreamer" \
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
       "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RtmpStreamer" \
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
       "NoRepair" 1
-
-    DetailPrint "Starting ${ES_SERVICE}..."
-    nsExec::ExecToLog 'net start "${ES_SERVICE}"'
-    Pop $0
   SectionEnd
 
 SectionGroupEnd
 
 ; ══════════════════════════════════════════════════════════════
-; Uninstaller
+; Uninstaller & service restart
 ; ══════════════════════════════════════════════════════════════
 
 Section "-WriteUninstaller"
@@ -216,49 +306,104 @@ Section "-WriteUninstaller"
     "NoRepair" 1
 SectionEnd
 
+; ── Post-install: restart only the services we stopped ──
+Section "-RestartServices"
+  ${If} $STOP_RS == "1"
+  ${AndIf} $RS_WAS_RUNNING == "1"
+    DetailPrint "Starting ${RS_SERVICE}..."
+    nsExec::ExecToLog 'net start "${RS_SERVICE}"'
+    Pop $0
+  ${EndIf}
+
+  ${If} $STOP_ES == "1"
+  ${AndIf} $ES_WAS_RUNNING == "1"
+    DetailPrint "Starting ${ES_SERVICE}..."
+    nsExec::ExecToLog 'net start "${ES_SERVICE}"'
+    Pop $0
+  ${EndIf}
+
+  DetailPrint "Installation complete."
+SectionEnd
+
 ; ── Component descriptions ──
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SC_GROUP}    "Plugins for the XProtect$\u2122 Smart Client"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SC_GROUP}    "Plugins for the XProtect™ Smart Client"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_WEATHER}     "Display live weather in Smart Client view items (Open-Meteo)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RDP}         "Embed interactive RDP sessions in Smart Client view items"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DD_GROUP}    "Device drivers for the XProtect$\u2122 Recording Server"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPDRIVER}  "Receive RTMP push streams (H.264) directly into XProtect$\u2122"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}    "Plugins for the XProtect$\u2122 Management Client / Event Server"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect$\u2122 cameras to RTMP destinations (YouTube, Twitch, etc.)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DD_GROUP}    "Device drivers for the XProtect™ Recording Server"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPDRIVER}  "Receive RTMP push streams (H.264) directly into XProtect™"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}    "Plugins for the XProtect™ Management Client / Event Server"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.)"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
-; ── Uninstall Section ──
-Section "Uninstall"
-  ; Stop services
-  DetailPrint "Stopping services..."
-  nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}"'
-  Pop $0
-  nsExec::ExecToLog 'net stop "${RS_SERVICE}"'
-  Pop $0
-  nsExec::ExecToLog 'net stop "${ES_SERVICE}"'
-  Pop $0
-  Sleep 2000
+; ══════════════════════════════════════════════════════════════
+; ComponentsLeave callback
+;   Runs when the user clicks Next on the Components page,
+;   BEFORE any sections execute. Sets $STOP_* variables so
+;   -StopServices knows what to stop.
+; ══════════════════════════════════════════════════════════════
+Function ComponentsLeave
+  StrCpy $STOP_SC "0"
+  StrCpy $STOP_RS "0"
+  StrCpy $STOP_ES "0"
 
-  ; Remove plugin directories
+  ; Smart Client plugins → need to close Smart Client
+  ${If} ${SectionIsSelected} ${SEC_WEATHER}
+  ${OrIf} ${SectionIsSelected} ${SEC_RDP}
+    StrCpy $STOP_SC "1"
+  ${EndIf}
+
+  ; Device Drivers → need to stop Recording Server + wait for DFP
+  ${If} ${SectionIsSelected} ${SEC_RTMPDRIVER}
+    StrCpy $STOP_RS "1"
+  ${EndIf}
+
+  ; Admin Plugins → need to stop Event Server + close Management Client
+  ${If} ${SectionIsSelected} ${SEC_RTMPSTREAMER}
+    StrCpy $STOP_ES "1"
+  ${EndIf}
+FunctionEnd
+
+; ══════════════════════════════════════════════════════════════
+; Uninstall Section
+; ══════════════════════════════════════════════════════════════
+Section "Uninstall"
+  ; ── Stop everything ──
+  DetailPrint "Closing XProtect™ Smart Client..."
+  nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}" 2>nul'
+  Pop $0
+  DetailPrint "Closing XProtect™ Management Client..."
+  nsExec::ExecToLog 'taskkill /F /IM "${MC_PROCESS}" 2>nul'
+  Pop $0
+  DetailPrint "Stopping ${RS_SERVICE}..."
+  nsExec::ExecToLog 'net stop "${RS_SERVICE}" /y 2>nul'
+  Pop $0
+  DetailPrint "Stopping ${ES_SERVICE}..."
+  nsExec::ExecToLog 'net stop "${ES_SERVICE}" /y 2>nul'
+  Pop $0
+  Sleep 5000
+
+  ; ── Remove plugin directories ──
   RMDir /r "$INSTDIR\MIPPlugins\Weather"
   RMDir /r "$INSTDIR\MIPPlugins\RDP"
   RMDir /r "$INSTDIR\MIPDrivers\RTMPDriver"
-  RMDir /r "$INSTDIR\MIPPlugins\RtmpStreamer"
+  RMDir /r "$INSTDIR\MIPPlugins\RTMPStreamer"
 
-  ; Remove uninstaller
+  ; ── Remove uninstaller ──
   Delete "$INSTDIR\MSCPlugins-Uninstall.exe"
 
-  ; Remove registry entries
+  ; ── Remove registry entries ──
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MSCPlugins"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RtmpStreamer"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer"
 
-  ; Restart services
-  DetailPrint "Starting services..."
+  ; ── Restart services ──
+  DetailPrint "Starting ${RS_SERVICE}..."
   nsExec::ExecToLog 'net start "${RS_SERVICE}"'
   Pop $0
+  DetailPrint "Starting ${ES_SERVICE}..."
   nsExec::ExecToLog 'net start "${ES_SERVICE}"'
   Pop $0
 

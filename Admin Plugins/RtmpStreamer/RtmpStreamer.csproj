@@ -6,11 +6,11 @@
     <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
     <ProjectGuid>{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>RtmpStreamer</RootNamespace>
-    <AssemblyName>RtmpStreamer</AssemblyName>
+    <RootNamespace>RTMPStreamer</RootNamespace>
+    <AssemblyName>RTMPStreamer</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <MipPluginDir>C:\Program Files\Milestone\MIPPlugins\RtmpStreamer\</MipPluginDir>
+    <MipPluginDir>C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\</MipPluginDir>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
     <PlatformTarget>x64</PlatformTarget>
@@ -49,15 +49,15 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PluginLog.cs" />
-    <Compile Include="RtmpStreamerDefinition.cs" />
-    <Compile Include="Admin\RtmpStreamerItemManager.cs" />
+    <Compile Include="RTMPStreamerDefinition.cs" />
+    <Compile Include="Admin\RTMPStreamerItemManager.cs" />
     <Compile Include="Admin\StreamConfigUserControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Admin\StreamConfigUserControl.Designer.cs">
       <DependentUpon>StreamConfigUserControl.cs</DependentUpon>
     </Compile>
-    <Compile Include="Background\RtmpStreamerBackgroundPlugin.cs" />
+    <Compile Include="Background\RTMPStreamerBackgroundPlugin.cs" />
     <Compile Include="Streaming\CameraFrameSource.cs" />
     <Compile Include="Streaming\GenericByteDataParser.cs" />
     <Compile Include="Streaming\StreamSession.cs" />
@@ -88,7 +88,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Build dependency: ensure helper exe is built before plugin -->
-    <ProjectReference Include="RtmpStreamerHelper\RtmpStreamerHelper.csproj">
+    <ProjectReference Include="RTMPStreamerHelper\RTMPStreamerHelper.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <Private>false</Private>
     </ProjectReference>
@@ -98,7 +98,7 @@
     <PreBuildEvent>
 net stop MilestoneEventServerService 2&gt;nul
 taskkill /f /im VideoOS.Administration.exe 2&gt;nul
-taskkill /f /im RtmpStreamerHelper.exe 2&gt;nul
+taskkill /f /im RTMPStreamerHelper.exe 2&gt;nul
 ping -n 4 127.0.0.1 &gt;nul
 if not exist "$(MipPluginDir)" mkdir "$(MipPluginDir)"
 exit /b 0
@@ -106,7 +106,7 @@ exit /b 0
     <PostBuildEvent>
 xcopy /y /d /e /i "$(TargetDir)*" "$(MipPluginDir)" &gt;nul 2&gt;nul
 copy /y "$(ProjectDir)plugin.def" "$(MipPluginDir)" &gt;nul 2&gt;nul
-xcopy /y /d /e /i "$(ProjectDir)RtmpStreamerHelper\bin\x64\$(ConfigurationName)\*" "$(MipPluginDir)" &gt;nul 2&gt;nul
+xcopy /y /d /e /i "$(ProjectDir)RTMPStreamerHelper\bin\x64\$(ConfigurationName)\*" "$(MipPluginDir)" &gt;nul 2&gt;nul
 net start MilestoneEventServerService 2&gt;nul
 start "" "C:\Program Files\Milestone\XProtect Management Client\VideoOS.Administration.exe" 2&gt;nul
 exit /b 0

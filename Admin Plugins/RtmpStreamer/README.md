@@ -1,4 +1,4 @@
-# RtmpStreamer
+# RTMPStreamer
 
 A Milestone XProtect™ MIP plugin that streams live camera video to RTMP/RTMPS destinations. Pure H.264 passthrough from XProtect™ cameras with silent AAC audio track -- no transcoding, no FFmpeg, no native dependencies.
 
@@ -20,11 +20,11 @@ Download `MSCPlugins-vX.X-Setup.exe` from [Releases](../../releases) and run as 
 
 ### Manual (ZIP)
 
-1. Download `RtmpStreamer-vX.X.zip` from [Releases](../../releases)
+1. Download `RTMPStreamer-vX.X.zip` from [Releases](../../releases)
 2. **Unblock the ZIP before extracting** -- right-click the `.zip` -> Properties -> Unblock -> OK
 3. Stop the **Milestone XProtect™ Event Server** service
 4. Create a `MIPPlugins` folder in `C:\Program Files\Milestone\` (if it doesn't already exist)
-5. Extract into `C:\Program Files\Milestone\MIPPlugins\RtmpStreamer\`
+5. Extract into `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\`
 6. Start the **Milestone XProtect™ Event Server** service
 7. Open the **Management Client** -- the plugin appears under **MIP Plug-ins > RTMP Streamer**
 
@@ -71,7 +71,7 @@ When you select an enabled stream, the detail panel shows a live log at the bott
  │    - Monitors health, auto-restarts on crash            │
  │                                                         │
  │  ┌───────────────────────────────────────────────────┐  │
- │  │  RtmpStreamerHelper.exe  (standalone MIP SDK)     │  │
+ │  │  RTMPStreamerHelper.exe  (standalone MIP SDK)     │  │
  │  │                                                   │  │
  │  │  RawLiveSource ──► H.264 Annex B                  │  │
  │  │       │                                           │  │
@@ -94,7 +94,7 @@ When you select an enabled stream, the detail panel shows a live log at the bott
 
 - **Management Client (Admin UI)** -- Configuration interface for creating, editing, and deleting stream items with live status updates
 - **Event Server (Background Plugin)** -- Runs as a background service, launches one helper process per enabled stream, monitors health with auto-restart
-- **Helper Process (RtmpStreamerHelper.exe)** -- Standalone executable per stream that connects to the Recording Server, muxes H.264 into FLV, and publishes to RTMP
+- **Helper Process (RTMPStreamerHelper.exe)** -- Standalone executable per stream that connects to the Recording Server, muxes H.264 into FLV, and publishes to RTMP
 
 ## Logging
 
@@ -123,7 +123,7 @@ Significant events are written to the Milestone System Log under the **RTMP Stre
 |---|---|
 | No video on RTMP server | Check Event Server logs. Ensure camera uses H.264 encoding. |
 | Helper keeps restarting | Check System Log for crash entries. Common: wrong server URI, camera not found. |
-| "Helper exe not found" | Ensure `RtmpStreamerHelper.exe` is in same directory as `RtmpStreamer.dll`. |
+| "Helper exe not found" | Ensure `RTMPStreamerHelper.exe` is in same directory as `RTMPStreamer.dll`. |
 | YouTube/Twitch rejects stream | Ensure correct URL format. Twitch/Facebook require `rtmps://`. |
 | "Camera is using H.265 codec" | Change camera to H.264 in Recording Server configuration. |
 | RTMP connection refused | Verify RTMP server is running. Check firewall for port 1935/443. |

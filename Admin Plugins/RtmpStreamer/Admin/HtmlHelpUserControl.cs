@@ -2,7 +2,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 
-namespace RtmpStreamer.Admin
+namespace RTMPStreamer.Admin
 {
     public class HtmlHelpUserControl : UserControl
     {

@@ -19,9 +19,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RDP", "Smart Client Plugins
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RTMPDriver", "Device Drivers\Rtmp\RTMPDriver\RTMPDriver.csproj", "{E155114F-DD32-4F24-BDAA-954D92482D50}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RtmpStreamer", "Admin Plugins\RtmpStreamer\RtmpStreamer.csproj", "{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RTMPStreamer", "Admin Plugins\RTMPStreamer\RTMPStreamer.csproj", "{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RtmpStreamerHelper", "Admin Plugins\RtmpStreamer\RtmpStreamerHelper\RtmpStreamerHelper.csproj", "{C2D3E4F5-A6B7-8901-CDEF-123456789ABC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RTMPStreamerHelper", "Admin Plugins\RTMPStreamer\RTMPStreamerHelper\RTMPStreamerHelper.csproj", "{C2D3E4F5-A6B7-8901-CDEF-123456789ABC}"
 EndProject
 
 Global
@@ -63,7 +63,7 @@ Global
 		{E155114F-DD32-4F24-BDAA-954D92482D50}.Release|x64.ActiveCfg = Release|x64
 		{E155114F-DD32-4F24-BDAA-954D92482D50}.Release|x64.Build.0 = Release|x64
 
-		# RtmpStreamer (old-style, x64 only)
+		# RTMPStreamer (old-style, x64 only)
 		{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|x64
 		{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.ActiveCfg = Debug|x64
@@ -73,7 +73,7 @@ Global
 		{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|x64.ActiveCfg = Release|x64
 		{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|x64.Build.0 = Release|x64
 
-		# RtmpStreamerHelper (old-style, x64 only)
+		# RTMPStreamerHelper (old-style, x64 only)
 		{C2D3E4F5-A6B7-8901-CDEF-123456789ABC}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{C2D3E4F5-A6B7-8901-CDEF-123456789ABC}.Debug|Any CPU.Build.0 = Debug|x64
 		{C2D3E4F5-A6B7-8901-CDEF-123456789ABC}.Debug|x64.ActiveCfg = Debug|x64

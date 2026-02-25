@@ -69,7 +69,7 @@ Write-Host "`n[2/6] Building Release|Any CPU..." -ForegroundColor Yellow
     /v:minimal
 if ($LASTEXITCODE -ne 0) { Write-Error "Build (Any CPU) failed"; exit 1 }
 
-# ── Build Release|x64 (RtmpStreamer + RtmpStreamerHelper) ──
+# ── Build Release|x64 (RTMPStreamer + RTMPStreamerHelper) ──
 Write-Host "`n[3/6] Building Release|x64..." -ForegroundColor Yellow
 & $msbuildPath $slnPath `
     /p:Configuration=Release `
@@ -100,16 +100,16 @@ $stageDriver = Join-Path $staging 'RTMPDriver'
 New-Item -ItemType Directory -Path $stageDriver -Force | Out-Null
 Copy-Item -Path (Join-Path $root 'Device Drivers\Rtmp\RTMPDriver\bin\Release\*') -Destination $stageDriver -Recurse
 
-# RtmpStreamer
-$stageStreamer = Join-Path $staging 'RtmpStreamer'
+# RTMPStreamer
+$stageStreamer = Join-Path $staging 'RTMPStreamer'
 New-Item -ItemType Directory -Path $stageStreamer -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Admin Plugins\RtmpStreamer\bin\x64\Release\*') -Destination $stageStreamer -Recurse
-Copy-Item -Path (Join-Path $root 'Admin Plugins\RtmpStreamer\RtmpStreamerHelper\bin\x64\Release\*') -Destination $stageStreamer -Recurse -Force
-Copy-Item -Path (Join-Path $root 'Admin Plugins\RtmpStreamer\plugin.def') -Destination $stageStreamer -Force
+Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\bin\x64\Release\*') -Destination $stageStreamer -Recurse
+Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\RTMPStreamerHelper\bin\x64\Release\*') -Destination $stageStreamer -Recurse -Force
+Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\plugin.def') -Destination $stageStreamer -Force
 
 # ── Create ZIPs ──
 Write-Host "`n[5/6] Creating release ZIPs..." -ForegroundColor Yellow
-$artifacts = @('Weather', 'RDP', 'RTMPDriver', 'RtmpStreamer')
+$artifacts = @('Weather', 'RDP', 'RTMPDriver', 'RTMPStreamer')
 foreach ($name in $artifacts) {
     $zipPath = Join-Path $buildDir "$name-v$version.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
@@ -137,7 +137,7 @@ if ($makensis) {
     $weatherDir = (Resolve-Path (Join-Path $staging 'Weather')).Path
     $rdpDir     = (Resolve-Path (Join-Path $staging 'RDP')).Path
     $driverDir  = (Resolve-Path (Join-Path $staging 'RTMPDriver')).Path
-    $streamerDir = (Resolve-Path (Join-Path $staging 'RtmpStreamer')).Path
+    $streamerDir = (Resolve-Path (Join-Path $staging 'RTMPStreamer')).Path
 
     & $makensis /DVERSION=$version `
         "/DWEATHER_DIR=$weatherDir" `
