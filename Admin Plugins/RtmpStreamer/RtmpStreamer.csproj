@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <ProjectGuid>{B1A2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>RtmpStreamer</RootNamespace>
+    <AssemblyName>RtmpStreamer</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <MipPluginDir>C:\Program Files\Milestone\MIPPlugins\RtmpStreamer\</MipPluginDir>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PluginLog.cs" />
+    <Compile Include="RtmpStreamerDefinition.cs" />
+    <Compile Include="Admin\RtmpStreamerItemManager.cs" />
+    <Compile Include="Admin\StreamConfigUserControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Admin\StreamConfigUserControl.Designer.cs">
+      <DependentUpon>StreamConfigUserControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Background\RtmpStreamerBackgroundPlugin.cs" />
+    <Compile Include="Streaming\CameraFrameSource.cs" />
+    <Compile Include="Streaming\GenericByteDataParser.cs" />
+    <Compile Include="Streaming\StreamSession.cs" />
+    <Compile Include="Streaming\StreamSessionManager.cs" />
+    <Compile Include="Rtmp\Amf0.cs" />
+    <Compile Include="Rtmp\RtmpPublisher.cs" />
+    <Compile Include="Rtmp\FlvMuxer.cs" />
+    <Compile Include="Rtmp\SilentAacGenerator.cs" />
+    <Compile Include="Rtmp\RtmpChunkWriter.cs" />
+    <Compile Include="Messaging\StreamStatusData.cs" />
+    <Compile Include="Admin\HtmlHelpUserControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SystemLog.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Admin\HelpPage.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Admin\StreamConfigUserControl.resx">
+      <DependentUpon>StreamConfigUserControl.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Build dependency: ensure helper exe is built before plugin -->
+    <ProjectReference Include="RtmpStreamerHelper\RtmpStreamerHelper.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+net stop MilestoneEventServerService 2&gt;nul
+taskkill /f /im VideoOS.Administration.exe 2&gt;nul
+taskkill /f /im RtmpStreamerHelper.exe 2&gt;nul
+ping -n 4 127.0.0.1 &gt;nul
+if not exist "$(MipPluginDir)" mkdir "$(MipPluginDir)"
+exit /b 0
+    </PreBuildEvent>
+    <PostBuildEvent>
+xcopy /y /d /e /i "$(TargetDir)*" "$(MipPluginDir)" &gt;nul 2&gt;nul
+copy /y "$(ProjectDir)plugin.def" "$(MipPluginDir)" &gt;nul 2&gt;nul
+xcopy /y /d /e /i "$(ProjectDir)RtmpStreamerHelper\bin\x64\$(ConfigurationName)\*" "$(MipPluginDir)" &gt;nul 2&gt;nul
+net start MilestoneEventServerService 2&gt;nul
+start "" "C:\Program Files\Milestone\XProtect Management Client\VideoOS.Administration.exe" 2&gt;nul
+exit /b 0
+    </PostBuildEvent>
+  </PropertyGroup>
+</Project>

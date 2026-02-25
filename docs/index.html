@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MSC Community Plugins for Milestone XProtect&trade;</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-hover: #1c2129;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-hover: #79b8ff;
+      --green: #3fb950;
+      --orange: #d29922;
+      --purple: #bc8cff;
+      --red: #f85149;
+      --card-sc: #1a3a2a;
+      --card-dd: #2a2a1a;
+      --card-ap: #1a1a3a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      background: rgba(13, 17, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 14px 0;
+    }
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    nav .logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    nav .logo span { color: var(--accent); }
+    nav .nav-links { display: flex; gap: 24px; }
+    nav .nav-links a {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      transition: color 0.15s;
+    }
+    nav .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 80px 0 60px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero .badge {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p {
+      color: var(--text-muted);
+      font-size: 1.15rem;
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+    .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      text-decoration: none;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent);
+      text-decoration: none;
+    }
+    .btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+    .disclaimer {
+      margin-top: 24px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── Sections ── */
+    section { padding: 64px 0; }
+    section + section { border-top: 1px solid var(--border); }
+    .section-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .section-header h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* ── Category groups ── */
+    .category {
+      margin-bottom: 40px;
+    }
+    .category:last-child { margin-bottom: 0; }
+    .category-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+      padding: 4px 12px;
+      border-radius: 6px;
+    }
+    .category-label.sc { background: var(--card-sc); color: var(--green); }
+    .category-label.dd { background: var(--card-dd); color: var(--orange); }
+    .category-label.ap { background: var(--card-ap); color: var(--purple); }
+
+    /* ── Plugin list ── */
+    .plugin-list {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .plugin-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--surface);
+      transition: background 0.12s;
+    }
+    .plugin-row:not(:last-child) {
+      border-bottom: 1px solid var(--border);
+    }
+    .plugin-row:hover { background: var(--surface-hover); }
+    .plugin-icon {
+      font-size: 1.35rem;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .plugin-icon.sc { background: var(--card-sc); }
+    .plugin-icon.dd { background: var(--card-dd); }
+    .plugin-icon.ap { background: var(--card-ap); }
+    .plugin-info { flex: 1; min-width: 0; }
+    .plugin-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .plugin-desc {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── Download section ── */
+    .download-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .download-option {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px;
+    }
+    .download-option h3 {
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+    }
+    .download-option .rec {
+      display: inline-block;
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--green);
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .download-option p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .download-option .btn { width: 100%; justify-content: center; }
+    .download-option ul {
+      list-style: none;
+      margin-top: 12px;
+    }
+    .download-option ul li {
+      padding: 6px 0;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+    }
+    .download-option ul li:first-child { border-top: none; }
+    .download-option ul li a { font-weight: 500; }
+
+    /* ── Install paths table ── */
+    .install-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+      font-size: 0.9rem;
+    }
+    .install-table th,
+    .install-table td {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .install-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .install-table code {
+      background: rgba(88, 166, 255, 0.08);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    /* ── Requirements ── */
+    .req-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .req-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .req-item h4 {
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+    }
+    .req-item p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--text-muted); }
+    footer a:hover { color: var(--accent); }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .hero h1 { font-size: 2rem; }
+      .download-grid { grid-template-columns: 1fr; }
+      nav .nav-links { gap: 14px; }
+    }
+
+    /* ── Note box ── */
+    .note {
+      background: rgba(210, 153, 34, 0.08);
+      border: 1px solid rgba(210, 153, 34, 0.25);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-top: 20px;
+    }
+    .note strong { color: var(--orange); }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <div class="container">
+    <div class="logo"><span>MSC</span> Community Plugins</div>
+    <div class="nav-links">
+      <a href="#plugins">Plugins</a>
+      <a href="#download">Download</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/YOUR_USER/mscp">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <div class="container">
+    <div class="badge">Open Source &middot; MIT License</div>
+    <h1>Community Plugins for<br>Milestone <span>XProtect&trade;</span></h1>
+    <p>A collection of open-source plugins and drivers that extend Milestone XProtect&trade; with weather overlays, RDP sessions, RTMP streaming, and more.</p>
+    <div class="hero-buttons">
+      <a href="https://github.com/YOUR_USER/mscp/releases/latest" class="btn btn-primary">
+        <svg viewBox="0 0 16 16"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14ZM7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z"/></svg>
+        Download Installer
+      </a>
+      <a href="https://github.com/YOUR_USER/mscp" class="btn btn-secondary">
+        <svg viewBox="0 0 16 16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+    <p class="disclaimer">This is an independent open source project and is not affiliated with, endorsed by, or supported by Milestone Systems. XProtect&trade; is a trademark of Milestone Systems A/S.</p>
+  </div>
+</div>
+
+<!-- ── Plugins ── -->
+<section id="plugins">
+  <div class="container">
+    <div class="section-header">
+      <h2>Plugins &amp; Drivers</h2>
+      <p>Pick and choose what you need -; install all or just the ones you want.</p>
+    </div>
+
+    <!-- Smart Client Plugins -->
+    <div class="category">
+      <div class="category-label sc">&#9679; Smart Client Plugins</div>
+      <div class="plugin-list">
+        <div class="plugin-row">
+          <div class="plugin-icon sc">&#9925;</div>
+          <div class="plugin-info">
+            <div class="plugin-name">Weather</div>
+            <div class="plugin-desc">Live weather display in Smart Client view items, powered by Open-Meteo -; no API key needed</div>
+          </div>
+        </div>
+        <div class="plugin-row">
+          <div class="plugin-icon sc">&#128421;</div>
+          <div class="plugin-info">
+            <div class="plugin-name">RDP</div>
+            <div class="plugin-desc">Embedded interactive Remote Desktop sessions in Smart Client view items</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Device Drivers -->
+    <div class="category">
+      <div class="category-label dd">&#9679; Device Drivers</div>
+      <div class="plugin-list">
+        <div class="plugin-row">
+          <div class="plugin-icon dd">&#128249;</div>
+          <div class="plugin-info">
+            <div class="plugin-name">RTMP Push Driver</div>
+            <div class="plugin-desc">Receive RTMP/RTMPS push streams (H.264) directly into XProtect&trade; as camera devices</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Plugins -->
+    <div class="category">
+      <div class="category-label ap">&#9679; Admin Plugins</div>
+      <div class="plugin-list">
+        <div class="plugin-row">
+          <div class="plugin-icon ap">&#128225;</div>
+          <div class="plugin-info">
+            <div class="plugin-name">RTMP Streamer</div>
+            <div class="plugin-desc">Stream XProtect&trade; cameras to RTMP destinations (YouTube, Twitch, Facebook) pure H.264 passthrough</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Download ── -->
+<section id="download">
+  <div class="container">
+    <div class="section-header">
+      <h2>Download</h2>
+      <p>Get the latest release from GitHub.</p>
+    </div>
+
+    <div class="download-grid">
+      <div class="download-option">
+        <h3>Unified Installer <span class="rec">Recommended</span></h3>
+        <p>Single installer with component selection. Choose exactly which plugins and drivers to install. Handles service restarts automatically.</p>
+        <a href="https://github.com/YOUR_USER/mscp/releases/latest" class="btn btn-primary">
+          <svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:currentColor"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14ZM7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z"/></svg>
+          Download MSCPlugins-Setup.exe
+        </a>
+      </div>
+
+      <div class="download-option">
+        <h3>Individual ZIPs</h3>
+        <p>Download only the plugin you need. Extract to the correct Milestone directory and restart the relevant service.</p>
+        <ul>
+          <li>
+            <span>Weather</span>
+            <a href="https://github.com/YOUR_USER/mscp/releases/latest">Download ZIP</a>
+          </li>
+          <li>
+            <span>RDP</span>
+            <a href="https://github.com/YOUR_USER/mscp/releases/latest">Download ZIP</a>
+          </li>
+          <li>
+            <span>RTMPDriver</span>
+            <a href="https://github.com/YOUR_USER/mscp/releases/latest">Download ZIP</a>
+          </li>
+          <li>
+            <span>RtmpStreamer</span>
+            <a href="https://github.com/YOUR_USER/mscp/releases/latest">Download ZIP</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Note:</strong> Always <strong>unblock</strong> downloaded ZIP files before extracting (right-click &rarr; Properties &rarr; Unblock). Windows marks downloaded files as untrusted and will block the DLLs from loading.
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="container">
+    <p>
+      MSC Community Plugins &middot; <a href="https://github.com/YOUR_USER/mscp">GitHub</a> &middot; <a href="https://github.com/YOUR_USER/mscp/blob/main/LICENSE">MIT License</a>
+    </p>
+    <p style="margin-top: 6px;">Not affiliated with or supported by Milestone Systems. XProtect&trade; is a trademark of Milestone Systems A/S.</p>
+  </div>
+</footer>
+
+<!-- ── Dynamic release links (fetches latest from GitHub API) ── -->
+<script>
+(function () {
+  // Replace with your actual GitHub user/org and repo name
+  var REPO = 'YOUR_USER/mscp';
+  var API  = 'https://api.github.com/repos/' + REPO + '/releases/latest';
+
+  fetch(API)
+    .then(function (r) { return r.json(); })
+    .then(function (release) {
+      if (!release || !release.assets) return;
+
+      var assets = release.assets;
+      var tag = release.tag_name;
+
+      // Update installer button
+      var installer = assets.find(function (a) { return a.name.endsWith('-Setup.exe'); });
+      if (installer) {
+        var installerBtns = document.querySelectorAll('a.btn-primary[href*="releases/latest"]');
+        installerBtns.forEach(function (btn) {
+          btn.href = installer.browser_download_url;
+        });
+      }
+
+      // Update individual ZIP links
+      var zipMap = { 'Weather': null, 'RDP': null, 'RTMPDriver': null, 'RtmpStreamer': null };
+      assets.forEach(function (a) {
+        for (var key in zipMap) {
+          if (a.name.indexOf(key) === 0 && a.name.endsWith('.zip')) {
+            zipMap[key] = a.browser_download_url;
+          }
+        }
+      });
+
+      var zipItems = document.querySelectorAll('.download-option ul li');
+      zipItems.forEach(function (li) {
+        var name = li.querySelector('span').textContent.trim();
+        var link = li.querySelector('a');
+        if (zipMap[name]) {
+          link.href = zipMap[name];
+          link.textContent = name + '-' + tag + '.zip';
+        }
+      });
+
+      // Add version badge to hero
+      var badge = document.querySelector('.hero .badge');
+      if (badge && tag) {
+        badge.textContent = 'Open Source \u00b7 MIT License \u00b7 Latest: ' + tag;
+      }
+    })
+    .catch(function () { /* GitHub API failed, links stay as fallback */ });
+})();
+</script>
+
+</body>
+</html>

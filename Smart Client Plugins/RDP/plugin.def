@@ -1,0 +1,4 @@
+<plugin>
+   <file name="RDP.dll"/>
+   <load env="SmartClient"/>
+</plugin>

@@ -1,0 +1,30 @@
+<external:PropertiesWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="RDP.Client.RDPPropertiesWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="260"
+    d:DesignWidth="250">
+    <Grid Margin="5">
+        <GroupBox Header="Remote Desktop Connection">
+            <StackPanel Margin="5">
+                <Label Content="Name:" />
+                <TextBox x:Name="nameTextBox" Padding="4" />
+                <Label Content="IP Address:" Margin="0,8,0,0" />
+                <TextBox x:Name="ipTextBox" Padding="4" />
+                <Label Content="Username:" Margin="0,8,0,0" />
+                <TextBox x:Name="usernameTextBox" Padding="4" />
+                <Separator Margin="0,12,0,8" />
+                <CheckBox x:Name="enableNlaCheckBox"
+                          Content="Require NLA (Network Level Authentication)"
+                          Margin="0,4,0,0" />
+                <CheckBox x:Name="enableClipboardCheckBox"
+                          Content="Enable clipboard redirection"
+                          Margin="0,4,0,0" />
+            </StackPanel>
+        </GroupBox>
+    </Grid>
+</external:PropertiesWpfUserControl>

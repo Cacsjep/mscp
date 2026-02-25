@@ -1,0 +1,4 @@
+<plugin>
+   <file name="RtmpStreamer.dll"/>
+   <load env="Service, Administration"/>
+</plugin>

@@ -1,0 +1,156 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Matrix build: each plugin builds in parallel ──
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Weather
+            solution: MSCPlugins.sln
+            platform: Any CPU
+            msbuild_targets: Weather
+            stage_from: Smart Client Plugins\Weather\bin\Release\net48
+            stage_to: Weather
+            extra_flags: /p:CIBuild=true
+
+          - name: RDP
+            solution: MSCPlugins.sln
+            platform: Any CPU
+            msbuild_targets: RDP
+            stage_from: Smart Client Plugins\RDP\bin\Release\net48
+            stage_to: RDP
+            extra_flags: /p:CIBuild=true
+
+          - name: RTMPDriver
+            solution: MSCPlugins.sln
+            platform: Any CPU
+            msbuild_targets: RTMPDriver
+            stage_from: Device Drivers\Rtmp\RTMPDriver\bin\Release
+            stage_to: RTMPDriver
+            extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
+
+          - name: RtmpStreamer
+            solution: MSCPlugins.sln
+            platform: x64
+            msbuild_targets: RtmpStreamer;RtmpStreamerHelper
+            stage_from: Admin Plugins\RtmpStreamer\bin\x64\Release
+            stage_to: RtmpStreamer
+            extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore MSCPlugins.sln
+
+      - name: Build ${{ matrix.name }}
+        run: >
+          msbuild ${{ matrix.solution }}
+          /p:Configuration=Release
+          /p:Platform="${{ matrix.platform }}"
+          /t:${{ matrix.msbuild_targets }}
+          ${{ matrix.extra_flags }}
+
+      - name: Stage ${{ matrix.name }}
+        run: |
+          New-Item -ItemType Directory -Path staging\${{ matrix.stage_to }} -Force
+          Copy-Item -Path "${{ matrix.stage_from }}\*" -Destination staging\${{ matrix.stage_to }} -Recurse
+        shell: pwsh
+
+      - name: Stage RtmpStreamer extras
+        if: matrix.name == 'RtmpStreamer'
+        run: |
+          Copy-Item -Path "Admin Plugins\RtmpStreamer\RtmpStreamerHelper\bin\x64\Release\*" -Destination staging\RtmpStreamer -Recurse -Force
+          Copy-Item -Path "Admin Plugins\RtmpStreamer\plugin.def" -Destination staging\RtmpStreamer -Force
+        shell: pwsh
+
+      - name: Create ZIP
+        run: Compress-Archive -Path staging\${{ matrix.stage_to }} -DestinationPath ${{ matrix.name }}-${{ github.ref_name }}.zip
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}-${{ github.ref_name }}.zip
+
+  # ── Collect all artifacts, build unified installer, create release ──
+  release:
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Extract staging directories
+        run: |
+          foreach ($name in @('Weather', 'RDP', 'RTMPDriver', 'RtmpStreamer')) {
+            $zip = Get-ChildItem "artifacts\$name\*.zip" | Select-Object -First 1
+            Expand-Archive -Path $zip.FullName -DestinationPath staging -Force
+          }
+        shell: pwsh
+
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+        shell: pwsh
+
+      - name: Build NSIS installer
+        run: |
+          $version = '${{ github.ref_name }}' -replace '^v',''
+          $weatherDir  = (Resolve-Path 'staging\Weather').Path
+          $rdpDir      = (Resolve-Path 'staging\RDP').Path
+          $driverDir   = (Resolve-Path 'staging\RTMPDriver').Path
+          $streamerDir = (Resolve-Path 'staging\RtmpStreamer').Path
+          $outDir = (Resolve-Path '.').Path
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" `
+            /DVERSION=$version `
+            "/DWEATHER_DIR=$weatherDir" `
+            "/DRDP_DIR=$rdpDir" `
+            "/DRTMPDRIVER_DIR=$driverDir" `
+            "/DRTMPSTREAMER_DIR=$streamerDir" `
+            "/DOUTDIR=$outDir" `
+            installer\MSCPlugins.nsi
+        shell: pwsh
+
+      - name: Collect release files
+        run: |
+          Copy-Item artifacts\Weather\*.zip -Destination .
+          Copy-Item artifacts\RDP\*.zip -Destination .
+          Copy-Item artifacts\RTMPDriver\*.zip -Destination .
+          Copy-Item artifacts\RtmpStreamer\*.zip -Destination .
+        shell: pwsh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Weather-${{ github.ref_name }}.zip
+            RDP-${{ github.ref_name }}.zip
+            RTMPDriver-${{ github.ref_name }}.zip
+            RtmpStreamer-${{ github.ref_name }}.zip
+            MSCPlugins-${{ github.ref_name }}-Setup.exe
+          generate_release_notes: true

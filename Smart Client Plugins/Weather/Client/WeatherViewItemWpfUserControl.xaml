@@ -1,0 +1,195 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="Weather.Client.WeatherViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:fa5="http://schemas.fontawesome.com/icons/"
+    mc:Ignorable="d"
+    d:DesignHeight="400"
+    d:DesignWidth="600"
+    PreviewMouseLeftButtonUp="OnMouseLeftUp"
+    PreviewMouseDoubleClick="OnMouseDoubleClick">
+    <Grid Background="#FF1C2326" SizeChanged="OnSizeChanged">
+        <!-- Weather display (live mode, data loaded) -->
+        <Grid x:Name="weatherDisplay" Visibility="Collapsed">
+            <Grid x:Name="weatherContent" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid.LayoutTransform>
+                    <ScaleTransform x:Name="weatherScale" ScaleX="1" ScaleY="1" />
+                </Grid.LayoutTransform>
+
+                <!-- Main weather icon (Row/Column set in code) -->
+                <fa5:ImageAwesome x:Name="weatherIcon"
+                                  Icon="Solid_Sun"
+                                  Width="64" Height="64"
+                                  Foreground="#FFFFD700"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,0,8" />
+
+                <!-- Details panel (Row/Column set in code) -->
+                <StackPanel x:Name="detailsPanel">
+                    <!-- Temperature -->
+                    <TextBlock x:Name="temperatureText"
+                               Foreground="White"
+                               FontSize="40"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center" />
+
+                    <!-- Weather description -->
+                    <TextBlock x:Name="descriptionText"
+                               Foreground="#FFAAAAAA"
+                               FontSize="16"
+                               HorizontalAlignment="Center"
+                               Margin="0,2,0,0" />
+
+                    <!-- Feels like -->
+                    <TextBlock x:Name="feelsLikeText"
+                               Foreground="#FF888888"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               Margin="0,8,0,0" />
+
+                    <!-- Info rows -->
+                    <Grid x:Name="infoGrid" HorizontalAlignment="Center" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="30" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Humidity -->
+                        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,2">
+                            <fa5:ImageAwesome Icon="Solid_Tint" Width="14" Height="14"
+                                              Foreground="#FF5B9BD5" Margin="0,0,6,0"
+                                              VerticalAlignment="Center" />
+                            <TextBlock x:Name="humidityText" Foreground="#FFAAAAAA" FontSize="13"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Wind -->
+                        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Margin="0,2">
+                            <fa5:ImageAwesome Icon="Solid_Wind" Width="14" Height="14"
+                                              Foreground="#FFA0A0A0" Margin="0,0,6,0"
+                                              VerticalAlignment="Center" />
+                            <TextBlock x:Name="windText" Foreground="#FFAAAAAA" FontSize="13"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Cloud cover -->
+                        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,2">
+                            <fa5:ImageAwesome Icon="Solid_Cloud" Width="14" Height="14"
+                                              Foreground="#FFA0A0A0" Margin="0,0,6,0"
+                                              VerticalAlignment="Center" />
+                            <TextBlock x:Name="cloudText" Foreground="#FFAAAAAA" FontSize="13"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Pressure -->
+                        <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="0,2">
+                            <fa5:ImageAwesome Icon="Solid_ThermometerHalf" Width="14" Height="14"
+                                              Foreground="#FFA0A0A0" Margin="0,0,6,0"
+                                              VerticalAlignment="Center" />
+                            <TextBlock x:Name="pressureText" Foreground="#FFAAAAAA" FontSize="13"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Location name -->
+                    <TextBlock x:Name="locationText"
+                               Foreground="#FF88BBFF"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               Margin="0,12,0,0" />
+
+                    <!-- Last updated -->
+                    <TextBlock x:Name="updatedText"
+                               Foreground="#FF666666"
+                               FontSize="11"
+                               HorizontalAlignment="Center"
+                               Margin="0,4,0,0" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- Loading overlay -->
+        <Grid x:Name="loadingOverlay" Background="#FF1C2326" Visibility="Collapsed">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel.LayoutTransform>
+                    <ScaleTransform x:Name="loadingScale" ScaleX="1" ScaleY="1" />
+                </StackPanel.LayoutTransform>
+                <fa5:ImageAwesome Icon="Solid_CircleNotch"
+                                  Spin="True" SpinDuration="1"
+                                  Width="40" Height="40"
+                                  Foreground="#FF88BBFF"
+                                  HorizontalAlignment="Center"
+                                  Margin="0,0,0,16" />
+                <TextBlock x:Name="loadingNameText"
+                           Foreground="White"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="Loading weather..."
+                           Foreground="#FF88BBFF"
+                           FontSize="13"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Error overlay -->
+        <Grid x:Name="errorOverlay" Background="#FF1C2326" Visibility="Collapsed">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="300">
+                <StackPanel.LayoutTransform>
+                    <ScaleTransform x:Name="errorScale" ScaleX="1" ScaleY="1" />
+                </StackPanel.LayoutTransform>
+                <fa5:ImageAwesome Icon="Solid_ExclamationTriangle"
+                                  Width="40" Height="40"
+                                  Foreground="#FFFF6B6B"
+                                  HorizontalAlignment="Center"
+                                  Margin="0,0,0,12" />
+                <TextBlock x:Name="errorText"
+                           Foreground="#FFFF6B6B"
+                           FontSize="13"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Setup mode overlay -->
+        <Grid x:Name="setupOverlay" Background="#FF1C2326" Visibility="Collapsed">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel.LayoutTransform>
+                    <ScaleTransform x:Name="setupScale" ScaleX="1" ScaleY="1" />
+                </StackPanel.LayoutTransform>
+                <TextBlock x:Name="setupNameText"
+                           Foreground="White"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,2" />
+                <TextBlock Text="Weather"
+                           Foreground="#FFAAAAAA"
+                           FontSize="13"
+                           HorizontalAlignment="Center" />
+                <TextBlock x:Name="setupInfoText"
+                           Foreground="#FF88BBFF"
+                           FontSize="13"
+                           HorizontalAlignment="Center"
+                           Margin="0,10,0,0"
+                           TextAlignment="Center" />
+                <TextBlock Text="Configure location in the Properties panel"
+                           Foreground="#FF666666"
+                           FontSize="11"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</external:ViewItemWpfUserControl>

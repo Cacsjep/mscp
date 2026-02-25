@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <ProjectGuid>{C2D3E4F5-A6B7-8901-CDEF-123456789ABC}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>RtmpStreamerHelper</RootNamespace>
+    <AssemblyName>RtmpStreamerHelper</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*" />
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform.SDK" Version="*" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Helper-specific files -->
+    <Compile Include="Program.cs" />
+    <Compile Include="PluginLog.cs" />
+    <!-- Shared source files from parent project -->
+    <Compile Include="..\Rtmp\Amf0.cs" Link="Rtmp\Amf0.cs" />
+    <Compile Include="..\Rtmp\RtmpPublisher.cs" Link="Rtmp\RtmpPublisher.cs" />
+    <Compile Include="..\Rtmp\FlvMuxer.cs" Link="Rtmp\FlvMuxer.cs" />
+    <Compile Include="..\Rtmp\SilentAacGenerator.cs" Link="Rtmp\SilentAacGenerator.cs" />
+    <Compile Include="..\Rtmp\RtmpChunkWriter.cs" Link="Rtmp\RtmpChunkWriter.cs" />
+    <Compile Include="..\Streaming\CameraFrameSource.cs" Link="Streaming\CameraFrameSource.cs" />
+    <Compile Include="..\Streaming\GenericByteDataParser.cs" Link="Streaming\GenericByteDataParser.cs" />
+    <Compile Include="..\Streaming\StreamSession.cs" Link="Streaming\StreamSession.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
