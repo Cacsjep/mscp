@@ -165,7 +165,7 @@ Export-PfxCertificate -Cert $cert `
 ### Logging
 
 ```
-C:\ProgramData\Milestone\XProtect™ Recording Server\Logs\DriverFramework_RTMPDriver.log
+C:\ProgramData\Milestone\XProtect Recording Server\Logs\DriverFramework_RTMPDriver.log
 ```
 
 ## Known Limitations

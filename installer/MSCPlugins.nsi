@@ -47,7 +47,7 @@ BrandingText "MSC Community Plugins v${VERSION}"
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
 !define MUI_ABORTWARNING
 
-!define MUI_WELCOMEPAGE_TEXT "This installer will install the selected Milestone XProtect community plugins and drivers.$\r$\n$\r$\nRunning services will be stopped as needed and restarted after installation.$\r$\n$\r$\nClick Next to continue."
+!define MUI_WELCOMEPAGE_TEXT "This installer will install the selected Milestone XProtect$\u2122 community plugins and drivers.$\r$\n$\r$\nRunning services will be stopped as needed and restarted after installation.$\r$\n$\r$\nClick Next to continue."
 
 ; ── Pages ──
 !insertmacro MUI_PAGE_WELCOME
@@ -218,13 +218,13 @@ SectionEnd
 
 ; ── Component descriptions ──
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SC_GROUP}    "Plugins for the XProtect Smart Client"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SC_GROUP}    "Plugins for the XProtect$\u2122 Smart Client"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_WEATHER}     "Display live weather in Smart Client view items (Open-Meteo)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RDP}         "Embed interactive RDP sessions in Smart Client view items"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DD_GROUP}    "Device drivers for the XProtect Recording Server"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPDRIVER}  "Receive RTMP push streams (H.264) directly into XProtect"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}    "Plugins for the XProtect Management Client / Event Server"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect cameras to RTMP destinations (YouTube, Twitch, etc.)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DD_GROUP}    "Device drivers for the XProtect$\u2122 Recording Server"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPDRIVER}  "Receive RTMP push streams (H.264) directly into XProtect$\u2122"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}    "Plugins for the XProtect$\u2122 Management Client / Event Server"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect$\u2122 cameras to RTMP destinations (YouTube, Twitch, etc.)"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ── Uninstall Section ──

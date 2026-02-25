@@ -287,7 +287,7 @@ var uri = $"{serverId.ServerScheme}://{serverId.ServerHostname}:{serverId.Server
 ### Plugin Log (Event Server log files)
 
 ```csharp
-// Appears in: C:\ProgramData\Milestone\XProtect™ Event Server\Logs\
+// Appears in: C:\ProgramData\Milestone\XProtect Event Server\Logs\
 EnvironmentManager.Instance.Log(false, "MyPlugin", "Info message");           // isError=false
 EnvironmentManager.Instance.Log(true, "MyPlugin", "Error message");           // isError=true
 EnvironmentManager.Instance.Log(true, "MyPlugin", "Error", new[] { ex });     // With exception

@@ -101,7 +101,7 @@ When you select an enabled stream, the detail panel shows a live log at the bott
 ### Event Server Logs
 
 ```
-C:\ProgramData\Milestone\XProtect™ Event Server\Logs\
+C:\ProgramData\Milestone\XProtect Event Server\Logs\
 ```
 
 ### Milestone System Log
