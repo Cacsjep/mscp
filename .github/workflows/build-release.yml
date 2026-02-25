@@ -17,33 +17,29 @@ jobs:
       matrix:
         include:
           - name: Weather
-            solution: MSCPlugins.sln
+            projects: Smart Client Plugins\Weather\Weather.csproj
             platform: Any CPU
-            msbuild_targets: Weather
             stage_from: Smart Client Plugins\Weather\bin\Release\net48
             stage_to: Weather
             extra_flags: /p:CIBuild=true
 
           - name: RDP
-            solution: MSCPlugins.sln
+            projects: Smart Client Plugins\RDP\RDP.csproj
             platform: Any CPU
-            msbuild_targets: RDP
             stage_from: Smart Client Plugins\RDP\bin\Release\net48
             stage_to: RDP
             extra_flags: /p:CIBuild=true
 
           - name: RTMPDriver
-            solution: MSCPlugins.sln
+            projects: Device Drivers\Rtmp\RTMPDriver\RTMPDriver.csproj
             platform: Any CPU
-            msbuild_targets: RTMPDriver
             stage_from: Device Drivers\Rtmp\RTMPDriver\bin\Release
             stage_to: RTMPDriver
             extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
 
           - name: RtmpStreamer
-            solution: MSCPlugins.sln
+            projects: Admin Plugins\RtmpStreamer\RtmpStreamer.csproj;Admin Plugins\RtmpStreamer\RtmpStreamerHelper\RtmpStreamerHelper.csproj
             platform: x64
-            msbuild_targets: RtmpStreamer;RtmpStreamerHelper
             stage_from: Admin Plugins\RtmpStreamer\bin\x64\Release
             stage_to: RtmpStreamer
             extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
@@ -62,12 +58,13 @@ jobs:
         run: nuget restore MSCPlugins.sln
 
       - name: Build ${{ matrix.name }}
-        run: >
-          msbuild ${{ matrix.solution }}
-          /p:Configuration=Release
-          /p:Platform="${{ matrix.platform }}"
-          /t:${{ matrix.msbuild_targets }}
-          ${{ matrix.extra_flags }}
+        run: |
+          $projects = "${{ matrix.projects }}" -split ";"
+          foreach ($proj in $projects) {
+            msbuild $proj /p:Configuration=Release /p:Platform="${{ matrix.platform }}" ${{ matrix.extra_flags }}
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+        shell: pwsh
 
       - name: Stage ${{ matrix.name }}
         run: |
