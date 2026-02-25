@@ -83,7 +83,7 @@ Var LOG_HANDLE           ; file handle for install log
 ; Check if a process is running
 ;   ${RESULT_VAR} = "1" if running, "0" if not
 !macro _CheckProcessRunning PROC_NAME RESULT_VAR
-  nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq ${PROC_NAME}" 2>nul | findstr /I /C:"${PROC_NAME}"'
+  nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq ${PROC_NAME}" /FO CSV /NH 2>nul | findstr /I /C:"${PROC_NAME}"'
   Pop ${RESULT_VAR}
   Pop $9
   ${If} ${RESULT_VAR} == 0
@@ -156,7 +156,7 @@ Section "-StopServices"
   ; ── Smart Client plugins selected → close Smart Client ──
   ${If} $STOP_SC == "1"
     !insertmacro _LogMsg "Closing Smart Client (${SC_PROCESS})..."
-    nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}" 2>nul'
+    nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}"'
     Pop $0
     !insertmacro _LogMsg "taskkill Smart Client exit code: $0"
     Sleep 2000
@@ -177,7 +177,7 @@ Section "-StopServices"
   ; ── Admin Plugins selected → close Management Client + stop Event Server ──
   ${If} $STOP_ES == "1"
     !insertmacro _LogMsg "Closing Management Client (${MC_PROCESS})..."
-    nsExec::ExecToLog 'taskkill /F /IM "${MC_PROCESS}" 2>nul'
+    nsExec::ExecToLog 'taskkill /F /IM "${MC_PROCESS}"'
     Pop $0
     !insertmacro _LogMsg "taskkill Management Client exit code: $0"
 
@@ -249,38 +249,26 @@ SectionGroupEnd
 SectionGroup "Device Drivers" SEC_DD_GROUP
 
   Section "RTMP Push Driver" SEC_RTMPDRIVER
-    ; ── Gate: wait for DriverFrameworkProcess to exit before copying ──
-    ;    The Recording Server was stopped in -StopServices, but the
-    ;    child process may take time to release file locks on driver DLLs.
+    ; ── Gate: ensure DriverFrameworkProcess is not locking driver DLLs ──
+    _dfp_check:
     !insertmacro _CheckProcessRunning "${DFP_PROCESS}" $R1
     !insertmacro _LogMsg "DriverFrameworkProcess running: $R1"
 
     ${If} $R1 == "1"
-      !insertmacro _LogMsg "Waiting up to 60 s for ${DFP_PROCESS} to exit..."
-      StrCpy $R0 0
+      MessageBox MB_YESNO|MB_ICONEXCLAMATION \
+        "${DFP_PROCESS} is still running and will lock driver files.$\r$\n$\r$\nKill the process now?" \
+        IDNO _dfp_skip
 
-      _dfp_wait:
-        Sleep 5000
-        IntOp $R0 $R0 + 1
-        !insertmacro _CheckProcessRunning "${DFP_PROCESS}" $R1
-        !insertmacro _LogMsg "  poll $R0/12 -- running: $R1"
-        ${If} $R1 == "0"
-          Goto _dfp_done
-        ${EndIf}
-        ${If} $R0 >= 12
-          Goto _dfp_timeout
-        ${EndIf}
-        Goto _dfp_wait
+      ; — Yes: kill the process —
+      !insertmacro _LogMsg "Killing ${DFP_PROCESS}..."
+      nsExec::ExecToLog 'taskkill /F /IM "${DFP_PROCESS}"'
+      Pop $0
+      !insertmacro _LogMsg "taskkill ${DFP_PROCESS} exit code: $0"
+      Sleep 3000
+      Goto _dfp_check
 
-      _dfp_timeout:
-        !insertmacro _LogMsg "TIMEOUT: ${DFP_PROCESS} still running after 60 s -- aborting."
-        MessageBox MB_OK|MB_ICONSTOP \
-          "The Recording Server driver process (${DFP_PROCESS}) is still running after 60 seconds.$\r$\n$\r$\nThe ${RS_SERVICE} may not have shut down completely.$\r$\nDriver files are locked and the RTMP Driver cannot be installed.$\r$\n$\r$\nPlease stop the Recording Server manually and run the installer again."
-        Abort "Installation aborted - driver files locked by Recording Server."
-
-      _dfp_done:
-        !insertmacro _LogMsg "DriverFrameworkProcess exited."
-        Sleep 2000
+      _dfp_skip:
+        !insertmacro _LogMsg "User skipped killing ${DFP_PROCESS}."
     ${EndIf}
 
     SetOutPath "$INSTDIR\MIPDrivers\RTMPDriver"
@@ -419,16 +407,16 @@ FunctionEnd
 Section "Uninstall"
   ; ── Stop everything ──
   DetailPrint "Closing XProtect™ Smart Client..."
-  nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}" 2>nul'
+  nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}"'
   Pop $0
   DetailPrint "Closing XProtect™ Management Client..."
-  nsExec::ExecToLog 'taskkill /F /IM "${MC_PROCESS}" 2>nul'
+  nsExec::ExecToLog 'taskkill /F /IM "${MC_PROCESS}"'
   Pop $0
   DetailPrint "Stopping ${RS_SERVICE}..."
-  nsExec::ExecToLog 'net stop "${RS_SERVICE}" /y 2>nul'
+  nsExec::ExecToLog 'net stop "${RS_SERVICE}" /y'
   Pop $0
   DetailPrint "Stopping ${ES_SERVICE}..."
-  nsExec::ExecToLog 'net stop "${ES_SERVICE}" /y 2>nul'
+  nsExec::ExecToLog 'net stop "${ES_SERVICE}" /y'
   Pop $0
   Sleep 5000
 
