@@ -18,21 +18,21 @@ jobs:
         include:
           - name: Weather
             projects: Smart Client Plugins\Weather\Weather.csproj
-            platform: Any CPU
+            platform: AnyCPU
             stage_from: Smart Client Plugins\Weather\bin\Release\net48
             stage_to: Weather
             extra_flags: /p:CIBuild=true
 
           - name: RDP
             projects: Smart Client Plugins\RDP\RDP.csproj
-            platform: Any CPU
+            platform: AnyCPU
             stage_from: Smart Client Plugins\RDP\bin\Release\net48
             stage_to: RDP
             extra_flags: /p:CIBuild=true
 
           - name: RTMPDriver
             projects: Device Drivers\Rtmp\RTMPDriver\RTMPDriver.csproj
-            platform: Any CPU
+            platform: AnyCPU
             stage_from: Device Drivers\Rtmp\RTMPDriver\bin\Release
             stage_to: RTMPDriver
             extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
