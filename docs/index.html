@@ -517,26 +517,6 @@
         });
       }
 
-      // Update individual ZIP links
-      var zipMap = { 'Weather': null, 'RDP': null, 'RTMPDriver': null, 'RTMPStreamer': null };
-      assets.forEach(function (a) {
-        for (var key in zipMap) {
-          if (a.name.indexOf(key) === 0 && a.name.endsWith('.zip')) {
-            zipMap[key] = a.browser_download_url;
-          }
-        }
-      });
-
-      var zipItems = document.querySelectorAll('.download-option ul li');
-      zipItems.forEach(function (li) {
-        var name = li.querySelector('span').textContent.trim();
-        var link = li.querySelector('a');
-        if (zipMap[name]) {
-          link.href = zipMap[name];
-          link.textContent = name + '-' + tag + '.zip';
-        }
-      });
-
       // Add version badge to hero
       var badge = document.querySelector('.hero .badge');
       if (badge && tag) {
