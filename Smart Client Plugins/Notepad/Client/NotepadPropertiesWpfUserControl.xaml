@@ -1,0 +1,21 @@
+<external:PropertiesWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="Notepad.Client.NotepadPropertiesWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="200"
+    d:DesignWidth="250">
+    <Grid Margin="5">
+        <GroupBox Header="Notepad">
+            <StackPanel Margin="5">
+                <Label Content="Title:" />
+                <TextBox x:Name="titleTextBox" Padding="4" />
+                <Label Content="Font Size:" Margin="0,8,0,0" />
+                <TextBox x:Name="fontSizeTextBox" Padding="4" />
+            </StackPanel>
+        </GroupBox>
+    </Grid>
+</external:PropertiesWpfUserControl>

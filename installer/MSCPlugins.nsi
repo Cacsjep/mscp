@@ -33,6 +33,9 @@ BrandingText "MSC Community Plugins v${VERSION}"
 !ifndef RDP_DIR
   !define RDP_DIR "..\build\staging\RDP"
 !endif
+!ifndef NOTEPAD_DIR
+  !define NOTEPAD_DIR "..\build\staging\Notepad"
+!endif
 !ifndef RTMPDRIVER_DIR
   !define RTMPDRIVER_DIR "..\build\staging\RTMPDriver"
 !endif
@@ -240,6 +243,26 @@ SectionGroup "Smart Client Plugins" SEC_SC_GROUP
       "NoRepair" 1
   SectionEnd
 
+  Section "Notepad Plugin" SEC_NOTEPAD
+    SetOutPath "$INSTDIR\MIPPlugins\Notepad"
+    !insertmacro _LogMsg "Installing Notepad Plugin to $INSTDIR\MIPPlugins\Notepad..."
+    File /r "${NOTEPAD_DIR}\*.*"
+    !insertmacro _LogMsg "Notepad Plugin installed."
+
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
+      "DisplayName" "Notepad Plugin v${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
+      "UninstallString" "$\"$INSTDIR\MIPPlugins\Notepad\Uninstall.exe$\""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
+      "DisplayVersion" "${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
+      "Publisher" "MSC Community Plugins"
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
+      "NoModify" 1
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
+      "NoRepair" 1
+  SectionEnd
+
 SectionGroupEnd
 
 ; ══════════════════════════════════════════════════════════════
@@ -368,6 +391,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SC_GROUP}    "Plugins for the XProtect™ Smart Client"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_WEATHER}     "Display live weather in Smart Client view items (Open-Meteo)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RDP}         "Embed interactive RDP sessions in Smart Client view items"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_NOTEPAD}     "Simple text editor for operator notes in Smart Client view items"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DD_GROUP}    "Device drivers for the XProtect™ Recording Server"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPDRIVER}  "Receive RTMP push streams (H.264) directly into XProtect™"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}    "Plugins for the XProtect™ Management Client / Event Server"
@@ -387,6 +411,7 @@ Function ComponentsLeave
   ; Smart Client plugins → need to close Smart Client
   ${If} ${SectionIsSelected} ${SEC_WEATHER}
   ${OrIf} ${SectionIsSelected} ${SEC_RDP}
+  ${OrIf} ${SectionIsSelected} ${SEC_NOTEPAD}
     StrCpy $STOP_SC "1"
   ${EndIf}
 
@@ -423,6 +448,7 @@ Section "Uninstall"
   ; ── Remove plugin directories ──
   RMDir /r "$INSTDIR\MIPPlugins\Weather"
   RMDir /r "$INSTDIR\MIPPlugins\RDP"
+  RMDir /r "$INSTDIR\MIPPlugins\Notepad"
   RMDir /r "$INSTDIR\MIPDrivers\RTMPDriver"
   RMDir /r "$INSTDIR\MIPPlugins\RTMPStreamer"
 
@@ -433,6 +459,7 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MSCPlugins"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer"
 

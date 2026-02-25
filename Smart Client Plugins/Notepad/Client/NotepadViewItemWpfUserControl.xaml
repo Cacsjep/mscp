@@ -1,0 +1,94 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="Notepad.Client.NotepadViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="400"
+    d:DesignWidth="600"
+    PreviewMouseLeftButtonUp="OnMouseLeftUp"
+    PreviewMouseDoubleClick="OnMouseDoubleClick">
+    <Grid Background="#FF1C2326">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Title header bar -->
+        <Border Grid.Row="0" Background="#FF070809" Padding="10,6">
+            <DockPanel>
+                <Button x:Name="saveButton"
+                        DockPanel.Dock="Right"
+                        Content="Save"
+                        Click="SaveButton_Click"
+                        FontSize="11"
+                        Padding="8,2"
+                        Margin="6,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="White"
+                        Background="#FF2A5A8A"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        Visibility="Collapsed" />
+                <TextBlock x:Name="savedIndicator"
+                           DockPanel.Dock="Right"
+                           Foreground="#FF666666"
+                           FontSize="11"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0" />
+                <TextBlock x:Name="titleText"
+                           Foreground="#FF88BBFF"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <!-- Live mode: editable text area -->
+        <TextBox x:Name="noteTextBox"
+                 Grid.Row="1"
+                 AcceptsReturn="True"
+                 AcceptsTab="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
+                 Background="#FF1C2326"
+                 Foreground="#FFE0E0E0"
+                 CaretBrush="#FF88BBFF"
+                 SelectionBrush="#FF2A5A8A"
+                 BorderThickness="0"
+                 Padding="10,8"
+                 FontFamily="Consolas, Courier New, monospace"
+                 FontSize="14"
+                 Visibility="Collapsed" />
+
+        <!-- Setup mode overlay -->
+        <Grid x:Name="setupOverlay" Grid.Row="1" Background="#FF1C2326" Visibility="Collapsed">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock x:Name="setupTitleText"
+                           Foreground="White"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,2" />
+                <TextBlock Text="Notepad"
+                           Foreground="#FFAAAAAA"
+                           FontSize="13"
+                           HorizontalAlignment="Center" />
+                <TextBlock x:Name="setupInfoText"
+                           Foreground="#FF88BBFF"
+                           FontSize="13"
+                           HorizontalAlignment="Center"
+                           Margin="0,10,0,0"
+                           TextAlignment="Center" />
+                <TextBlock Text="Configure title and font size in the Properties panel"
+                           Foreground="#FF666666"
+                           FontSize="11"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</external:ViewItemWpfUserControl>

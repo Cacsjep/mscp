@@ -95,6 +95,11 @@ $stageRdp = Join-Path $staging 'RDP'
 New-Item -ItemType Directory -Path $stageRdp -Force | Out-Null
 Copy-Item -Path (Join-Path $root 'Smart Client Plugins\RDP\bin\Release\net48\*') -Destination $stageRdp -Recurse
 
+# Notepad
+$stageNotepad = Join-Path $staging 'Notepad'
+New-Item -ItemType Directory -Path $stageNotepad -Force | Out-Null
+Copy-Item -Path (Join-Path $root 'Smart Client Plugins\Notepad\bin\Release\net48\*') -Destination $stageNotepad -Recurse
+
 # RTMPDriver
 $stageDriver = Join-Path $staging 'RTMPDriver'
 New-Item -ItemType Directory -Path $stageDriver -Force | Out-Null
@@ -109,7 +114,7 @@ Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\plugin.def') -Desti
 
 # ── Create ZIPs ──
 Write-Host "`n[5/6] Creating release ZIPs..." -ForegroundColor Yellow
-$artifacts = @('Weather', 'RDP', 'RTMPDriver', 'RTMPStreamer')
+$artifacts = @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer')
 foreach ($name in $artifacts) {
     $zipPath = Join-Path $buildDir "$name-v$version.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
@@ -134,14 +139,16 @@ if (-not $makensis) {
 
 if ($makensis) {
     $nsiScript = Join-Path $root 'installer\MSCPlugins.nsi'
-    $weatherDir = (Resolve-Path (Join-Path $staging 'Weather')).Path
-    $rdpDir     = (Resolve-Path (Join-Path $staging 'RDP')).Path
-    $driverDir  = (Resolve-Path (Join-Path $staging 'RTMPDriver')).Path
+    $weatherDir  = (Resolve-Path (Join-Path $staging 'Weather')).Path
+    $rdpDir      = (Resolve-Path (Join-Path $staging 'RDP')).Path
+    $notepadDir  = (Resolve-Path (Join-Path $staging 'Notepad')).Path
+    $driverDir   = (Resolve-Path (Join-Path $staging 'RTMPDriver')).Path
     $streamerDir = (Resolve-Path (Join-Path $staging 'RTMPStreamer')).Path
 
     & $makensis /DVERSION=$version `
         "/DWEATHER_DIR=$weatherDir" `
         "/DRDP_DIR=$rdpDir" `
+        "/DNOTEPAD_DIR=$notepadDir" `
         "/DRTMPDRIVER_DIR=$driverDir" `
         "/DRTMPSTREAMER_DIR=$streamerDir" `
         "/DOUTDIR=$buildDir" `

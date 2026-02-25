@@ -14,6 +14,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 |---|---|---|
 | [Weather](Smart%20Client%20Plugins/Weather) | Smart Client | Live weather display in Smart Client view items (Open-Meteo) |
 | [RDP](Smart%20Client%20Plugins/RDP) | Smart Client | Embedded RDP sessions in Smart Client view items |
+| [Notepad](Smart%20Client%20Plugins/Notepad) | Smart Client | Simple text editor for operator notes in Smart Client view items |
 | [Rtmp](Device%20Drivers/Rtmp) | Device Driver | Receive RTMP/RTMPS push streams (H.264) directly into XProtect™ |
 | [RTMPStreamer](Admin%20Plugins/RTMPStreamer) | Admin Plugin | Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.) |
 
@@ -34,6 +35,7 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 |---|---|
 | Weather | `C:\Program Files\Milestone\MIPPlugins\Weather\` |
 | RDP | `C:\Program Files\Milestone\MIPPlugins\RDP\` |
+| Notepad | `C:\Program Files\Milestone\MIPPlugins\Notepad\` |
 | RTMPDriver | `C:\Program Files\Milestone\MIPDrivers\RTMPDriver\` |
 | RTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\` |
 
@@ -53,7 +55,8 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 mscp/
 ├── Smart Client Plugins/
 │   ├── Weather/                   Weather view item plugin
-│   └── RDP/                       RDP view item plugin
+│   ├── RDP/                       RDP view item plugin
+│   └── Notepad/                   Notepad view item plugin
 ├── Device Drivers/
 │   └── Rtmp/                      RTMP push stream driver
 ├── Admin Plugins/

@@ -30,6 +30,13 @@ jobs:
             stage_to: RDP
             extra_flags: /p:CIBuild=true
 
+          - name: Notepad
+            projects: Smart Client Plugins\Notepad\Notepad.csproj
+            platform: AnyCPU
+            stage_from: Smart Client Plugins\Notepad\bin\Release\net48
+            stage_to: Notepad
+            extra_flags: /p:CIBuild=true
+
           - name: RTMPDriver
             projects: Device Drivers\Rtmp\RTMPDriver\RTMPDriver.csproj
             platform: AnyCPU
@@ -105,7 +112,7 @@ jobs:
 
       - name: Extract staging directories
         run: |
-          foreach ($name in @('Weather', 'RDP', 'RTMPDriver', 'RTMPStreamer')) {
+          foreach ($name in @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer')) {
             $zip = Get-ChildItem "artifacts\$name\*.zip" | Select-Object -First 1
             Expand-Archive -Path $zip.FullName -DestinationPath staging -Force
           }
@@ -120,6 +127,7 @@ jobs:
           $version = '${{ github.ref_name }}' -replace '^v',''
           $weatherDir  = (Resolve-Path 'staging\Weather').Path
           $rdpDir      = (Resolve-Path 'staging\RDP').Path
+          $notepadDir  = (Resolve-Path 'staging\Notepad').Path
           $driverDir   = (Resolve-Path 'staging\RTMPDriver').Path
           $streamerDir = (Resolve-Path 'staging\RTMPStreamer').Path
           $outDir = (Resolve-Path '.').Path
@@ -127,6 +135,7 @@ jobs:
             /DVERSION=$version `
             "/DWEATHER_DIR=$weatherDir" `
             "/DRDP_DIR=$rdpDir" `
+            "/DNOTEPAD_DIR=$notepadDir" `
             "/DRTMPDRIVER_DIR=$driverDir" `
             "/DRTMPSTREAMER_DIR=$streamerDir" `
             "/DOUTDIR=$outDir" `
@@ -137,6 +146,7 @@ jobs:
         run: |
           Copy-Item artifacts\Weather\*.zip -Destination .
           Copy-Item artifacts\RDP\*.zip -Destination .
+          Copy-Item artifacts\Notepad\*.zip -Destination .
           Copy-Item artifacts\RTMPDriver\*.zip -Destination .
           Copy-Item artifacts\RTMPStreamer\*.zip -Destination .
         shell: pwsh
@@ -147,6 +157,7 @@ jobs:
           files: |
             Weather-${{ github.ref_name }}.zip
             RDP-${{ github.ref_name }}.zip
+            Notepad-${{ github.ref_name }}.zip
             RTMPDriver-${{ github.ref_name }}.zip
             RTMPStreamer-${{ github.ref_name }}.zip
             MSCPlugins-${{ github.ref_name }}-Setup.exe
