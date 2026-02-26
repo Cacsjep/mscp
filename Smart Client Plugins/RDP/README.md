@@ -7,7 +7,7 @@ Embed interactive RDP sessions directly into XProtect™ Smart Client view items
 
 ## Quick Start
 
-1. Download the installer from [Releases](../../releases)
+1. Download the installer from [Releases](https://github.com/Cacsjep/mscp/releases)
 2. **Setup** mode: drag **Remote Desktop Connection** into a view
 3. Set **IP Address**, **Username**, and optionally a **Name**
 4. **Live** mode: enter password and click **Connect**
@@ -18,11 +18,11 @@ Embed interactive RDP sessions directly into XProtect™ Smart Client view items
 
 ### Installer (Recommended)
 
-Download `MSCPlugins-vX.X-Setup.exe` from [Releases](../../releases) and run as **Administrator**. Select **RDP Plugin** in the component list.
+Download `MSCPlugins-vX.X-Setup.exe` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **RDP Plugin** in the component list.
 
 ### Manual (ZIP)
 
-1. Download `RDP-vX.X.zip` from [Releases](../../releases)
+1. Download `RDP-vX.X.zip` from [Releases](https://github.com/Cacsjep/mscp/releases)
 2. **Unblock** it first: right-click -> Properties -> Unblock
 3. Extract to `C:\Program Files\Milestone\MIPPlugins\RDP\`
 4. Restart the Smart Client

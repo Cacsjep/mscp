@@ -7,7 +7,7 @@ A Milestone XProtect™ MIP device driver that receives direct RTMP push streams
 
 ## Quick Start
 
-1. Download the installer from [Releases](../../releases)
+1. Download the installer from [Releases](https://github.com/Cacsjep/mscp/releases)
 2. Add hardware in Management Client (see [Installation](#installation) for details)
 3. Point your RTMP source at `rtmp://<milestone-server>:<port>/<stream-path>` (or `rtmps://` with [TLS enabled](#tls--rtmps))
 
@@ -17,11 +17,11 @@ A Milestone XProtect™ MIP device driver that receives direct RTMP push streams
 
 ### Installer (Recommended)
 
-Download `MSCPlugins-vX.X-Setup.exe` from [Releases](../../releases) and run as **Administrator**. Select **RTMP Push Driver** in the component list.
+Download `MSCPlugins-vX.X-Setup.exe` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **RTMP Push Driver** in the component list.
 
 ### Manual (ZIP)
 
-1. Download `RTMPDriver-vX.X.zip` from [Releases](../../releases)
+1. Download `RTMPDriver-vX.X.zip` from [Releases](https://github.com/Cacsjep/mscp/releases)
 2. **Unblock the ZIP before extracting** -- right-click the `.zip` -> Properties -> Unblock -> OK
 3. Stop the **Milestone XProtect™ Recording Server** service
 4. Create a `MIPDrivers` folder in `C:\Program Files\Milestone\` (if it doesn't already exist)

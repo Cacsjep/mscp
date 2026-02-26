@@ -7,7 +7,7 @@ Simple text editor for operator notes directly in XProtect Smart Client view ite
 
 ## Quick Start
 
-1. Download the installer from [Releases](../../releases)
+1. Download the installer from [Releases](https://github.com/Cacsjep/mscp/releases)
 2. **Setup** mode: drag **Notepad** into a view
 3. In Properties, set a title and font size
 4. **Live** mode: start typing notes
@@ -18,11 +18,11 @@ Simple text editor for operator notes directly in XProtect Smart Client view ite
 
 ### Installer (Recommended)
 
-Download `MSCPlugins-vX.X-Setup.exe` from [Releases](../../releases) and run as **Administrator**. Select **Notepad Plugin** in the component list.
+Download `MSCPlugins-vX.X-Setup.exe` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **Notepad Plugin** in the component list.
 
 ### Manual (ZIP)
 
-1. Download `Notepad-vX.X.zip` from [Releases](../../releases)
+1. Download `Notepad-vX.X.zip` from [Releases](https://github.com/Cacsjep/mscp/releases)
 2. **Unblock** it first: right-click -> Properties -> Unblock
 3. Extract to `C:\Program Files\Milestone\MIPPlugins\Notepad\`
 4. Restart the Smart Client
