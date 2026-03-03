@@ -29,7 +29,6 @@ namespace CertWatchdog.Models
         {
             if (daysLeft < 0) return CertStatus.Expired;
             if (daysLeft <= 15) return CertStatus.Critical;
-            if (daysLeft <= 30) return CertStatus.Critical;
             if (daysLeft <= 60) return CertStatus.Expiring;
             return CertStatus.OK;
         }

@@ -372,11 +372,12 @@ namespace CertWatchdog.Background
                 Timestamp = DateTime.UtcNow
             };
 
-            if (_mc != null)
+            var mc = _mc;
+            if (mc != null)
             {
                 try
                 {
-                    _mc.TransmitMessage(
+                    mc.TransmitMessage(
                         new Message(CertMessageIds.CertDataResponse, response), null, null, null);
                 }
                 catch (Exception ex)

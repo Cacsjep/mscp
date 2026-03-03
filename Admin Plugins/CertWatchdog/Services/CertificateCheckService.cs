@@ -52,18 +52,25 @@ namespace CertWatchdog.Services
                     ex.Response.Dispose();
                 }
 
-                if (cert != null)
+                try
                 {
-                    info.Issuer = cert.Issuer;
-                    info.Subject = cert.Subject;
-                    info.NotAfter = cert.NotAfter;
-                    info.DaysLeft = (int)(cert.NotAfter - DateTime.UtcNow).TotalDays;
-                    info.Status = CertificateInfo.ClassifyDaysLeft(info.DaysLeft);
+                    if (cert != null)
+                    {
+                        info.Issuer = cert.Issuer;
+                        info.Subject = cert.Subject;
+                        info.NotAfter = cert.NotAfter;
+                        info.DaysLeft = (int)(cert.NotAfter - DateTime.UtcNow).TotalDays;
+                        info.Status = CertificateInfo.ClassifyDaysLeft(info.DaysLeft);
+                    }
+                    else
+                    {
+                        info.Status = CertStatus.Error;
+                        info.ErrorMessage = "No certificate received";
+                    }
                 }
-                else
+                finally
                 {
-                    info.Status = CertStatus.Error;
-                    info.ErrorMessage = "No certificate received";
+                    cert?.Dispose();
                 }
             }
             catch (Exception ex)

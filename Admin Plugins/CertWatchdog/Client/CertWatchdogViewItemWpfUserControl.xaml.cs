@@ -71,13 +71,14 @@ namespace CertWatchdog.Client
 
         private void RequestCertData()
         {
-            if (_closing || _mc == null) return;
+            var mc = _mc;
+            if (_closing || mc == null) return;
 
             try
             {
                 _pendingRequestId = Guid.NewGuid();
                 var request = new CertDataRequest { RequestId = _pendingRequestId };
-                _mc.TransmitMessage(
+                mc.TransmitMessage(
                     new Message(CertMessageIds.CertDataRequest, request), null, null, null);
 
                 Dispatcher.BeginInvoke(new Action(() =>
