@@ -51,6 +51,13 @@ jobs:
             stage_to: RTMPStreamer
             extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
 
+          - name: CertWatchdog
+            projects: Admin Plugins\CertWatchdog\CertWatchdog.csproj
+            platform: AnyCPU
+            stage_from: Admin Plugins\CertWatchdog\bin\Release\net48
+            stage_to: CertWatchdog
+            extra_flags: /p:CIBuild=true
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -112,7 +119,7 @@ jobs:
 
       - name: Extract staging directories
         run: |
-          foreach ($name in @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer')) {
+          foreach ($name in @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'CertWatchdog')) {
             $zip = Get-ChildItem "artifacts\$name\*.zip" | Select-Object -First 1
             Expand-Archive -Path $zip.FullName -DestinationPath staging -Force
           }
@@ -130,6 +137,7 @@ jobs:
           $notepadDir  = (Resolve-Path 'staging\Notepad').Path
           $driverDir   = (Resolve-Path 'staging\RTMPDriver').Path
           $streamerDir = (Resolve-Path 'staging\RTMPStreamer').Path
+          $certwatchdogDir = (Resolve-Path 'staging\CertWatchdog').Path
           $outDir = (Resolve-Path '.').Path
           & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" `
             /DVERSION=$version `
@@ -138,6 +146,7 @@ jobs:
             "/DNOTEPAD_DIR=$notepadDir" `
             "/DRTMPDRIVER_DIR=$driverDir" `
             "/DRTMPSTREAMER_DIR=$streamerDir" `
+            "/DCERTWATCHDOG_DIR=$certwatchdogDir" `
             "/DOUTDIR=$outDir" `
             installer\MSCPlugins.nsi
         shell: pwsh
@@ -149,6 +158,7 @@ jobs:
           Copy-Item artifacts\Notepad\*.zip -Destination .
           Copy-Item artifacts\RTMPDriver\*.zip -Destination .
           Copy-Item artifacts\RTMPStreamer\*.zip -Destination .
+          Copy-Item artifacts\CertWatchdog\*.zip -Destination .
         shell: pwsh
 
       - name: Create GitHub Release
@@ -160,5 +170,6 @@ jobs:
             Notepad-${{ github.ref_name }}.zip
             RTMPDriver-${{ github.ref_name }}.zip
             RTMPStreamer-${{ github.ref_name }}.zip
+            CertWatchdog-${{ github.ref_name }}.zip
             MSCPlugins-${{ github.ref_name }}-Setup.exe
           generate_release_notes: true

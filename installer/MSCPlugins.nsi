@@ -42,6 +42,9 @@ BrandingText "MSC Community Plugins v${VERSION}"
 !ifndef RTMPSTREAMER_DIR
   !define RTMPSTREAMER_DIR "..\build\staging\RTMPStreamer"
 !endif
+!ifndef CERTWATCHDOG_DIR
+  !define CERTWATCHDOG_DIR "..\build\staging\CertWatchdog"
+!endif
 
 ; ── Process / service names ──
 !define SC_PROCESS  "Client.exe"
@@ -341,6 +344,26 @@ SectionGroup "Admin Plugins" SEC_AP_GROUP
       "NoRepair" 1
   SectionEnd
 
+  Section "Certificate Watchdog Plugin" SEC_CERTWATCHDOG
+    SetOutPath "$INSTDIR\MIPPlugins\CertWatchdog"
+    !insertmacro _LogMsg "Installing Certificate Watchdog Plugin to $INSTDIR\MIPPlugins\CertWatchdog..."
+    File /r "${CERTWATCHDOG_DIR}\*.*"
+    !insertmacro _LogMsg "Certificate Watchdog Plugin installed."
+
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
+      "DisplayName" "CertWatchdog v${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
+      "UninstallString" "$\"$INSTDIR\MIPPlugins\CertWatchdog\Uninstall.exe$\""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
+      "DisplayVersion" "${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
+      "Publisher" "MSC Community Plugins"
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
+      "NoModify" 1
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
+      "NoRepair" 1
+  SectionEnd
+
 SectionGroupEnd
 
 ; ══════════════════════════════════════════════════════════════
@@ -396,6 +419,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPDRIVER}  "Receive RTMP push streams (H.264) directly into XProtect™"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}    "Plugins for the XProtect™ Management Client / Event Server"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CERTWATCHDOG} "Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints with dashboard and alerts"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ══════════════════════════════════════════════════════════════
@@ -422,7 +446,9 @@ Function ComponentsLeave
 
   ; Admin Plugins → need to stop Event Server + close Management Client
   ${If} ${SectionIsSelected} ${SEC_RTMPSTREAMER}
+  ${OrIf} ${SectionIsSelected} ${SEC_CERTWATCHDOG}
     StrCpy $STOP_ES "1"
+    StrCpy $STOP_SC "1"
   ${EndIf}
 FunctionEnd
 
@@ -451,6 +477,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\MIPPlugins\Notepad"
   RMDir /r "$INSTDIR\MIPDrivers\RTMPDriver"
   RMDir /r "$INSTDIR\MIPPlugins\RTMPStreamer"
+  RMDir /r "$INSTDIR\MIPPlugins\CertWatchdog"
 
   ; ── Remove uninstaller ──
   Delete "$INSTDIR\MSCPlugins-Uninstall.exe"
@@ -462,6 +489,7 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog"
 
   ; ── Restart services ──
   DetailPrint "Starting ${RS_SERVICE}..."

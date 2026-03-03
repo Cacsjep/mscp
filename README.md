@@ -17,6 +17,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [Notepad](Smart%20Client%20Plugins/Notepad) | Smart Client | Simple text editor for operator notes in Smart Client view items |
 | [Rtmp](Device%20Drivers/Rtmp) | Device Driver | Receive RTMP/RTMPS push streams (H.264) directly into XProtect™ |
 | [RTMPStreamer](Admin%20Plugins/RTMPStreamer) | Admin Plugin | Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.) |
+| [CertWatchdog](Admin%20Plugins/CertWatchdog) | Admin Plugin | Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints |
 
 ## Installation
 
@@ -38,6 +39,7 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 | Notepad | `C:\Program Files\Milestone\MIPPlugins\Notepad\` |
 | RTMPDriver | `C:\Program Files\Milestone\MIPDrivers\RTMPDriver\` |
 | RTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\` |
+| CertWatchdog | `C:\Program Files\Milestone\MIPPlugins\CertWatchdog\` |
 
 > [!NOTE]
 > Always **unblock** downloaded ZIP files before extracting (right-click -> Properties -> Unblock). Windows marks downloaded files as untrusted and will block the DLLs from loading if you skip this step.
@@ -60,7 +62,8 @@ mscp/
 ├── Device Drivers/
 │   └── Rtmp/                      RTMP push stream driver
 ├── Admin Plugins/
-│   └── RTMPStreamer/              RTMP outbound streaming plugin
+│   ├── RTMPStreamer/              RTMP outbound streaming plugin
+│   └── CertWatchdog/             SSL certificate expiry monitoring plugin
 ├── MSCPlugins.sln                 Visual Studio solution (all projects)
 ├── installer/
 │   └── MSCPlugins.nsi             Unified NSIS installer script
