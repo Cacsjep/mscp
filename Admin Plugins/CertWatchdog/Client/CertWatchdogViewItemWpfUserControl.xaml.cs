@@ -17,7 +17,9 @@ namespace CertWatchdog.Client
         private object _responseFilter;
         private Guid _pendingRequestId;
         private Timer _refreshTimer;
+        private Timer _retryTimer;
         private volatile bool _closing;
+        private volatile bool _dataReceived;
         private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(60);
 
         public CertWatchdogViewItemWpfUserControl()
@@ -43,6 +45,19 @@ namespace CertWatchdog.Client
                     // Request cert data now and every 60 minutes
                     RequestCertData();
                     _refreshTimer = new Timer(_ => RequestCertData(), null, RefreshInterval, RefreshInterval);
+
+                    // Retry every 5s until first response arrives
+                    // (Event Server may not have its MC filter registered yet)
+                    _retryTimer = new Timer(_ =>
+                    {
+                        if (_dataReceived || _closing)
+                        {
+                            _retryTimer?.Dispose();
+                            _retryTimer = null;
+                            return;
+                        }
+                        RequestCertData();
+                    }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
                 }
                 catch (Exception ex)
                 {
@@ -58,6 +73,8 @@ namespace CertWatchdog.Client
         {
             _closing = true;
 
+            _retryTimer?.Dispose();
+            _retryTimer = null;
             _refreshTimer?.Dispose();
             _refreshTimer = null;
 
@@ -101,6 +118,8 @@ namespace CertWatchdog.Client
             if (_closing) return null;
             var response = message.Data as CertDataResponse;
             if (response == null) return null;
+
+            _dataReceived = true;
 
             Dispatcher.BeginInvoke(new Action(() =>
             {
