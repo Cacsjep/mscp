@@ -112,9 +112,14 @@ Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\bin\x64\Release\*')
 Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\RTMPStreamerHelper\bin\x64\Release\*') -Destination $stageStreamer -Recurse -Force
 Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\plugin.def') -Destination $stageStreamer -Force
 
+# CertWatchdog
+$stageCertWatchdog = Join-Path $staging 'CertWatchdog'
+New-Item -ItemType Directory -Path $stageCertWatchdog -Force | Out-Null
+Copy-Item -Path (Join-Path $root 'Admin Plugins\CertWatchdog\bin\Release\net48\*') -Destination $stageCertWatchdog -Recurse
+
 # ── Create ZIPs ──
 Write-Host "`n[5/6] Creating release ZIPs..." -ForegroundColor Yellow
-$artifacts = @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer')
+$artifacts = @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'CertWatchdog')
 foreach ($name in $artifacts) {
     $zipPath = Join-Path $buildDir "$name-v$version.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
@@ -144,6 +149,7 @@ if ($makensis) {
     $notepadDir  = (Resolve-Path (Join-Path $staging 'Notepad')).Path
     $driverDir   = (Resolve-Path (Join-Path $staging 'RTMPDriver')).Path
     $streamerDir = (Resolve-Path (Join-Path $staging 'RTMPStreamer')).Path
+    $certwatchdogDir = (Resolve-Path (Join-Path $staging 'CertWatchdog')).Path
 
     & $makensis /DVERSION=$version `
         "/DWEATHER_DIR=$weatherDir" `
@@ -151,6 +157,7 @@ if ($makensis) {
         "/DNOTEPAD_DIR=$notepadDir" `
         "/DRTMPDRIVER_DIR=$driverDir" `
         "/DRTMPSTREAMER_DIR=$streamerDir" `
+        "/DCERTWATCHDOG_DIR=$certwatchdogDir" `
         "/DOUTDIR=$buildDir" `
         $nsiScript
     if ($LASTEXITCODE -ne 0) { Write-Error "NSIS build failed"; exit 1 }
