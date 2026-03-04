@@ -21,6 +21,7 @@ namespace CertWatchdog.Background
 
         private MessageCommunication _mc;
         private object _requestFilter;
+        private object _recollectFilter;
         private volatile bool _mcRegistered;
 
         // Config change receivers
@@ -99,10 +100,18 @@ namespace CertWatchdog.Background
             // Unregister config change receivers
             UnregisterConfigChangeReceivers();
 
-            if (_mc != null && _requestFilter != null)
+            if (_mc != null)
             {
-                _mc.UnRegisterCommunicationFilter(_requestFilter);
-                _requestFilter = null;
+                if (_requestFilter != null)
+                {
+                    _mc.UnRegisterCommunicationFilter(_requestFilter);
+                    _requestFilter = null;
+                }
+                if (_recollectFilter != null)
+                {
+                    _mc.UnRegisterCommunicationFilter(_recollectFilter);
+                    _recollectFilter = null;
+                }
             }
             _mc = null;
 
@@ -241,8 +250,11 @@ namespace CertWatchdog.Background
                 _requestFilter = _mc.RegisterCommunicationFilter(
                     OnCertDataRequest,
                     new CommunicationIdFilter(CertMessageIds.CertDataRequest));
+                _recollectFilter = _mc.RegisterCommunicationFilter(
+                    OnRecollectRequest,
+                    new CommunicationIdFilter(CertMessageIds.CertRecollectRequest));
                 _mcRegistered = true;
-                PluginLog.Info("MessageCommunication filter registered for cert data requests");
+                PluginLog.Info("MessageCommunication filters registered");
             }
             catch (Exception ex)
             {
@@ -443,6 +455,26 @@ namespace CertWatchdog.Background
                     PluginLog.Error($"Failed to send cert data response: {ex.Message}");
                 }
             }
+
+            return null;
+        }
+
+        private object OnRecollectRequest(Message message, FQID dest, FQID source)
+        {
+            if (_closing) return null;
+
+            PluginLog.Info("Recollect requested by client");
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    PerformCertCheck();
+                }
+                catch (Exception ex)
+                {
+                    PluginLog.Error($"Recollect cert check failed: {ex.Message}", ex);
+                }
+            });
 
             return null;
         }

@@ -71,7 +71,12 @@ The "Certificates" workspace tab shows two sortable tables. Click any column hea
 | Days Left | Days remaining (color-coded) |
 | Status | OK, Expiring, Critical, Expired, or Error |
 
-> **Note:** After the Event Server starts, it takes approximately 30 seconds before the first certificate check runs. The Smart Client dashboard will show "Loading certificate data..." until results are available.
+**Buttons:**
+
+- **Recollect** — Triggers a full certificate re-check on the Event Server (endpoint discovery, certificate validation, and event firing). Use this after replacing a certificate to immediately verify the change.
+- **Refresh** — Fetches the latest cached results from the Event Server without triggering a new check.
+
+> **Note:** The Event Server checks certificates automatically every 6 hours and within 20 seconds of hardware/server config changes. After a restart, the first check runs after approximately 30 seconds.
 
 ## Installation
 

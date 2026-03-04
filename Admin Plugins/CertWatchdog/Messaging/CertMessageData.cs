@@ -8,6 +8,7 @@ namespace CertWatchdog.Messaging
     {
         public const string CertDataRequest = "CertWatchdog.CertDataRequest";
         public const string CertDataResponse = "CertWatchdog.CertDataResponse";
+        public const string CertRecollectRequest = "CertWatchdog.CertRecollectRequest";
     }
 
     [Serializable]

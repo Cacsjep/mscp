@@ -165,5 +165,38 @@ namespace CertWatchdog.Client
         {
             RequestCertData();
         }
+
+        private void OnRecollectClick(object sender, RoutedEventArgs e)
+        {
+            var mc = _mc;
+            if (_closing || mc == null) return;
+
+            try
+            {
+                mc.TransmitMessage(
+                    new Message(CertMessageIds.CertRecollectRequest, null), null, null, null);
+
+                loadingText.Text = "Recollecting certificates...";
+                loadingOverlay.Visibility = Visibility.Visible;
+
+                // Request updated data after a short delay to allow the check to complete
+                _dataReceived = false;
+                _retryTimer?.Dispose();
+                _retryTimer = new Timer(_ =>
+                {
+                    if (_dataReceived || _closing)
+                    {
+                        _retryTimer?.Dispose();
+                        _retryTimer = null;
+                        return;
+                    }
+                    RequestCertData();
+                }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(5));
+            }
+            catch (Exception ex)
+            {
+                loadingText.Text = $"Recollect failed: {ex.Message}";
+            }
+        }
     }
 }

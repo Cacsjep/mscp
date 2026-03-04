@@ -31,7 +31,7 @@ namespace CertWatchdog.Admin
             _descriptionLabel = new Label
             {
                 Text = "Monitors SSL/TLS certificate expiry for all XProtect HTTPS endpoints.\n\n" +
-                       "The plugin automatically discovers Management Server, Recording Server,\n" +
+                       "The plugin automatically discovers Management Server, Recording Server, Hardware Devices,\n" +
                        "and registered service endpoints, then checks their certificates periodically.\n\n" +
                        "Events are fired at 60, 30, and 15 day thresholds before expiry.\n" +
                        "These events can be used in XProtect Rules to trigger alarms or notifications.\n\n" +

@@ -112,10 +112,18 @@
                     <TextBlock Text="Certificate Watchdog" Foreground="White" FontSize="16" FontWeight="Bold"
                                VerticalAlignment="Center"/>
                 </StackPanel>
-                <Button x:Name="refreshButton" Grid.Column="1" Content="&#8635; Refresh"
-                        Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
-                        Padding="12,6" MinHeight="28" Cursor="Hand" Click="OnRefreshClick"
-                        VerticalAlignment="Center" FontSize="12"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="Auto-check every 6 hours" Foreground="#FF666666" FontSize="11"
+                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Button x:Name="recollectButton" Content="&#8635; Recollect"
+                            Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
+                            Padding="12,6" MinHeight="28" Cursor="Hand" Click="OnRecollectClick"
+                            VerticalAlignment="Center" FontSize="12" Margin="0,0,6,0"/>
+                    <Button x:Name="refreshButton" Content="&#8635; Refresh"
+                            Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
+                            Padding="12,6" MinHeight="28" Cursor="Hand" Click="OnRefreshClick"
+                            VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -204,8 +212,33 @@
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <TextBlock Text="&#128274;" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"
                            Foreground="#FF58A6FF"/>
-                <TextBlock x:Name="loadingText" Text="Loading certificate data..."
+                <TextBlock x:Name="loadingText" Text="Awaiting certificate data..."
                            Foreground="#FF88BBFF" FontSize="14" HorizontalAlignment="Center"/>
+                <!-- Spinning arc -->
+                <Canvas Width="28" Height="28" Margin="0,16,0,0" HorizontalAlignment="Center">
+                    <Ellipse Width="28" Height="28" Stroke="#FF333D47" StrokeThickness="3"/>
+                    <Ellipse x:Name="spinnerArc" Width="28" Height="28"
+                             Stroke="#FF58A6FF" StrokeThickness="3"
+                             StrokeDashArray="1.5 3" StrokeDashCap="Round"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform x:Name="spinnerRotate" Angle="0"/>
+                        </Ellipse.RenderTransform>
+                        <Ellipse.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="spinnerRotate"
+                                                         Storyboard.TargetProperty="Angle"
+                                                         From="0" To="360"
+                                                         Duration="0:0:1"
+                                                         RepeatBehavior="Forever"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Ellipse.Triggers>
+                    </Ellipse>
+                </Canvas>
             </StackPanel>
         </Grid>
 
