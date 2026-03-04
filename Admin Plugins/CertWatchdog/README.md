@@ -4,12 +4,12 @@ Monitor SSL/TLS certificate expiry for all XProtect HTTPS endpoints. Fires Miles
 
 ## Features
 
-- **Automatic endpoint discovery** — Finds Management Server, Recording Servers, and all registered service HTTPS endpoints
-- **Periodic certificate checking** — Checks all discovered endpoints every 6 hours (configurable)
-- **Milestone event integration** — Fires events at 60, 30, and 15 day thresholds for use in XProtect Rules
-- **Smart Client dashboard** — "Certificates" workspace tab showing all endpoints with expiry status
-- **System log entries** — Certificate status changes logged to XProtect System Log
-- **Duplicate prevention** — Each threshold event fires only once per certificate per threshold
+- **Automatic endpoint discovery**  Finds Management Server, Recording Servers, and all registered service HTTPS endpoints
+- **Periodic certificate checking**  Checks all discovered endpoints every 6 hours (configurable)
+- **Milestone event integration**  Fires events at 60, 30, and 15 day thresholds for use in XProtect Rules
+- **Smart Client dashboard**  "Certificates" workspace tab showing all endpoints with expiry status
+- **System log entries**  Certificate status changes logged to XProtect System Log
+- **Duplicate prevention**  Each threshold event fires only once per certificate per threshold
 
 ## Architecture
 
@@ -35,12 +35,12 @@ Available as triggers in XProtect Rules:
 
 The "Certificates" workspace tab displays a grid with:
 
-- **Endpoint** — Hostname of the server
-- **URL** — Full HTTPS URL
-- **Issuer** — Certificate issuer
-- **Expires** — Certificate expiry date
-- **Days Left** — Days remaining (color-coded: green/yellow/red)
-- **Status** — OK, Expiring, Critical, Expired, or Error
+- **Endpoint**  Hostname of the server
+- **URL**  Full HTTPS URL
+- **Issuer**  Certificate issuer
+- **Expires**  Certificate expiry date
+- **Days Left**  Days remaining (color-coded: green/yellow/red)
+- **Status**  OK, Expiring, Critical, Expired, or Error
 
 ## Installation
 
@@ -61,8 +61,15 @@ Select "Certificate Watchdog Plugin" in the Admin Plugins section of the unified
 - Event Server, Management Client, and Smart Client
 - HTTPS endpoints to monitor (the plugin auto-discovers these)
 
-## Troubleshooting
+## Development
 
-- **No endpoints found**: Ensure your XProtect system uses HTTPS. HTTP-only endpoints are not monitored.
-- **Smart Client shows "Loading..."**: The Event Server may still be performing the initial certificate check (runs 30 seconds after startup). Click Refresh after a minute.
-- **Events not firing**: Events fire once per threshold per certificate. Check the System Log for certificate check activity.
+This plugin spans all three XProtect environments, so building it stops the Event Server, Smart Client, and Management Client, deploys to `MIPPlugins\CertWatchdog\`, and restarts the Event Server. The shared `Directory.Build.targets` handles this automatically.
+
+Use the VS launch profile dropdown (F5) to pick which process to debug:
+
+- **Smart Client** — launches `Client.exe` (debug the workspace UI)
+- **Management Client** — launches `VideoOS.Administration.exe` (debug the admin view)
+- **Event Server (console)** — launches `VideoOS.Event.Server.exe -x` (debug background cert checking)
+
+The `-x` flag runs the Event Server as a console process so VS can attach the debugger from startup.
+

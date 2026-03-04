@@ -65,6 +65,8 @@ mscp/
 │   ├── RTMPStreamer/              RTMP outbound streaming plugin
 │   └── CertWatchdog/             SSL certificate expiry monitoring plugin
 ├── MSCPlugins.sln                 Visual Studio solution (all projects)
+├── Directory.Build.props          Shared MSBuild properties (paths, deploy flags)
+├── Directory.Build.targets        Shared build targets (stop/deploy/start cycle)
 ├── installer/
 │   └── MSCPlugins.nsi             Unified NSIS installer script
 ├── .github/workflows/
@@ -90,6 +92,51 @@ The solution contains all projects organized in solution folders matching the re
 ```
 
 This builds all plugins in Release configuration, creates per-plugin ZIPs, and optionally a unified NSIS installer (requires [NSIS](https://nsis.sourceforge.io/)). All output goes to the `build/` directory.
+
+## Development Workflow
+
+### Shared Build Infrastructure
+
+All projects share a centralized stop/deploy/start cycle via `Directory.Build.props` and `Directory.Build.targets` at the solution root. This eliminates duplicated build event boilerplate, each project just declares what it needs:
+
+```xml
+<PropertyGroup>
+  <PluginName>MyPlugin</PluginName>         <!-- Auto-deploys to MIPPlugins\MyPlugin\ -->
+  <StopSmartClient>true</StopSmartClient>   <!-- Kill Client.exe before build -->
+  <LaunchSmartClient>true</LaunchSmartClient> <!-- Launch Smart Client after deploy -->
+</PropertyGroup>
+```
+
+**Available flags:**
+
+| Flag | Effect |
+|---|---|
+| `StopSmartClient` | Kill Smart Client (`Client.exe`) before build |
+| `StopAdminClient` | Kill Management Client (`VideoOS.Administration.exe`) before build |
+| `StopEventServer` | Stop the Event Server service before build |
+| `StopRecordingServer` | Stop the Recording Server service before build |
+| `StartEventServer` | Restart the Event Server service after deploy |
+| `StartRecordingServer` | Restart the Recording Server service after deploy |
+| `LaunchSmartClient` | Launch Smart Client after deploy |
+| `LaunchAdminClient` | Launch Management Client after deploy |
+
+All flags default to `false`. The entire stop/deploy/start cycle is skipped during CI builds (`CIBuild=true`).
+
+Since all environments load from the same `MIPPlugins\` folder, multi-environment plugins (like CertWatchdog) must stop every process that holds the DLL before deploying. The build handles this automatically based on the project's flags.
+
+### Launch Profiles
+
+Each SDK-style project includes `Properties/launchSettings.json` with debug profiles for its target environments. Select the profile from the Visual Studio debug dropdown:
+
+| Plugin Type | Profiles |
+|---|---|
+| Smart Client plugins | Smart Client |
+| Admin plugins (Service + Admin) | Smart Client, Management Client, Event Server (console) |
+| Device drivers | *(use VS Debug tab, old-style project)* |
+
+The **Event Server (console)** profile launches the Event Server with the `-x` flag, which runs it as a regular console process instead of a Windows service, allowing Visual Studio to attach the debugger from startup. This is the [SDK-recommended approach](https://doc.developer.milestonesys.com/mipsdk/) for debugging Event Server plugins.
+
+> **Note:** Run Visual Studio as **Administrator** writing to `C:\Program Files\Milestone\MIPPlugins\` requires elevated privileges.
 
 ## Releasing
 
@@ -132,6 +179,18 @@ Example `plugin.def`:
    <load env="SmartClient"/>       <!-- or "Service" for drivers, "Service, Administration" for admin plugins -->
 </plugin>
 ```
+
+Your `.csproj` should declare `PluginName` and the dev-deploy flags it needs. The shared `Directory.Build.props` and `Directory.Build.targets` handle the stop/copy/start cycle automatically:
+
+```xml
+<PropertyGroup>
+  <PluginName>YourPlugin</PluginName>
+  <StopSmartClient>true</StopSmartClient>     <!-- set flags matching your plugin's target environment -->
+  <LaunchSmartClient>true</LaunchSmartClient>
+</PropertyGroup>
+```
+
+For SDK-style projects, also add a `Properties/launchSettings.json` with a debug profile (see existing plugins for examples).
 
 #### 2. Add the project to the solution
 

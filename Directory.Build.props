@@ -1,0 +1,34 @@
+<Project>
+
+  <!--
+    Shared MSBuild properties for all MSC Community Plugins projects.
+    Automatically imported by MSBuild for every project in this directory tree.
+
+    Each project sets PluginName and the Stop/Start/Launch flags it needs.
+    On build, the shared targets stop locked processes, deploy to MIPPlugins,
+    restart services, and launch apps. Use the VS launch profile dropdown
+    to pick which executable to debug (F5).
+  -->
+
+  <!-- Milestone install paths -->
+  <PropertyGroup>
+    <MIPPluginsRoot>C:\Program Files\Milestone\MIPPlugins</MIPPluginsRoot>
+    <MIPDriversRoot>C:\Program Files\Milestone\MIPDrivers</MIPDriversRoot>
+    <SmartClientExe>C:\Program Files\Milestone\XProtect Smart Client\Client.exe</SmartClientExe>
+    <AdminClientExe>C:\Program Files\Milestone\XProtect Management Client\VideoOS.Administration.exe</AdminClientExe>
+    <EventServerExe>C:\Program Files\Milestone\XProtect Event Server\VideoOS.Event.Server.exe</EventServerExe>
+  </PropertyGroup>
+
+  <!-- Dev-deploy flags (defaults all off, overridden per project) -->
+  <PropertyGroup>
+    <StopSmartClient>false</StopSmartClient>
+    <StopAdminClient>false</StopAdminClient>
+    <StopEventServer>false</StopEventServer>
+    <StopRecordingServer>false</StopRecordingServer>
+    <StartEventServer>false</StartEventServer>
+    <StartRecordingServer>false</StartRecordingServer>
+    <LaunchSmartClient>false</LaunchSmartClient>
+    <LaunchAdminClient>false</LaunchAdminClient>
+  </PropertyGroup>
+
+</Project>

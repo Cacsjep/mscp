@@ -10,7 +10,11 @@
     <AssemblyName>RTMPStreamer</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <MipPluginDir>C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\</MipPluginDir>
+    <PluginName>RTMPStreamer</PluginName>
+    <StopAdminClient>true</StopAdminClient>
+    <StopEventServer>true</StopEventServer>
+    <StartEventServer>true</StartEventServer>
+    <LaunchAdminClient>true</LaunchAdminClient>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
     <PlatformTarget>x64</PlatformTarget>
@@ -94,22 +98,15 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PreBuildEvent>
-net stop MilestoneEventServerService 2&gt;nul
-taskkill /f /im VideoOS.Administration.exe 2&gt;nul
-taskkill /f /im RTMPStreamerHelper.exe 2&gt;nul
-ping -n 4 127.0.0.1 &gt;nul
-if not exist "$(MipPluginDir)" mkdir "$(MipPluginDir)"
-exit /b 0
-    </PreBuildEvent>
-    <PostBuildEvent>
-xcopy /y /d /e /i "$(TargetDir)*" "$(MipPluginDir)" &gt;nul 2&gt;nul
-copy /y "$(ProjectDir)plugin.def" "$(MipPluginDir)" &gt;nul 2&gt;nul
-xcopy /y /d /e /i "$(ProjectDir)RTMPStreamerHelper\bin\x64\$(ConfigurationName)\*" "$(MipPluginDir)" &gt;nul 2&gt;nul
-net start MilestoneEventServerService 2&gt;nul
-start "" "C:\Program Files\Milestone\XProtect Management Client\VideoOS.Administration.exe" 2&gt;nul
-exit /b 0
-    </PostBuildEvent>
-  </PropertyGroup>
+  <!-- Stop RTMPStreamerHelper before shared MIPStopProcesses -->
+  <Target Name="StopHelper" BeforeTargets="MIPStopProcesses"
+          Condition="'$(CIBuild)' != 'true'">
+    <Exec Command="taskkill /F /IM RTMPStreamerHelper.exe 2&gt;nul" IgnoreExitCode="true"/>
+  </Target>
+
+  <!-- Copy RTMPStreamerHelper output after shared MIPDeploy -->
+  <Target Name="DeployHelper" AfterTargets="MIPDeploy" BeforeTargets="MIPLaunch"
+          Condition="'$(CIBuild)' != 'true' and '$(PluginName)' != ''">
+    <Exec Command="xcopy /Y /D /E /I &quot;$(ProjectDir)RTMPStreamerHelper\bin\x64\$(Configuration)\*&quot; &quot;$(MIPPluginDir)&quot;" IgnoreExitCode="true"/>
+  </Target>
 </Project>

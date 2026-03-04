@@ -7,8 +7,9 @@
     <RootNamespace>Weather</RootNamespace>
     <AssemblyName>Weather</AssemblyName>
     <LangVersion>latest</LangVersion>
-    <MIPPluginDir>C:\Program Files\Milestone\MIPPlugins\Weather\</MIPPluginDir>
-    <SmartClientExe>C:\Program Files\Milestone\XProtect Smart Client\Client.exe</SmartClientExe>
+    <PluginName>Weather</PluginName>
+    <StopSmartClient>true</StopSmartClient>
+    <LaunchSmartClient>true</LaunchSmartClient>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,17 +30,5 @@
     </Content>
     <Resource Include="Resources\PluginIcon.png" />
   </ItemGroup>
-
-  <!-- Pre-build: kill Smart Client so DLL files are not locked (skipped in CI) -->
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="'$(CIBuild)' != 'true'">
-    <Exec Command="taskkill /F /IM Client.exe 2&gt;nul &amp; ping -n 3 127.0.0.1 &gt;nul" IgnoreExitCode="true" />
-  </Target>
-
-  <!-- Post-build: copy output to MIPPlugins and launch Smart Client (skipped in CI) -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(CIBuild)' != 'true'">
-    <Exec Command="if not exist &quot;$(MIPPluginDir)&quot; mkdir &quot;$(MIPPluginDir)&quot;" />
-    <Exec Command="xcopy /Y /E &quot;$(TargetDir)*.*&quot; &quot;$(MIPPluginDir)&quot;" />
-    <Exec Command="start &quot;&quot; &quot;$(SmartClientExe)&quot;" />
-  </Target>
 
 </Project>

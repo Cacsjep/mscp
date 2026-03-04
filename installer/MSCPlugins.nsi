@@ -285,7 +285,7 @@ SectionGroup "Device Drivers" SEC_DD_GROUP
         "${DFP_PROCESS} is still running and will lock driver files.$\r$\n$\r$\nKill the process now?" \
         IDNO _dfp_skip
 
-      ; — Yes: kill the process —
+      ;  Yes: kill the process 
       !insertmacro _LogMsg "Killing ${DFP_PROCESS}..."
       nsExec::ExecToLog 'taskkill /F /IM "${DFP_PROCESS}"'
       Pop $0

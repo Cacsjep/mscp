@@ -7,6 +7,11 @@
     "Management Client": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\Milestone\\XProtect Management Client\\VideoOS.Administration.exe"
+    },
+    "Event Server (console)": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Milestone\\XProtect Event Server\\VideoOS.Event.Server.exe",
+      "commandLineArgs": "-x"
     }
   }
 }

@@ -224,21 +224,21 @@ namespace RDP.Client
                 _rdpClient.AdvancedSettings8.AuthenticationLevel = 2;
                 _rdpClient.AdvancedSettings8.NegotiateSecurityLayer = !enableNla;
 
-                // Redirection — all disabled except clipboard if configured
+                // Redirection  all disabled except clipboard if configured
                 _rdpClient.AdvancedSettings8.RedirectDrives = false;
                 _rdpClient.AdvancedSettings8.RedirectPrinters = false;
                 _rdpClient.AdvancedSettings8.RedirectClipboard = _viewItemManager.EnableClipboard;
                 _rdpClient.AdvancedSettings8.RedirectSmartCards = false;
                 _rdpClient.AdvancedSettings8.RedirectPorts = false;
 
-                // Session hygiene — no local caching of credentials/bitmaps
+                // Session hygiene  no local caching of credentials/bitmaps
                 _rdpClient.AdvancedSettings8.PublicMode = true;
 
                 // Connection timeout
                 _rdpClient.AdvancedSettings8.overallConnectionTimeout = ConnectionTimeoutSeconds;
                 _rdpClient.AdvancedSettings8.singleConnectionTimeout = ConnectionTimeoutSeconds;
 
-                // Password — set via NonScriptable interface, then clear from UI
+                // Password  set via NonScriptable interface, then clear from UI
                 var password = loginPasswordBox.Password;
                 if (!string.IsNullOrEmpty(password))
                 {
