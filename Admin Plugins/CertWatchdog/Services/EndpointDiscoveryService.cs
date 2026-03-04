@@ -225,7 +225,7 @@ namespace CertWatchdog.Services
                             endpoints[key] = new EndpointInfo
                             {
                                 Url = url,
-                                ServiceType = "Camera/Hardware",
+                                ServiceType = hw.Name,
                                 SourceItemId = cameraId
                             };
                             count++;

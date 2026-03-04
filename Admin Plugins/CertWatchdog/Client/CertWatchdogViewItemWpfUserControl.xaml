@@ -6,9 +6,94 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     mc:Ignorable="d"
-    d:DesignHeight="500"
+    d:DesignHeight="600"
     d:DesignWidth="900">
     <Grid Background="#FF1C2326">
+        <Grid.Resources>
+            <!-- Shared DataGrid column header style -->
+            <Style x:Key="GridColumnHeaderStyle" TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="#FF252A2E"/>
+                <Setter Property="Foreground" Value="#FF8B949E"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Padding" Value="10,8"/>
+                <Setter Property="BorderBrush" Value="#FF30363D"/>
+                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            </Style>
+            <!-- Shared DataGrid cell style -->
+            <Style x:Key="GridCellStyle" TargetType="DataGridCell">
+                <Setter Property="Padding" Value="10,6"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="DataGridCell">
+                            <Border Background="{TemplateBinding Background}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="#FF2A3A4A"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <!-- Shared DataGrid row style -->
+            <Style x:Key="GridRowStyle" TargetType="DataGridRow">
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#FF2A2F35"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <!-- Days Left column style (color-coded) -->
+            <Style x:Key="DaysLeftStyle" TargetType="TextBlock">
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Status}" Value="OK">
+                        <Setter Property="Foreground" Value="#FF3FB950"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Status}" Value="Expiring">
+                        <Setter Property="Foreground" Value="#FFD29922"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Status}" Value="Critical">
+                        <Setter Property="Foreground" Value="#FFF85149"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Status}" Value="Expired">
+                        <Setter Property="Foreground" Value="#FFF85149"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Status}" Value="Error">
+                        <Setter Property="Foreground" Value="#FF8B949E"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <!-- Status column style (color-coded) -->
+            <Style x:Key="StatusStyle" TargetType="TextBlock">
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Status}" Value="OK">
+                        <Setter Property="Foreground" Value="#FF3FB950"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Status}" Value="Expiring">
+                        <Setter Property="Foreground" Value="#FFD29922"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Status}" Value="Critical">
+                        <Setter Property="Foreground" Value="#FFF85149"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Status}" Value="Expired">
+                        <Setter Property="Foreground" Value="#FFF85149"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Status}" Value="Error">
+                        <Setter Property="Foreground" Value="#FF8B949E"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -34,124 +119,85 @@
             </Grid>
         </Border>
 
-        <!-- Certificate DataGrid -->
-        <DataGrid x:Name="certDataGrid" Grid.Row="1"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  SelectionMode="Single"
-                  Background="#FF1C2326"
-                  Foreground="#FFE6EDF3"
-                  RowBackground="#FF1C2326"
-                  AlternatingRowBackground="#FF222830"
-                  BorderBrush="#FF30363D"
-                  BorderThickness="0"
-                  GridLinesVisibility="Horizontal"
-                  HorizontalGridLinesBrush="#FF30363D"
-                  HeadersVisibility="Column"
-                  CanUserSortColumns="True"
-                  CanUserResizeColumns="True"
-                  CanUserReorderColumns="False"
-                  RowHeaderWidth="0"
-                  FontSize="13">
-            <DataGrid.ColumnHeaderStyle>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#FF252A2E"/>
-                    <Setter Property="Foreground" Value="#FF8B949E"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="FontSize" Value="12"/>
-                    <Setter Property="Padding" Value="10,8"/>
-                    <Setter Property="BorderBrush" Value="#FF30363D"/>
-                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                </Style>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.CellStyle>
-                <Style TargetType="DataGridCell">
-                    <Setter Property="Padding" Value="10,6"/>
-                    <Setter Property="BorderBrush" Value="Transparent"/>
-                    <Setter Property="BorderThickness" Value="0"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="DataGridCell">
-                                <Border Background="{TemplateBinding Background}"
-                                        Padding="{TemplateBinding Padding}">
-                                    <ContentPresenter VerticalAlignment="Center"/>
-                                </Border>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                    <Style.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#FF2A3A4A"/>
-                            <Setter Property="Foreground" Value="White"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.CellStyle>
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#FF2A2F35"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.RowStyle>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Service" Binding="{Binding ServiceType}" Width="150"/>
-                <DataGridTextColumn Header="Endpoint" Binding="{Binding Endpoint}" Width="150"/>
-                <DataGridTextColumn Header="URL" Binding="{Binding Url}" Width="250"/>
-                <DataGridTextColumn Header="Issuer" Binding="{Binding Issuer}" Width="200"/>
-                <DataGridTextColumn Header="Expires" Binding="{Binding NotAfter, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
-                <DataGridTextColumn Header="Days Left" Binding="{Binding DaysLeft}" Width="90">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontWeight" Value="Bold"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Status}" Value="OK">
-                                    <Setter Property="Foreground" Value="#FF3FB950"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Expiring">
-                                    <Setter Property="Foreground" Value="#FFD29922"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Critical">
-                                    <Setter Property="Foreground" Value="#FFF85149"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Expired">
-                                    <Setter Property="Foreground" Value="#FFF85149"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Error">
-                                    <Setter Property="Foreground" Value="#FF8B949E"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Status}" Value="OK">
-                                    <Setter Property="Foreground" Value="#FF3FB950"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Expiring">
-                                    <Setter Property="Foreground" Value="#FFD29922"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Critical">
-                                    <Setter Property="Foreground" Value="#FFF85149"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Expired">
-                                    <Setter Property="Foreground" Value="#FFF85149"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Error">
-                                    <Setter Property="Foreground" Value="#FF8B949E"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- Tables area -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="60"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*" MinHeight="60"/>
+            </Grid.RowDefinitions>
+
+            <!-- Server Certificates -->
+            <DockPanel Grid.Row="0">
+                <Border DockPanel.Dock="Top" Background="#FF252A2E" Padding="12,6" BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
+                    <TextBlock Text="Server Certificates" Foreground="#FF8B949E" FontSize="12" FontWeight="SemiBold"/>
+                </Border>
+                <DataGrid x:Name="serverDataGrid"
+                      AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                      Background="#FF1C2326" Foreground="#FFE6EDF3"
+                      RowBackground="#FF1C2326" AlternatingRowBackground="#FF222830"
+                      BorderBrush="#FF30363D" BorderThickness="0"
+                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#FF30363D"
+                      HeadersVisibility="Column"
+                      CanUserSortColumns="True" CanUserResizeColumns="True" CanUserReorderColumns="False"
+                      RowHeaderWidth="0" FontSize="13"
+                      ColumnHeaderStyle="{StaticResource GridColumnHeaderStyle}"
+                      CellStyle="{StaticResource GridCellStyle}"
+                      RowStyle="{StaticResource GridRowStyle}"
+                      VirtualizingStackPanel.IsVirtualizing="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Service" Binding="{Binding ServiceType}" Width="2*"/>
+                    <DataGridTextColumn Header="Endpoint" Binding="{Binding Endpoint}" Width="2*"/>
+                    <DataGridTextColumn Header="URL" Binding="{Binding Url}" Width="3*"/>
+                    <DataGridTextColumn Header="Issuer" Binding="{Binding Issuer}" Width="2*"/>
+                    <DataGridTextColumn Header="Expires" Binding="{Binding NotAfter, StringFormat='{}{0:yyyy-MM-dd}'}" Width="1.2*"/>
+                    <DataGridTextColumn Header="Days Left" Binding="{Binding DaysLeft}" Width="1*"
+                                        ElementStyle="{StaticResource DaysLeftStyle}"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="1*"
+                                        ElementStyle="{StaticResource StatusStyle}"/>
+                </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch"
+                          Background="#FF30363D" ResizeDirection="Rows"/>
+
+            <!-- Hardware Certificates -->
+            <DockPanel Grid.Row="2">
+                <Border DockPanel.Dock="Top" Background="#FF252A2E" Padding="12,6" BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Hardware Certificates" Foreground="#FF8B949E" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="hwCountText" Foreground="#FF666666" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                <DataGrid x:Name="hwDataGrid"
+                      AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                      Background="#FF1C2326" Foreground="#FFE6EDF3"
+                      RowBackground="#FF1C2326" AlternatingRowBackground="#FF222830"
+                      BorderBrush="#FF30363D" BorderThickness="0"
+                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#FF30363D"
+                      HeadersVisibility="Column"
+                      CanUserSortColumns="True" CanUserResizeColumns="True" CanUserReorderColumns="False"
+                      RowHeaderWidth="0" FontSize="13"
+                      ColumnHeaderStyle="{StaticResource GridColumnHeaderStyle}"
+                      CellStyle="{StaticResource GridCellStyle}"
+                      RowStyle="{StaticResource GridRowStyle}"
+                      VirtualizingStackPanel.IsVirtualizing="True"
+                      EnableRowVirtualization="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name" Binding="{Binding ServiceType}" Width="3*"/>
+                    <DataGridTextColumn Header="URL" Binding="{Binding Url}" Width="2*"/>
+                    <DataGridTextColumn Header="Issuer" Binding="{Binding Issuer}" Width="2*"/>
+                    <DataGridTextColumn Header="Expires" Binding="{Binding NotAfter, StringFormat='{}{0:yyyy-MM-dd}'}" Width="1.2*"/>
+                    <DataGridTextColumn Header="Days Left" Binding="{Binding DaysLeft}" Width="1*"
+                                        ElementStyle="{StaticResource DaysLeftStyle}"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="1*"
+                                        ElementStyle="{StaticResource StatusStyle}"/>
+                </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Grid>
 
         <!-- Loading overlay -->
         <Grid x:Name="loadingOverlay" Grid.Row="1" Background="#FF1C2326" Visibility="Visible">

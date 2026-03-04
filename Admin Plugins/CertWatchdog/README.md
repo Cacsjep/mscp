@@ -4,12 +4,15 @@ Monitor SSL/TLS certificate expiry for all XProtect HTTPS endpoints. Fires Miles
 
 ## Features
 
-- **Automatic endpoint discovery**  Finds Management Server, Recording Servers, and all registered service HTTPS endpoints
-- **Periodic certificate checking**  Checks all discovered endpoints every 6 hours (configurable)
+- **Automatic endpoint discovery**  Finds Management Server, Recording Servers, registered services, and HTTPS-enabled hardware devices
+- **Hardware device monitoring**  Reads HTTPS settings from each hardware's driver configuration via the Configuration API
+- **Periodic certificate checking**  Checks all discovered endpoints every 6 hours with parallel connections (up to 40 concurrent)
+- **Config change detection**  Re-checks certificates within 20 seconds when hardware or servers are added/removed/modified
 - **Milestone event integration**  Fires events at 60, 30, and 15 day thresholds for use in XProtect Rules
-- **Smart Client dashboard**  "Certificates" workspace tab showing all endpoints with expiry status
+- **Separate device events**  Hardware certificate events use the camera as event source, allowing per-camera rules
+- **Smart Client dashboard**  "Certificates" workspace tab with separate server and hardware certificate tables
 - **System log entries**  Certificate status changes logged to XProtect System Log
-- **Duplicate prevention**  Each threshold event fires only once per certificate per threshold
+- **Duplicate prevention**  Each threshold event fires only once per endpoint per threshold during runtime
 
 ## Architecture
 
@@ -25,22 +28,50 @@ This plugin spans all three XProtect environments from a single DLL:
 
 Available as triggers in XProtect Rules:
 
+**Server Certificate Events** (source: Certificate Watchdog item)
+
 | Event | Description |
 |---|---|
-| Cert Expire (60 Days) | Certificate expires within 60 days |
-| Cert Expire (30 Days) | Certificate expires within 30 days |
-| Cert Expire (15 Days) | Certificate expires within 15 days |
+| Cert Expire (60 Days) | Server certificate expires within 60 days |
+| Cert Expire (30 Days) | Server certificate expires within 30 days |
+| Cert Expire (15 Days) | Server certificate expires within 15 days |
+
+**Device Certificate Events** (source: individual camera)
+
+| Event | Description |
+|---|---|
+| Device Cert Expire (60 Days) | Hardware certificate expires within 60 days |
+| Device Cert Expire (30 Days) | Hardware certificate expires within 30 days |
+| Device Cert Expire (15 Days) | Hardware certificate expires within 15 days |
 
 ## Smart Client Dashboard
 
-The "Certificates" workspace tab displays a grid with:
+The "Certificates" workspace tab shows two sortable tables. Click any column header to sort.
 
-- **Endpoint**  Hostname of the server
-- **URL**  Full HTTPS URL
-- **Issuer**  Certificate issuer
-- **Expires**  Certificate expiry date
-- **Days Left**  Days remaining (color-coded: green/yellow/red)
-- **Status**  OK, Expiring, Critical, Expired, or Error
+**Server Certificates**  Management Server, Recording Servers, and registered services:
+
+| Column | Description |
+|---|---|
+| Service | Service type (e.g. Recording Server) |
+| Endpoint | Server hostname |
+| URL | Full HTTPS URL |
+| Issuer | Certificate issuer |
+| Expires | Certificate expiry date |
+| Days Left | Days remaining (color-coded: green/yellow/red) |
+| Status | OK, Expiring, Critical, Expired, or Error |
+
+**Hardware Certificates**  HTTPS-enabled cameras and devices:
+
+| Column | Description |
+|---|---|
+| Name | Hardware device name |
+| URL | HTTPS URL (constructed from device address and HTTPS port) |
+| Issuer | Certificate issuer |
+| Expires | Certificate expiry date |
+| Days Left | Days remaining (color-coded) |
+| Status | OK, Expiring, Critical, Expired, or Error |
+
+> **Note:** After the Event Server starts, it takes approximately 30 seconds before the first certificate check runs. The Smart Client dashboard will show "Loading certificate data..." until results are available.
 
 ## Installation
 
@@ -67,9 +98,6 @@ This plugin spans all three XProtect environments, so building it stops the Even
 
 Use the VS launch profile dropdown (F5) to pick which process to debug:
 
-- **Smart Client** — launches `Client.exe` (debug the workspace UI)
-- **Management Client** — launches `VideoOS.Administration.exe` (debug the admin view)
-- **Event Server (console)** — launches `VideoOS.Event.Server.exe -x` (debug background cert checking)
-
-The `-x` flag runs the Event Server as a console process so VS can attach the debugger from startup.
-
+- **Smart Client**  launches `Client.exe` (debug the workspace UI)
+- **Management Client**  launches `VideoOS.Administration.exe` (debug the admin view)
+- **Event Server (console)**  launches `VideoOS.Event.Server.exe -x` (debug background cert checking)
