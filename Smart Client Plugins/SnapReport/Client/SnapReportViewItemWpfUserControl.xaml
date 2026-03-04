@@ -1,0 +1,159 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="SnapReport.Client.SnapReportViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="600"
+    d:DesignWidth="900">
+    <external:ViewItemWpfUserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </external:ViewItemWpfUserControl.Resources>
+    <Grid Background="#FF1C2326">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#FF252A2E" Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="&#128247;" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="SnapReport" Foreground="White" FontSize="16" FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="selectAllButton" Content="Select All"
+                            Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
+                            Padding="12,6" MinHeight="28" Cursor="Hand" Click="OnSelectAllClick"
+                            VerticalAlignment="Center" FontSize="12" Margin="0,0,6,0"/>
+                    <Button x:Name="deselectAllButton" Content="Deselect All"
+                            Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
+                            Padding="12,6" MinHeight="28" Cursor="Hand" Click="OnDeselectAllClick"
+                            VerticalAlignment="Center" FontSize="12" Margin="0,0,6,0"/>
+                    <Button x:Name="generateButton" Content="&#128196; Generate PDF"
+                            Background="#FF238636" Foreground="White" BorderBrush="#FF2EA043"
+                            Padding="12,6" MinHeight="28" Cursor="Hand" Click="OnGenerateClick"
+                            VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main content area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="250"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="200"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Camera tree -->
+            <DockPanel Grid.Column="0">
+                <Border DockPanel.Dock="Top" Background="#FF252A2E" Padding="12,6" BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
+                    <TextBlock Text="Camera Selection" Foreground="#FF8B949E" FontSize="12" FontWeight="SemiBold"/>
+                </Border>
+                <TreeView x:Name="cameraTree" Background="#FF1C2326" BorderThickness="0"
+                          Padding="8">
+                    <TreeView.Resources>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="Foreground" Value="#FFE6EDF3"/>
+                            <Setter Property="FontSize" Value="13"/>
+                            <Setter Property="Padding" Value="2"/>
+                            <Setter Property="IsExpanded" Value="True"/>
+                        </Style>
+                    </TreeView.Resources>
+                </TreeView>
+            </DockPanel>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch" Background="#FF30363D"/>
+
+            <!-- Snapshot preview / progress area -->
+            <DockPanel Grid.Column="2">
+                <Border DockPanel.Dock="Top" Background="#FF252A2E" Padding="12,6" BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Snapshots" Foreground="#FF8B949E" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="progressCount" Grid.Column="1" Foreground="#FF666666" FontSize="11"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- Progress bar (docked at bottom of this panel) -->
+                <ProgressBar x:Name="progressBar" DockPanel.Dock="Bottom" Height="4"
+                             Background="#FF30363D" Foreground="#FF238636"
+                             Visibility="Collapsed" Minimum="0"/>
+
+                <!-- Scrollable snapshot gallery (visible during/after generation) -->
+                <ScrollViewer x:Name="snapshotScroll" DockPanel.Dock="Top" Visibility="Collapsed"
+                              VerticalScrollBarVisibility="Auto" Background="#FF1C2326">
+                    <ItemsControl x:Name="snapshotList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#FF222830" CornerRadius="4" Margin="8,4"
+                                        Padding="8" BorderBrush="#FF30363D" BorderThickness="1">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <!-- Camera name -->
+                                        <TextBlock Grid.Row="0" Text="{Binding CameraName}"
+                                                   Foreground="#FFE6EDF3" FontSize="11" FontWeight="SemiBold"
+                                                   Margin="0,0,0,4" TextTrimming="CharacterEllipsis"/>
+                                        <!-- Snapshot image or error -->
+                                        <Image Grid.Row="1" Source="{Binding Thumbnail}"
+                                               MaxHeight="240" Stretch="Uniform"
+                                               HorizontalAlignment="Left"
+                                               Visibility="{Binding HasImage, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Grid.Row="1" Text="{Binding ErrorMessage}"
+                                                   Foreground="#FFF85149" FontSize="11"
+                                                   Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Idle placeholder (visible before generation starts, last child = fills remaining space) -->
+                <Grid x:Name="idlePlaceholder" Background="#FF1C2326">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                        <TextBlock Text="&#128247;" FontSize="48" HorizontalAlignment="Center"
+                                   Margin="0,0,0,16" Foreground="#FF58A6FF"/>
+                        <TextBlock x:Name="progressText" Text="Select cameras and click Generate PDF"
+                                   Foreground="#FF8B949E" FontSize="13" HorizontalAlignment="Center"
+                                   TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+            </DockPanel>
+        </Grid>
+
+        <!-- Status bar -->
+        <Border Grid.Row="2" Background="#FF252A2E" Padding="12,6" BorderBrush="#FF30363D" BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="statusText" Grid.Column="0" Foreground="#FF8B949E" FontSize="11"
+                           VerticalAlignment="Center" Text="Ready"/>
+                <TextBlock Grid.Column="1" Foreground="#FF666666" FontSize="11"
+                           VerticalAlignment="Center" Text="v1.0.0"/>
+            </Grid>
+        </Border>
+    </Grid>
+
+</external:ViewItemWpfUserControl>
