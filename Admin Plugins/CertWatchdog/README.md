@@ -2,28 +2,6 @@
 
 Monitor SSL/TLS certificate expiry for all XProtect HTTPS endpoints. Fires Milestone events at 60/30/15 day thresholds and provides a Smart Client workspace dashboard.
 
-## Features
-
-- **Automatic endpoint discovery**  Finds Management Server, Recording Servers, registered services, and HTTPS-enabled hardware devices
-- **Hardware device monitoring**  Reads HTTPS settings from each hardware's driver configuration via the Configuration API
-- **Periodic certificate checking**  Checks all discovered endpoints every 6 hours with parallel connections (up to 40 concurrent)
-- **Config change detection**  Re-checks certificates within 20 seconds when hardware or servers are added/removed/modified
-- **Milestone event integration**  Fires events at 60, 30, and 15 day thresholds for use in XProtect Rules
-- **Separate device events**  Hardware certificate events use the camera as event source, allowing per-camera rules
-- **Smart Client dashboard**  "Certificates" workspace tab with separate server and hardware certificate tables
-- **System log entries**  Certificate status changes logged to XProtect System Log
-- **Duplicate prevention**  Each threshold event fires only once per endpoint per threshold during runtime
-
-## Architecture
-
-This plugin spans all three XProtect environments from a single DLL:
-
-| Environment | Component | Purpose |
-|---|---|---|
-| Event Server | BackgroundPlugin | Discovers endpoints, checks certs, fires events |
-| Management Client | ItemManager | Registers event types, shows admin view |
-| Smart Client | WorkspacePlugin | "Certificates" dashboard tab |
-
 ## Event Types
 
 Available as triggers in XProtect Rules:
@@ -101,6 +79,16 @@ The Smart Client dashboard is controlled by role-based security. In Management C
 - Event Server, Management Client, and Smart Client
 - HTTPS endpoints to monitor (the plugin auto-discovers these)
 
+## Architecture
+
+This plugin spans all three XProtect environments from a single DLL:
+
+| Environment | Component | Purpose |
+|---|---|---|
+| Event Server | BackgroundPlugin | Discovers endpoints, checks certs, fires events |
+| Management Client | ItemManager | Registers event types, shows admin view |
+| Smart Client | WorkspacePlugin | "Certificates" dashboard tab |
+
 ## Development
 
 This plugin spans all three XProtect environments, so building it stops the Event Server, Smart Client, and Management Client, deploys to `MIPPlugins\CertWatchdog\`, and restarts the Event Server. The shared `Directory.Build.targets` handles this automatically.
@@ -110,3 +98,4 @@ Use the VS launch profile dropdown (F5) to pick which process to debug:
 - **Smart Client**  launches `Client.exe` (debug the workspace UI)
 - **Management Client**  launches `VideoOS.Administration.exe` (debug the admin view)
 - **Event Server (console)**  launches `VideoOS.Event.Server.exe -x` (debug background cert checking)
+
