@@ -47,7 +47,7 @@ jobs:
           - name: RTMPStreamer
             projects: Admin Plugins\RTMPStreamer\RTMPStreamer.csproj;Admin Plugins\RTMPStreamer\RTMPStreamerHelper\RTMPStreamerHelper.csproj
             platform: x64
-            stage_from: Admin Plugins\RTMPStreamer\bin\x64\Release
+            stage_from: Admin Plugins\RTMPStreamer\bin\x64\Release\net48
             stage_to: RTMPStreamer
             extra_flags: /p:CIBuild=true
 
@@ -89,7 +89,7 @@ jobs:
       - name: Stage RTMPStreamer extras
         if: matrix.name == 'RTMPStreamer'
         run: |
-          Copy-Item -Path "Admin Plugins\RTMPStreamer\RTMPStreamerHelper\bin\x64\Release\*" -Destination staging\RTMPStreamer -Recurse -Force
+          Copy-Item -Path "Admin Plugins\RTMPStreamer\RTMPStreamerHelper\bin\x64\Release\net48\*" -Destination staging\RTMPStreamer -Recurse -Force
           Copy-Item -Path "Admin Plugins\RTMPStreamer\plugin.def" -Destination staging\RTMPStreamer -Force
         shell: pwsh
 
