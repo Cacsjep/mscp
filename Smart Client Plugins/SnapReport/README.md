@@ -2,21 +2,6 @@
 
 A Smart Client workspace plugin that lets users select cameras from a folder tree, grab live snapshots, and generate a PDF report with one camera per page.
 
-## Features
-
-- Camera folder tree with checkboxes for selection
-- Live JPEG snapshot capture from selected cameras
-- PDF report generation with one camera per page (PdfSharp)
-- Progress tracking during snapshot capture
-- Dark theme matching XProtect Smart Client
-
-## Use Cases
-
-- Site surveys and compliance documentation
-- Status reports for camera installations
-- Quick visual verification of camera views
-- Incident documentation
-
 ## Installation
 
 ### Unified Installer
