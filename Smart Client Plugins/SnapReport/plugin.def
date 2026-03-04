@@ -1,0 +1,4 @@
+<plugin>
+   <file name="SnapReport.dll"/>
+   <load env="SmartClient"/>
+</plugin>

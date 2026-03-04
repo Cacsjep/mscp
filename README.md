@@ -17,6 +17,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [Notepad](Smart%20Client%20Plugins/Notepad) | Smart Client | Simple text editor for operator notes in Smart Client view items |
 | [Rtmp](Device%20Drivers/Rtmp) | Device Driver | Receive RTMP/RTMPS push streams (H.264) directly into XProtect™ |
 | [RTMPStreamer](Admin%20Plugins/RTMPStreamer) | Admin Plugin | Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.) |
+| [SnapReport](Smart%20Client%20Plugins/SnapReport) | Smart Client | Camera snapshot PDF report generator for site surveys and compliance |
 | [CertWatchdog](Admin%20Plugins/CertWatchdog) | Admin Plugin | Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints |
 
 ## Installation
@@ -39,6 +40,7 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 | Notepad | `C:\Program Files\Milestone\MIPPlugins\Notepad\` |
 | RTMPDriver | `C:\Program Files\Milestone\MIPDrivers\RTMPDriver\` |
 | RTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\` |
+| SnapReport | `C:\Program Files\Milestone\MIPPlugins\SnapReport\` |
 | CertWatchdog | `C:\Program Files\Milestone\MIPPlugins\CertWatchdog\` |
 
 > [!NOTE]
@@ -58,7 +60,8 @@ mscp/
 ├── Smart Client Plugins/
 │   ├── Weather/                   Weather view item plugin
 │   ├── RDP/                       RDP view item plugin
-│   └── Notepad/                   Notepad view item plugin
+│   ├── Notepad/                   Notepad view item plugin
+│   └── SnapReport/                Camera snapshot PDF report generator
 ├── Device Drivers/
 │   └── Rtmp/                      RTMP push stream driver
 ├── Admin Plugins/

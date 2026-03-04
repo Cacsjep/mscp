@@ -45,6 +45,9 @@ BrandingText "MSC Community Plugins v${VERSION}"
 !ifndef CERTWATCHDOG_DIR
   !define CERTWATCHDOG_DIR "..\build\staging\CertWatchdog"
 !endif
+!ifndef SNAPREPORT_DIR
+  !define SNAPREPORT_DIR "..\build\staging\SnapReport"
+!endif
 
 ; ── Process / service names ──
 !define SC_PROCESS  "Client.exe"
@@ -266,6 +269,26 @@ SectionGroup "Smart Client Plugins" SEC_SC_GROUP
       "NoRepair" 1
   SectionEnd
 
+  Section "SnapReport Plugin" SEC_SNAPREPORT
+    SetOutPath "$INSTDIR\MIPPlugins\SnapReport"
+    !insertmacro _LogMsg "Installing SnapReport Plugin to $INSTDIR\MIPPlugins\SnapReport..."
+    File /r "${SNAPREPORT_DIR}\*.*"
+    !insertmacro _LogMsg "SnapReport Plugin installed."
+
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
+      "DisplayName" "SnapReport Plugin v${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
+      "UninstallString" "$\"$INSTDIR\MIPPlugins\SnapReport\Uninstall.exe$\""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
+      "DisplayVersion" "${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
+      "Publisher" "MSC Community Plugins"
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
+      "NoModify" 1
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
+      "NoRepair" 1
+  SectionEnd
+
 SectionGroupEnd
 
 ; ══════════════════════════════════════════════════════════════
@@ -420,6 +443,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}    "Plugins for the XProtect™ Management Client / Event Server"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CERTWATCHDOG} "Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints with dashboard and alerts"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SNAPREPORT} "Select cameras and generate PDF snapshot reports for site surveys and compliance"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ══════════════════════════════════════════════════════════════
@@ -436,6 +460,7 @@ Function ComponentsLeave
   ${If} ${SectionIsSelected} ${SEC_WEATHER}
   ${OrIf} ${SectionIsSelected} ${SEC_RDP}
   ${OrIf} ${SectionIsSelected} ${SEC_NOTEPAD}
+  ${OrIf} ${SectionIsSelected} ${SEC_SNAPREPORT}
     StrCpy $STOP_SC "1"
   ${EndIf}
 
@@ -478,6 +503,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\MIPDrivers\RTMPDriver"
   RMDir /r "$INSTDIR\MIPPlugins\RTMPStreamer"
   RMDir /r "$INSTDIR\MIPPlugins\CertWatchdog"
+  RMDir /r "$INSTDIR\MIPPlugins\SnapReport"
 
   ; ── Remove uninstaller ──
   Delete "$INSTDIR\MSCPlugins-Uninstall.exe"
@@ -490,6 +516,7 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport"
 
   ; ── Restart services ──
   DetailPrint "Starting ${RS_SERVICE}..."
