@@ -6,6 +6,7 @@
     <RootNamespace>RTMPStreamerHelper</RootNamespace>
     <AssemblyName>RTMPStreamerHelper</AssemblyName>
     <LangVersion>latest</LangVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
