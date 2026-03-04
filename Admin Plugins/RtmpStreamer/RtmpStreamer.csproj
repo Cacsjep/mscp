@@ -58,7 +58,7 @@
   <!-- Copy RTMPStreamerHelper output after shared MIPDeploy -->
   <Target Name="DeployHelper" AfterTargets="MIPDeploy" BeforeTargets="MIPLaunch"
           Condition="'$(CIBuild)' != 'true' and '$(PluginName)' != ''">
-    <Exec Command="xcopy /Y /D /E /I &quot;$(ProjectDir)RTMPStreamerHelper\bin\$(Configuration)\net48\*&quot; &quot;$(MIPPluginDir)&quot;" IgnoreExitCode="true"/>
+    <Exec Command="xcopy /Y /D /E /I &quot;$(ProjectDir)RTMPStreamerHelper\bin\$(Platform)\$(Configuration)\net48\*&quot; &quot;$(MIPPluginDir)&quot;" IgnoreExitCode="true"/>
   </Target>
 
 </Project>
