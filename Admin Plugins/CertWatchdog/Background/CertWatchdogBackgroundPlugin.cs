@@ -23,14 +23,22 @@ namespace CertWatchdog.Background
         private object _requestFilter;
         private volatile bool _mcRegistered;
 
+        // Config change receivers
+        private object _hardwareChangeFilter;
+        private object _serverChangeFilter;
+        private Timer _configChangeDebounce;
+
+        // Kind GUIDs for config change filtering
+        private static readonly Guid KindHardware = new Guid("C9DDC944-FB27-4E34-88F8-76023FCC9CE9");
+        private static readonly Guid KindServer = new Guid("3B25FE94-7C2F-499a-86DF-2FA68AA3E1B5");
+
         // FQID of the auto-created plugin item (used as event source)
         private FQID _pluginItemFqid;
 
         // Thresholds for event firing (days)
         private static readonly int[] Thresholds = { 60, 30, 15 };
 
-        // Track which thresholds have been fired per endpoint URL
-        // Key: URL, Value: set of threshold days already fired
+        // Track which thresholds have been fired per endpoint URL (in-memory only, resets on restart)
         private readonly Dictionary<string, HashSet<int>> _firedThresholds =
             new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
 
@@ -54,9 +62,6 @@ namespace CertWatchdog.Background
             // Auto-create the plugin item if it doesn't exist
             EnsurePluginItem();
 
-            // Load previously fired thresholds from saved item properties
-            LoadFiredThresholds();
-
             // Start MessageCommunication (session established asynchronously)
             try
             {
@@ -68,6 +73,9 @@ namespace CertWatchdog.Background
             {
                 PluginLog.Error($"Failed to init MessageCommunication: {ex.Message}", ex);
             }
+
+            // Register config change receivers for Hardware and Server kinds
+            RegisterConfigChangeReceivers();
 
             // Start the periodic check timer
             // Filter registration is deferred to the first timer tick when
@@ -85,6 +93,12 @@ namespace CertWatchdog.Background
             _checkTimer?.Dispose();
             _checkTimer = null;
 
+            _configChangeDebounce?.Dispose();
+            _configChangeDebounce = null;
+
+            // Unregister config change receivers
+            UnregisterConfigChangeReceivers();
+
             if (_mc != null && _requestFilter != null)
             {
                 _mc.UnRegisterCommunicationFilter(_requestFilter);
@@ -93,6 +107,77 @@ namespace CertWatchdog.Background
             _mc = null;
 
             SystemLog.PluginStopped();
+        }
+
+        private void RegisterConfigChangeReceivers()
+        {
+            try
+            {
+                _hardwareChangeFilter = EnvironmentManager.Instance.RegisterReceiver(
+                    OnConfigChanged,
+                    new MessageIdAndRelatedKindFilter(
+                        MessageId.Server.ConfigurationChangedIndication,
+                        KindHardware));
+
+                _serverChangeFilter = EnvironmentManager.Instance.RegisterReceiver(
+                    OnConfigChanged,
+                    new MessageIdAndRelatedKindFilter(
+                        MessageId.Server.ConfigurationChangedIndication,
+                        KindServer));
+
+                PluginLog.Info("Config change receivers registered for Hardware and Server kinds");
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Error($"Failed to register config change receivers: {ex.Message}", ex);
+            }
+        }
+
+        private void UnregisterConfigChangeReceivers()
+        {
+            try
+            {
+                if (_hardwareChangeFilter != null)
+                {
+                    EnvironmentManager.Instance.UnRegisterReceiver(_hardwareChangeFilter);
+                    _hardwareChangeFilter = null;
+                }
+                if (_serverChangeFilter != null)
+                {
+                    EnvironmentManager.Instance.UnRegisterReceiver(_serverChangeFilter);
+                    _serverChangeFilter = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Error($"Failed to unregister config change receivers: {ex.Message}", ex);
+            }
+        }
+
+        private object OnConfigChanged(Message message, FQID dest, FQID source)
+        {
+            if (_closing) return null;
+
+            PluginLog.Info("Config change detected, scheduling cert re-check in 20s");
+
+            // Reset debounce timer to 20s from now
+            _configChangeDebounce?.Dispose();
+            _configChangeDebounce = new Timer(_ =>
+            {
+                if (!_closing)
+                {
+                    try
+                    {
+                        PerformCertCheck();
+                    }
+                    catch (Exception ex)
+                    {
+                        PluginLog.Error($"Config-triggered certificate check failed: {ex.Message}", ex);
+                    }
+                }
+            }, null, TimeSpan.FromSeconds(20), Timeout.InfiniteTimeSpan);
+
+            return null;
         }
 
         private void EnsurePluginItem()
@@ -179,7 +264,7 @@ namespace CertWatchdog.Background
                 return;
             }
 
-            // Check all certificates
+            // Check all certificates (parallel)
             var results = CertificateCheckService.CheckAllCertificates(endpoints);
 
             lock (_certLock)
@@ -193,7 +278,7 @@ namespace CertWatchdog.Background
                 c.Status == CertStatus.Critical ||
                 c.Status == CertStatus.Expired);
 
-            // Fire events for expiring certs
+            // Fire events for expiring certs (thresholds tracked in-memory only, reset on restart)
             foreach (var cert in results)
             {
                 if (cert.Status == CertStatus.Error) continue;
@@ -206,9 +291,6 @@ namespace CertWatchdog.Background
                     }
                 }
             }
-
-            // Persist fired thresholds
-            SaveFiredThresholds();
 
             SystemLog.CertCheckComplete(results.Count, expiringCount);
             PluginLog.Info($"Certificate check complete: {results.Count} checked, {expiringCount} expiring");
@@ -228,38 +310,84 @@ namespace CertWatchdog.Background
 
             thresholds.Add(thresholdDays);
 
-            // Determine event type GUID based on threshold
+            // Determine event type GUID and source FQID based on whether this is a device or server cert
+            bool isDeviceCert = cert.SourceItemId != null;
             Guid eventTypeId;
-            switch (thresholdDays)
+
+            if (isDeviceCert)
             {
-                case 60:
-                    eventTypeId = CertWatchdogDefinition.EventType60DaysId;
-                    break;
-                case 30:
-                    eventTypeId = CertWatchdogDefinition.EventType30DaysId;
-                    break;
-                case 15:
-                    eventTypeId = CertWatchdogDefinition.EventType15DaysId;
-                    break;
-                default:
-                    return;
+                switch (thresholdDays)
+                {
+                    case 60:
+                        eventTypeId = CertWatchdogDefinition.DeviceEventType60DaysId;
+                        break;
+                    case 30:
+                        eventTypeId = CertWatchdogDefinition.DeviceEventType30DaysId;
+                        break;
+                    case 15:
+                        eventTypeId = CertWatchdogDefinition.DeviceEventType15DaysId;
+                        break;
+                    default:
+                        return;
+                }
+            }
+            else
+            {
+                switch (thresholdDays)
+                {
+                    case 60:
+                        eventTypeId = CertWatchdogDefinition.EventType60DaysId;
+                        break;
+                    case 30:
+                        eventTypeId = CertWatchdogDefinition.EventType30DaysId;
+                        break;
+                    case 15:
+                        eventTypeId = CertWatchdogDefinition.EventType15DaysId;
+                        break;
+                    default:
+                        return;
+                }
+            }
+
+            // Build source FQID: for device certs, point to the hardware item; for server certs, use plugin item
+            FQID sourceFqid;
+            if (isDeviceCert)
+            {
+                sourceFqid = new FQID(
+                    EnvironmentManager.Instance.MasterSite.ServerId,
+                    Guid.Empty,
+                    cert.SourceItemId.Value,
+                    FolderType.No,
+                    Kind.Camera);
+            }
+            else
+            {
+                sourceFqid = _pluginItemFqid;
             }
 
             try
             {
+                // Message must match the registered EventType.Message exactly for Rules matching
+                var eventTypeMessage = isDeviceCert
+                    ? $"Device Cert Expire ({thresholdDays} Days)"
+                    : $"Cert Expire ({thresholdDays} Days)";
+
                 var header = new EventHeader
                 {
-                    ID = eventTypeId,
-                    Class = "Analytics",
-                    Type = $"CertExpire{thresholdDays}Days",
-                    Name = $"Cert Expire ({thresholdDays} Days)",
-                    Message = $"Certificate for '{cert.Endpoint}' expires in {cert.DaysLeft} days (threshold: {thresholdDays}d)",
-                    CustomTag = cert.Url,
+                    ID = Guid.NewGuid(),
+                    Class = "Operational",
+                    Type = isDeviceCert
+                        ? $"DeviceCertExpire{thresholdDays}Days"
+                        : $"CertExpire{thresholdDays}Days",
+                    Timestamp = DateTime.Now,
+                    Name = cert.Endpoint,
+                    Message = eventTypeMessage,
+                    CustomTag = $"Certificate for '{cert.Endpoint}' expires in {cert.DaysLeft} days (threshold: {thresholdDays}d)",
                     Priority = 3,
                     Source = new EventSource
                     {
                         Name = cert.Endpoint,
-                        FQID = _pluginItemFqid
+                        FQID = sourceFqid
                     }
                 };
 
@@ -268,89 +396,19 @@ namespace CertWatchdog.Background
                     EventHeader = header
                 };
 
-                var eventMessage = new Message(MessageId.Server.NewEventIndication)
-                {
-                    Data = analyticsEvent
-                };
-
-                EnvironmentManager.Instance.PostMessage(eventMessage);
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.Server.NewEventCommand)
+                    {
+                        Data = analyticsEvent,
+                        RelatedFQID = sourceFqid
+                    });
 
                 SystemLog.CertExpiring(cert.Endpoint, cert.DaysLeft);
-                PluginLog.Info($"Fired {thresholdDays}-day event for {cert.Endpoint} ({cert.DaysLeft} days left)");
+                PluginLog.Info($"Fired {thresholdDays}-day {(isDeviceCert ? "device " : "")}event for {cert.Endpoint} ({cert.DaysLeft} days left)");
             }
             catch (Exception ex)
             {
                 PluginLog.Error($"Failed to fire event for {cert.Endpoint}: {ex.Message}", ex);
-            }
-        }
-
-        private void LoadFiredThresholds()
-        {
-            try
-            {
-                var items = Configuration.Instance.GetItemConfigurations(
-                    CertWatchdogDefinition.PluginId, null, CertWatchdogDefinition.CertWatchdogKindId);
-
-                if (items == null || items.Count == 0) return;
-
-                var item = items[0];
-                foreach (var kvp in item.Properties)
-                {
-                    if (!kvp.Key.StartsWith("Fired_")) continue;
-
-                    var url = kvp.Key.Substring(6);
-                    var thresholdValues = kvp.Value.Split(',');
-                    var thresholdSet = new HashSet<int>();
-
-                    foreach (var v in thresholdValues)
-                    {
-                        if (int.TryParse(v, out var t))
-                            thresholdSet.Add(t);
-                    }
-
-                    _firedThresholds[url] = thresholdSet;
-                }
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Error($"Failed to load fired thresholds: {ex.Message}", ex);
-            }
-        }
-
-        private void SaveFiredThresholds()
-        {
-            try
-            {
-                var items = Configuration.Instance.GetItemConfigurations(
-                    CertWatchdogDefinition.PluginId, null, CertWatchdogDefinition.CertWatchdogKindId);
-
-                if (items == null || items.Count == 0) return;
-
-                var item = items[0];
-
-                // Clear old fired entries
-                var keysToRemove = new List<string>();
-                foreach (var key in item.Properties.Keys)
-                {
-                    if (key.StartsWith("Fired_"))
-                        keysToRemove.Add(key);
-                }
-                foreach (var key in keysToRemove)
-                    item.Properties.Remove(key);
-
-                // Write current fired thresholds
-                foreach (var kvp in _firedThresholds)
-                {
-                    var key = "Fired_" + kvp.Key;
-                    var value = string.Join(",", kvp.Value);
-                    item.Properties[key] = value;
-                }
-
-                Configuration.Instance.SaveItemConfiguration(CertWatchdogDefinition.PluginId, item);
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Error($"Failed to save fired thresholds: {ex.Message}", ex);
             }
         }
 

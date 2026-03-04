@@ -28,6 +28,12 @@ namespace CertWatchdog
         internal static readonly Guid EventType15DaysId = new Guid("D1C2E3F4-A5B6-4789-90AB-CDEF01234570");
         internal static readonly Guid StateGroupId = new Guid("D1C2E3F4-A5B6-4789-90AB-CDEF01234571");
 
+        // Device certificate events (source = camera/hardware)
+        internal static readonly Guid DeviceEventGroupId = new Guid("D1C2E3F4-A5B6-4789-90AB-CDEF01234572");
+        internal static readonly Guid DeviceEventType60DaysId = new Guid("D1C2E3F4-A5B6-4789-90AB-CDEF01234573");
+        internal static readonly Guid DeviceEventType30DaysId = new Guid("D1C2E3F4-A5B6-4789-90AB-CDEF01234574");
+        internal static readonly Guid DeviceEventType15DaysId = new Guid("D1C2E3F4-A5B6-4789-90AB-CDEF01234575");
+
         private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
         private List<ViewItemPlugin> _viewItemPlugins = new List<ViewItemPlugin>();
         private List<WorkSpacePlugin> _workSpacePlugins = new List<WorkSpacePlugin>();

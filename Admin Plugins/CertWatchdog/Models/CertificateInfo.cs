@@ -24,6 +24,7 @@ namespace CertWatchdog.Models
         public CertStatus Status { get; set; }
         public string ErrorMessage { get; set; }
         public DateTime LastChecked { get; set; }
+        public Guid? SourceItemId { get; set; }
 
         public static CertStatus ClassifyDaysLeft(int daysLeft)
         {
