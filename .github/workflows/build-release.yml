@@ -42,14 +42,14 @@ jobs:
             platform: AnyCPU
             stage_from: Device Drivers\Rtmp\RTMPDriver\bin\Release
             stage_to: RTMPDriver
-            extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
+            extra_flags: /p:CIBuild=true
 
           - name: RTMPStreamer
             projects: Admin Plugins\RTMPStreamer\RTMPStreamer.csproj;Admin Plugins\RTMPStreamer\RTMPStreamerHelper\RTMPStreamerHelper.csproj
             platform: x64
             stage_from: Admin Plugins\RTMPStreamer\bin\x64\Release
             stage_to: RTMPStreamer
-            extra_flags: /p:PreBuildEvent= /p:PostBuildEvent=
+            extra_flags: /p:CIBuild=true
 
           - name: CertWatchdog
             projects: Admin Plugins\CertWatchdog\CertWatchdog.csproj
