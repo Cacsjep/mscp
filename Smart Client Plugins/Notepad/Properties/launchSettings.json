@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "Notepad": {
+    "Smart Client": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\Milestone\\XProtect Smart Client\\Client.exe"
     }

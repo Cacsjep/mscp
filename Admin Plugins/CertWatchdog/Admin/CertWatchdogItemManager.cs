@@ -50,6 +50,11 @@ namespace CertWatchdog.Admin
                 {
                     ID = CertWatchdogDefinition.EventGroupId,
                     Name = "Certificate Watchdog"
+                },
+                new VideoOS.Platform.Data.EventGroup
+                {
+                    ID = CertWatchdogDefinition.DeviceEventGroupId,
+                    Name = "Device Certificate Watchdog"
                 }
             };
         }
@@ -57,9 +62,11 @@ namespace CertWatchdog.Admin
         public override Collection<VideoOS.Platform.Data.EventType> GetKnownEventTypes(CultureInfo culture)
         {
             var sourceKinds = new List<Guid> { CertWatchdogDefinition.CertWatchdogKindId };
+            var deviceSourceKinds = new List<Guid> { Kind.Camera };
 
             return new Collection<VideoOS.Platform.Data.EventType>
             {
+                // Server certificate events
                 new VideoOS.Platform.Data.EventType
                 {
                     ID = CertWatchdogDefinition.EventType60DaysId,
@@ -89,6 +96,37 @@ namespace CertWatchdog.Admin
                     State = "Critical",
                     DefaultSourceKind = CertWatchdogDefinition.CertWatchdogKindId,
                     SourceKinds = sourceKinds
+                },
+                // Device certificate events
+                new VideoOS.Platform.Data.EventType
+                {
+                    ID = CertWatchdogDefinition.DeviceEventType60DaysId,
+                    Message = "Device Cert Expire (60 Days)",
+                    GroupID = CertWatchdogDefinition.DeviceEventGroupId,
+                    StateGroupID = CertWatchdogDefinition.StateGroupId,
+                    State = "Expiring",
+                    DefaultSourceKind = Kind.Camera,
+                    SourceKinds = deviceSourceKinds
+                },
+                new VideoOS.Platform.Data.EventType
+                {
+                    ID = CertWatchdogDefinition.DeviceEventType30DaysId,
+                    Message = "Device Cert Expire (30 Days)",
+                    GroupID = CertWatchdogDefinition.DeviceEventGroupId,
+                    StateGroupID = CertWatchdogDefinition.StateGroupId,
+                    State = "Critical",
+                    DefaultSourceKind = Kind.Camera,
+                    SourceKinds = deviceSourceKinds
+                },
+                new VideoOS.Platform.Data.EventType
+                {
+                    ID = CertWatchdogDefinition.DeviceEventType15DaysId,
+                    Message = "Device Cert Expire (15 Days)",
+                    GroupID = CertWatchdogDefinition.DeviceEventGroupId,
+                    StateGroupID = CertWatchdogDefinition.StateGroupId,
+                    State = "Critical",
+                    DefaultSourceKind = Kind.Camera,
+                    SourceKinds = deviceSourceKinds
                 }
             };
         }

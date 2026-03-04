@@ -161,7 +161,7 @@ namespace RTMPDriver
                 Toolbox.Log.Trace("VideoStreamSession: Stream stopped event fired for {0}", _streamPath);
             }
 
-            // Live H.264 path — block until a frame arrives or stream goes offline
+            // Live H.264 path  block until a frame arrives or stream goes offline
             if (isLive)
             {
                 byte[] frameData = null;
@@ -216,7 +216,7 @@ namespace RTMPDriver
                     header = BuildH264Header(frameData, isKeyFrame, frameTs);
                     return true;
                 }
-                // Stream went offline during wait — fall through to test pattern
+                // Stream went offline during wait  fall through to test pattern
             }
 
             // Drain remaining H.264 frames after stream went offline

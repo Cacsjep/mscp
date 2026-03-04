@@ -1,0 +1,55 @@
+<Project>
+
+  <!-- Compute MIPPluginDir from PluginName (evaluated here because PluginName is set in the project file) -->
+  <PropertyGroup Condition="'$(PluginName)' != '' and '$(MIPPluginDir)' == ''">
+    <MIPPluginDir>$(MIPPluginsRoot)\$(PluginName)\</MIPPluginDir>
+  </PropertyGroup>
+
+  <!--
+    Shared MSBuild targets for all MSC Community Plugins projects.
+    Handles stop/deploy/start cycle for local dev builds.
+    Skipped entirely when CIBuild=true (CI and build.ps1).
+
+    Each project sets flags in its .csproj (e.g. StopSmartClient=true).
+    The build automatically stops locked processes, deploys to MIPPlugins,
+    restarts services, and launches apps. Use the VS launch profile dropdown
+    to pick which executable to debug (F5).
+  -->
+
+  <!-- ═══ Pre-build: stop processes to unlock DLLs ═══ -->
+  <Target Name="MIPStopProcesses" BeforeTargets="Build"
+          Condition="'$(CIBuild)' != 'true'">
+    <Exec Command="taskkill /F /IM Client.exe 2&gt;nul"
+          Condition="'$(StopSmartClient)' == 'true'" IgnoreExitCode="true"/>
+    <Exec Command="taskkill /F /IM VideoOS.Administration.exe 2&gt;nul"
+          Condition="'$(StopAdminClient)' == 'true'" IgnoreExitCode="true"/>
+    <Exec Command="net stop MilestoneEventServerService 2&gt;nul"
+          Condition="'$(StopEventServer)' == 'true'" IgnoreExitCode="true"/>
+    <Exec Command='net stop "Milestone XProtect Recording Server" 2&gt;nul'
+          Condition="'$(StopRecordingServer)' == 'true'" IgnoreExitCode="true"/>
+    <!-- Wait for processes to fully terminate -->
+    <Exec Command="ping -n 3 127.0.0.1 &gt;nul" IgnoreExitCode="true"
+          Condition="'$(StopSmartClient)' == 'true' or '$(StopAdminClient)' == 'true' or '$(StopEventServer)' == 'true' or '$(StopRecordingServer)' == 'true'"/>
+  </Target>
+
+  <!-- ═══ Post-build: copy output to MIPPlugins ═══ -->
+  <Target Name="MIPDeploy" AfterTargets="Build"
+          Condition="'$(CIBuild)' != 'true' and '$(PluginName)' != ''">
+    <Exec Command="if not exist &quot;$(MIPPluginDir)&quot; mkdir &quot;$(MIPPluginDir)&quot;"/>
+    <Exec Command="xcopy /Y /E &quot;$(TargetDir)*.*&quot; &quot;$(MIPPluginDir)&quot;"/>
+  </Target>
+
+  <!-- ═══ Post-deploy: restart services and launch apps ═══ -->
+  <Target Name="MIPLaunch" AfterTargets="Build" DependsOnTargets="MIPDeploy"
+          Condition="'$(CIBuild)' != 'true'">
+    <Exec Command="net start MilestoneEventServerService 2&gt;nul"
+          Condition="'$(StartEventServer)' == 'true'" IgnoreExitCode="true"/>
+    <Exec Command='net start "Milestone XProtect Recording Server" 2&gt;nul'
+          Condition="'$(StartRecordingServer)' == 'true'" IgnoreExitCode="true"/>
+    <Exec Command="start &quot;&quot; &quot;$(SmartClientExe)&quot;"
+          Condition="'$(LaunchSmartClient)' == 'true'" IgnoreExitCode="true"/>
+    <Exec Command="start &quot;&quot; &quot;$(AdminClientExe)&quot;"
+          Condition="'$(LaunchAdminClient)' == 'true'" IgnoreExitCode="true"/>
+  </Target>
+
+</Project>

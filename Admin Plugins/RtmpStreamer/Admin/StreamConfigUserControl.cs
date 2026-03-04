@@ -176,7 +176,7 @@ namespace RTMPStreamer.Admin
             _lastLogHash = 0;
             _dgvLog.Rows.Clear();
 
-            // Do all MessageCommunication work off the UI thread —
+            // Do all MessageCommunication work off the UI thread 
             // Start() can block for seconds on first call.
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
@@ -186,7 +186,7 @@ namespace RTMPStreamer.Admin
                     MessageCommunicationManager.Start(serverId);
                     var mc = MessageCommunicationManager.Get(serverId);
 
-                    // Register filters before checking generation — we'll clean up if stale
+                    // Register filters before checking generation  we'll clean up if stale
                     var updateFilter = mc.RegisterCommunicationFilter(
                         OnStatusMessage,
                         new CommunicationIdFilter(StreamMessageIds.StatusUpdate));
@@ -202,7 +202,7 @@ namespace RTMPStreamer.Admin
                         {
                             if (_subscribeGeneration != generation)
                             {
-                                // Stale — user switched items while we were connecting.
+                                // Stale  user switched items while we were connecting.
                                 // Unregister the orphaned filters immediately.
                                 mc.UnRegisterCommunicationFilter(updateFilter);
                                 mc.UnRegisterCommunicationFilter(responseFilter);
@@ -348,7 +348,7 @@ namespace RTMPStreamer.Admin
                     : "";
             }
 
-            // Log grid — only rebuild when content actually changed
+            // Log grid  only rebuild when content actually changed
             if (update.RecentLogLines != null && update.RecentLogLines.Count > 0)
             {
                 var logHash = update.RecentLogLines.Count;

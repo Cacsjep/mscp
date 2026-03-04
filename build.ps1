@@ -63,8 +63,6 @@ Write-Host "`n[2/6] Building Release|Any CPU..." -ForegroundColor Yellow
     /p:Configuration=Release `
     '/p:Platform=Any CPU' `
     /p:CIBuild=true `
-    /p:PreBuildEvent= `
-    /p:PostBuildEvent= `
     /t:Rebuild `
     /v:minimal
 if ($LASTEXITCODE -ne 0) { Write-Error "Build (Any CPU) failed"; exit 1 }
@@ -75,8 +73,6 @@ Write-Host "`n[3/6] Building Release|x64..." -ForegroundColor Yellow
     /p:Configuration=Release `
     /p:Platform=x64 `
     /p:CIBuild=true `
-    /p:PreBuildEvent= `
-    /p:PostBuildEvent= `
     /t:Rebuild `
     /v:minimal
 if ($LASTEXITCODE -ne 0) { Write-Error "Build (x64) failed"; exit 1 }

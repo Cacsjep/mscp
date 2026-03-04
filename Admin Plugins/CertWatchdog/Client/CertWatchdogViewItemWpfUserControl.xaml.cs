@@ -100,7 +100,7 @@ namespace CertWatchdog.Client
 
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    loadingText.Text = "Requesting certificate data...";
+                    loadingText.Text = "Awaiting certificate data...";
                     loadingOverlay.Visibility = Visibility.Visible;
                 }));
             }
@@ -140,7 +140,12 @@ namespace CertWatchdog.Client
                 return;
             }
 
-            certDataGrid.ItemsSource = certificates;
+            var serverCerts = certificates.Where(c => c.SourceItemId == null).ToList();
+            var hwCerts = certificates.Where(c => c.SourceItemId != null).ToList();
+
+            serverDataGrid.ItemsSource = serverCerts;
+            hwDataGrid.ItemsSource = hwCerts;
+            hwCountText.Text = $"({hwCerts.Count})";
             loadingOverlay.Visibility = Visibility.Collapsed;
 
             var okCount = certificates.Count(c => c.Status == CertStatus.OK);
@@ -149,7 +154,7 @@ namespace CertWatchdog.Client
                 c.Status == CertStatus.Critical || c.Status == CertStatus.Expired);
             var errorCount = certificates.Count(c => c.Status == CertStatus.Error);
 
-            statusText.Text = $"{certificates.Count} endpoint(s)  |  " +
+            statusText.Text = $"{serverCerts.Count} server  |  {hwCerts.Count} hardware  |  " +
                               $"{okCount} OK  |  {expiringCount} Expiring  |  " +
                               $"{criticalCount} Critical  |  {errorCount} Error";
 
@@ -159,6 +164,39 @@ namespace CertWatchdog.Client
         private void OnRefreshClick(object sender, RoutedEventArgs e)
         {
             RequestCertData();
+        }
+
+        private void OnRecollectClick(object sender, RoutedEventArgs e)
+        {
+            var mc = _mc;
+            if (_closing || mc == null) return;
+
+            try
+            {
+                mc.TransmitMessage(
+                    new Message(CertMessageIds.CertRecollectRequest, null), null, null, null);
+
+                loadingText.Text = "Recollecting certificates...";
+                loadingOverlay.Visibility = Visibility.Visible;
+
+                // Request updated data after a short delay to allow the check to complete
+                _dataReceived = false;
+                _retryTimer?.Dispose();
+                _retryTimer = new Timer(_ =>
+                {
+                    if (_dataReceived || _closing)
+                    {
+                        _retryTimer?.Dispose();
+                        _retryTimer = null;
+                        return;
+                    }
+                    RequestCertData();
+                }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(5));
+            }
+            catch (Exception ex)
+            {
+                loadingText.Text = $"Recollect failed: {ex.Message}";
+            }
         }
     }
 }

@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using CertWatchdog.Models;
 
 namespace CertWatchdog.Services
@@ -82,32 +85,36 @@ namespace CertWatchdog.Services
             return info;
         }
 
-        public static List<CertificateInfo> CheckAllCertificates(List<(string Url, string ServiceType)> endpoints)
+        public static List<CertificateInfo> CheckAllCertificates(List<EndpointInfo> endpoints)
         {
-            var results = new List<CertificateInfo>();
+            var results = new ConcurrentBag<CertificateInfo>();
 
-            foreach (var endpoint in endpoints)
-            {
-                try
+            Parallel.ForEach(endpoints,
+                new ParallelOptions { MaxDegreeOfParallelism = 40 },
+                endpoint =>
                 {
-                    var certInfo = CheckCertificate(endpoint.Url, endpoint.ServiceType);
-                    results.Add(certInfo);
-                }
-                catch (Exception ex)
-                {
-                    results.Add(new CertificateInfo
+                    try
                     {
-                        Url = endpoint.Url,
-                        Endpoint = GetEndpointName(endpoint.Url),
-                        ServiceType = endpoint.ServiceType,
-                        Status = CertStatus.Error,
-                        ErrorMessage = ex.Message,
-                        LastChecked = DateTime.UtcNow
-                    });
-                }
-            }
+                        var certInfo = CheckCertificate(endpoint.Url, endpoint.ServiceType);
+                        certInfo.SourceItemId = endpoint.SourceItemId;
+                        results.Add(certInfo);
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add(new CertificateInfo
+                        {
+                            Url = endpoint.Url,
+                            Endpoint = GetEndpointName(endpoint.Url),
+                            ServiceType = endpoint.ServiceType,
+                            SourceItemId = endpoint.SourceItemId,
+                            Status = CertStatus.Error,
+                            ErrorMessage = ex.Message,
+                            LastChecked = DateTime.UtcNow
+                        });
+                    }
+                });
 
-            return results;
+            return results.ToList();
         }
 
         private static string GetEndpointName(string url)

@@ -8,7 +8,7 @@ namespace RTMPDriver.Rtmp
     /// <summary>
     /// Thread-safe frame queue bridging RTMP client threads (producer) and
     /// Milestone GetLiveFrame threads (consumer). One instance per stream path.
-    /// H.264 requires every frame delivered in order — no skipping.
+    /// H.264 requires every frame delivered in order  no skipping.
     /// </summary>
     internal class RtmpStreamBuffer
     {

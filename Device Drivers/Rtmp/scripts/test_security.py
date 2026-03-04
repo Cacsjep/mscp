@@ -227,7 +227,7 @@ def test_max_connections():
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
             sock.connect((HOST, PORT))
-            # Try handshake — if connection was rejected, this will fail
+            # Try handshake  if connection was rejected, this will fail
             if rtmp_handshake(sock):
                 sockets.append(sock)
                 accepted += 1
@@ -281,12 +281,12 @@ def test_oversized_message():
     drain_server_responses(sock, 0.5)
 
     # Send a Type 0 chunk header on csid=3 with message length = 10 MB
-    # Message type 20 (AMF0 command) — server will reject due to size
+    # Message type 20 (AMF0 command)  server will reject due to size
     oversized_length = 10 * 1024 * 1024  # 10 MB
     hdr = build_chunk_header_type0(csid=3, msg_type=20, msg_length=oversized_length)
     try:
         sock.sendall(hdr)
-        # Send a small amount of payload data — server should disconnect
+        # Send a small amount of payload data  server should disconnect
         # before we finish sending 10 MB
         sock.sendall(b'\x00' * 128)
         time.sleep(1)
@@ -327,7 +327,7 @@ def test_chunk_size_zero():
         send_rtmp_message(sock, csid=2, msg_type=1, payload=payload)
         time.sleep(1)
 
-        # Now try sending any message — should fail since the server
+        # Now try sending any message  should fail since the server
         # should have disconnected us after seeing chunk_size=0
         connect_payload = build_connect_command()
         send_rtmp_message(sock, csid=3, msg_type=20, payload=connect_payload)
@@ -517,7 +517,7 @@ def test_amf0_truncated():
         print("  PASS: Server disconnected gracefully (truncated AMF0)")
         return True
     else:
-        # Not necessarily a fail — server might just ignore the bad command
+        # Not necessarily a fail  server might just ignore the bad command
         print("  WARN: Server stayed alive (may have ignored truncated data)")
         return True  # Acceptable: truncated data causes FormatException which disconnects
 
