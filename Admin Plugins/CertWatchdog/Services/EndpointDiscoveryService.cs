@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using VideoOS.Platform;
+using VideoOS.Platform.ConfigurationItems;
 
 namespace CertWatchdog.Services
 {
@@ -158,103 +159,87 @@ namespace CertWatchdog.Services
 
         private static void DiscoverHardwareDevices(Dictionary<string, EndpointInfo> endpoints)
         {
-            var items = Configuration.Instance.GetItemsByKind(Kind.Hardware);
-            if (items == null || items.Count == 0)
-            {
-                PluginLog.Info("No hardware items found");
-                return;
-            }
-
-            PluginLog.Info($"Found {items.Count} hardware items");
-
-            var firstItem = items[0];
-            if (firstItem.Properties != null)
-            {
-                PluginLog.Info($"Hardware item '{firstItem.Name}' properties: {string.Join(", ", firstItem.Properties.Keys)}");
-            }
-
+            var management = new ManagementServer(EnvironmentManager.Instance.MasterSite);
             int count = 0;
-            foreach (var item in items)
+
+            foreach (var rs in management.RecordingServerFolder.RecordingServers)
             {
-                if (item.Properties == null) continue;
+                PluginLog.Info($"Checking recording server: {rs.Name}");
 
-                try
+                foreach (var hw in rs.HardwareFolder.Hardwares)
                 {
-                    var address = GetProperty(item, "Address");
-                    if (string.IsNullOrEmpty(address)) continue;
+                    if (!hw.Enabled) continue;
 
-                    string url = null;
-                    var objectId = item.FQID?.ObjectId ?? Guid.Empty;
-
-                    // Strategy 1: Address is already a full URL — check its scheme
                     try
                     {
-                        var parsed = new Uri(address);
-                        if (parsed.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+                        var address = hw.Address;
+                        if (string.IsNullOrEmpty(address)) continue;
+
+                        // Read HTTPS settings from HardwareDriverSettings
+                        bool httpsEnabled = false;
+                        int httpsPort = 443;
+
+                        try
                         {
-                            url = $"https://{parsed.Authority}";
+                            foreach (var settings in hw.HardwareDriverSettingsFolder.HardwareDriverSettings)
+                            {
+                                foreach (var child in settings.HardwareDriverSettingsChildItems)
+                                {
+                                    var props = child.Properties;
+                                    if (props.Keys.Contains("HttpSEnabled"))
+                                        httpsEnabled = "Yes".Equals(props.GetValue("HttpSEnabled"), StringComparison.OrdinalIgnoreCase);
+                                    if (props.Keys.Contains("HttpSPort"))
+                                        int.TryParse(props.GetValue("HttpSPort"), out httpsPort);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            PluginLog.Error($"Error reading driver settings for '{hw.Name}': {ex.Message}");
+                        }
+
+                        if (!httpsEnabled) continue;
+
+                        // Parse Address (always HTTP) and construct HTTPS URL
+                        Uri parsed;
+                        try { parsed = new Uri(address); }
+                        catch { continue; }
+
+                        var url = httpsPort == 443
+                            ? $"https://{parsed.Host}"
+                            : $"https://{parsed.Host}:{httpsPort}";
+
+                        // Use first camera under this hardware as event source
+                        Guid? cameraId = null;
+                        try
+                        {
+                            var firstCamera = hw.CameraFolder.Cameras.FirstOrDefault();
+                            if (firstCamera != null)
+                                cameraId = new Guid(firstCamera.Id);
+                        }
+                        catch { }
+
+                        var key = $"{url}|{hw.Id}";
+                        if (!endpoints.ContainsKey(key))
+                        {
+                            endpoints[key] = new EndpointInfo
+                            {
+                                Url = url,
+                                ServiceType = "Camera/Hardware",
+                                SourceItemId = cameraId
+                            };
+                            count++;
+                            PluginLog.Info($"  Hardware '{hw.Name}': {url} (HTTPS port {httpsPort})");
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Not a valid URI, skip
+                        PluginLog.Error($"Error processing hardware '{hw.Name}': {ex.Message}");
                     }
-
-                    // Strategy 2: Explicit HTTPSEnabled property (some drivers expose this)
-                    if (url == null)
-                    {
-                        var httpsEnabled = GetProperty(item, "HTTPSEnabled");
-                        if (!string.IsNullOrEmpty(httpsEnabled) &&
-                            httpsEnabled.Equals("Yes", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var httpsPort = GetProperty(item, "HTTPSPort");
-                            if (string.IsNullOrEmpty(httpsPort))
-                                httpsPort = "443";
-
-                            string host;
-                            try
-                            {
-                                var parsed = new Uri(address);
-                                host = parsed.Host;
-                            }
-                            catch
-                            {
-                                host = address;
-                            }
-
-                            url = $"https://{host}:{httpsPort}";
-                        }
-                    }
-
-                    if (url == null) continue;
-
-                    // Hardware devices can share the same address; use URL+ObjectId as key
-                    var key = $"{url}|{objectId}";
-                    if (!endpoints.ContainsKey(key))
-                    {
-                        endpoints[key] = new EndpointInfo
-                        {
-                            Url = url,
-                            ServiceType = "Camera/Hardware",
-                            SourceItemId = objectId == Guid.Empty ? (Guid?)null : objectId
-                        };
-                        count++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    PluginLog.Error($"Error processing hardware item '{item.Name}': {ex.Message}");
                 }
             }
 
             PluginLog.Info($"Discovered {count} hardware HTTPS endpoint(s)");
-        }
-
-        private static string GetProperty(Item item, string key)
-        {
-            if (item.Properties.ContainsKey(key))
-                return item.Properties[key];
-            return null;
         }
     }
 }
