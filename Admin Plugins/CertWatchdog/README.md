@@ -91,6 +91,10 @@ Select "Certificate Watchdog Plugin" in the Admin Plugins section of the unified
 3. Restart the Management Client
 4. Restart the Smart Client
 
+## Permissions
+
+The Smart Client dashboard is controlled by role-based security. In Management Client under **Security > Roles**, the plugin appears as "Certificate Watchdog" with a **Read** permission. Grant it to allow the Certificates workspace tab; deny or leave unset to hide it. The Event Server background checks and event firing are not affected by this setting.
+
 ## Requirements
 
 - Milestone XProtect Professional+ or higher

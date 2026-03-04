@@ -10,6 +10,7 @@ using VideoOS.Platform.Admin;
 using VideoOS.Platform.Background;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.UI.Controls;
+using VideoOS.Platform.Util;
 
 namespace CertWatchdog
 {
@@ -38,6 +39,11 @@ namespace CertWatchdog
         private List<ViewItemPlugin> _viewItemPlugins = new List<ViewItemPlugin>();
         private List<WorkSpacePlugin> _workSpacePlugins = new List<WorkSpacePlugin>();
         private List<ItemNode> _itemNodes;
+
+        private readonly List<SecurityAction> _securityActions = new List<SecurityAction>
+        {
+            new SecurityAction("GENERIC_READ", "Read"),
+        };
 
         private Image _pluginIcon;
         private Image _folderIcon;
@@ -81,8 +87,11 @@ namespace CertWatchdog
 
             if (env == EnvironmentType.SmartClient)
             {
-                _viewItemPlugins.Add(new CertWatchdogViewItemPlugin());
-                _workSpacePlugins.Add(new CertWatchdogWorkspacePlugin());
+                if (HasReadPermission())
+                {
+                    _viewItemPlugins.Add(new CertWatchdogViewItemPlugin());
+                    _workSpacePlugins.Add(new CertWatchdogWorkspacePlugin());
+                }
             }
         }
 
@@ -138,5 +147,25 @@ namespace CertWatchdog
         public override List<BackgroundPlugin> BackgroundPlugins => _backgroundPlugins;
         public override List<ViewItemPlugin> ViewItemPlugins => _viewItemPlugins;
         public override List<WorkSpacePlugin> WorkSpacePlugins => _workSpacePlugins;
+
+        public override List<SecurityAction> SecurityActions => _securityActions;
+
+        private static bool HasReadPermission()
+        {
+            try
+            {
+                SecurityAccess.CheckPermission(PluginId, "GENERIC_READ");
+                return true;
+            }
+            catch (NotAuthorizedMIPException)
+            {
+                return false;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(ex.ToString());
+                return false;
+            }
+        }
     }
 }
