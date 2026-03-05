@@ -6,17 +6,42 @@
              mc:Ignorable="d"
              d:DesignHeight="400"
              d:DesignWidth="600">
-    <Grid>
-        <Border Padding="30"
-                BorderThickness="1"
-                BorderBrush="LightGray"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center">
-            <TextBlock Text="Recorder settings panel placeholder."
-                       TextWrapping="Wrap"
-                       FontSize="12"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-        </Border>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Monitor Capture" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+        <TextBlock Grid.Row="1" Text="Select which monitors to capture. If none are selected, all monitors are captured."
+                   TextWrapping="Wrap" Margin="0,0,0,15" Opacity="0.7" />
+
+        <ItemsControl Grid.Row="2" x:Name="MonitorList">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border BorderBrush="#444" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock FontWeight="SemiBold">
+                                    <Run Text="{Binding DisplayName, Mode=OneWay}" />
+                                    <Run Text="{Binding PrimaryLabel, Mode=OneWay}" Foreground="Gray" />
+                                </TextBlock>
+                                <TextBlock Opacity="0.6">
+                                    <Run Text="{Binding Resolution, Mode=OneWay}" />
+                                    <Run Text=" — " />
+                                    <Run Text="{Binding Position, Mode=OneWay}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </UserControl>

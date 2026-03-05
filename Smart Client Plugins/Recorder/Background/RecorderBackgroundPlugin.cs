@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using System.Windows.Forms;
+using Recorder.Background;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
 
@@ -17,11 +21,8 @@ namespace Recorder.Background
         public override List<EnvironmentType> TargetEnvironments
             => new List<EnvironmentType> { EnvironmentType.SmartClient };
 
-        private readonly object _lock = new object();
-        private List<WindowInfo> _windows = new List<WindowInfo>();
         private Thread _captureThread;
         private volatile bool _run;
-
         private string _outputDir;
 
         public override void Init()
@@ -45,37 +46,26 @@ namespace Recorder.Background
             {
                 try
                 {
-                    var windows = ProcessWindows.GetAllWindowsForCurrentProcess();
+                    var config = RecorderConfig.Load();
+                    var screens = Screen.AllScreens
+                        .Where(s => config.IsMonitorEnabled(s))
+                        .ToList();
 
-                    lock (_lock)
-                        _windows = windows;
+                    var sw = Stopwatch.StartNew();
+                    var captured = 0;
 
-                    Log($"Cycle: found {windows.Count} window(s)");
-
-                    foreach (var win in windows)
+                    foreach (var screen in screens)
                     {
                         if (!_run) break;
 
-                        if (!win.IsVisible)
-                        {
-                            Log($"  Skip hidden: {win}");
-                            continue;
-                        }
-                        if (win.IsMinimized || !win.HasArea)
-                        {
-                            Log($"  Skip minimized/no-area: {win}");
-                            continue;
-                        }
-
                         try
                         {
-                            using (var bmp = Capture.CaptureWindow(win.Handle))
+                            var snapSw = Stopwatch.StartNew();
+                            using (var bmp = MonitorCapture.CaptureScreen(screen))
                             {
-                                var safeName = SanitizeFileName(win.Title);
-                                if (string.IsNullOrEmpty(safeName))
-                                    safeName = win.Handle.ToString();
-                                safeName = $"{safeName}_{win.Handle}";
+                                var captureMs = snapSw.ElapsedMilliseconds;
 
+                                var safeName = SanitizeFileName(screen.DeviceName);
                                 var path = Path.Combine(_outputDir, $"{safeName}.png");
 
                                 using (var ms = new MemoryStream())
@@ -83,14 +73,19 @@ namespace Recorder.Background
                                     bmp.Save(ms, ImageFormat.Png);
                                     File.WriteAllBytes(path, ms.ToArray());
                                 }
-                                Log($"  Snap {win.Width}x{win.Height} \"{win.Title}\" -> {path}");
+                                var totalMs = snapSw.ElapsedMilliseconds;
+                                var sizeKb = new FileInfo(path).Length / 1024;
+                                Log($"  Snap {screen.DeviceName} {screen.Bounds.Width}x{screen.Bounds.Height} capture={captureMs}ms encode+save={totalMs - captureMs}ms total={totalMs}ms size={sizeKb}KB");
+                                captured++;
                             }
                         }
                         catch (Exception e)
                         {
-                            LogError($"  Capture failed for {win}: {e.Message}");
+                            LogError($"  Capture failed for {screen.DeviceName}: {e.Message}");
                         }
                     }
+
+                    Log($"Cycle: {captured}/{screens.Count} monitor(s) in {sw.ElapsedMilliseconds}ms");
                 }
                 catch (Exception e)
                 {
@@ -110,7 +105,7 @@ namespace Recorder.Background
 
         private static string SanitizeFileName(string name)
         {
-            if (string.IsNullOrWhiteSpace(name)) return null;
+            if (string.IsNullOrWhiteSpace(name)) return "unknown";
             foreach (var c in Path.GetInvalidFileNameChars())
                 name = name.Replace(c, '_');
             return name.Trim();
