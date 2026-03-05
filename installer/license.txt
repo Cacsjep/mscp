@@ -29,3 +29,16 @@ of Milestone Systems A/S.
 
 Use at your own risk. These plugins and drivers interact directly with your
 Milestone installation. Always test in a non-production environment first.
+
+
+THIRD-PARTY SOFTWARE
+
+This software includes FFmpeg libraries (GPL-3.0) and the x264 encoder
+(GPL-2.0+). By installing the MonitorRTMPStreamer plugin, you acknowledge
+that these components are distributed under the GNU General Public License.
+Full license texts and source code links are available in
+THIRD-PARTY-NOTICES.txt included with this distribution and at:
+
+  FFmpeg:       https://ffmpeg.org/ (GPL-3.0)
+  FFmpeg.AutoGen: https://github.com/Ruslan-B/FFmpeg.AutoGen (LGPL-3.0)
+  x264:         https://www.videolan.org/developers/x264.html (GPL-2.0+)

@@ -2,7 +2,8 @@
 <#
 .SYNOPSIS
     Unified build script for MSC Community Plugins.
-    Builds all plugins/drivers in Release, creates per-plugin ZIPs, and a combined NSIS installer.
+    Reads plugins.json for the plugin list. Builds all plugins in Release,
+    creates per-plugin ZIPs, and a combined NSIS installer.
 .EXAMPLE
     .\build.ps1
 #>
@@ -13,8 +14,13 @@ $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $version = '1.0.0'
 $buildDir = Join-Path $root 'build'
+$manifestPath = Join-Path $root 'plugins.json'
 
 Write-Host "== MSC Community Plugins v$version ==" -ForegroundColor Cyan
+
+# ── Load plugin manifest ──
+$plugins = Get-Content $manifestPath -Raw | ConvertFrom-Json
+Write-Host "Loaded $($plugins.Count) plugins from plugins.json"
 
 # ── Locate MSBuild ──
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -57,84 +63,76 @@ Write-Host "`n[1/6] Restoring NuGet packages..." -ForegroundColor Yellow
 & $nugetPath restore $slnPath
 if ($LASTEXITCODE -ne 0) { Write-Error "NuGet restore failed"; exit 1 }
 
-# ── Build Release|Any CPU (Smart Client plugins + RTMPDriver) ──
-Write-Host "`n[2/6] Building Release|Any CPU..." -ForegroundColor Yellow
-& $msbuildPath $slnPath `
-    /p:Configuration=Release `
-    '/p:Platform=Any CPU' `
-    /p:CIBuild=true `
-    /t:Rebuild `
-    /v:minimal
-if ($LASTEXITCODE -ne 0) { Write-Error "Build (Any CPU) failed"; exit 1 }
+# ── Determine which platforms are needed ──
+$platforms = $plugins | ForEach-Object {
+    if ($_.platform) { $_.platform } else { 'AnyCPU' }
+} | Sort-Object -Unique
 
-# ── Build Release|x64 (RTMPStreamer + RTMPStreamerHelper) ──
-Write-Host "`n[3/6] Building Release|x64..." -ForegroundColor Yellow
-& $msbuildPath $slnPath `
-    /p:Configuration=Release `
-    /p:Platform=x64 `
-    /p:CIBuild=true `
-    /t:Rebuild `
-    /v:minimal
-if ($LASTEXITCODE -ne 0) { Write-Error "Build (x64) failed"; exit 1 }
+$stepNum = 2
+foreach ($plat in $platforms) {
+    $platDisplay = if ($plat -eq 'AnyCPU') { 'Any CPU' } else { $plat }
+    Write-Host "`n[$stepNum/6] Building Release|$platDisplay..." -ForegroundColor Yellow
+    & $msbuildPath $slnPath `
+        /p:Configuration=Release `
+        "/p:Platform=$platDisplay" `
+        /p:CIBuild=true `
+        /t:Rebuild `
+        /v:minimal
+    if ($LASTEXITCODE -ne 0) { Write-Error "Build ($platDisplay) failed"; exit 1 }
+    $stepNum++
+}
 
 # ── Stage files ──
 Write-Host "`n[4/6] Staging release files..." -ForegroundColor Yellow
 $staging = Join-Path $buildDir 'staging'
 
-# Weather
-$stageWeather = Join-Path $staging 'Weather'
-New-Item -ItemType Directory -Path $stageWeather -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Smart Client Plugins\Weather\bin\Release\net48\*') -Destination $stageWeather -Recurse
+foreach ($p in $plugins) {
+    $platform = if ($p.platform) { $p.platform } else { 'AnyCPU' }
+    $outputPath = if ($p.outputPath) { $p.outputPath }
+                  elseif ($platform -eq 'x64') { 'bin/x64/Release/net48' }
+                  else { 'bin/Release/net48' }
 
-# RDP
-$stageRdp = Join-Path $staging 'RDP'
-New-Item -ItemType Directory -Path $stageRdp -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Smart Client Plugins\RDP\bin\Release\net48\*') -Destination $stageRdp -Recurse
+    $stageDir = Join-Path $staging $p.name
+    New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
+    $srcPath = Join-Path $root "$($p.path)\$outputPath"
+    Copy-Item -Path "$srcPath\*" -Destination $stageDir -Recurse
+    Write-Host "  Staged: $($p.name) <- $($p.path)\$outputPath"
 
-# Notepad
-$stageNotepad = Join-Path $staging 'Notepad'
-New-Item -ItemType Directory -Path $stageNotepad -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Smart Client Plugins\Notepad\bin\Release\net48\*') -Destination $stageNotepad -Recurse
+    # Extra staging directories
+    if ($p.extraStagingDirs) {
+        foreach ($dir in $p.extraStagingDirs) {
+            $extraSrc = Join-Path $root $dir
+            Copy-Item -Path "$extraSrc\*" -Destination $stageDir -Recurse -Force
+            Write-Host "    + extra dir: $dir"
+        }
+    }
 
-# RTMPDriver
-$stageDriver = Join-Path $staging 'RTMPDriver'
-New-Item -ItemType Directory -Path $stageDriver -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Device Drivers\Rtmp\RTMPDriver\bin\Release\*') -Destination $stageDriver -Recurse
-
-# RTMPStreamer
-$stageStreamer = Join-Path $staging 'RTMPStreamer'
-New-Item -ItemType Directory -Path $stageStreamer -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\bin\x64\Release\*') -Destination $stageStreamer -Recurse
-Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\RTMPStreamerHelper\bin\x64\Release\*') -Destination $stageStreamer -Recurse -Force
-Copy-Item -Path (Join-Path $root 'Admin Plugins\RTMPStreamer\plugin.def') -Destination $stageStreamer -Force
-
-# CertWatchdog
-$stageCertWatchdog = Join-Path $staging 'CertWatchdog'
-New-Item -ItemType Directory -Path $stageCertWatchdog -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Admin Plugins\CertWatchdog\bin\Release\net48\*') -Destination $stageCertWatchdog -Recurse
-
-# SnapReport
-$stageSnapReport = Join-Path $staging 'SnapReport'
-New-Item -ItemType Directory -Path $stageSnapReport -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Smart Client Plugins\SnapReport\bin\Release\net48\*') -Destination $stageSnapReport -Recurse
-
-# MonitorRTMPStreamer
-$stageMonitorRTMPStreamer = Join-Path $staging 'MonitorRTMPStreamer'
-New-Item -ItemType Directory -Path $stageMonitorRTMPStreamer -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Smart Client Plugins\MonitorRTMPStreamer\bin\Release\net48\*') -Destination $stageMonitorRTMPStreamer -Recurse
+    # Extra staging files
+    if ($p.extraStagingFiles) {
+        foreach ($file in $p.extraStagingFiles) {
+            $extraFile = Join-Path $root $file
+            Copy-Item -Path $extraFile -Destination $stageDir -Force
+            Write-Host "    + extra file: $file"
+        }
+    }
+}
 
 # ── Create ZIPs ──
 Write-Host "`n[5/6] Creating release ZIPs..." -ForegroundColor Yellow
-$artifacts = @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'CertWatchdog', 'SnapReport', 'MonitorRTMPStreamer')
-foreach ($name in $artifacts) {
-    $zipPath = Join-Path $buildDir "$name-v$version.zip"
+foreach ($p in $plugins) {
+    $zipPath = Join-Path $buildDir "$($p.name)-v$version.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-    Compress-Archive -Path (Join-Path $staging $name) -DestinationPath $zipPath
+    Compress-Archive -Path (Join-Path $staging $p.name) -DestinationPath $zipPath
     Write-Host "  -> $zipPath"
 }
 
-# ── Build NSIS installer ──
+# ── Generate NSIS include + Build installer ──
 Write-Host "`n[6/6] Building NSIS installer..." -ForegroundColor Yellow
+
+# Generate plugin-generated.nsi from plugins.json
+$genScript = Join-Path $root 'installer\generate-nsi.ps1'
+& $genScript -ManifestPath $manifestPath
+
 $makensis = $null
 $nsisLocations = @(
     "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
@@ -150,26 +148,18 @@ if (-not $makensis) {
 
 if ($makensis) {
     $nsiScript = Join-Path $root 'installer\MSCPlugins.nsi'
-    $weatherDir  = (Resolve-Path (Join-Path $staging 'Weather')).Path
-    $rdpDir      = (Resolve-Path (Join-Path $staging 'RDP')).Path
-    $notepadDir  = (Resolve-Path (Join-Path $staging 'Notepad')).Path
-    $driverDir   = (Resolve-Path (Join-Path $staging 'RTMPDriver')).Path
-    $streamerDir = (Resolve-Path (Join-Path $staging 'RTMPStreamer')).Path
-    $certwatchdogDir = (Resolve-Path (Join-Path $staging 'CertWatchdog')).Path
-    $snapreportDir = (Resolve-Path (Join-Path $staging 'SnapReport')).Path
-    $monitorrtmpstreamerDir = (Resolve-Path (Join-Path $staging 'MonitorRTMPStreamer')).Path
 
-    & $makensis /DVERSION=$version `
-        "/DWEATHER_DIR=$weatherDir" `
-        "/DRDP_DIR=$rdpDir" `
-        "/DNOTEPAD_DIR=$notepadDir" `
-        "/DRTMPDRIVER_DIR=$driverDir" `
-        "/DRTMPSTREAMER_DIR=$streamerDir" `
-        "/DCERTWATCHDOG_DIR=$certwatchdogDir" `
-        "/DSNAPREPORT_DIR=$snapreportDir" `
-        "/DMONITORRTMPSTREAMER_DIR=$monitorrtmpstreamerDir" `
-        "/DOUTDIR=$buildDir" `
-        $nsiScript
+    # Build /D args for staging dirs dynamically
+    $nsisArgs = @("/DVERSION=$version")
+    foreach ($p in $plugins) {
+        $dirName = "$($p.name.ToUpper())_DIR"
+        $dirPath = (Resolve-Path (Join-Path $staging $p.name)).Path
+        $nsisArgs += "/D${dirName}=$dirPath"
+    }
+    $nsisArgs += "/DOUTDIR=$buildDir"
+    $nsisArgs += $nsiScript
+
+    & $makensis @nsisArgs
     if ($LASTEXITCODE -ne 0) { Write-Error "NSIS build failed"; exit 1 }
 } else {
     Write-Warning "NSIS not found -- skipping installer build."
@@ -179,8 +169,8 @@ if ($makensis) {
 # ── Done ──
 Write-Host "`n== Build complete ==" -ForegroundColor Green
 Write-Host "Output: $buildDir"
-foreach ($name in $artifacts) {
-    Write-Host "  ZIP: $name-v$version.zip"
+foreach ($p in $plugins) {
+    Write-Host "  ZIP: $($p.name)-v$version.zip"
 }
 if ($makensis) {
     Write-Host "  Installer: MSCPlugins-v$version-Setup.exe"

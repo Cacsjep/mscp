@@ -9,68 +9,60 @@ permissions:
   contents: write
 
 jobs:
+  # ── Generate build matrix from plugins.json ──
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.gen.outputs.matrix }}
+      names: ${{ steps.gen.outputs.names }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: gen
+        shell: pwsh
+        run: |
+          $plugins = Get-Content plugins.json -Raw | ConvertFrom-Json
+          $include = @()
+          $names = @()
+
+          foreach ($p in $plugins) {
+            $project = if ($p.project) { $p.project } else { "$($p.name).csproj" }
+            $platform = if ($p.platform) { $p.platform } else { 'AnyCPU' }
+            $outputPath = if ($p.outputPath) { $p.outputPath }
+                          elseif ($platform -eq 'x64') { 'bin/x64/Release/net48' }
+                          else { 'bin/Release/net48' }
+
+            # Build project list (main + extras)
+            $projects = @("$($p.path)/$project" -replace '/', '\')
+            if ($p.extraProjects) {
+              foreach ($ep in $p.extraProjects) {
+                $projects += ($ep -replace '/', '\')
+              }
+            }
+
+            $include += @{
+              name       = $p.name
+              projects   = $projects -join ';'
+              platform   = $platform
+              stage_from = ("$($p.path)/$outputPath" -replace '/', '\')
+              stage_to   = $p.name
+            }
+            $names += $p.name
+          }
+
+          $matrix = @{ include = $include } | ConvertTo-Json -Depth 5 -Compress
+          $namesList = $names | ConvertTo-Json -Compress
+
+          "matrix=$matrix" >> $env:GITHUB_OUTPUT
+          "names=$namesList" >> $env:GITHUB_OUTPUT
+
   # ── Matrix build: each plugin builds in parallel ──
   build:
+    needs: setup
     runs-on: windows-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: Weather
-            projects: Smart Client Plugins\Weather\Weather.csproj
-            platform: AnyCPU
-            stage_from: Smart Client Plugins\Weather\bin\Release\net48
-            stage_to: Weather
-            extra_flags: /p:CIBuild=true
-
-          - name: RDP
-            projects: Smart Client Plugins\RDP\RDP.csproj
-            platform: AnyCPU
-            stage_from: Smart Client Plugins\RDP\bin\Release\net48
-            stage_to: RDP
-            extra_flags: /p:CIBuild=true
-
-          - name: Notepad
-            projects: Smart Client Plugins\Notepad\Notepad.csproj
-            platform: AnyCPU
-            stage_from: Smart Client Plugins\Notepad\bin\Release\net48
-            stage_to: Notepad
-            extra_flags: /p:CIBuild=true
-
-          - name: RTMPDriver
-            projects: Device Drivers\Rtmp\RTMPDriver\RTMPDriver.csproj
-            platform: AnyCPU
-            stage_from: Device Drivers\Rtmp\RTMPDriver\bin\Release
-            stage_to: RTMPDriver
-            extra_flags: /p:CIBuild=true
-
-          - name: RTMPStreamer
-            projects: Admin Plugins\RTMPStreamer\RTMPStreamer.csproj;Admin Plugins\RTMPStreamer\RTMPStreamerHelper\RTMPStreamerHelper.csproj
-            platform: x64
-            stage_from: Admin Plugins\RTMPStreamer\bin\x64\Release\net48
-            stage_to: RTMPStreamer
-            extra_flags: /p:CIBuild=true
-
-          - name: CertWatchdog
-            projects: Admin Plugins\CertWatchdog\CertWatchdog.csproj
-            platform: AnyCPU
-            stage_from: Admin Plugins\CertWatchdog\bin\Release\net48
-            stage_to: CertWatchdog
-            extra_flags: /p:CIBuild=true
-
-          - name: SnapReport
-            projects: Smart Client Plugins\SnapReport\SnapReport.csproj
-            platform: AnyCPU
-            stage_from: Smart Client Plugins\SnapReport\bin\Release\net48
-            stage_to: SnapReport
-            extra_flags: /p:CIBuild=true
-
-          - name: MonitorRTMPStreamer
-            projects: Smart Client Plugins\MonitorRTMPStreamer\MonitorRTMPStreamer.csproj
-            platform: AnyCPU
-            stage_from: Smart Client Plugins\MonitorRTMPStreamer\bin\Release\net48
-            stage_to: MonitorRTMPStreamer
-            extra_flags: /p:CIBuild=true
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
 
     steps:
       - name: Checkout
@@ -89,7 +81,7 @@ jobs:
         run: |
           $projects = "${{ matrix.projects }}" -split ";"
           foreach ($proj in $projects) {
-            msbuild $proj /p:Configuration=Release /p:Platform="${{ matrix.platform }}" ${{ matrix.extra_flags }}
+            msbuild $proj /p:Configuration=Release /p:Platform="${{ matrix.platform }}" /p:CIBuild=true
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
         shell: pwsh
@@ -100,12 +92,25 @@ jobs:
           Copy-Item -Path "${{ matrix.stage_from }}\*" -Destination staging\${{ matrix.stage_to }} -Recurse
         shell: pwsh
 
-      - name: Stage RTMPStreamer extras
-        if: matrix.name == 'RTMPStreamer'
-        run: |
-          Copy-Item -Path "Admin Plugins\RTMPStreamer\RTMPStreamerHelper\bin\x64\Release\net48\*" -Destination staging\RTMPStreamer -Recurse -Force
-          Copy-Item -Path "Admin Plugins\RTMPStreamer\plugin.def" -Destination staging\RTMPStreamer -Force
+      - name: Extra staging for ${{ matrix.name }}
         shell: pwsh
+        run: |
+          $plugins = Get-Content plugins.json -Raw | ConvertFrom-Json
+          $p = $plugins | Where-Object { $_.name -eq '${{ matrix.name }}' }
+          if ($p.extraStagingDirs) {
+            foreach ($dir in $p.extraStagingDirs) {
+              $src = $dir -replace '/', '\'
+              Copy-Item -Path "$src\*" -Destination "staging\${{ matrix.stage_to }}" -Recurse -Force
+              Write-Host "Extra staging dir: $src"
+            }
+          }
+          if ($p.extraStagingFiles) {
+            foreach ($file in $p.extraStagingFiles) {
+              $src = $file -replace '/', '\'
+              Copy-Item -Path $src -Destination "staging\${{ matrix.stage_to }}" -Force
+              Write-Host "Extra staging file: $src"
+            }
+          }
 
       - name: Create ZIP
         run: Compress-Archive -Path staging\${{ matrix.stage_to }} -DestinationPath ${{ matrix.name }}-${{ github.ref_name }}.zip
@@ -119,7 +124,7 @@ jobs:
 
   # ── Collect all artifacts, build unified installer, create release ──
   release:
-    needs: build
+    needs: [setup, build]
     runs-on: windows-latest
 
     steps:
@@ -132,66 +137,52 @@ jobs:
           path: artifacts
 
       - name: Extract staging directories
+        shell: pwsh
         run: |
-          foreach ($name in @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'CertWatchdog', 'SnapReport', 'MonitorRTMPStreamer')) {
+          $names = '${{ needs.setup.outputs.names }}' | ConvertFrom-Json
+          foreach ($name in $names) {
             $zip = Get-ChildItem "artifacts\$name\*.zip" | Select-Object -First 1
             Expand-Archive -Path $zip.FullName -DestinationPath staging -Force
           }
-        shell: pwsh
 
       - name: Install NSIS
         run: choco install nsis -y --no-progress
         shell: pwsh
 
+      - name: Generate NSIS sections
+        shell: pwsh
+        run: pwsh installer/generate-nsi.ps1
+
       - name: Build NSIS installer
+        shell: pwsh
         run: |
           $version = '${{ github.ref_name }}' -replace '^v',''
-          $weatherDir  = (Resolve-Path 'staging\Weather').Path
-          $rdpDir      = (Resolve-Path 'staging\RDP').Path
-          $notepadDir  = (Resolve-Path 'staging\Notepad').Path
-          $driverDir   = (Resolve-Path 'staging\RTMPDriver').Path
-          $streamerDir = (Resolve-Path 'staging\RTMPStreamer').Path
-          $certwatchdogDir = (Resolve-Path 'staging\CertWatchdog').Path
-          $snapreportDir = (Resolve-Path 'staging\SnapReport').Path
-          $monitorrtmpstreamerDir = (Resolve-Path 'staging\MonitorRTMPStreamer').Path
+          $plugins = Get-Content plugins.json -Raw | ConvertFrom-Json
           $outDir = (Resolve-Path '.').Path
-          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" `
-            /DVERSION=$version `
-            "/DWEATHER_DIR=$weatherDir" `
-            "/DRDP_DIR=$rdpDir" `
-            "/DNOTEPAD_DIR=$notepadDir" `
-            "/DRTMPDRIVER_DIR=$driverDir" `
-            "/DRTMPSTREAMER_DIR=$streamerDir" `
-            "/DCERTWATCHDOG_DIR=$certwatchdogDir" `
-            "/DSNAPREPORT_DIR=$snapreportDir" `
-            "/DMONITORRTMPSTREAMER_DIR=$monitorrtmpstreamerDir" `
-            "/DOUTDIR=$outDir" `
-            installer\MSCPlugins.nsi
-        shell: pwsh
+
+          $nsisArgs = @("/DVERSION=$version")
+          foreach ($p in $plugins) {
+            $dirName = "$($p.name.ToUpper())_DIR"
+            $dirPath = (Resolve-Path "staging\$($p.name)").Path
+            $nsisArgs += "/D${dirName}=$dirPath"
+          }
+          $nsisArgs += "/DOUTDIR=$outDir"
+          $nsisArgs += "installer\MSCPlugins.nsi"
+
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" @nsisArgs
 
       - name: Collect release files
-        run: |
-          Copy-Item artifacts\Weather\*.zip -Destination .
-          Copy-Item artifacts\RDP\*.zip -Destination .
-          Copy-Item artifacts\Notepad\*.zip -Destination .
-          Copy-Item artifacts\RTMPDriver\*.zip -Destination .
-          Copy-Item artifacts\RTMPStreamer\*.zip -Destination .
-          Copy-Item artifacts\CertWatchdog\*.zip -Destination .
-          Copy-Item artifacts\SnapReport\*.zip -Destination .
-          Copy-Item artifacts\MonitorRTMPStreamer\*.zip -Destination .
         shell: pwsh
+        run: |
+          $names = '${{ needs.setup.outputs.names }}' | ConvertFrom-Json
+          foreach ($name in $names) {
+            Copy-Item "artifacts\$name\*.zip" -Destination .
+          }
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Weather-${{ github.ref_name }}.zip
-            RDP-${{ github.ref_name }}.zip
-            Notepad-${{ github.ref_name }}.zip
-            RTMPDriver-${{ github.ref_name }}.zip
-            RTMPStreamer-${{ github.ref_name }}.zip
-            CertWatchdog-${{ github.ref_name }}.zip
-            SnapReport-${{ github.ref_name }}.zip
-            MonitorRTMPStreamer-${{ github.ref_name }}.zip
+            *-${{ github.ref_name }}.zip
             MSCPlugins-${{ github.ref_name }}-Setup.exe
           generate_release_notes: true

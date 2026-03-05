@@ -1,10 +1,16 @@
 ; MSCPlugins Unified NSIS Installer Script
 ; Installs Milestone XProtect™ Community Plugins & Drivers
+;
+; Plugin sections are auto-generated from plugins.json.
+; Run: pwsh installer/generate-nsi.ps1
 
 !include "MUI2.nsh"
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
 !include "Sections.nsh"
+
+; ── Generated plugin definitions (staging dirs, sections, descriptions) ──
+!include "plugin-generated.nsi"
 
 ; ── Version (passed via /DVERSION=x.x on the command line) ──
 !ifndef VERSION
@@ -26,31 +32,8 @@ InstallDir "$PROGRAMFILES64\Milestone"
 RequestExecutionLevel admin
 BrandingText "MSC Community Plugins v${VERSION}"
 
-; ── Staging directories (passed via /D on the command line) ──
-!ifndef WEATHER_DIR
-  !define WEATHER_DIR "..\build\staging\Weather"
-!endif
-!ifndef RDP_DIR
-  !define RDP_DIR "..\build\staging\RDP"
-!endif
-!ifndef NOTEPAD_DIR
-  !define NOTEPAD_DIR "..\build\staging\Notepad"
-!endif
-!ifndef RTMPDRIVER_DIR
-  !define RTMPDRIVER_DIR "..\build\staging\RTMPDriver"
-!endif
-!ifndef RTMPSTREAMER_DIR
-  !define RTMPSTREAMER_DIR "..\build\staging\RTMPStreamer"
-!endif
-!ifndef CERTWATCHDOG_DIR
-  !define CERTWATCHDOG_DIR "..\build\staging\CertWatchdog"
-!endif
-!ifndef SNAPREPORT_DIR
-  !define SNAPREPORT_DIR "..\build\staging\SnapReport"
-!endif
-!ifndef MONITORRTMPSTREAMER_DIR
-  !define MONITORRTMPSTREAMER_DIR "..\build\staging\MonitorRTMPStreamer"
-!endif
+; ── Staging directory defines (from plugins.json) ──
+!insertmacro PluginStagingDefines
 
 ; ── Process / service names ──
 !define SC_PROCESS  "Client.exe"
@@ -92,8 +75,6 @@ Var LOG_HANDLE           ; file handle for install log
 ; Process / service check macros
 ; ══════════════════════════════════════════════════════════════
 
-; Check if a process is running
-;   ${RESULT_VAR} = "1" if running, "0" if not
 !macro _CheckProcessRunning PROC_NAME RESULT_VAR
   nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq ${PROC_NAME}" /FO CSV /NH 2>nul | findstr /I /C:"${PROC_NAME}"'
   Pop ${RESULT_VAR}
@@ -105,8 +86,6 @@ Var LOG_HANDLE           ; file handle for install log
   ${EndIf}
 !macroend
 
-; Check if a Windows service is running
-;   ${RESULT_VAR} = "1" if running, "0" if not / not installed
 !macro _CheckServiceRunning SVC_NAME RESULT_VAR
   nsExec::ExecToStack 'cmd /c sc query "${SVC_NAME}" 2>nul | findstr /C:"RUNNING"'
   Pop ${RESULT_VAR}
@@ -128,7 +107,6 @@ Var LOG_HANDLE           ; file handle for install log
 ; ── Pages ──
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "license.txt"
-; ComponentsLeave callback captures which services need to be stopped
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ComponentsLeave
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_INSTFILES
@@ -141,12 +119,9 @@ Var LOG_HANDLE           ; file handle for install log
 !insertmacro MUI_LANGUAGE "English"
 
 ; ══════════════════════════════════════════════════════════════
-; .onInit -- set safe defaults (critical for silent /S mode
-;   where page callbacks never run)
+; .onInit -- set safe defaults (critical for silent /S mode)
 ; ══════════════════════════════════════════════════════════════
 Function .onInit
-  ; Default: stop everything. ComponentsLeave will narrow this
-  ; down in interactive mode based on the actual selection.
   StrCpy $STOP_SC "1"
   StrCpy $STOP_RS "1"
   StrCpy $STOP_ES "1"
@@ -154,7 +129,6 @@ FunctionEnd
 
 ; ══════════════════════════════════════════════════════════════
 ; Pre-install: Stop services/processes based on selected components
-; (hidden section -- always runs first)
 ; ══════════════════════════════════════════════════════════════
 Section "-StopServices"
 
@@ -165,7 +139,6 @@ Section "-StopServices"
 
   !insertmacro _LogMsg "STOP_SC=$STOP_SC  STOP_RS=$STOP_RS  STOP_ES=$STOP_ES"
 
-  ; ── Smart Client plugins selected → close Smart Client ──
   ${If} $STOP_SC == "1"
     !insertmacro _LogMsg "Closing Smart Client (${SC_PROCESS})..."
     nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}"'
@@ -174,7 +147,6 @@ Section "-StopServices"
     Sleep 2000
   ${EndIf}
 
-  ; ── Device Drivers selected → stop Recording Server ──
   ${If} $STOP_RS == "1"
     !insertmacro _CheckServiceRunning "${RS_SERVICE}" $RS_WAS_RUNNING
     !insertmacro _LogMsg "Recording Server was running: $RS_WAS_RUNNING"
@@ -186,7 +158,6 @@ Section "-StopServices"
     ${EndIf}
   ${EndIf}
 
-  ; ── Admin Plugins selected → close Management Client + stop Event Server ──
   ${If} $STOP_ES == "1"
     !insertmacro _LogMsg "Closing Management Client (${MC_PROCESS})..."
     nsExec::ExecToLog 'taskkill /F /IM "${MC_PROCESS}"'
@@ -207,209 +178,19 @@ Section "-StopServices"
 SectionEnd
 
 ; ══════════════════════════════════════════════════════════════
-; Smart Client Plugins
+; Plugin Sections (auto-generated from plugins.json)
 ; ══════════════════════════════════════════════════════════════
 
 SectionGroup "Smart Client Plugins" SEC_SC_GROUP
-
-  Section "Weather Plugin" SEC_WEATHER
-    SetOutPath "$INSTDIR\MIPPlugins\Weather"
-    !insertmacro _LogMsg "Installing Weather Plugin to $INSTDIR\MIPPlugins\Weather..."
-    File /r "${WEATHER_DIR}\*.*"
-    !insertmacro _LogMsg "Weather Plugin installed."
-
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
-      "DisplayName" "Weather Plugin v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\Weather\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
-      "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
-      "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
-      "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather" \
-      "NoRepair" 1
-  SectionEnd
-
-  Section "RDP Plugin" SEC_RDP
-    SetOutPath "$INSTDIR\MIPPlugins\RDP"
-    !insertmacro _LogMsg "Installing RDP Plugin to $INSTDIR\MIPPlugins\RDP..."
-    File /r "${RDP_DIR}\*.*"
-    !insertmacro _LogMsg "RDP Plugin installed."
-
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
-      "DisplayName" "RDP Plugin v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\RDP\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
-      "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
-      "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
-      "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP" \
-      "NoRepair" 1
-  SectionEnd
-
-  Section "Notepad Plugin" SEC_NOTEPAD
-    SetOutPath "$INSTDIR\MIPPlugins\Notepad"
-    !insertmacro _LogMsg "Installing Notepad Plugin to $INSTDIR\MIPPlugins\Notepad..."
-    File /r "${NOTEPAD_DIR}\*.*"
-    !insertmacro _LogMsg "Notepad Plugin installed."
-
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
-      "DisplayName" "Notepad Plugin v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\Notepad\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
-      "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
-      "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
-      "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad" \
-      "NoRepair" 1
-  SectionEnd
-
-  Section "SnapReport Plugin" SEC_SNAPREPORT
-    SetOutPath "$INSTDIR\MIPPlugins\SnapReport"
-    !insertmacro _LogMsg "Installing SnapReport Plugin to $INSTDIR\MIPPlugins\SnapReport..."
-    File /r "${SNAPREPORT_DIR}\*.*"
-    !insertmacro _LogMsg "SnapReport Plugin installed."
-
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
-      "DisplayName" "SnapReport Plugin v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\SnapReport\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
-      "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
-      "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
-      "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport" \
-      "NoRepair" 1
-  SectionEnd
-
-  Section "Monitor RTMP Streamer" SEC_MONITORRTMPSTREAMER
-    SetOutPath "$INSTDIR\MIPPlugins\MonitorRTMPStreamer"
-    !insertmacro _LogMsg "Installing Monitor RTMP Streamer to $INSTDIR\MIPPlugins\MonitorRTMPStreamer..."
-    File /r "${MONITORRTMPSTREAMER_DIR}\*.*"
-    !insertmacro _LogMsg "Monitor RTMP Streamer installed."
-
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
-      "DisplayName" "Monitor RTMP Streamer v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\MonitorRTMPStreamer\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
-      "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
-      "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
-      "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
-      "NoRepair" 1
-  SectionEnd
-
+  !insertmacro PluginSmartClientSections
 SectionGroupEnd
-
-; ══════════════════════════════════════════════════════════════
-; Device Drivers
-; ══════════════════════════════════════════════════════════════
 
 SectionGroup "Device Drivers" SEC_DD_GROUP
-
-  Section "RTMP Push Driver" SEC_RTMPDRIVER
-    ; ── Gate: ensure DriverFrameworkProcess is not locking driver DLLs ──
-    _dfp_check:
-    !insertmacro _CheckProcessRunning "${DFP_PROCESS}" $R1
-    !insertmacro _LogMsg "DriverFrameworkProcess running: $R1"
-
-    ${If} $R1 == "1"
-      MessageBox MB_YESNO|MB_ICONEXCLAMATION \
-        "${DFP_PROCESS} is still running and will lock driver files.$\r$\n$\r$\nKill the process now?" \
-        IDNO _dfp_skip
-
-      ;  Yes: kill the process 
-      !insertmacro _LogMsg "Killing ${DFP_PROCESS}..."
-      nsExec::ExecToLog 'taskkill /F /IM "${DFP_PROCESS}"'
-      Pop $0
-      !insertmacro _LogMsg "taskkill ${DFP_PROCESS} exit code: $0"
-      Sleep 3000
-      Goto _dfp_check
-
-      _dfp_skip:
-        !insertmacro _LogMsg "User skipped killing ${DFP_PROCESS}."
-    ${EndIf}
-
-    SetOutPath "$INSTDIR\MIPDrivers\RTMPDriver"
-    !insertmacro _LogMsg "Installing RTMP Push Driver to $INSTDIR\MIPDrivers\RTMPDriver..."
-    File /r "${RTMPDRIVER_DIR}\*.*"
-    !insertmacro _LogMsg "RTMP Push Driver installed."
-
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
-      "DisplayName" "RTMPDriver v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
-      "UninstallString" "$\"$INSTDIR\MIPDrivers\RTMPDriver\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
-      "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
-      "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
-      "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver" \
-      "NoRepair" 1
-  SectionEnd
-
+  !insertmacro PluginDeviceDriverSections
 SectionGroupEnd
 
-; ══════════════════════════════════════════════════════════════
-; Admin Plugins
-; ══════════════════════════════════════════════════════════════
-
 SectionGroup "Admin Plugins" SEC_AP_GROUP
-
-  Section "RTMP Streamer Plugin" SEC_RTMPSTREAMER
-    SetOutPath "$INSTDIR\MIPPlugins\RTMPStreamer"
-    !insertmacro _LogMsg "Installing RTMP Streamer Plugin to $INSTDIR\MIPPlugins\RTMPStreamer..."
-    File /r "${RTMPSTREAMER_DIR}\*.*"
-    !insertmacro _LogMsg "RTMP Streamer Plugin installed."
-
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
-      "DisplayName" "RTMPStreamer v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\RTMPStreamer\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
-      "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
-      "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
-      "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer" \
-      "NoRepair" 1
-  SectionEnd
-
-  Section "Certificate Watchdog Plugin" SEC_CERTWATCHDOG
-    SetOutPath "$INSTDIR\MIPPlugins\CertWatchdog"
-    !insertmacro _LogMsg "Installing Certificate Watchdog Plugin to $INSTDIR\MIPPlugins\CertWatchdog..."
-    File /r "${CERTWATCHDOG_DIR}\*.*"
-    !insertmacro _LogMsg "Certificate Watchdog Plugin installed."
-
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
-      "DisplayName" "CertWatchdog v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\CertWatchdog\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
-      "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
-      "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
-      "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog" \
-      "NoRepair" 1
-  SectionEnd
-
+  !insertmacro PluginAdminPluginSections
 SectionGroupEnd
 
 ; ══════════════════════════════════════════════════════════════
@@ -434,7 +215,6 @@ Section "-WriteUninstaller"
     "NoRepair" 1
 SectionEnd
 
-; ── Post-install: restart only the services we stopped ──
 Section "-RestartServices"
   ${If} $STOP_RS == "1"
   ${AndIf} $RS_WAS_RUNNING == "1"
@@ -455,58 +235,28 @@ Section "-RestartServices"
   !insertmacro _LogClose
 SectionEnd
 
-; ── Component descriptions ──
+; ── Component descriptions (auto-generated from plugins.json) ──
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SC_GROUP}    "Plugins for the XProtect™ Smart Client"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_WEATHER}     "Display live weather in Smart Client view items (Open-Meteo)"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RDP}         "Embed interactive RDP sessions in Smart Client view items"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_NOTEPAD}     "Simple text editor for operator notes in Smart Client view items"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DD_GROUP}    "Device drivers for the XProtect™ Recording Server"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPDRIVER}  "Receive RTMP push streams (H.264) directly into XProtect™"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}    "Plugins for the XProtect™ Management Client / Event Server"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.)"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CERTWATCHDOG} "Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints with dashboard and alerts"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SNAPREPORT} "Select cameras and generate PDF snapshot reports for site surveys and compliance"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_MONITORRTMPSTREAMER} "Capture desktop monitors and stream via RTMP"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SC_GROUP}  "Plugins for the XProtect™ Smart Client"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DD_GROUP}  "Device drivers for the XProtect™ Recording Server"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_AP_GROUP}  "Plugins for the XProtect™ Management Client / Event Server"
+  !insertmacro PluginDescriptions
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ══════════════════════════════════════════════════════════════
-; ComponentsLeave callback
-;   Runs when the user clicks Next on the Components page (interactive only).
-;   Narrows down $STOP_* from the "stop all" default set in .onInit.
+; ComponentsLeave callback (auto-generated from plugins.json)
 ; ══════════════════════════════════════════════════════════════
 Function ComponentsLeave
   StrCpy $STOP_SC "0"
   StrCpy $STOP_RS "0"
   StrCpy $STOP_ES "0"
-
-  ; Smart Client plugins → need to close Smart Client
-  ${If} ${SectionIsSelected} ${SEC_WEATHER}
-  ${OrIf} ${SectionIsSelected} ${SEC_RDP}
-  ${OrIf} ${SectionIsSelected} ${SEC_NOTEPAD}
-  ${OrIf} ${SectionIsSelected} ${SEC_SNAPREPORT}
-  ${OrIf} ${SectionIsSelected} ${SEC_MONITORRTMPSTREAMER}
-    StrCpy $STOP_SC "1"
-  ${EndIf}
-
-  ; Device Drivers → need to stop Recording Server + wait for DFP
-  ${If} ${SectionIsSelected} ${SEC_RTMPDRIVER}
-    StrCpy $STOP_RS "1"
-  ${EndIf}
-
-  ; Admin Plugins → need to stop Event Server + close Management Client
-  ${If} ${SectionIsSelected} ${SEC_RTMPSTREAMER}
-  ${OrIf} ${SectionIsSelected} ${SEC_CERTWATCHDOG}
-    StrCpy $STOP_ES "1"
-    StrCpy $STOP_SC "1"
-  ${EndIf}
+  !insertmacro PluginComponentsLeave
 FunctionEnd
 
 ; ══════════════════════════════════════════════════════════════
 ; Uninstall Section
 ; ══════════════════════════════════════════════════════════════
 Section "Uninstall"
-  ; ── Stop everything ──
   DetailPrint "Closing XProtect™ Smart Client..."
   nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}"'
   Pop $0
@@ -521,29 +271,12 @@ Section "Uninstall"
   Pop $0
   Sleep 5000
 
-  ; ── Remove plugin directories ──
-  RMDir /r "$INSTDIR\MIPPlugins\Weather"
-  RMDir /r "$INSTDIR\MIPPlugins\RDP"
-  RMDir /r "$INSTDIR\MIPPlugins\Notepad"
-  RMDir /r "$INSTDIR\MIPDrivers\RTMPDriver"
-  RMDir /r "$INSTDIR\MIPPlugins\RTMPStreamer"
-  RMDir /r "$INSTDIR\MIPPlugins\CertWatchdog"
-  RMDir /r "$INSTDIR\MIPPlugins\SnapReport"
-  RMDir /r "$INSTDIR\MIPPlugins\MonitorRTMPStreamer"
+  ; ── Remove plugin directories + registry (auto-generated) ──
+  !insertmacro PluginUninstallCleanup
 
   ; ── Remove uninstaller ──
   Delete "$INSTDIR\MSCPlugins-Uninstall.exe"
-
-  ; ── Remove registry entries ──
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MSCPlugins"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Weather"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RDP"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Notepad"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPDriver"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer"
 
   ; ── Restart services ──
   DetailPrint "Starting ${RS_SERVICE}..."
