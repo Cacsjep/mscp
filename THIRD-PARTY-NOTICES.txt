@@ -1,0 +1,67 @@
+Third-Party Software Notices
+============================
+
+MSC Community Plugins includes or depends on the following third-party
+software. Their licenses and copyright notices are reproduced below.
+
+
+------------------------------------------------------------------------
+FFmpeg
+------------------------------------------------------------------------
+
+The MonitorRTMPStreamer plugin ships FFmpeg shared libraries (avcodec,
+avformat, avutil, swscale, swresample, avfilter, avdevice) obtained via
+the FFmpeg.GPL NuGet package. These libraries are compiled with GPL-
+licensed encoders (including libx264).
+
+  License:    GNU General Public License v3.0 (GPL-3.0)
+  Website:    https://ffmpeg.org/
+  Source:     https://ffmpeg.org/download.html
+
+  Copyright (c) 2000-2026 the FFmpeg developers.
+
+  FFmpeg is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the
+  Free Software Foundation; either version 3 of the License, or (at your
+  option) any later version.
+
+  FFmpeg is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+  for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with FFmpeg. If not, see <https://www.gnu.org/licenses/>.
+
+  The full GPL-3.0 license text is available at:
+  https://www.gnu.org/licenses/gpl-3.0.txt
+
+
+------------------------------------------------------------------------
+FFmpeg.AutoGen
+------------------------------------------------------------------------
+
+C# bindings for FFmpeg used by the MonitorRTMPStreamer plugin.
+
+  License:    GNU Lesser General Public License v3.0 (LGPL-3.0)
+  Repository: https://github.com/Ruslan-B/FFmpeg.AutoGen
+
+  Copyright (c) Ruslan Balanukhin.
+
+  The full LGPL-3.0 license text is available at:
+  https://www.gnu.org/licenses/lgpl-3.0.txt
+
+
+------------------------------------------------------------------------
+x264
+------------------------------------------------------------------------
+
+H.264 encoder library included in the FFmpeg GPL builds.
+
+  License:    GNU General Public License v2.0 or later (GPL-2.0+)
+  Website:    https://www.videolan.org/developers/x264.html
+
+  Copyright (c) 2003-2026 x264 project contributors.
+
+  The full GPL-2.0 license text is available at:
+  https://www.gnu.org/licenses/gpl-2.0.txt
