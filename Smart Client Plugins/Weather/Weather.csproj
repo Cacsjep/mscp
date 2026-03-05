@@ -9,7 +9,7 @@
     <LangVersion>latest</LangVersion>
     <PluginName>Weather</PluginName>
     <StopSmartClient>true</StopSmartClient>
-    <LaunchSmartClient>true</LaunchSmartClient>
+    <LaunchSmartClient>false</LaunchSmartClient>
   </PropertyGroup>
 
   <ItemGroup>

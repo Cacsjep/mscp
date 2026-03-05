@@ -14,6 +14,7 @@ namespace Recorder.Client
 
         public override void Init()
         {
+            Console.WriteLine("");
         }
 
         public override void Close()
