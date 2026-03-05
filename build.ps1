@@ -118,9 +118,14 @@ $stageSnapReport = Join-Path $staging 'SnapReport'
 New-Item -ItemType Directory -Path $stageSnapReport -Force | Out-Null
 Copy-Item -Path (Join-Path $root 'Smart Client Plugins\SnapReport\bin\Release\net48\*') -Destination $stageSnapReport -Recurse
 
+# MonitorRTMPStreamer
+$stageMonitorRTMPStreamer = Join-Path $staging 'MonitorRTMPStreamer'
+New-Item -ItemType Directory -Path $stageMonitorRTMPStreamer -Force | Out-Null
+Copy-Item -Path (Join-Path $root 'Smart Client Plugins\MonitorRTMPStreamer\bin\Release\net48\*') -Destination $stageMonitorRTMPStreamer -Recurse
+
 # ── Create ZIPs ──
 Write-Host "`n[5/6] Creating release ZIPs..." -ForegroundColor Yellow
-$artifacts = @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'CertWatchdog', 'SnapReport')
+$artifacts = @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'CertWatchdog', 'SnapReport', 'MonitorRTMPStreamer')
 foreach ($name in $artifacts) {
     $zipPath = Join-Path $buildDir "$name-v$version.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
@@ -152,6 +157,7 @@ if ($makensis) {
     $streamerDir = (Resolve-Path (Join-Path $staging 'RTMPStreamer')).Path
     $certwatchdogDir = (Resolve-Path (Join-Path $staging 'CertWatchdog')).Path
     $snapreportDir = (Resolve-Path (Join-Path $staging 'SnapReport')).Path
+    $monitorrtmpstreamerDir = (Resolve-Path (Join-Path $staging 'MonitorRTMPStreamer')).Path
 
     & $makensis /DVERSION=$version `
         "/DWEATHER_DIR=$weatherDir" `
@@ -161,6 +167,7 @@ if ($makensis) {
         "/DRTMPSTREAMER_DIR=$streamerDir" `
         "/DCERTWATCHDOG_DIR=$certwatchdogDir" `
         "/DSNAPREPORT_DIR=$snapreportDir" `
+        "/DMONITORRTMPSTREAMER_DIR=$monitorrtmpstreamerDir" `
         "/DOUTDIR=$buildDir" `
         $nsiScript
     if ($LASTEXITCODE -ne 0) { Write-Error "NSIS build failed"; exit 1 }

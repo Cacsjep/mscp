@@ -48,6 +48,9 @@ BrandingText "MSC Community Plugins v${VERSION}"
 !ifndef SNAPREPORT_DIR
   !define SNAPREPORT_DIR "..\build\staging\SnapReport"
 !endif
+!ifndef MONITORRTMPSTREAMER_DIR
+  !define MONITORRTMPSTREAMER_DIR "..\build\staging\MonitorRTMPStreamer"
+!endif
 
 ; ── Process / service names ──
 !define SC_PROCESS  "Client.exe"
@@ -289,6 +292,26 @@ SectionGroup "Smart Client Plugins" SEC_SC_GROUP
       "NoRepair" 1
   SectionEnd
 
+  Section "Monitor RTMP Streamer" SEC_MONITORRTMPSTREAMER
+    SetOutPath "$INSTDIR\MIPPlugins\MonitorRTMPStreamer"
+    !insertmacro _LogMsg "Installing Monitor RTMP Streamer to $INSTDIR\MIPPlugins\MonitorRTMPStreamer..."
+    File /r "${MONITORRTMPSTREAMER_DIR}\*.*"
+    !insertmacro _LogMsg "Monitor RTMP Streamer installed."
+
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
+      "DisplayName" "Monitor RTMP Streamer v${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
+      "UninstallString" "$\"$INSTDIR\MIPPlugins\MonitorRTMPStreamer\Uninstall.exe$\""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
+      "DisplayVersion" "${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
+      "Publisher" "MSC Community Plugins"
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
+      "NoModify" 1
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
+      "NoRepair" 1
+  SectionEnd
+
 SectionGroupEnd
 
 ; ══════════════════════════════════════════════════════════════
@@ -444,6 +467,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CERTWATCHDOG} "Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints with dashboard and alerts"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SNAPREPORT} "Select cameras and generate PDF snapshot reports for site surveys and compliance"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_MONITORRTMPSTREAMER} "Capture desktop monitors and stream via RTMP"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ══════════════════════════════════════════════════════════════
@@ -461,6 +485,7 @@ Function ComponentsLeave
   ${OrIf} ${SectionIsSelected} ${SEC_RDP}
   ${OrIf} ${SectionIsSelected} ${SEC_NOTEPAD}
   ${OrIf} ${SectionIsSelected} ${SEC_SNAPREPORT}
+  ${OrIf} ${SectionIsSelected} ${SEC_MONITORRTMPSTREAMER}
     StrCpy $STOP_SC "1"
   ${EndIf}
 
@@ -504,6 +529,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\MIPPlugins\RTMPStreamer"
   RMDir /r "$INSTDIR\MIPPlugins\CertWatchdog"
   RMDir /r "$INSTDIR\MIPPlugins\SnapReport"
+  RMDir /r "$INSTDIR\MIPPlugins\MonitorRTMPStreamer"
 
   ; ── Remove uninstaller ──
   Delete "$INSTDIR\MSCPlugins-Uninstall.exe"
@@ -517,6 +543,7 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer"
 
   ; ── Restart services ──
   DetailPrint "Starting ${RS_SERVICE}..."

@@ -4,28 +4,24 @@
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
     <OutputType>Library</OutputType>
-    <RootNamespace>RDP</RootNamespace>
-    <AssemblyName>RDP</AssemblyName>
+    <RootNamespace>MonitorRTMPStreamer</RootNamespace>
+    <AssemblyName>MonitorRTMPStreamer</AssemblyName>
     <LangVersion>latest</LangVersion>
-    <PluginName>RDP</PluginName>
+    <PluginName>MonitorRTMPStreamer</PluginName>
     <StopSmartClient>true</StopSmartClient>
     <LaunchSmartClient>false</LaunchSmartClient>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FFmpeg.AutoGen" Version="8.0.0" />
+    <PackageReference Include="FFmpeg.GPL" Version="20260305.1.0" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
-    <Reference Include="WindowsFormsIntegration" />
-    <Reference Include="AxMSTSCLib">
-      <HintPath>lib\AxMSTSCLib.dll</HintPath>
-    </Reference>
-    <Reference Include="MSTSCLib">
-      <HintPath>lib\MSTSCLib.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
