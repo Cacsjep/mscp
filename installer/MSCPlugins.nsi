@@ -485,7 +485,7 @@ Function ComponentsLeave
   ${OrIf} ${SectionIsSelected} ${SEC_RDP}
   ${OrIf} ${SectionIsSelected} ${SEC_NOTEPAD}
   ${OrIf} ${SectionIsSelected} ${SEC_SNAPREPORT}
-  ${OrIf} ${SectionIsSelected} ${SEC_RECORDER}
+  ${OrIf} ${SectionIsSelected} ${SEC_MONITORRTMPSTREAMER}
     StrCpy $STOP_SC "1"
   ${EndIf}
 
