@@ -10,9 +10,12 @@
     <PluginName>Recorder</PluginName>
     <StopSmartClient>true</StopSmartClient>
     <LaunchSmartClient>false</LaunchSmartClient>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FFmpeg.AutoGen" Version="8.0.0" />
+    <PackageReference Include="FFmpeg.GPL" Version="20260305.1.0" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
   </ItemGroup>
 

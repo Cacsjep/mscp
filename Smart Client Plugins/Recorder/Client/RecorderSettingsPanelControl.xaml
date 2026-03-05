@@ -11,13 +11,14 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="Monitor Capture" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
         <TextBlock Grid.Row="1" Text="Select which monitors to capture. If none are selected, all monitors are captured."
                    TextWrapping="Wrap" Margin="0,0,0,15" Opacity="0.7" />
 
-        <ItemsControl Grid.Row="2" x:Name="MonitorList">
+        <ItemsControl Grid.Row="2" x:Name="MonitorList" Margin="0,0,0,20">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border BorderBrush="#444" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,8">
@@ -43,5 +44,14 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+
+        <StackPanel Grid.Row="3">
+            <TextBlock Text="RTMP Streaming" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+
+            <TextBlock Text="RTMP URL:" Margin="0,0,0,5" />
+            <TextBox Text="{Binding RtmpUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
+            <TextBlock Text="e.g. rtmp://server:1935/live/stream  (leave empty to disable streaming)"
+                       Opacity="0.7" Margin="0,0,0,0" TextWrapping="Wrap" />
+        </StackPanel>
     </Grid>
 </UserControl>

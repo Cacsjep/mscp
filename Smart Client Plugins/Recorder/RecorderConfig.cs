@@ -17,11 +17,9 @@ namespace Recorder
 
         private static readonly object _fileLock = new object();
 
-        /// <summary>
-        /// Device names of monitors enabled for capture.
-        /// Empty means all monitors are enabled (default).
-        /// </summary>
         public HashSet<string> EnabledMonitors { get; set; } = new HashSet<string>();
+
+        public string RtmpUrl { get; set; } = "";
 
         public static RecorderConfig Load()
         {
@@ -40,6 +38,10 @@ namespace Recorder
                         config.EnabledMonitors = new HashSet<string>(
                             monitors.Elements("Monitor").Select(e => e.Value));
                     }
+
+                    var rtmpEl = doc.Root?.Element("RtmpUrl");
+                    if (rtmpEl != null)
+                        config.RtmpUrl = rtmpEl.Value;
                 }
                 catch
                 {
@@ -57,7 +59,8 @@ namespace Recorder
                 var doc = new XDocument(
                     new XElement("RecorderConfig",
                         new XElement("EnabledMonitors",
-                            EnabledMonitors.Select(m => new XElement("Monitor", m)))));
+                            EnabledMonitors.Select(m => new XElement("Monitor", m))),
+                        new XElement("RtmpUrl", RtmpUrl ?? "")));
                 doc.Save(ConfigPath);
             }
         }

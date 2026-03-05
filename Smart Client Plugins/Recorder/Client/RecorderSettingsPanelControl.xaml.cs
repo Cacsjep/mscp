@@ -7,15 +7,25 @@ using System.Windows.Forms;
 
 namespace Recorder.Client
 {
-    public partial class RecorderSettingsPanelControl : System.Windows.Controls.UserControl
+    public partial class RecorderSettingsPanelControl : System.Windows.Controls.UserControl, INotifyPropertyChanged
     {
         public List<MonitorItem> Monitors { get; }
+
+        private string _rtmpUrl;
+        public string RtmpUrl
+        {
+            get => _rtmpUrl;
+            set { _rtmpUrl = value; OnPropertyChanged(); }
+        }
 
         public RecorderSettingsPanelControl()
         {
             InitializeComponent();
+            DataContext = this;
 
             var config = RecorderConfig.Load();
+            RtmpUrl = config.RtmpUrl;
+
             Monitors = Screen.AllScreens.Select((s, i) => new MonitorItem
             {
                 DeviceName = s.DeviceName,
@@ -32,16 +42,23 @@ namespace Recorder.Client
         public bool Save(out string error)
         {
             error = string.Empty;
-            var config = new RecorderConfig();
-            var enabled = Monitors.Where(m => m.IsEnabled).Select(m => m.DeviceName).ToList();
 
-            // If all selected, store empty set (= capture all)
+            var config = new RecorderConfig
+            {
+                RtmpUrl = RtmpUrl ?? "",
+            };
+
+            var enabled = Monitors.Where(m => m.IsEnabled).Select(m => m.DeviceName).ToList();
             if (enabled.Count < Monitors.Count)
-                config.EnabledMonitors = new System.Collections.Generic.HashSet<string>(enabled);
+                config.EnabledMonitors = new HashSet<string>(enabled);
 
             config.Save();
             return true;
         }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
     public class MonitorItem : INotifyPropertyChanged

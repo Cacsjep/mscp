@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using Recorder.Background;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
 
@@ -24,6 +23,7 @@ namespace Recorder.Background
         private Thread _captureThread;
         private volatile bool _run;
         private string _outputDir;
+        private RtmpStreamer _streamer;
 
         public override void Init()
         {
@@ -49,50 +49,55 @@ namespace Recorder.Background
                     var config = RecorderConfig.Load();
                     var screens = Screen.AllScreens
                         .Where(s => config.IsMonitorEnabled(s))
-                        .ToList();
+                        .ToArray();
 
-                    var sw = Stopwatch.StartNew();
-                    var captured = 0;
-
-                    foreach (var screen in screens)
+                    if (screens.Length == 0)
                     {
-                        if (!_run) break;
-
-                        try
-                        {
-                            var snapSw = Stopwatch.StartNew();
-                            using (var bmp = MonitorCapture.CaptureScreen(screen))
-                            {
-                                var captureMs = snapSw.ElapsedMilliseconds;
-
-                                var safeName = SanitizeFileName(screen.DeviceName);
-                                var path = Path.Combine(_outputDir, $"{safeName}.png");
-
-                                using (var ms = new MemoryStream())
-                                {
-                                    bmp.Save(ms, ImageFormat.Png);
-                                    File.WriteAllBytes(path, ms.ToArray());
-                                }
-                                var totalMs = snapSw.ElapsedMilliseconds;
-                                var sizeKb = new FileInfo(path).Length / 1024;
-                                Log($"  Snap {screen.DeviceName} {screen.Bounds.Width}x{screen.Bounds.Height} capture={captureMs}ms encode+save={totalMs - captureMs}ms total={totalMs}ms size={sizeKb}KB");
-                                captured++;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            LogError($"  Capture failed for {screen.DeviceName}: {e.Message}");
-                        }
+                        Thread.Sleep(2000);
+                        continue;
                     }
 
-                    Log($"Cycle: {captured}/{screens.Count} monitor(s) in {sw.ElapsedMilliseconds}ms");
+                    var sw = Stopwatch.StartNew();
+
+                    using (var stitched = MonitorCapture.CaptureAndStitch(screens))
+                    {
+                        var captureMs = sw.ElapsedMilliseconds;
+
+                        // Start RTMP streamer on first frame (we now know the resolution)
+                        if (_streamer == null && !string.IsNullOrWhiteSpace(config.RtmpUrl))
+                        {
+                            _streamer = new RtmpStreamer(
+                                stitched.Width, stitched.Height,
+                                rtmpUrl: config.RtmpUrl,
+                                log: Log, logError: LogError);
+                            _streamer.Start();
+                        }
+
+                        // Push frame to RTMP stream
+                        if (_streamer?.IsRunning == true)
+                            _streamer.PushFrame(stitched);
+
+                        // Also save snapshot to disk
+                        var path = Path.Combine(_outputDir, "stitched.png");
+                        using (var ms = new MemoryStream())
+                        {
+                            stitched.Save(ms, ImageFormat.Png);
+                            File.WriteAllBytes(path, ms.ToArray());
+                        }
+
+                        var totalMs = sw.ElapsedMilliseconds;
+                        var sizeKb = new FileInfo(path).Length / 1024;
+                        Log($"Cycle: {screens.Length} monitor(s) stitched={stitched.Width}x{stitched.Height} "
+                          + $"capture={captureMs}ms total={totalMs}ms size={sizeKb}KB "
+                          + $"rtmp={(_streamer?.IsRunning == true ? "streaming" : "off")}");
+                    }
                 }
                 catch (Exception e)
                 {
                     LogError($"Cycle error: {e}");
                 }
 
-                Thread.Sleep(2000);
+                Thread.Sleep(1000);
             }
         }
 
@@ -100,15 +105,9 @@ namespace Recorder.Background
         {
             _run = false;
             _captureThread?.Join(3000);
+            _streamer?.Dispose();
+            _streamer = null;
             Log("Recorder stopped.");
-        }
-
-        private static string SanitizeFileName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name)) return "unknown";
-            foreach (var c in Path.GetInvalidFileNameChars())
-                name = name.Replace(c, '_');
-            return name.Trim();
         }
 
         private void Log(string msg)
