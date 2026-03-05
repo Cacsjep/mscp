@@ -3,60 +3,75 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Recorder.Background
 {
+    public struct WindowInfo
+    {
+        public IntPtr Handle;
+        public string Title;
+        public int Width;
+        public int Height;
+        public bool IsVisible;
+        public bool IsMinimized;
+
+        public bool HasArea => Width > 0 && Height > 0;
+
+        public override string ToString()
+            => $"[{Handle}] \"{Title}\" {Width}x{Height} visible={IsVisible} minimized={IsMinimized}";
+    }
+
     public static class ProcessWindows
     {
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-        [DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
         [DllImport("user32.dll")]
         private static extern bool IsWindowVisible(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+        private static extern bool IsIconic(IntPtr hWnd);
 
-        private const uint GW_OWNER = 4;
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
-        public static IReadOnlyList<IntPtr> GetTopLevelWindowsForCurrentProcess(bool visibleOnly = true, bool ownedOnly = false)
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
         {
-            int myPid = Process.GetCurrentProcess().Id;
-            var result = new List<IntPtr>();
+            public int Left, Top, Right, Bottom;
+        }
 
-            EnumWindows((hWnd, lParam) =>
-            {
-                GetWindowThreadProcessId(hWnd, out uint pid);
-                if (pid != (uint)myPid) return true;
+        public static List<WindowInfo> GetAllWindowsForCurrentProcess()
+        {
+            var result = new List<WindowInfo>();
+            var sb = new StringBuilder(256);
+            var proc = Process.GetCurrentProcess();
 
-                if (visibleOnly && !IsWindowVisible(hWnd)) return true;
+            var mainHwnd = proc.MainWindowHandle;
+            if (mainHwnd == IntPtr.Zero)
+                return result;
 
-                if (!ownedOnly)
-                {
-                    // common: only include unowned top-level windows
-                    if (GetWindow(hWnd, GW_OWNER) != IntPtr.Zero) return true;
-                }
-
-                result.Add(hWnd);
-                return true;
-            }, IntPtr.Zero);
-
+            result.Add(BuildWindowInfo(mainHwnd, sb));
             return result;
         }
 
-        public static IntPtr GetMainTopLevelWindow()
+        private static WindowInfo BuildWindowInfo(IntPtr hWnd, StringBuilder sb)
         {
-            // best-effort: first visible unowned top-level window
-            var windows = GetTopLevelWindowsForCurrentProcess(visibleOnly: true, ownedOnly: false);
-            return windows.Count > 0 ? windows[0] : IntPtr.Zero;
+            sb.Clear();
+            GetWindowText(hWnd, sb, sb.Capacity);
+            GetWindowRect(hWnd, out RECT rect);
+
+            return new WindowInfo
+            {
+                Handle = hWnd,
+                Title = sb.ToString(),
+                Width = rect.Right - rect.Left,
+                Height = rect.Bottom - rect.Top,
+                IsVisible = IsWindowVisible(hWnd),
+                IsMinimized = IsIconic(hWnd),
+            };
         }
-
-
     }
 
     public class Capture
@@ -88,6 +103,14 @@ namespace Recorder.Background
         [DllImport("gdi32.dll")]
         static extern IntPtr SelectObject(IntPtr hdc, IntPtr obj);
 
+        [DllImport("gdi32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool DeleteObject(IntPtr hObject);
+
+        [DllImport("gdi32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool DeleteDC(IntPtr hdc);
+
         [DllImport("user32.dll")]
         static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
 
@@ -108,19 +131,30 @@ namespace Recorder.Background
             int width = rect.Right - rect.Left;
             int height = rect.Bottom - rect.Top;
 
+            if (width <= 0 || height <= 0)
+                throw new InvalidOperationException($"Window has no area ({width}x{height}). It may be minimized.");
+
             IntPtr hdcSrc = GetWindowDC(hwnd);
-            IntPtr hdcDest = CreateCompatibleDC(hdcSrc);
+            try
+            {
+                IntPtr hdcDest = CreateCompatibleDC(hdcSrc);
+                IntPtr hBitmap = CreateCompatibleBitmap(hdcSrc, width, height);
+                IntPtr hOld = SelectObject(hdcDest, hBitmap);
 
-            IntPtr hBitmap = CreateCompatibleBitmap(hdcSrc, width, height);
-            SelectObject(hdcDest, hBitmap);
+                BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, SRCCOPY);
 
-            BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, SRCCOPY);
+                Bitmap bmp = Image.FromHbitmap(hBitmap);
 
-            Bitmap bmp = Image.FromHbitmap(hBitmap);
+                SelectObject(hdcDest, hOld);
+                DeleteObject(hBitmap);
+                DeleteDC(hdcDest);
 
-            ReleaseDC(hwnd, hdcSrc);
-
-            return bmp;
+                return bmp;
+            }
+            finally
+            {
+                ReleaseDC(hwnd, hdcSrc);
+            }
         }
     }
 }
