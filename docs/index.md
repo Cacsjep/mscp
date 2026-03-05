@@ -42,6 +42,7 @@ hide:
     font-size: 2.8rem;
     font-weight: 800;
     margin-bottom: 0.5rem;
+    color: #ffffff;
   }
   .hero h1 span {
     color: var(--md-primary-fg-color);
@@ -73,8 +74,6 @@ hide:
 </style>
 
 <div class="hero" markdown>
-
-<p style="display:inline-block; background:var(--md-code-bg-color); border:1px solid var(--md-default-fg-color--lightest); border-radius:20px; padding:4px 14px; font-size:0.8rem; color:var(--md-default-fg-color--light);">Open Source · MIT License</p>
 
 # Community Plugins for<br>Milestone <span>XProtect™</span>
 
@@ -112,8 +111,8 @@ hide:
 
   function buildCubes() {
     cubes = [];
-    var gridW = Math.ceil(W / (UNIT * COS_A)) + 16;
-    var gridH = Math.ceil(H / (UNIT * SIN_A)) + 16;
+    var gridW = Math.ceil(W / (UNIT * COS_A)) + 24;
+    var gridH = Math.ceil(H / (UNIT * SIN_A)) + 24;
     var taken = {};
 
     function key(r, c) { return r + ',' + c; }
@@ -124,12 +123,16 @@ hide:
 
         var rnd = Math.random();
         var size;
-        if (rnd < 0.08) size = 1;
-        else if (rnd < 0.2) size = 2;
-        else if (rnd < 0.45) size = 3;
-        else if (rnd < 0.7) size = 4;
-        else if (rnd < 0.9) size = 5;
-        else size = 6;
+        if (rnd < 0.05) size = 1;
+        else if (rnd < 0.12) size = 2;
+        else if (rnd < 0.22) size = 3;
+        else if (rnd < 0.35) size = 4;
+        else if (rnd < 0.48) size = 5;
+        else if (rnd < 0.60) size = 6;
+        else if (rnd < 0.72) size = 7;
+        else if (rnd < 0.82) size = 8;
+        else if (rnd < 0.92) size = 9;
+        else size = 10;
 
         // Check if space is free
         var fits = true;
@@ -188,104 +191,85 @@ hide:
     return (w1 + w2) * 10;
   }
 
-  function drawColumn(sx, sy, w, h, bright, alpha, highlight) {
+  function drawColumn(sx, sy, w, h, bright, alpha, hl) {
     if (h < 1) return;
     var hw = w / 2;
 
-    // 4 key points of the top diamond
-    var topY = sy - h;           // top of column
-    var lx = sx - hw * COS_A;   // left point x
-    var ly = sy + hw * SIN_A;   // left point y (base)
-    var rx = sx + hw * COS_A;   // right point x
-    var ry = sy + hw * SIN_A;   // right point y (base)
-    var by = sy + w * SIN_A;    // bottom point y (base)
+    var topY = sy - h;
+    var lx = sx - hw * COS_A;
+    var ly = sy + hw * SIN_A;
+    var rx = sx + hw * COS_A;
+    var ry = sy + hw * SIN_A;
+    var by = sy + w * SIN_A;
 
-    // Top diamond points
-    var tlx = lx;               // top-left x
-    var tly = topY + hw * SIN_A;// top-left y
-    var trx = rx;               // top-right x
-    var try_ = topY + hw * SIN_A;// top-right y
-    var tty = topY;             // top-top y (peak of diamond)
-    var tby = topY + w * SIN_A; // top-bottom y
+    var tly = topY + hw * SIN_A;
+    var try_ = topY + hw * SIN_A;
+    var tty = topY;
+    var tby = topY + w * SIN_A;
 
     var a = alpha * 0.25;
-    var hl = highlight ? 1 : 0;
 
     // Left face
     c.beginPath();
-    c.moveTo(sx, tby);
-    c.lineTo(lx, tly);
-    c.lineTo(lx, ly);
-    c.lineTo(sx, by);
+    c.moveTo(sx, tby); c.lineTo(lx, tly); c.lineTo(lx, ly); c.lineTo(sx, by);
     c.closePath();
-    c.fillStyle = hl ? 'rgba(20,60,140,' + alpha * 0.7 + ')' : 'rgba(8,18,40,' + a * 0.25 + ')';
+    c.fillStyle = 'rgba(8,18,40,' + a * 0.25 + ')';
     c.fill();
-    c.strokeStyle = hl ? 'rgba(60,150,255,' + alpha * 0.9 + ')' : 'rgba(30,70,140,' + a * 0.6 + ')';
-    c.lineWidth = hl ? 1 : 0.5;
+    c.strokeStyle = 'rgba(30,70,140,' + a * 0.6 + ')';
+    c.lineWidth = 0.5;
     c.stroke();
 
     // Right face
     c.beginPath();
-    c.moveTo(sx, tby);
-    c.lineTo(rx, try_);
-    c.lineTo(rx, ry);
-    c.lineTo(sx, by);
+    c.moveTo(sx, tby); c.lineTo(rx, try_); c.lineTo(rx, ry); c.lineTo(sx, by);
     c.closePath();
-    c.fillStyle = hl ? 'rgba(30,80,180,' + alpha * 0.75 + ')' : 'rgba(18,45,95,' + a * 0.3 + ')';
+    c.fillStyle = 'rgba(18,45,95,' + a * 0.3 + ')';
     c.fill();
-    c.strokeStyle = hl ? 'rgba(70,160,255,' + alpha * 0.9 + ')' : 'rgba(40,100,190,' + a * 0.7 + ')';
+    c.strokeStyle = 'rgba(40,100,190,' + a * 0.7 + ')';
     c.stroke();
 
-    // Top face
+    // Top face — glassy look with gradient
     c.beginPath();
-    c.moveTo(sx, tty);
-    c.lineTo(rx, try_);
-    c.lineTo(sx, tby);
-    c.lineTo(lx, tly);
+    c.moveTo(sx, tty); c.lineTo(rx, try_); c.lineTo(sx, tby); c.lineTo(lx, tly);
     c.closePath();
-    c.fillStyle = hl ? 'rgba(50,130,230,' + alpha * 0.85 + ')' : 'rgba(35,90,175,' + a * 0.35 + ')';
+    var topGrad = c.createLinearGradient(lx, tty, rx, tby);
+    var baseA = a * 0.35 + hl * alpha * 0.6;
+    topGrad.addColorStop(0, 'rgba(60,140,220,' + baseA * 1.2 + ')');
+    topGrad.addColorStop(0.4, 'rgba(35,90,175,' + baseA * 0.7 + ')');
+    topGrad.addColorStop(1, 'rgba(20,60,130,' + baseA * 0.4 + ')');
+    c.fillStyle = topGrad;
     c.fill();
-    c.strokeStyle = hl ? 'rgba(100,190,255,' + alpha + ')' : 'rgba(70,160,255,' + a * 0.8 + ')';
+    c.strokeStyle = 'rgba(120,200,255,' + (a * 0.5 + hl * alpha * 0.6) + ')';
+    c.lineWidth = 0.5 + hl;
     c.stroke();
 
-    // Glow + fade-down for highlights
-    if (hl) {
-      c.shadowColor = 'rgba(60,150,255,0.4)';
-      c.shadowBlur = 12;
+    // Highlight: glow all cube edges
+    if (hl > 0.01) {
+      var edgeA = hl * alpha * 0.9;
+      c.strokeStyle = 'rgba(100,180,255,' + edgeA + ')';
+      c.lineWidth = 0.5 + hl * 0.5;
+      c.shadowColor = 'rgba(60,150,255,' + hl * 0.5 + ')';
+      c.shadowBlur = 10 * hl;
+
+      // Top face edges
       c.beginPath();
-      c.moveTo(sx, tty);
-      c.lineTo(rx, try_);
-      c.lineTo(sx, tby);
-      c.lineTo(lx, tly);
+      c.moveTo(sx, tty); c.lineTo(rx, try_); c.lineTo(sx, tby); c.lineTo(lx, tly);
       c.closePath();
-      c.fill();
+      c.stroke();
+
+      // Left face edges
+      c.beginPath();
+      c.moveTo(sx, tby); c.lineTo(lx, tly); c.lineTo(lx, ly); c.lineTo(sx, by);
+      c.closePath();
+      c.stroke();
+
+      // Right face edges
+      c.beginPath();
+      c.moveTo(sx, tby); c.lineTo(rx, try_); c.lineTo(rx, ry); c.lineTo(sx, by);
+      c.closePath();
+      c.stroke();
+
       c.shadowBlur = 0;
-
-      // Fade-out glow below the cube
-      var fadeH = h * 1.5;
-      var grad = c.createLinearGradient(sx, by, sx, by + fadeH);
-      grad.addColorStop(0, 'rgba(50,130,230,' + alpha * 0.4 + ')');
-      grad.addColorStop(1, 'rgba(50,130,230,0)');
-
-      // Left fade
-      c.beginPath();
-      c.moveTo(lx, ly);
-      c.lineTo(sx, by);
-      c.lineTo(sx, by + fadeH);
-      c.lineTo(lx, ly + fadeH);
-      c.closePath();
-      c.fillStyle = grad;
-      c.fill();
-
-      // Right fade
-      c.beginPath();
-      c.moveTo(sx, by);
-      c.lineTo(rx, ry);
-      c.lineTo(rx, ry + fadeH);
-      c.lineTo(sx, by + fadeH);
-      c.closePath();
-      c.fillStyle = grad;
-      c.fill();
     }
   }
 
@@ -305,7 +289,7 @@ hide:
       var sx = (centerGx - centerGz) * UNIT * COS_A;
       if (Math.abs(sx) > W * 0.2) edge.push(cb);
     }
-    var count = 3 + Math.floor(Math.random() * 5);
+    var count = 25 + Math.floor(Math.random() * 16);
     for (var i = 0; i < count && edge.length > 0; i++) {
       var idx = Math.floor(Math.random() * edge.length);
       edge[idx].highlight = true;
@@ -319,10 +303,19 @@ hide:
   function draw(ts) {
     t = ts * 0.001;
 
-    // Shuffle highlights every 1s
-    if (ts - lastHL > 1000) {
+    // Highlight cycle: fade in 500ms, hold, fade out 500ms, switch
+    var elapsed = ts - lastHL;
+    if (elapsed > HL_CYCLE) {
       shuffleHighlights();
       lastHL = ts;
+      elapsed = 0;
+    }
+    if (elapsed < HL_FADE) {
+      hlFade = elapsed / HL_FADE;
+    } else if (elapsed > HL_CYCLE - HL_FADE) {
+      hlFade = (HL_CYCLE - elapsed) / HL_FADE;
+    } else {
+      hlFade = 1;
     }
     c.clearRect(0, 0, W, H);
 
@@ -369,7 +362,8 @@ hide:
       if (alpha < 0.01) continue;
 
       var bright = 0.4 + cube.baseH * 0.3 + Math.max(0, wy / 20) * 0.3;
-      drawColumn(sx, sy, cube.w, colH, bright, alpha, cube.highlight);
+      var hl = cube.highlight ? hlFade : 0;
+      drawColumn(sx, sy, cube.w, colH, bright, alpha, hl);
     }
 
     requestAnimationFrame(draw);
