@@ -1,0 +1,69 @@
+[
+  {
+    "name": "Weather",
+    "displayName": "Weather Plugin",
+    "path": "Smart Client Plugins/Weather",
+    "category": "SmartClient",
+    "description": "Display live weather in Smart Client view items (Open-Meteo)"
+  },
+  {
+    "name": "RDP",
+    "displayName": "RDP Plugin",
+    "path": "Smart Client Plugins/RDP",
+    "category": "SmartClient",
+    "description": "Embed interactive RDP sessions in Smart Client view items"
+  },
+  {
+    "name": "Notepad",
+    "displayName": "Notepad Plugin",
+    "path": "Smart Client Plugins/Notepad",
+    "category": "SmartClient",
+    "description": "Simple text editor for operator notes in Smart Client view items"
+  },
+  {
+    "name": "SnapReport",
+    "displayName": "SnapReport Plugin",
+    "path": "Smart Client Plugins/SnapReport",
+    "category": "SmartClient",
+    "description": "Select cameras and generate PDF snapshot reports for site surveys and compliance"
+  },
+  {
+    "name": "MonitorRTMPStreamer",
+    "displayName": "Monitor RTMP Streamer",
+    "path": "Smart Client Plugins/MonitorRTMPStreamer",
+    "category": "SmartClient",
+    "description": "Capture desktop monitors and stream via RTMP"
+  },
+  {
+    "name": "RTMPDriver",
+    "displayName": "RTMP Push Driver",
+    "path": "Device Drivers/Rtmp/RTMPDriver",
+    "category": "DeviceDriver",
+    "outputPath": "bin/Release",
+    "description": "Receive RTMP push streams (H.264) directly into XProtect\u2122"
+  },
+  {
+    "name": "RTMPStreamer",
+    "displayName": "RTMP Streamer Plugin",
+    "path": "Admin Plugins/RTMPStreamer",
+    "platform": "x64",
+    "category": "AdminPlugin",
+    "description": "Stream XProtect\u2122 cameras to RTMP destinations (YouTube, Twitch, etc.)",
+    "extraProjects": [
+      "Admin Plugins/RTMPStreamer/RTMPStreamerHelper/RTMPStreamerHelper.csproj"
+    ],
+    "extraStagingDirs": [
+      "Admin Plugins/RTMPStreamer/RTMPStreamerHelper/bin/x64/Release/net48"
+    ],
+    "extraStagingFiles": [
+      "Admin Plugins/RTMPStreamer/plugin.def"
+    ]
+  },
+  {
+    "name": "CertWatchdog",
+    "displayName": "Certificate Watchdog Plugin",
+    "path": "Admin Plugins/CertWatchdog",
+    "category": "AdminPlugin",
+    "description": "Monitor SSL certificate expiry for all XProtect\u2122 HTTPS endpoints and devices with dashboard and alerts"
+  }
+]
