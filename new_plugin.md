@@ -75,8 +75,9 @@ The `env` value depends on category:
     <RootNamespace>MyPlugin</RootNamespace>
     <AssemblyName>MyPlugin</AssemblyName>
     <LangVersion>latest</LangVersion>
-    <MIPPluginDir>C:\Program Files\Milestone\MIPPlugins\MyPlugin\</MIPPluginDir>
-    <SmartClientExe>C:\Program Files\Milestone\XProtect Smart Client\Client.exe</SmartClientExe>
+    <PluginName>MyPlugin</PluginName>
+    <StopSmartClient>true</StopSmartClient>
+    <LaunchSmartClient>true</LaunchSmartClient>
   </PropertyGroup>
 
   <ItemGroup>
@@ -95,18 +96,6 @@ The `env` value depends on category:
     <Resource Include="Resources\PluginIcon.png" />
   </ItemGroup>
 
-  <!-- Pre-build: kill Smart Client so DLL files are not locked (skipped in CI) -->
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="'$(CIBuild)' != 'true'">
-    <Exec Command="taskkill /F /IM Client.exe 2&gt;nul &amp; ping -n 3 127.0.0.1 &gt;nul" IgnoreExitCode="true" />
-  </Target>
-
-  <!-- Post-build: copy output to MIPPlugins and launch Smart Client (skipped in CI) -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(CIBuild)' != 'true'">
-    <Exec Command="if not exist &quot;$(MIPPluginDir)&quot; mkdir &quot;$(MIPPluginDir)&quot;" />
-    <Exec Command="xcopy /Y /E &quot;$(TargetDir)*.*&quot; &quot;$(MIPPluginDir)&quot;" />
-    <Exec Command="start &quot;&quot; &quot;$(SmartClientExe)&quot;" />
-  </Target>
-
 </Project>
 ```
 
@@ -115,7 +104,8 @@ Key points:
 - MIP SDK NuGet uses wildcard prerelease: `Version="*-*"`
 - `plugin.def` must be `CopyToOutputDirectory=Always`
 - Plugin icon is `<Resource>` (not `Content`)
-- Pre/Post build targets use `$(CIBuild)` condition to skip in CI
+- Declare `PluginName` and deploy flags — the shared `Directory.Build.props` and `Directory.Build.targets` handle the stop/copy/start cycle automatically
+- No manual Pre/PostBuild targets needed
 
 ### MyPluginDefinition.cs
 
@@ -507,162 +497,49 @@ Solution folder GUIDs:
 
 ---
 
-## 4. Modify build.ps1
+## 4. Add to plugins.json
 
-Three changes:
+Add one entry to `plugins.json`. This single change automatically configures the CI workflow, `build.ps1`, and the NSIS installer.
 
-### Staging Block
-
-Add after the last staging block (before the ZIP creation loop):
-
-```powershell
-# MyPlugin
-$stageMyPlugin = Join-Path $staging 'MyPlugin'
-New-Item -ItemType Directory -Path $stageMyPlugin -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Smart Client Plugins\MyPlugin\bin\Release\net48\*') -Destination $stageMyPlugin -Recurse
+```json
+{
+  "name": "MyPlugin",
+  "displayName": "My Plugin",
+  "path": "Smart Client Plugins/MyPlugin",
+  "category": "SmartClient",
+  "description": "Short description for the NSIS installer"
+}
 ```
 
-### Artifacts Array
+**Required fields:**
 
-Add `'MyPlugin'` to the `$artifacts` array:
+| Field | Description |
+|---|---|
+| `name` | Plugin name (used for assembly, staging dir, ZIP name, registry key) |
+| `displayName` | Human-readable name shown in the NSIS installer |
+| `path` | Relative path to the project folder from the repo root |
+| `category` | `SmartClient`, `DeviceDriver`, or `AdminPlugin` |
+| `description` | One-line description for the NSIS component selection page |
 
-```powershell
-$artifacts = @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'MyPlugin')
-```
+**Optional fields (with defaults):**
 
-### NSIS Variable
+| Field | Default | Description |
+|---|---|---|
+| `project` | `{name}.csproj` | Project file name if different from the plugin name |
+| `platform` | `AnyCPU` | MSBuild platform (`AnyCPU` or `x64`) |
+| `outputPath` | `bin/Release/net48` | Build output path (auto-adjusts to `bin/x64/Release/net48` for x64) |
+| `extraProjects` | `[]` | Additional .csproj files to build (e.g. helper projects) |
+| `extraStagingDirs` | `[]` | Extra directories to copy into the staging folder |
+| `extraStagingFiles` | `[]` | Extra individual files to copy into the staging folder |
 
-Add resolve + `/D` flag to the makensis call:
-
-```powershell
-$mypluginDir = (Resolve-Path (Join-Path $staging 'MyPlugin')).Path
-
-& $makensis ... `
-    "/DMYPLUGIN_DIR=$mypluginDir" `
-    ...
-```
+This entry automatically configures:
+- GitHub Actions build matrix and release job
+- `build.ps1` staging, zipping, and NSIS arguments
+- NSIS installer sections, descriptions, ComponentsLeave logic, and uninstall cleanup
 
 ---
 
-## 5. Modify .github/workflows/build-release.yml
-
-Five changes:
-
-### Matrix Entry
-
-```yaml
-- name: MyPlugin
-  projects: Smart Client Plugins\MyPlugin\MyPlugin.csproj
-  platform: AnyCPU
-  stage_from: Smart Client Plugins\MyPlugin\bin\Release\net48
-  stage_to: MyPlugin
-  extra_flags: /p:CIBuild=true
-```
-
-Note: `platform` is `AnyCPU` (no space) in the workflow, but `Any CPU` (with space) in the solution file.
-
-### Extract Loop
-
-Add `'MyPlugin'` to the `foreach` array:
-
-```powershell
-foreach ($name in @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'MyPlugin')) {
-```
-
-### NSIS Build Step
-
-Add resolve + `/D` flag:
-
-```powershell
-$mypluginDir = (Resolve-Path 'staging\MyPlugin').Path
-# Add to makensis call:
-"/DMYPLUGIN_DIR=$mypluginDir" `
-```
-
-### Collect Release Files
-
-```yaml
-Copy-Item artifacts\MyPlugin\*.zip -Destination .
-```
-
-### Release Files List
-
-```yaml
-MyPlugin-${{ github.ref_name }}.zip
-```
-
----
-
-## 6. Modify installer/MSCPlugins.nsi
-
-Six changes:
-
-### Staging Directory Define
-
-```nsi
-!ifndef MYPLUGIN_DIR
-  !define MYPLUGIN_DIR "..\build\staging\MyPlugin"
-!endif
-```
-
-### Install Section
-
-Add inside the appropriate `SectionGroup` (e.g., Smart Client Plugins):
-
-```nsi
-Section "MyPlugin Plugin" SEC_MYPLUGIN
-  SetOutPath "$INSTDIR\MIPPlugins\MyPlugin"
-  !insertmacro _LogMsg "Installing MyPlugin Plugin..."
-  File /r "${MYPLUGIN_DIR}\*.*"
-
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MyPlugin" \
-    "DisplayName" "MyPlugin Plugin v${VERSION}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MyPlugin" \
-    "UninstallString" "$\"$INSTDIR\MIPPlugins\MyPlugin\Uninstall.exe$\""
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MyPlugin" \
-    "DisplayVersion" "${VERSION}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MyPlugin" \
-    "Publisher" "MSC Community Plugins"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MyPlugin" \
-    "NoModify" 1
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MyPlugin" \
-    "NoRepair" 1
-SectionEnd
-```
-
-Install path convention:
-- Smart Client plugins: `$INSTDIR\MIPPlugins\{Name}`
-- Device drivers: `$INSTDIR\MIPDrivers\{Name}`
-
-### ComponentsLeave
-
-Add to the Smart Client check block:
-
-```nsi
-${OrIf} ${SectionIsSelected} ${SEC_MYPLUGIN}
-```
-
-### Uninstall - Remove Directory
-
-```nsi
-RMDir /r "$INSTDIR\MIPPlugins\MyPlugin"
-```
-
-### Uninstall - Remove Registry
-
-```nsi
-DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MyPlugin"
-```
-
-### Description Text
-
-```nsi
-!insertmacro MUI_DESCRIPTION_TEXT ${SEC_MYPLUGIN} "Description for the installer UI"
-```
-
----
-
-## 7. Update Documentation
+## 5. Update Documentation
 
 ### README.md
 
@@ -688,14 +565,12 @@ Create `Smart Client Plugins/MyPlugin/README.md` following the Weather/RDP/Notep
 
 ---
 
-## 8. Checklist
+## 6. Checklist
 
 - [ ] Plugin folder with `.csproj`, `plugin.def`, source files, `README.md`
 - [ ] 4 unique GUIDs generated and used correctly
 - [ ] Project added to `MSCPlugins.sln` (project entry + platform config + NestedProjects)
-- [ ] `build.ps1` updated (staging block + `$artifacts` array + NSIS variable)
-- [ ] `build-release.yml` updated (matrix entry + extract loop + NSIS build + collect + release files)
-- [ ] `installer/MSCPlugins.nsi` updated (define + section + ComponentsLeave + uninstall + description)
+- [ ] Entry added to `plugins.json`
 - [ ] `README.md` updated (plugin table + install paths)
-- [ ] `docs/index.html` updated (plugin card + zipMap)
+- [ ] `docs/index.html` updated (plugin card)
 - [ ] Build verified locally with `.\build.ps1`
