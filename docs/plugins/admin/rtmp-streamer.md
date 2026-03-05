@@ -11,6 +11,10 @@ A Milestone XProtect admin plugin that streams live camera video to RTMP/RTMPS d
 4. Pick a camera and enter the RTMP destination URL
 5. Click **Save**, streaming starts automatically
 
+<video controls width="100%">
+  <source src="../vids/rtmp_usage.mp4" type="video/mp4">
+</video>
+
 ## Configuration
 
 All configuration is done in the **Management Client** under **MIP Plug-ins > RTMP Streamer > RTMP Streams**.

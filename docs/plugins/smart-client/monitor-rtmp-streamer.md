@@ -3,20 +3,17 @@
 # Monitor RTMP Streamer
 
 A Smart Client plugin that captures desktop monitors and streams them via RTMP.
+Its usefull if you want to record what operators do.
+
+<video controls width="100%">
+  <source src="../vids/rtmp_mon_usage.mp4" type="video/mp4">
+</video>
 
 ## Quick Start
 
 1. Open the Monitor RTMP Streamer panel
 4. Select monitors and configure the RTMP destination
 5. Start streaming
-
-## Features
-
-- Multi-monitor capture with per-monitor toggle
-- H.264 encoding via FFmpeg (bundled, no external install needed)
-- RTMP streaming with auto-reconnect
-- Live status dashboard (capture timing, stream status, uptime)
-- Visual monitor layout configuration
 
 ## Troubleshooting
 

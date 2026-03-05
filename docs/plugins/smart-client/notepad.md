@@ -10,19 +10,16 @@ Simple text editor for operator notes directly in XProtect Smart Client view ite
 3. In Properties, set a title and font size
 4. Switch to **Live** mode and start typing notes
 
+<video controls width="100%">
+  <source src="../vids/notepad_usage.mp4" type="video/mp4">
+</video>
+
 ## Configuration
 
 | Setting | Default | Description |
 |---|---|---|
 | **Title** | *(empty)* | Header text shown above the note area (e.g. "Shift Notes") |
 | **Font Size** | 14 | Text size in the editor (1&ndash;72) |
-
-## Features
-
-- Editable text area in Live mode for operator notes
-- Notes persist via XProtect property storage (survive restarts)
-- Auto-save every 30 seconds with explicit Save button
-- Configurable title and font size
 
 ## Troubleshooting
 

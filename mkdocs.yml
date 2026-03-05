@@ -40,7 +40,7 @@ nav:
       - Weather: plugins/smart-client/weather.md
       - RDP: plugins/smart-client/rdp.md
       - Notepad: plugins/smart-client/notepad.md
-      - SnapReport: plugins/smart-client/snapreport.md
+      - Snapshot Report: plugins/smart-client/snapreport.md
       - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md

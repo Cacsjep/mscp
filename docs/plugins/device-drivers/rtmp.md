@@ -25,6 +25,11 @@ After installing, add new hardware in the **Management Client**:
 
 To add **multiple instances**, use `localhost` with a different port for each one.
 
+
+<video controls width="100%">
+  <source src="../rtmp-vids/add_rtmp_device.mp4" type="video/mp4">
+</video>
+
 ## Usage
 
 Push an RTMP stream to `rtmp://<milestone-server>:<port>/<stream-path>` from any RTMP-capable source. The video encoder must be set to **H.264**.

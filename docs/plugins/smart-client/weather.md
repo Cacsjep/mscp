@@ -10,6 +10,10 @@ Display live weather conditions directly in XProtect Smart Client view items, po
 3. In Properties, search for a city or enter lat/long
 4. Switch to **Live** mode, weather data loads automatically
 
+<video controls width="100%">
+  <source src="../vids/weather_usage.mp4" type="video/mp4">
+</video>
+
 ## Configuration
 
 All settings are configured in the Smart Client **Properties** panel (Setup mode).
@@ -23,15 +27,6 @@ All settings are configured in the Smart Client **Properties** panel (Setup mode
 | **Temperature Unit** | Celsius | Celsius or Fahrenheit |
 
 Use the **Search** button in Properties to find a city by name. The geocoding API returns up to 5 results to pick from.
-
-## Features
-
-- Live weather conditions with FontAwesome 5 icons
-- Temperature, feels-like, humidity, wind speed/direction, cloud cover, pressure
-- Day/night aware icons (sun vs moon)
-- Auto-refresh on configurable interval
-- 28 WMO weather codes mapped to descriptions and icons
-- Dark theme matching Smart Client UI
 
 ## Weather Data
 

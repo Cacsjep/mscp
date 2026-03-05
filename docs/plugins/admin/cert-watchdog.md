@@ -8,13 +8,16 @@ Monitor SSL/TLS certificate expiry for all XProtect HTTPS endpoints. Fires Miles
 
 1. Open the **Certificates** workspace tab in the Smart Client to see all endpoint statuses
 
-The plugin auto-discovers all HTTPS endpoints. No manual configuration needed.
+The plugin auto-discovers all HTTPS endpoints. And all devices that have HTTPS enabled.
 
-## Event Types
+<video controls width="100%">
+  <source src="../vids/cert_usage.mp4" type="video/mp4">
+</video>
 
-Available as triggers in XProtect Rules:
 
-### Server Certificate Events
+## Events
+
+#### Server Certificate Events
 
 Source: Certificate Watchdog item
 
@@ -24,9 +27,9 @@ Source: Certificate Watchdog item
 | Cert Expire (30 Days) | Server certificate expires within 30 days |
 | Cert Expire (15 Days) | Server certificate expires within 15 days |
 
-### Device Certificate Events
+#### Device Certificate Events
 
-Source: individual camera/hardware
+Source: individual device/hardware
 
 | Event | Description |
 |---|---|
@@ -36,36 +39,9 @@ Source: individual camera/hardware
 
 Use these events to trigger email notifications, alarms, or any other XProtect rule action.
 
-## Smart Client Dashboard
+## Smart Client
 
 The **Certificates** workspace tab shows two sortable tables. Click any column header to sort.
-
-### Server Certificates
-
-Management Server, Recording Servers, and registered services:
-
-| Column | Description |
-|---|---|
-| Service | Service type (e.g. Recording Server) |
-| Endpoint | Server hostname |
-| URL | Full HTTPS URL |
-| Issuer | Certificate issuer |
-| Expires | Certificate expiry date |
-| Days Left | Days remaining (color-coded: green/yellow/red) |
-| Status | OK, Expiring, Critical, Expired, or Error |
-
-### Hardware Certificates
-
-HTTPS-enabled cameras and devices:
-
-| Column | Description |
-|---|---|
-| Name | Hardware device name |
-| URL | HTTPS URL (constructed from device address and HTTPS port) |
-| Issuer | Certificate issuer |
-| Expires | Certificate expiry date |
-| Days Left | Days remaining (color-coded) |
-| Status | OK, Expiring, Critical, Expired, or Error |
 
 ### Dashboard Buttons
 
@@ -88,12 +64,4 @@ The Smart Client dashboard is controlled by role-based security. In Management C
 | Status shows "Error" | The endpoint may be unreachable. Check network connectivity and firewall. |
 | Events not firing | Verify the Event Server plugin is loaded. Check Event Server logs. |
 
-## Architecture
 
-This plugin spans all three XProtect environments from a single DLL:
-
-| Environment | Component | Purpose |
-|---|---|---|
-| Event Server | BackgroundPlugin | Discovers endpoints, checks certs, fires events |
-| Management Client | ItemManager | Registers event types, shows admin view |
-| Smart Client | WorkspacePlugin | "Certificates" dashboard tab |

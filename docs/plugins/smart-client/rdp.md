@@ -2,13 +2,17 @@
 
 # RDP
 
-Embed interactive RDP sessions directly into XProtect Smart Client view items.
+Embed interactive RDP sessions directly into XProtect Smart Client.
 
 ## Quick Start
 
 1. In **Setup** mode, drag **Remote Desktop Connection** into a view
 3. Set **IP Address**, **Username**, and optionally a **Name**
 4. Switch to **Live** mode, enter the password, and click **Connect**
+
+<video controls width="100%">
+  <source src="../vids/rdp_usage.mp4" type="video/mp4">
+</video>
 
 ## Configuration
 
@@ -63,4 +67,4 @@ Password is entered at connect time and cleared immediately. Never stored.
 | 3847 | Password expired |
 | 6919 | Server certificate expired/invalid |
 
-60+ codes are decoded and shown on disconnect.
+

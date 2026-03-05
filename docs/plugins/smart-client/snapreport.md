@@ -1,18 +1,22 @@
 <div class="show-title" markdown>
 
-# SnapReport
+# Snapshot Report
 
 A Smart Client workspace plugin that lets users select cameras from a folder tree, grab live snapshots, and generate a PDF report with one camera per page.
 
 ## Quick Start
 
 1. Open XProtect Smart Client
-3. Navigate to the **SnapReport** workspace tab
+3. Navigate to the **Snap Report** workspace tab
 4. Select cameras using the checkbox tree
 5. Click **Generate PDF**
 6. Choose a save location
 7. Wait for snapshot capture and PDF generation
 8. Optionally open the generated PDF
+
+<video controls width="100%">
+  <source src="../vids/snap_usage.mp4" type="video/mp4">
+</video>
 
 ## Permissions
 
