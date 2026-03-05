@@ -30,7 +30,7 @@ extra_css:
 
 nav:
   - Home: index.md
-  - Plugins & Drivers Overview: plugins/index.md
+  - Plugins & Drivers: plugins/index.md
   - Download: getting-started/installation.md
   - Plugins:
     - Admin Plugins:
