@@ -1,0 +1,76 @@
+site_name: MSC Community Plugins
+site_description: Open-source plugins and drivers for Milestone XProtect
+site_url: https://cacsjep.github.io/mscp/
+repo_url: https://github.com/Cacsjep/mscp
+repo_name: Cacsjep/mscp
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: blue
+    accent: light blue
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - navigation.instant
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - assets/css/custom.css
+
+nav:
+  - Home: index.md
+  - Plugins & Drivers Overview: plugins/index.md
+  - Download: getting-started/installation.md
+  - Plugins:
+    - Admin Plugins:
+      - RTMP Streamer: plugins/admin/rtmp-streamer.md
+      - Certificate Watchdog: plugins/admin/cert-watchdog.md
+    - Smart Client:
+      - Weather: plugins/smart-client/weather.md
+      - RDP: plugins/smart-client/rdp.md
+      - Notepad: plugins/smart-client/notepad.md
+      - SnapReport: plugins/smart-client/snapreport.md
+      - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
+  - Device Drivers:
+    - RTMP Push Driver: plugins/device-drivers/rtmp.md
+  - Support:
+    - Reporting Bugs: support/reporting-bugs.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Cacsjep/mscp
+
+copyright: >
+  MSC Community Plugins | Not affiliated with or supported by Milestone Systems.
+  XProtect&trade; is a trademark of Milestone Systems A/S.

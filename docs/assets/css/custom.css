@@ -1,0 +1,57 @@
+/* ── Deep black theme ── */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0d0d0d;
+  --md-default-bg-color--light: #1a1a1a;
+  --md-default-bg-color--lighter: #1a1a1a;
+  --md-default-bg-color--lightest: #252525;
+  --md-code-bg-color: #1a1a1a;
+  --md-default-fg-color--lightest: #2e2e2e;
+}
+
+[data-md-color-scheme="slate"] .md-nav,
+[data-md-color-scheme="slate"] .md-sidebar {
+  background: #0d0d0d;
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  background: rgba(13, 13, 13, 0.95);
+  border-bottom: 1px solid #252525;
+}
+
+[data-md-color-scheme="slate"] .md-tabs {
+  background: #0d0d0d;
+  border-bottom: 1px solid #252525;
+}
+
+[data-md-color-scheme="slate"] .md-footer {
+  background: #0d0d0d;
+}
+
+/* ── Hide auto-generated h1 page title ── */
+.md-content__inner > h1 {
+  display: none !important;
+}
+/* ── Show h1 on pages that opt in ── */
+.show-title h1 {
+  display: block !important;
+}
+
+/* ── Smaller body text ── */
+.md-typeset {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+
+.md-typeset h2 {
+  font-size: 1.1rem;
+}
+
+.md-typeset h3 {
+  font-size: 0.9rem;
+}
+
+.md-typeset h4 {
+  font-size: 0.8rem;
+}
+
