@@ -1,4 +1,4 @@
-site_name: MSC Community Plugins
+site_name: MS Community Plugins
 site_description: Open-source plugins and drivers for Milestone XProtect
 site_url: https://cacsjep.github.io/mscp/
 repo_url: https://github.com/Cacsjep/mscp
@@ -30,7 +30,7 @@ extra_css:
 
 nav:
   - Home: index.md
-  - Plugins & Drivers Overview: plugins/index.md
+  - Plugins & Drivers: plugins/index.md
   - Download: getting-started/installation.md
   - Plugins:
     - Admin Plugins:
