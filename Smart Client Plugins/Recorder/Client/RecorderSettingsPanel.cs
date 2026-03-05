@@ -24,6 +24,7 @@ namespace Recorder.Client
 
         public override void CloseUserControl()
         {
+            _control?.StopTimer();
             _control = null;
         }
 

@@ -23,24 +23,23 @@ namespace Recorder.Background
         /// </summary>
         public static Bitmap CaptureAndStitch(Screen[] screens)
         {
-            var minX = screens.Min(s => s.Bounds.X);
-            var minY = screens.Min(s => s.Bounds.Y);
-            var maxX = screens.Max(s => s.Bounds.Right);
-            var maxY = screens.Max(s => s.Bounds.Bottom);
+            var sorted = screens.OrderBy(s => s.Bounds.X).ThenBy(s => s.Bounds.Y).ToArray();
 
-            var totalWidth = maxX - minX;
-            var totalHeight = maxY - minY;
+            var totalWidth = sorted.Sum(s => s.Bounds.Width);
+            var totalHeight = sorted.Max(s => s.Bounds.Height);
 
             var stitched = new Bitmap(totalWidth, totalHeight);
             using (var g = Graphics.FromImage(stitched))
             {
                 g.Clear(Color.Black);
-                foreach (var screen in screens)
+                var offsetX = 0;
+                foreach (var screen in sorted)
                 {
                     using (var capture = CaptureScreen(screen))
                     {
-                        g.DrawImage(capture, screen.Bounds.X - minX, screen.Bounds.Y - minY);
+                        g.DrawImage(capture, offsetX, 0);
                     }
+                    offsetX += screen.Bounds.Width;
                 }
             }
             return stitched;

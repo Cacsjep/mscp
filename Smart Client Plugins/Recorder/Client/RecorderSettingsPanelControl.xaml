@@ -4,54 +4,73 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="400"
+             d:DesignHeight="700"
              d:DesignWidth="600">
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
 
-        <TextBlock Grid.Row="0" Text="Monitor Capture" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
-        <TextBlock Grid.Row="1" Text="Select which monitors to capture. If none are selected, all monitors are captured."
-                   TextWrapping="Wrap" Margin="0,0,0,15" Opacity="0.7" />
+            <!-- ═══ STATUS ═══ -->
+            <TextBlock Text="Status" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+            <Border BorderBrush="#555" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,20">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
 
-        <ItemsControl Grid.Row="2" x:Name="MonitorList" Margin="0,0,0,20">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border BorderBrush="#444" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,8">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <StackPanel Grid.Column="1">
-                                <TextBlock FontWeight="SemiBold">
-                                    <Run Text="{Binding DisplayName, Mode=OneWay}" />
-                                    <Run Text="{Binding PrimaryLabel, Mode=OneWay}" Foreground="Gray" />
-                                </TextBlock>
-                                <TextBlock Opacity="0.6">
-                                    <Run Text="{Binding Resolution, Mode=OneWay}" />
-                                    <Run Text=" — " />
-                                    <Run Text="{Binding Position, Mode=OneWay}" />
-                                </TextBlock>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Capture:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CaptureStatus" />
 
-        <StackPanel Grid.Row="3">
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Resolution:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ResolutionStatus" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Performance:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PerfStatus" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Stream:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="StreamStatus" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Uptime:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" x:Name="UptimeStatus" />
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ErrorStatus"
+                               Foreground="#FF4444" TextWrapping="Wrap" Margin="0,6,0,0" />
+                </Grid>
+            </Border>
+
+            <!-- ═══ MONITORS LAYOUT ═══ -->
+            <TextBlock Text="Monitors" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,5" />
+            <TextBlock Text="Click a monitor to toggle capture. If none are selected, all are captured."
+                       TextWrapping="Wrap" Margin="0,0,0,10" Opacity="0.7" />
+
+            <Border BorderBrush="#555" BorderThickness="1" CornerRadius="4" Margin="0,0,0,20" Background="#1a1a1a">
+                <Canvas x:Name="MonitorCanvas" Height="180" ClipToBounds="True" />
+            </Border>
+
+            <!-- ═══ RTMP ═══ -->
             <TextBlock Text="RTMP Streaming" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
 
             <TextBlock Text="RTMP URL:" Margin="0,0,0,5" />
             <TextBox Text="{Binding RtmpUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
-            <TextBlock Text="e.g. rtmp://server:1935/live/stream  (leave empty to disable streaming)"
-                       Opacity="0.7" Margin="0,0,0,0" TextWrapping="Wrap" />
+            <TextBlock Text="e.g. rtmp://server:1935/live/stream  (leave empty to disable)"
+                       Opacity="0.7" TextWrapping="Wrap" Margin="0,0,0,20" />
+
+            <!-- Save button + spinner -->
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="SaveButton" Content="Save &amp; Restart Stream" Padding="20,8" MinHeight="32" Click="Apply_Click"
+                        Foreground="White" Background="#3399FF" BorderBrush="#2277CC" />
+                <TextBlock x:Name="SaveSpinner" Text="Restarting..." Margin="12,0,0,0"
+                           VerticalAlignment="Center" FontStyle="Italic" Opacity="0.7" Visibility="Collapsed" />
+            </StackPanel>
+
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </UserControl>

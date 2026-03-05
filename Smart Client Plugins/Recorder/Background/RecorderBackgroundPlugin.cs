@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
@@ -22,20 +20,16 @@ namespace Recorder.Background
 
         private Thread _captureThread;
         private volatile bool _run;
-        private string _outputDir;
         private RtmpStreamer _streamer;
+        private string _activeRtmpUrl;
+        private int _reconnectDelay;
 
         public override void Init()
         {
-            _outputDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
-                "RecorderCaptures");
-            Directory.CreateDirectory(_outputDir);
-
             _run = true;
             _captureThread = new Thread(CaptureLoop) { IsBackground = true };
             _captureThread.Start();
-            Log($"Recorder started. Output: {_outputDir}");
+            Log("Recorder started.");
         }
 
         private void CaptureLoop()
@@ -47,6 +41,19 @@ namespace Recorder.Background
                 try
                 {
                     var config = RecorderConfig.Load();
+                    var status = RecorderStatus.Instance;
+
+                    // Handle restart requests (URL changed from settings panel)
+                    if (status.RestartRequested)
+                    {
+                        status.RestartRequested = false;
+                        StopStreamer();
+                        status.ClearError();
+                        _reconnectDelay = 0;
+                        Log("Stream restart requested.");
+                        status.RestartCompleted = true;
+                    }
+
                     var screens = Screen.AllScreens
                         .Where(s => config.IsMonitorEnabled(s))
                         .ToArray();
@@ -62,51 +69,87 @@ namespace Recorder.Background
                     using (var stitched = MonitorCapture.CaptureAndStitch(screens))
                     {
                         var captureMs = sw.ElapsedMilliseconds;
+                        var encodeStart = sw.ElapsedMilliseconds;
 
-                        // Start RTMP streamer on first frame (we now know the resolution)
+                        // Start or reconnect streamer
                         if (_streamer == null && !string.IsNullOrWhiteSpace(config.RtmpUrl))
                         {
-                            _streamer = new RtmpStreamer(
-                                stitched.Width, stitched.Height,
-                                rtmpUrl: config.RtmpUrl,
-                                log: Log, logError: LogError);
-                            _streamer.Start();
+                            if (_reconnectDelay > 0)
+                            {
+                                _reconnectDelay--;
+                                status.SetError($"Reconnecting in {_reconnectDelay + 1}s...");
+                            }
+                            else
+                            {
+                                _activeRtmpUrl = config.RtmpUrl;
+                                _streamer = new RtmpStreamer(
+                                    stitched.Width, stitched.Height,
+                                    rtmpUrl: config.RtmpUrl,
+                                    log: Log, logError: OnStreamError);
+
+                                if (_streamer.Start())
+                                {
+                                    status.ClearError();
+                                    _reconnectDelay = 0;
+                                    Log($"RTMP connected: {config.RtmpUrl} ({stitched.Width}x{stitched.Height})");
+                                }
+                                else
+                                {
+                                    StopStreamer();
+                                    _reconnectDelay = 5; // retry in 5 seconds
+                                }
+                            }
                         }
 
-                        // Push frame to RTMP stream
+                        // Push frame — if it fails, dispose and let reconnect kick in
                         if (_streamer?.IsRunning == true)
+                        {
                             _streamer.PushFrame(stitched);
 
-                        // Also save snapshot to disk
-                        var path = Path.Combine(_outputDir, "stitched.png");
-                        using (var ms = new MemoryStream())
-                        {
-                            stitched.Save(ms, ImageFormat.Png);
-                            File.WriteAllBytes(path, ms.ToArray());
+                            if (!_streamer.IsRunning)
+                            {
+                                Log("RTMP connection lost. Will reconnect.");
+                                StopStreamer();
+                                _reconnectDelay = 5;
+                            }
                         }
 
+                        var encodeMs = sw.ElapsedMilliseconds - encodeStart;
                         var totalMs = sw.ElapsedMilliseconds;
-                        var sizeKb = new FileInfo(path).Length / 1024;
-                        Log($"Cycle: {screens.Length} monitor(s) stitched={stitched.Width}x{stitched.Height} "
-                          + $"capture={captureMs}ms total={totalMs}ms size={sizeKb}KB "
-                          + $"rtmp={(_streamer?.IsRunning == true ? "streaming" : "off")}");
+
+                        status.UpdateCycle(screens.Length, stitched.Width, stitched.Height, captureMs, encodeMs, totalMs);
+                        status.UpdateStreaming(_streamer?.IsRunning == true, _activeRtmpUrl ?? config.RtmpUrl);
                     }
                 }
                 catch (Exception e)
                 {
-                    LogError($"Cycle error: {e}");
+                    RecorderStatus.Instance.SetError(e.Message);
+                    LogError($"Cycle error: {e.Message}");
                 }
 
                 Thread.Sleep(1000);
             }
         }
 
+        private void OnStreamError(string msg)
+        {
+            RecorderStatus.Instance.SetError(msg);
+            LogError(msg);
+        }
+
+        private void StopStreamer()
+        {
+            _streamer?.Dispose();
+            _streamer = null;
+            _activeRtmpUrl = null;
+        }
+
         public override void Close()
         {
             _run = false;
             _captureThread?.Join(3000);
-            _streamer?.Dispose();
-            _streamer = null;
+            StopStreamer();
+            RecorderStatus.Instance.UpdateStreaming(false, "");
             Log("Recorder stopped.");
         }
 
