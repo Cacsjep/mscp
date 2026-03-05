@@ -42,7 +42,7 @@ hide:
   <div class="download-card">
     <h3>Unified Installer <span class="rec">Recommended</span></h3>
     <p>Single installer with component selection.</p>
-    <a href="https://github.com/Cacsjep/mscp/releases/latest" class="md-button md-button--primary" style="width:100%;text-align:center;font-weight:400">Download MSCPlugins-Setup.exe</a>
+    <a id="installer-download" href="https://github.com/Cacsjep/mscp/releases/latest" class="md-button md-button--primary" style="width:100%;text-align:center;font-weight:400">Download MSCPlugins-Setup.exe</a>
     <small>Choose exactly which plugins and drivers to install.</small>
   </div>
   <div class="download-card">
@@ -98,3 +98,20 @@ After manual installation, restart the relevant service, if you update, you need
 | Smart Client Plugins | Restart the **Smart Client** |
 | Device Drivers | Restart the **Recording Server** service |
 | Admin Plugins | Restart the **Event Server** service, then the **Management Client** and **Smart Client** |
+
+<script>
+fetch("https://api.github.com/repos/Cacsjep/mscp/releases/latest")
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var asset = data.assets.find(function(a) {
+      return a.name.match(/MSCPlugins.*Setup\.exe$/i);
+    });
+    if (asset) {
+      var btn = document.getElementById("installer-download");
+      if (btn) {
+        btn.href = asset.browser_download_url;
+        btn.textContent = "Download " + asset.name;
+      }
+    }
+  });
+</script>
