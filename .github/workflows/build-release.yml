@@ -65,6 +65,13 @@ jobs:
             stage_to: SnapReport
             extra_flags: /p:CIBuild=true
 
+          - name: Recorder
+            projects: Smart Client Plugins\Recorder\Recorder.csproj
+            platform: AnyCPU
+            stage_from: Smart Client Plugins\Recorder\bin\Release\net48
+            stage_to: Recorder
+            extra_flags: /p:CIBuild=true
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -126,7 +133,7 @@ jobs:
 
       - name: Extract staging directories
         run: |
-          foreach ($name in @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'CertWatchdog', 'SnapReport')) {
+          foreach ($name in @('Weather', 'RDP', 'Notepad', 'RTMPDriver', 'RTMPStreamer', 'CertWatchdog', 'SnapReport', 'Recorder')) {
             $zip = Get-ChildItem "artifacts\$name\*.zip" | Select-Object -First 1
             Expand-Archive -Path $zip.FullName -DestinationPath staging -Force
           }
@@ -146,6 +153,7 @@ jobs:
           $streamerDir = (Resolve-Path 'staging\RTMPStreamer').Path
           $certwatchdogDir = (Resolve-Path 'staging\CertWatchdog').Path
           $snapreportDir = (Resolve-Path 'staging\SnapReport').Path
+          $recorderDir = (Resolve-Path 'staging\Recorder').Path
           $outDir = (Resolve-Path '.').Path
           & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" `
             /DVERSION=$version `
@@ -156,6 +164,7 @@ jobs:
             "/DRTMPSTREAMER_DIR=$streamerDir" `
             "/DCERTWATCHDOG_DIR=$certwatchdogDir" `
             "/DSNAPREPORT_DIR=$snapreportDir" `
+            "/DRECORDER_DIR=$recorderDir" `
             "/DOUTDIR=$outDir" `
             installer\MSCPlugins.nsi
         shell: pwsh
@@ -169,6 +178,7 @@ jobs:
           Copy-Item artifacts\RTMPStreamer\*.zip -Destination .
           Copy-Item artifacts\CertWatchdog\*.zip -Destination .
           Copy-Item artifacts\SnapReport\*.zip -Destination .
+          Copy-Item artifacts\Recorder\*.zip -Destination .
         shell: pwsh
 
       - name: Create GitHub Release
@@ -182,5 +192,6 @@ jobs:
             RTMPStreamer-${{ github.ref_name }}.zip
             CertWatchdog-${{ github.ref_name }}.zip
             SnapReport-${{ github.ref_name }}.zip
+            Recorder-${{ github.ref_name }}.zip
             MSCPlugins-${{ github.ref_name }}-Setup.exe
           generate_release_notes: true

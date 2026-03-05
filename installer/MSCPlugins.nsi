@@ -48,6 +48,9 @@ BrandingText "MSC Community Plugins v${VERSION}"
 !ifndef SNAPREPORT_DIR
   !define SNAPREPORT_DIR "..\build\staging\SnapReport"
 !endif
+!ifndef RECORDER_DIR
+  !define RECORDER_DIR "..\build\staging\Recorder"
+!endif
 
 ; ── Process / service names ──
 !define SC_PROCESS  "Client.exe"
@@ -289,6 +292,26 @@ SectionGroup "Smart Client Plugins" SEC_SC_GROUP
       "NoRepair" 1
   SectionEnd
 
+  Section "Recorder Plugin" SEC_RECORDER
+    SetOutPath "$INSTDIR\MIPPlugins\Recorder"
+    !insertmacro _LogMsg "Installing Recorder Plugin to $INSTDIR\MIPPlugins\Recorder..."
+    File /r "${RECORDER_DIR}\*.*"
+    !insertmacro _LogMsg "Recorder Plugin installed."
+
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+      "DisplayName" "Recorder Plugin v${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+      "UninstallString" "$\"$INSTDIR\MIPPlugins\Recorder\Uninstall.exe$\""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+      "DisplayVersion" "${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+      "Publisher" "MSC Community Plugins"
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+      "NoModify" 1
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+      "NoRepair" 1
+  SectionEnd
+
 SectionGroupEnd
 
 ; ══════════════════════════════════════════════════════════════
@@ -444,6 +467,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CERTWATCHDOG} "Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints with dashboard and alerts"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SNAPREPORT} "Select cameras and generate PDF snapshot reports for site surveys and compliance"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RECORDER} "Recorder settings panel for the Smart Client"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ══════════════════════════════════════════════════════════════
@@ -461,6 +485,7 @@ Function ComponentsLeave
   ${OrIf} ${SectionIsSelected} ${SEC_RDP}
   ${OrIf} ${SectionIsSelected} ${SEC_NOTEPAD}
   ${OrIf} ${SectionIsSelected} ${SEC_SNAPREPORT}
+  ${OrIf} ${SectionIsSelected} ${SEC_RECORDER}
     StrCpy $STOP_SC "1"
   ${EndIf}
 
@@ -504,6 +529,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\MIPPlugins\RTMPStreamer"
   RMDir /r "$INSTDIR\MIPPlugins\CertWatchdog"
   RMDir /r "$INSTDIR\MIPPlugins\SnapReport"
+  RMDir /r "$INSTDIR\MIPPlugins\Recorder"
 
   ; ── Remove uninstaller ──
   Delete "$INSTDIR\MSCPlugins-Uninstall.exe"
@@ -517,6 +543,7 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder"
 
   ; ── Restart services ──
   DetailPrint "Starting ${RS_SERVICE}..."

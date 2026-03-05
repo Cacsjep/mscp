@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Recorder</RootNamespace>
+    <AssemblyName>Recorder</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <PluginName>Recorder</PluginName>
+    <StopSmartClient>true</StopSmartClient>
+    <LaunchSmartClient>true</LaunchSmartClient>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Resource Include="Resources\PluginIcon.png" />
+  </ItemGroup>
+
+</Project>

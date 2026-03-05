@@ -18,6 +18,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [Rtmp](Device%20Drivers/Rtmp) | Device Driver | Receive RTMP/RTMPS push streams (H.264) directly into XProtect™ |
 | [RTMPStreamer](Admin%20Plugins/RTMPStreamer) | Admin Plugin | Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.) |
 | [SnapReport](Smart%20Client%20Plugins/SnapReport) | Smart Client | Camera snapshot PDF report generator for site surveys and compliance |
+| [Recorder](Smart%20Client%20Plugins/Recorder) | Smart Client | Recorder settings panel for the Smart Client |
 | [CertWatchdog](Admin%20Plugins/CertWatchdog) | Admin Plugin | Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints |
 
 ## Installation
@@ -41,6 +42,7 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 | RTMPDriver | `C:\Program Files\Milestone\MIPDrivers\RTMPDriver\` |
 | RTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\` |
 | SnapReport | `C:\Program Files\Milestone\MIPPlugins\SnapReport\` |
+| Recorder | `C:\Program Files\Milestone\MIPPlugins\Recorder\` |
 | CertWatchdog | `C:\Program Files\Milestone\MIPPlugins\CertWatchdog\` |
 
 > [!NOTE]
@@ -61,7 +63,8 @@ mscp/
 │   ├── Weather/                   Weather view item plugin
 │   ├── RDP/                       RDP view item plugin
 │   ├── Notepad/                   Notepad view item plugin
-│   └── SnapReport/                Camera snapshot PDF report generator
+│   ├── SnapReport/                Camera snapshot PDF report generator
+│   └── Recorder/                  Recorder settings panel
 ├── Device Drivers/
 │   └── Rtmp/                      RTMP push stream driver
 ├── Admin Plugins/

@@ -1,0 +1,4 @@
+<plugin>
+   <file name="Recorder.dll"/>
+   <load env="SmartClient"/>
+</plugin>
