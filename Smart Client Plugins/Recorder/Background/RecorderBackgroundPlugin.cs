@@ -74,6 +74,7 @@ namespace Recorder.Background
                                 var safeName = SanitizeFileName(win.Title);
                                 if (string.IsNullOrEmpty(safeName))
                                     safeName = win.Handle.ToString();
+                                safeName = $"{safeName}_{win.Handle}";
 
                                 var path = Path.Combine(_outputDir, $"{safeName}.png");
 

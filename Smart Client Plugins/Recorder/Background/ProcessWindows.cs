@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
+using System.Windows.Interop;
 
 namespace Recorder.Background
 {
@@ -42,18 +43,36 @@ namespace Recorder.Background
             public int Left, Top, Right, Bottom;
         }
 
+        /// <summary>
+        /// Gets all WPF windows via Application.Current.Windows on the UI thread.
+        /// Safe to call from a background thread — marshals to the Dispatcher automatically.
+        /// </summary>
         public static List<WindowInfo> GetAllWindowsForCurrentProcess()
         {
-            var result = new List<WindowInfo>();
-            var sb = new StringBuilder(256);
-            var proc = Process.GetCurrentProcess();
+            var app = Application.Current;
+            if (app == null)
+                return new List<WindowInfo>();
 
-            var mainHwnd = proc.MainWindowHandle;
-            if (mainHwnd == IntPtr.Zero)
+            // Marshal to the UI thread to read Application.Windows
+            return (List<WindowInfo>)app.Dispatcher.Invoke(new Func<List<WindowInfo>>(() =>
+            {
+                var result = new List<WindowInfo>();
+                var sb = new StringBuilder(256);
+
+                foreach (Window win in app.Windows)
+                {
+                    var helper = new WindowInteropHelper(win);
+                    var hwnd = helper.Handle;
+                    if (hwnd == IntPtr.Zero) continue;
+
+                    var info = BuildWindowInfo(hwnd, sb);
+                    if (string.IsNullOrWhiteSpace(info.Title)) continue;
+
+                    result.Add(info);
+                }
+
                 return result;
-
-            result.Add(BuildWindowInfo(mainHwnd, sb));
-            return result;
+            }));
         }
 
         private static WindowInfo BuildWindowInfo(IntPtr hWnd, StringBuilder sb)
