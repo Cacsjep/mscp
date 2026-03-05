@@ -15,6 +15,8 @@
                 <TextBox x:Name="nameTextBox" Padding="4" />
                 <Label Content="IP Address:" Margin="0,8,0,0" />
                 <TextBox x:Name="ipTextBox" Padding="4" />
+                <Label Content="Port:" Margin="0,8,0,0" />
+                <TextBox x:Name="portTextBox" Padding="4" MaxLength="5" />
                 <Label Content="Username:" Margin="0,8,0,0" />
                 <TextBox x:Name="usernameTextBox" Padding="4" />
                 <Separator Margin="0,12,0,8" />

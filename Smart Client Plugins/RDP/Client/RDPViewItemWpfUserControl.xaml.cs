@@ -1,9 +1,9 @@
+using AxMSTSCLib;
+using MSTSCLib;
 using System;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
-using AxMSTSCLib;
-using MSTSCLib;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.Messaging;
@@ -220,7 +220,7 @@ namespace RDP.Client
                 // Authentication
                 bool enableNla = _viewItemManager.EnableNLA;
                 _rdpClient.AdvancedSettings8.EnableCredSspSupport = enableNla;
-                _rdpClient.AdvancedSettings8.RDPPort = 3389;
+                _rdpClient.AdvancedSettings8.RDPPort = _viewItemManager.Port;
                 _rdpClient.AdvancedSettings8.AuthenticationLevel = 2;
                 _rdpClient.AdvancedSettings8.NegotiateSecurityLayer = !enableNla;
 
@@ -442,11 +442,13 @@ namespace RDP.Client
         {
             var ip = _viewItemManager.IPAddress;
             var user = _viewItemManager.Username;
+            var port = _viewItemManager.Port;
 
             if (string.IsNullOrWhiteSpace(ip))
                 return "No IP configured";
 
-            return string.IsNullOrWhiteSpace(user) ? ip : $"{user}@{ip}";
+            var host = port != 3389 ? $"{ip}:{port}" : ip;
+            return string.IsNullOrWhiteSpace(user) ? host : $"{user}@{host}";
         }
 
         private void UpdateLoginInfo()
