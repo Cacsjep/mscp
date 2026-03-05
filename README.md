@@ -71,10 +71,12 @@ mscp/
 │   ├── RTMPStreamer/              RTMP outbound streaming plugin
 │   └── CertWatchdog/             SSL certificate expiry monitoring plugin
 ├── MSCPlugins.sln                 Visual Studio solution (all projects)
+├── plugins.json                   Central plugin manifest (drives CI, build, installer)
 ├── Directory.Build.props          Shared MSBuild properties (paths, deploy flags)
 ├── Directory.Build.targets        Shared build targets (stop/deploy/start cycle)
 ├── installer/
-│   └── MSCPlugins.nsi             Unified NSIS installer script
+│   ├── MSCPlugins.nsi             Unified NSIS installer script
+│   └── generate-nsi.ps1           Generates NSIS sections from plugins.json
 ├── .github/workflows/
 │   └── build-release.yml          CI: matrix build + create release
 ├── build.ps1                      Local build script
@@ -209,92 +211,47 @@ EndProject
 
 Make sure to add the project GUID to the `NestedProjects` section so it appears under the correct solution folder, and add platform configuration entries in `ProjectConfigurationPlatforms`.
 
-#### 3. Update `build.ps1`
+#### 3. Add the plugin to `plugins.json`
 
-Add a staging block to copy your build output (after the existing plugins, in step 4):
+All build infrastructure (CI workflow, `build.ps1`, NSIS installer) is driven by the central `plugins.json` manifest. Add one entry:
 
-```powershell
-# YourPlugin
-$stageYour = Join-Path $staging 'YourPlugin'
-New-Item -ItemType Directory -Path $stageYour -Force | Out-Null
-Copy-Item -Path (Join-Path $root 'Smart Client Plugins\YourPlugin\bin\Release\net48\*') -Destination $stageYour -Recurse
+```json
+{
+  "name": "YourPlugin",
+  "displayName": "Your Plugin",
+  "path": "Smart Client Plugins/YourPlugin",
+  "category": "SmartClient",
+  "description": "Short description for the NSIS installer"
+}
 ```
 
-Add `'YourPlugin'` to the `$artifacts` array so a ZIP is created:
+**Required fields:**
 
-```powershell
-$artifacts = @('Weather', 'RDP', 'RTMPDriver', 'RTMPStreamer', 'YourPlugin')
-```
+| Field | Description |
+|---|---|
+| `name` | Plugin name (used for assembly, staging dir, ZIP name, registry key) |
+| `displayName` | Human-readable name shown in the NSIS installer |
+| `path` | Relative path to the project folder from the repo root |
+| `category` | `SmartClient`, `DeviceDriver`, or `AdminPlugin` |
+| `description` | One-line description for the NSIS component selection page |
 
-Update the NSIS variables section to pass your staging directory:
+**Optional fields (with defaults):**
 
-```powershell
-$yourDir = (Resolve-Path (Join-Path $staging 'YourPlugin')).Path
+| Field | Default | Description |
+|---|---|---|
+| `project` | `{name}.csproj` | Project file name if different from the plugin name |
+| `platform` | `AnyCPU` | MSBuild platform (`AnyCPU` or `x64`) |
+| `outputPath` | `bin/Release/net48` | Build output path (auto-adjusts to `bin/x64/Release/net48` for x64) |
+| `extraProjects` | `[]` | Additional .csproj files to build (e.g. helper projects) |
+| `extraStagingDirs` | `[]` | Extra directories to copy into the staging folder |
+| `extraStagingFiles` | `[]` | Extra individual files to copy into the staging folder |
 
-& $makensis ... `
-    "/DYOURPLUGIN_DIR=$yourDir" `
-    ...
-```
+This single entry automatically configures:
+- GitHub Actions build matrix and release job
+- `build.ps1` staging, zipping, and NSIS arguments
+- NSIS installer sections, descriptions, ComponentsLeave logic, and uninstall cleanup
 
-#### 4. Update `.github/workflows/build-release.yml`
-
-Add a new matrix entry in the `build` job:
-
-```yaml
-- name: YourPlugin
-  solution: MSCPlugins.sln
-  platform: Any CPU
-  msbuild_targets: YourPlugin
-  stage_from: Smart Client Plugins\YourPlugin\bin\Release\net48
-  stage_to: YourPlugin
-  extra_flags: /p:CIBuild=true
-```
-
-In the `release` job, add your plugin name to the extract loop and the collect/release file lists:
-
-```yaml
-# Extract staging directories
-foreach ($name in @('Weather', 'RDP', 'RTMPDriver', 'RTMPStreamer', 'YourPlugin')) {
-
-# Collect release files
-Copy-Item artifacts\YourPlugin\*.zip -Destination .
-
-# Create GitHub Release → files
-YourPlugin-${{ github.ref_name }}.zip
-```
-
-#### 5. Update `installer/MSCPlugins.nsi`
-
-Add a staging directory define:
-
-```nsi
-!ifndef YOURPLUGIN_DIR
-  !define YOURPLUGIN_DIR "..\build\staging\YourPlugin"
-!endif
-```
-
-Add an install section inside the appropriate `SectionGroup`:
-
-```nsi
-Section "Your Plugin" SEC_YOURPLUGIN
-  DetailPrint "Closing Smart Client..."
-  nsExec::ExecToLog 'taskkill /F /IM "${SC_PROCESS}"'
-  Pop $0
-  Sleep 2000
-
-  SetOutPath "$INSTDIR\MIPPlugins\YourPlugin"
-  DetailPrint "Installing Your Plugin..."
-  File /r "${YOURPLUGIN_DIR}\*.*"
-
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\YourPlugin" \
-    "DisplayName" "YourPlugin v${VERSION}"
-  ; ... (registry entries, see existing sections for the pattern)
-SectionEnd
-```
-
-Add a description, uninstall cleanup, and registry removal (see existing entries as a template).
-
-#### 6. Update documentation
+#### 4. Update documentation
 
 - **`README.md`** (this file) &mdash; add your plugin to the Plugins & Drivers table and the Manual install paths table
 - **`docs/index.html`** &mdash; add a plugin card in the correct category section
@@ -304,9 +261,7 @@ Add a description, uninstall cleanup, and registry removal (see existing entries
 
 - [ ] Plugin folder with `.csproj`, `plugin.def`, `README.md`, and source files
 - [ ] Project added to `MSCPlugins.sln` (correct solution folder + platform config)
-- [ ] `build.ps1` &mdash; staging block, `$artifacts` array, NSIS variable
-- [ ] `.github/workflows/build-release.yml` &mdash; matrix entry, extract/collect/release lists
-- [ ] `installer/MSCPlugins.nsi` &mdash; directory define, install section, description, uninstall cleanup
+- [ ] Entry added to `plugins.json`
 - [ ] `README.md` &mdash; plugin table + install paths table
 - [ ] `docs/index.html` &mdash; plugin card in correct category
 - [ ] Build verified locally with `.\build.ps1`
