@@ -48,8 +48,8 @@ BrandingText "MSC Community Plugins v${VERSION}"
 !ifndef SNAPREPORT_DIR
   !define SNAPREPORT_DIR "..\build\staging\SnapReport"
 !endif
-!ifndef RECORDER_DIR
-  !define RECORDER_DIR "..\build\staging\Recorder"
+!ifndef MONITORRTMPSTREAMER_DIR
+  !define MONITORRTMPSTREAMER_DIR "..\build\staging\MonitorRTMPStreamer"
 !endif
 
 ; ── Process / service names ──
@@ -292,23 +292,23 @@ SectionGroup "Smart Client Plugins" SEC_SC_GROUP
       "NoRepair" 1
   SectionEnd
 
-  Section "Recorder Plugin" SEC_RECORDER
-    SetOutPath "$INSTDIR\MIPPlugins\Recorder"
-    !insertmacro _LogMsg "Installing Recorder Plugin to $INSTDIR\MIPPlugins\Recorder..."
-    File /r "${RECORDER_DIR}\*.*"
-    !insertmacro _LogMsg "Recorder Plugin installed."
+  Section "Monitor RTMP Streamer" SEC_MONITORRTMPSTREAMER
+    SetOutPath "$INSTDIR\MIPPlugins\MonitorRTMPStreamer"
+    !insertmacro _LogMsg "Installing Monitor RTMP Streamer to $INSTDIR\MIPPlugins\MonitorRTMPStreamer..."
+    File /r "${MONITORRTMPSTREAMER_DIR}\*.*"
+    !insertmacro _LogMsg "Monitor RTMP Streamer installed."
 
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
-      "DisplayName" "Recorder Plugin v${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
-      "UninstallString" "$\"$INSTDIR\MIPPlugins\Recorder\Uninstall.exe$\""
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
+      "DisplayName" "Monitor RTMP Streamer v${VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
+      "UninstallString" "$\"$INSTDIR\MIPPlugins\MonitorRTMPStreamer\Uninstall.exe$\""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
       "DisplayVersion" "${VERSION}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
       "Publisher" "MSC Community Plugins"
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
       "NoModify" 1
-    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder" \
+    WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer" \
       "NoRepair" 1
   SectionEnd
 
@@ -467,7 +467,7 @@ SectionEnd
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RTMPSTREAMER} "Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CERTWATCHDOG} "Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints with dashboard and alerts"
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_SNAPREPORT} "Select cameras and generate PDF snapshot reports for site surveys and compliance"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_RECORDER} "Recorder settings panel for the Smart Client"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SEC_MONITORRTMPSTREAMER} "Capture desktop monitors and stream via RTMP"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ══════════════════════════════════════════════════════════════
@@ -529,7 +529,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\MIPPlugins\RTMPStreamer"
   RMDir /r "$INSTDIR\MIPPlugins\CertWatchdog"
   RMDir /r "$INSTDIR\MIPPlugins\SnapReport"
-  RMDir /r "$INSTDIR\MIPPlugins\Recorder"
+  RMDir /r "$INSTDIR\MIPPlugins\MonitorRTMPStreamer"
 
   ; ── Remove uninstaller ──
   Delete "$INSTDIR\MSCPlugins-Uninstall.exe"
@@ -543,7 +543,7 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RTMPStreamer"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\CertWatchdog"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapReport"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Recorder"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\MonitorRTMPStreamer"
 
   ; ── Restart services ──
   DetailPrint "Starting ${RS_SERVICE}..."
