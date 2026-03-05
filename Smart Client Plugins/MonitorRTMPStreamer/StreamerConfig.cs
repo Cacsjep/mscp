@@ -5,13 +5,13 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
-namespace Recorder
+namespace MonitorRTMPStreamer
 {
-    public class RecorderConfig
+    public class StreamerConfig
     {
         private static readonly string ConfigDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "Milestone", "Recorder");
+            "Milestone", "MonitorRTMPStreamer");
 
         private static readonly string ConfigPath = Path.Combine(ConfigDir, "config.xml");
 
@@ -21,11 +21,11 @@ namespace Recorder
 
         public string RtmpUrl { get; set; } = "";
 
-        public static RecorderConfig Load()
+        public static StreamerConfig Load()
         {
             lock (_fileLock)
             {
-                var config = new RecorderConfig();
+                var config = new StreamerConfig();
                 if (!File.Exists(ConfigPath))
                     return config;
 
@@ -57,7 +57,7 @@ namespace Recorder
             {
                 Directory.CreateDirectory(ConfigDir);
                 var doc = new XDocument(
-                    new XElement("RecorderConfig",
+                    new XElement("StreamerConfig",
                         new XElement("EnabledMonitors",
                             EnabledMonitors.Select(m => new XElement("Monitor", m))),
                         new XElement("RtmpUrl", RtmpUrl ?? "")));

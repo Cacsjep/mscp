@@ -7,13 +7,13 @@ using System.Windows.Forms;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
 
-namespace Recorder.Background
+namespace MonitorRTMPStreamer.Background
 {
-    public class RecorderBackgroundPlugin : BackgroundPlugin
+    public class StreamerBackgroundPlugin : BackgroundPlugin
     {
-        public override Guid Id => RecorderDefinition.RecorderBackgroundPluginId;
+        public override Guid Id => StreamerDefinition.StreamerBackgroundPluginId;
 
-        public override string Name => "Recorder BackgroundPlugin";
+        public override string Name => "MonitorRTMPStreamer BackgroundPlugin";
 
         public override List<EnvironmentType> TargetEnvironments
             => new List<EnvironmentType> { EnvironmentType.SmartClient };
@@ -29,7 +29,7 @@ namespace Recorder.Background
             _run = true;
             _captureThread = new Thread(CaptureLoop) { IsBackground = true };
             _captureThread.Start();
-            Log("Recorder started.");
+            Log("MonitorRTMPStreamer started.");
         }
 
         private void CaptureLoop()
@@ -40,8 +40,8 @@ namespace Recorder.Background
             {
                 try
                 {
-                    var config = RecorderConfig.Load();
-                    var status = RecorderStatus.Instance;
+                    var config = StreamerConfig.Load();
+                    var status = StreamerStatus.Instance;
 
                     // Handle restart requests (URL changed from settings panel)
                     if (status.RestartRequested)
@@ -123,7 +123,7 @@ namespace Recorder.Background
                 }
                 catch (Exception e)
                 {
-                    RecorderStatus.Instance.SetError(e.Message);
+                    StreamerStatus.Instance.SetError(e.Message);
                     LogError($"Cycle error: {e.Message}");
                 }
 
@@ -133,7 +133,7 @@ namespace Recorder.Background
 
         private void OnStreamError(string msg)
         {
-            RecorderStatus.Instance.SetError(msg);
+            StreamerStatus.Instance.SetError(msg);
             LogError(msg);
         }
 
@@ -149,14 +149,14 @@ namespace Recorder.Background
             _run = false;
             _captureThread?.Join(3000);
             StopStreamer();
-            RecorderStatus.Instance.UpdateStreaming(false, "");
-            Log("Recorder stopped.");
+            StreamerStatus.Instance.UpdateStreaming(false, "");
+            Log("MonitorRTMPStreamer stopped.");
         }
 
         private void Log(string msg)
-            => EnvironmentManager.Instance.Log(false, nameof(RecorderBackgroundPlugin), msg);
+            => EnvironmentManager.Instance.Log(false, nameof(StreamerBackgroundPlugin), msg);
 
         private void LogError(string msg)
-            => EnvironmentManager.Instance.Log(true, nameof(RecorderBackgroundPlugin), msg);
+            => EnvironmentManager.Instance.Log(true, nameof(StreamerBackgroundPlugin), msg);
     }
 }

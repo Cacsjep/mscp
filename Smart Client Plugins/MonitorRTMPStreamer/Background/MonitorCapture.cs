@@ -2,7 +2,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace Recorder.Background
+namespace MonitorRTMPStreamer.Background
 {
     public static class MonitorCapture
     {
@@ -18,8 +18,8 @@ namespace Recorder.Background
         }
 
         /// <summary>
-        /// Captures all given screens and stitches them into one image
-        /// based on their actual desktop positions.
+        /// Captures all given screens and stitches them into one image,
+        /// packed side by side sorted by X position.
         /// </summary>
         public static Bitmap CaptureAndStitch(Screen[] screens)
         {

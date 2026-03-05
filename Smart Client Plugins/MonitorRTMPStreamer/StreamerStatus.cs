@@ -1,10 +1,10 @@
 using System;
 
-namespace Recorder
+namespace MonitorRTMPStreamer
 {
-    public class RecorderStatus
+    public class StreamerStatus
     {
-        public static readonly RecorderStatus Instance = new RecorderStatus();
+        public static readonly StreamerStatus Instance = new StreamerStatus();
 
         private readonly object _lock = new object();
 

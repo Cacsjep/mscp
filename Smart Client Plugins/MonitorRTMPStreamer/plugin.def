@@ -1,4 +1,4 @@
 <plugin>
-   <file name="Recorder.dll"/>
+   <file name="MonitorRTMPStreamer.dll"/>
    <load env="SmartClient"/>
 </plugin>

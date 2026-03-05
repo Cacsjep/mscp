@@ -4,10 +4,10 @@
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
     <OutputType>Library</OutputType>
-    <RootNamespace>Recorder</RootNamespace>
-    <AssemblyName>Recorder</AssemblyName>
+    <RootNamespace>MonitorRTMPStreamer</RootNamespace>
+    <AssemblyName>MonitorRTMPStreamer</AssemblyName>
     <LangVersion>latest</LangVersion>
-    <PluginName>Recorder</PluginName>
+    <PluginName>MonitorRTMPStreamer</PluginName>
     <StopSmartClient>true</StopSmartClient>
     <LaunchSmartClient>false</LaunchSmartClient>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

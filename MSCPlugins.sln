@@ -24,7 +24,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CertWatchdog", "Admin Plugi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SnapReport", "Smart Client Plugins\SnapReport\SnapReport.csproj", "{0B6EB70C-CF01-41A6-B44A-55065D6CB183}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Recorder", "Smart Client Plugins\Recorder\Recorder.csproj", "{4B66AC49-14DA-4088-8849-4EE9BC99ECAC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitorRTMPStreamer", "Smart Client Plugins\MonitorRTMPStreamer\MonitorRTMPStreamer.csproj", "{4B66AC49-14DA-4088-8849-4EE9BC99ECAC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

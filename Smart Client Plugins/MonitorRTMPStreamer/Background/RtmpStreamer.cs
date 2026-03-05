@@ -5,7 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using FFmpeg.AutoGen;
 
-namespace Recorder.Background
+namespace MonitorRTMPStreamer.Background
 {
     public unsafe class RtmpStreamer : IDisposable
     {

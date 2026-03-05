@@ -2,15 +2,15 @@ using System;
 using System.Windows.Controls;
 using VideoOS.Platform.Client;
 
-namespace Recorder.Client
+namespace MonitorRTMPStreamer.Client
 {
-    public class RecorderSettingsPanel : SettingsPanelPlugin
+    public class StreamerSettingsPanel : SettingsPanelPlugin
     {
-        private RecorderSettingsPanelControl _control;
+        private StreamerSettingsPanelControl _control;
 
         public override Guid Id => new Guid("DB052E27-E683-4410-B6A2-BCEF835D2EF3");
 
-        public override string Title => "Recorder";
+        public override string Title => "Monitor RTMP Streamer";
 
         public override void Init() { }
 
@@ -18,7 +18,7 @@ namespace Recorder.Client
 
         public override UserControl GenerateUserControl()
         {
-            _control = new RecorderSettingsPanelControl();
+            _control = new StreamerSettingsPanelControl();
             return _control;
         }
 

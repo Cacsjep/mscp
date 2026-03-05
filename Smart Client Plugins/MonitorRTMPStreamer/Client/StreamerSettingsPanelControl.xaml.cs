@@ -11,9 +11,9 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
-namespace Recorder.Client
+namespace MonitorRTMPStreamer.Client
 {
-    public partial class RecorderSettingsPanelControl : System.Windows.Controls.UserControl, INotifyPropertyChanged
+    public partial class StreamerSettingsPanelControl : System.Windows.Controls.UserControl, INotifyPropertyChanged
     {
         public List<MonitorItem> Monitors { get; }
         private readonly DispatcherTimer _refreshTimer;
@@ -26,12 +26,12 @@ namespace Recorder.Client
             set { _rtmpUrl = value; OnPropertyChanged(); }
         }
 
-        public RecorderSettingsPanelControl()
+        public StreamerSettingsPanelControl()
         {
             InitializeComponent();
             DataContext = this;
 
-            var config = RecorderConfig.Load();
+            var config = StreamerConfig.Load();
             RtmpUrl = config.RtmpUrl;
 
             Monitors = Screen.AllScreens.Select((s, i) => new MonitorItem
@@ -145,7 +145,7 @@ namespace Recorder.Client
 
         private void RefreshStatus()
         {
-            var st = RecorderStatus.Instance;
+            var st = StreamerStatus.Instance;
 
             CaptureStatus.Text = st.IsCapturing
                 ? $"{st.MonitorCount} monitor(s) active"
@@ -206,20 +206,20 @@ namespace Recorder.Client
             SaveButton.IsEnabled = false;
             SaveSpinner.Visibility = Visibility.Visible;
             _waitingForRestart = true;
-            RecorderStatus.Instance.RestartRequested = true;
+            StreamerStatus.Instance.RestartRequested = true;
         }
 
         public bool Save(out string error)
         {
             error = string.Empty;
             SaveConfig();
-            RecorderStatus.Instance.RestartRequested = true;
+            StreamerStatus.Instance.RestartRequested = true;
             return true;
         }
 
         private void SaveConfig()
         {
-            var config = new RecorderConfig
+            var config = new StreamerConfig
             {
                 RtmpUrl = RtmpUrl ?? "",
             };
