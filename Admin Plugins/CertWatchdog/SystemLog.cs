@@ -12,28 +12,6 @@ namespace CertWatchdog
 
         protected override Dictionary<string, LogMessage> BuildMessages() => new Dictionary<string, LogMessage>
         {
-            ["PluginStarted"] = new LogMessage
-            {
-                Id = "PluginStarted",
-                Group = Group.System,
-                Severity = Severity.Info,
-                Status = Status.Success,
-                RelatedObjectKind = Kind.Server,
-                Category = Category.VideoOut.ToString(),
-                CategoryName = "Certificate Monitoring",
-                Message = "Certificate Watchdog started, monitoring {p1} endpoint(s)"
-            },
-            ["PluginStopped"] = new LogMessage
-            {
-                Id = "PluginStopped",
-                Group = Group.System,
-                Severity = Severity.Info,
-                Status = Status.StatusQuo,
-                RelatedObjectKind = Kind.Server,
-                Category = Category.VideoOut.ToString(),
-                CategoryName = "Certificate Monitoring",
-                Message = "Certificate Watchdog stopped"
-            },
             ["CertExpiring"] = new LogMessage
             {
                 Id = "CertExpiring",
@@ -68,12 +46,6 @@ namespace CertWatchdog
                 Message = "Certificate check failed for '{p1}': {p2}"
             }
         };
-
-        public void PluginStarted(int endpointCount) =>
-            WriteEntry("PluginStarted", new Dictionary<string, string> { ["p1"] = endpointCount.ToString() });
-
-        public void PluginStopped() =>
-            WriteEntry("PluginStopped");
 
         public void CertExpiring(string endpoint, int daysLeft) =>
             WriteEntry("CertExpiring", new Dictionary<string, string> { ["p1"] = endpoint, ["p2"] = daysLeft.ToString() });

@@ -12,15 +12,13 @@ namespace Auditor.Background
 {
     public class AuditEventServerPlugin : BackgroundPlugin
     {
-        private MessageCommunication _mc;
-        private object _auditFilter;
+        private static readonly PluginLog _log = new PluginLog("ES Auditor");
+        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
         private object _configChangedReceiver;
         private volatile bool _mcRegistered;
         private volatile bool _closing;
         private Timer _initTimer;
         private FQID _pluginItemFqid;
-
-        private readonly PluginLog _log = new PluginLog("ES Auditor - Audit Server");
 
         public override Guid Id => AuditorDefinition.EventServerBgPluginId;
         public override string Name => "Auditor Event Server";
@@ -40,17 +38,7 @@ namespace Auditor.Background
                 new MessageIdFilter(MessageId.Server.ConfigurationChangedIndication));
             _log.Info("Registered ConfigurationChangedIndication receiver");
 
-            try
-            {
-                var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
-                MessageCommunicationManager.Start(serverId);
-                _mc = MessageCommunicationManager.Get(serverId);
-                _log.Info("MessageCommunication started");
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to init MessageCommunication: {ex.Message}");
-            }
+            _cmh.Start();
 
             // Defer filter registration - MC not ready during Init
             _initTimer = new Timer(OnInitTimer, null, TimeSpan.FromSeconds(15), Timeout.InfiniteTimeSpan);
@@ -72,15 +60,7 @@ namespace Auditor.Background
                 _configChangedReceiver = null;
             }
 
-            if (_mc != null)
-            {
-                if (_auditFilter != null)
-                {
-                    _mc.UnRegisterCommunicationFilter(_auditFilter);
-                    _auditFilter = null;
-                }
-            }
-            _mc = null;
+            _cmh.Close();
             _log.Info("Audit Event Server plugin closed");
         }
 
@@ -128,20 +108,10 @@ namespace Auditor.Background
 
         private void EnsureMessageCommunicationFilter()
         {
-            if (_mcRegistered || _mc == null) return;
+            if (_mcRegistered || _cmh.MessageCommunication == null) return;
 
-            try
-            {
-                _auditFilter = _mc.RegisterCommunicationFilter(
-                    OnAuditEventReceived,
-                    new CommunicationIdFilter(AuditMessageIds.AuditEventReport));
-                _mcRegistered = true;
-                _log.Info("MC filter registered for audit events - ready to receive");
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to register MC filter: {ex.Message}");
-            }
+            _cmh.Register(OnAuditEventReceived, new CommunicationIdFilter(AuditMessageIds.AuditEventReport));
+            _mcRegistered = true;
         }
 
         private object OnAuditEventReceived(Message message, FQID dest, FQID source)

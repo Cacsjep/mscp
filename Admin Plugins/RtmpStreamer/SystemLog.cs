@@ -56,28 +56,6 @@ namespace RTMPStreamer
                 CategoryName = "RTMP Streaming",
                 Message = "RTMP stream '{p1}' process crashed, restart #{p2}"
             },
-            ["PluginStarted"] = new LogMessage
-            {
-                Id = "PluginStarted",
-                Group = Group.System,
-                Severity = Severity.Info,
-                Status = Status.Success,
-                RelatedObjectKind = Kind.Server,
-                Category = Category.VideoOut.ToString(),
-                CategoryName = "RTMP Streaming",
-                Message = "RTMP Streamer started with {p1} active stream(s)"
-            },
-            ["PluginStopped"] = new LogMessage
-            {
-                Id = "PluginStopped",
-                Group = Group.System,
-                Severity = Severity.Info,
-                Status = Status.StatusQuo,
-                RelatedObjectKind = Kind.Server,
-                Category = Category.VideoOut.ToString(),
-                CategoryName = "RTMP Streaming",
-                Message = "RTMP Streamer stopped"
-            }
         };
 
         public void StreamConnected(string streamName, string rtmpUrl) =>
@@ -91,11 +69,5 @@ namespace RTMPStreamer
 
         public void HelperCrashed(string streamName, int restartCount) =>
             WriteEntry("HelperCrashed", new Dictionary<string, string> { ["p1"] = streamName, ["p2"] = restartCount.ToString() });
-
-        public void PluginStarted(int streamCount) =>
-            WriteEntry("PluginStarted", new Dictionary<string, string> { ["p1"] = streamCount.ToString() });
-
-        public void PluginStopped() =>
-            WriteEntry("PluginStopped");
     }
 }

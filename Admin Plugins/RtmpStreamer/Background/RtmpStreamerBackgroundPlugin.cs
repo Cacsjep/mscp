@@ -26,8 +26,7 @@ namespace RTMPStreamer.Background
         private string _milestoneDir;
         private string _lastConfigSnapshot;
 
-        private MessageCommunication _mc;
-        private object _statusRequestFilter;
+        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
 
         public override Guid Id => RTMPStreamerDefinition.BackgroundPluginId;
         public override string Name => "RTMP Streamer Background";
@@ -75,24 +74,10 @@ namespace RTMPStreamer.Background
 
             _sysLog.Register();
 
-            try
-            {
-                var mcServerId = EnvironmentManager.Instance.MasterSite.ServerId;
-                MessageCommunicationManager.Start(mcServerId);
-                _mc = MessageCommunicationManager.Get(mcServerId);
-                _statusRequestFilter = _mc.RegisterCommunicationFilter(
-                    OnStatusRequest,
-                    new CommunicationIdFilter(StreamMessageIds.StatusRequest));
-                _log.Info("MessageCommunication initialized for live status");
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to init MessageCommunication: {ex.Message}", ex);
-            }
+            _cmh.Start();
+            _cmh.Register(OnStatusRequest, new CommunicationIdFilter(StreamMessageIds.StatusRequest));
 
             LoadAndStartStreams();
-
-            _sysLog.PluginStarted(_helpers.Count);
 
             _monitorTimer = new Timer(MonitorHelpers, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
         }
@@ -111,14 +96,7 @@ namespace RTMPStreamer.Background
                 _configMessageObj = null;
             }
 
-            if (_mc != null && _statusRequestFilter != null)
-            {
-                _mc.UnRegisterCommunicationFilter(_statusRequestFilter);
-                _statusRequestFilter = null;
-            }
-            _mc = null;
-
-            _sysLog.PluginStopped();
+            _cmh.Close();
 
             StopAllHelpers();
         }
@@ -384,7 +362,7 @@ namespace RTMPStreamer.Background
 
         private void TransmitStatusUpdate(Guid itemId, bool force = false)
         {
-            if (_mc == null) return;
+            if (_cmh.MessageCommunication == null) return;
 
             if (!force && _helpers.TryGetValue(itemId, out var h))
             {
@@ -397,8 +375,7 @@ namespace RTMPStreamer.Background
             try
             {
                 var update = BuildStatusUpdate(itemId);
-                _mc.TransmitMessage(
-                    new Message(StreamMessageIds.StatusUpdate, update), null, null, null);
+                _cmh.TransmitMessage(new Message(StreamMessageIds.StatusUpdate, update));
             }
             catch (Exception ex)
             {
@@ -411,18 +388,14 @@ namespace RTMPStreamer.Background
             var request = message.Data as StreamStatusRequest;
             if (request == null) return null;
 
-            var update = BuildStatusUpdate(request.ItemId);
-            if (_mc != null)
+            try
             {
-                try
-                {
-                    _mc.TransmitMessage(
-                        new Message(StreamMessageIds.StatusResponse, update), null, null, null);
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"Failed to send status response: {ex.Message}");
-                }
+                var update = BuildStatusUpdate(request.ItemId);
+                _cmh.TransmitMessage(new Message(StreamMessageIds.StatusResponse, update));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to send status response: {ex.Message}");
             }
             return null;
         }

@@ -35,10 +35,8 @@ namespace Auditor.Client
         // Audit rule config - cached matched rule for current user
         private Item _cachedRule;
 
-        // MessageCommunication for sending to Event Server
-        private MessageCommunication _mc;
-
-        private PluginLog _log = new PluginLog("SC Auditor - Background Plugin");
+        private static readonly PluginLog _log = new PluginLog("SC Auditor");
+        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
 
         public override void Init()
         {
@@ -52,17 +50,7 @@ namespace Auditor.Client
             _msghandler.Register(OnPlaybackTime, new MessageIdFilter(MessageId.SmartClient.PlaybackCurrentTimeIndication));
             _msghandler.Register(OnWorkspaceChanged, new MessageIdFilter(MessageId.SmartClient.ShownWorkSpaceChangedIndication));
 
-            // Start MessageCommunication
-            try
-            {
-                var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
-                MessageCommunicationManager.Start(serverId);
-                _mc = MessageCommunicationManager.Get(serverId);
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to init MC: {ex.Message}");
-            }
+            _cmh.Start();
 
             // Track ImageViewerAddOns for independent playback
             ClientControl.Instance.NewImageViewerControlEvent += OnNewImageViewerControl;
@@ -170,7 +158,7 @@ namespace Auditor.Client
                 _imageViewers.Clear();
             }
 
-            _mc = null;
+            _cmh.Close();
             _msghandler = null;
             _log.Info("BackgroundPlugin closed");
         }
@@ -607,8 +595,7 @@ namespace Auditor.Client
 
         private void SendToEventServer(AuditEventData auditData)
         {
-            var mc = _mc;
-            if (mc == null) return;
+            if (_cmh.MessageCommunication == null) return;
 
             // Only send auditable event types to Event Server
             var eventType = auditData.EventType.ToString();
@@ -639,9 +626,7 @@ namespace Auditor.Client
                     Details = auditData.Details,
                 };
 
-                mc.TransmitMessage(
-                    new Message(AuditMessageIds.AuditEventReport, report),
-                    null, null, null);
+                _cmh.TransmitMessage(new Message(AuditMessageIds.AuditEventReport, report));
                 _log.Info($"Transmitted audit event '{eventType}' to Event Server via MC");
             }
             catch (Exception ex)

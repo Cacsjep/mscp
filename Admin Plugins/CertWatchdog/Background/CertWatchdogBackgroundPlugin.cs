@@ -22,9 +22,7 @@ namespace CertWatchdog.Background
         private readonly object _certLock = new object();
         private List<CertificateInfo> _lastResults = new List<CertificateInfo>();
 
-        private MessageCommunication _mc;
-        private object _requestFilter;
-        private object _recollectFilter;
+        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
         private volatile bool _mcRegistered;
 
         // Config change receivers
@@ -66,17 +64,7 @@ namespace CertWatchdog.Background
             // Auto-create the plugin item if it doesn't exist
             EnsurePluginItem();
 
-            // Start MessageCommunication (session established asynchronously)
-            try
-            {
-                var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
-                MessageCommunicationManager.Start(serverId);
-                _mc = MessageCommunicationManager.Get(serverId);
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to init MessageCommunication: {ex.Message}", ex);
-            }
+            _cmh.Start();
 
             // Register config change receivers for Hardware and Server kinds
             RegisterConfigChangeReceivers();
@@ -103,22 +91,8 @@ namespace CertWatchdog.Background
             // Unregister config change receivers
             UnregisterConfigChangeReceivers();
 
-            if (_mc != null)
-            {
-                if (_requestFilter != null)
-                {
-                    _mc.UnRegisterCommunicationFilter(_requestFilter);
-                    _requestFilter = null;
-                }
-                if (_recollectFilter != null)
-                {
-                    _mc.UnRegisterCommunicationFilter(_recollectFilter);
-                    _recollectFilter = null;
-                }
-            }
-            _mc = null;
+            _cmh.Close();
 
-            _sysLog.PluginStopped();
         }
 
         private void RegisterConfigChangeReceivers()
@@ -246,23 +220,11 @@ namespace CertWatchdog.Background
 
         private void EnsureMessageCommunicationFilter()
         {
-            if (_mcRegistered || _mc == null) return;
+            if (_mcRegistered || _cmh.MessageCommunication == null) return;
 
-            try
-            {
-                _requestFilter = _mc.RegisterCommunicationFilter(
-                    OnCertDataRequest,
-                    new CommunicationIdFilter(CertMessageIds.CertDataRequest));
-                _recollectFilter = _mc.RegisterCommunicationFilter(
-                    OnRecollectRequest,
-                    new CommunicationIdFilter(CertMessageIds.CertRecollectRequest));
-                _mcRegistered = true;
-                _log.Info("MessageCommunication filters registered");
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to register MessageCommunication filter: {ex.Message}", ex);
-            }
+            _cmh.Register(OnCertDataRequest, new CommunicationIdFilter(CertMessageIds.CertDataRequest));
+            _cmh.Register(OnRecollectRequest, new CommunicationIdFilter(CertMessageIds.CertRecollectRequest));
+            _mcRegistered = true;
         }
 
         private void PerformCertCheck()
@@ -273,11 +235,7 @@ namespace CertWatchdog.Background
             var endpoints = EndpointDiscoveryService.DiscoverHttpsEndpoints();
             _log.Info($"Discovered {endpoints.Count} HTTPS endpoint(s)");
 
-            if (endpoints.Count == 0)
-            {
-                _sysLog.PluginStarted(0);
-                return;
-            }
+            if (endpoints.Count == 0) return;
 
             // Check all certificates (parallel)
             var results = CertificateCheckService.CheckAllCertificates(endpoints);
@@ -445,18 +403,13 @@ namespace CertWatchdog.Background
                 Timestamp = DateTime.UtcNow
             };
 
-            var mc = _mc;
-            if (mc != null)
+            try
             {
-                try
-                {
-                    mc.TransmitMessage(
-                        new Message(CertMessageIds.CertDataResponse, response), null, null, null);
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"Failed to send cert data response: {ex.Message}");
-                }
+                _cmh.TransmitMessage(new Message(CertMessageIds.CertDataResponse, response));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to send cert data response: {ex.Message}");
             }
 
             return null;
