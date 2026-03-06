@@ -1,27 +1,34 @@
 using System;
 
-namespace RTMPStreamer
+namespace CommunitySDK
 {
     /// <summary>
-    /// Logging for the standalone helper process.
-    /// Same API as the plugin's PluginLog so shared source files work in both contexts.
+    /// Standalone helper replacement for CommunitySDK.PluginLog.
+    /// Same instance-based API so shared source files compile in both contexts.
     /// Writes to stderr so the parent BackgroundPlugin can capture output.
     /// </summary>
-    internal static class PluginLog
+    internal class PluginLog
     {
-        public static void Info(string message)
+        private readonly string _category;
+
+        public PluginLog(string category)
         {
-            Console.Error.WriteLine($"{DateTime.Now:HH:mm:ss.fff} INFO  {message}");
+            _category = category;
         }
 
-        public static void Error(string message)
+        public void Info(string message)
         {
-            Console.Error.WriteLine($"{DateTime.Now:HH:mm:ss.fff} ERROR {message}");
+            Console.Error.WriteLine($"{DateTime.Now:HH:mm:ss.fff} INFO  [{_category}] {message}");
         }
 
-        public static void Error(string message, Exception ex)
+        public void Error(string message)
         {
-            Console.Error.WriteLine($"{DateTime.Now:HH:mm:ss.fff} ERROR {message}: {ex.Message}");
+            Console.Error.WriteLine($"{DateTime.Now:HH:mm:ss.fff} ERROR [{_category}] {message}");
+        }
+
+        public void Error(string message, Exception ex)
+        {
+            Console.Error.WriteLine($"{DateTime.Now:HH:mm:ss.fff} ERROR [{_category}] {message}: {ex.Message}");
         }
     }
 }

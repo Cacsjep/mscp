@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using CommunitySDK;
 using RTMPStreamer.Rtmp;
 using VideoOS.Platform;
 
@@ -11,6 +12,7 @@ namespace RTMPStreamer.Streaming
     /// </summary>
     internal class StreamSession : IDisposable
     {
+        private static readonly PluginLog _log = new PluginLog("RTMPStreamer");
         private CameraFrameSource _frameSource;
         private FlvMuxer _muxer;
         private RtmpPublisher _publisher;
@@ -270,12 +272,12 @@ namespace RTMPStreamer.Streaming
 
         private void Log(string message)
         {
-            PluginLog.Info($"[Session:{_sessionId}] {message}");
+            _log.Info($"[Session:{_sessionId}] {message}");
         }
 
         private void LogError(string message)
         {
-            PluginLog.Error($"[Session:{_sessionId}] {message}");
+            _log.Error($"[Session:{_sessionId}] {message}");
         }
 
         /// <summary>

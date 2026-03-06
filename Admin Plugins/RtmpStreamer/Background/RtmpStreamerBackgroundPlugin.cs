@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using CommunitySDK;
 using RTMPStreamer.Messaging;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
@@ -14,6 +15,7 @@ namespace RTMPStreamer.Background
 {
     public class RTMPStreamerBackgroundPlugin : BackgroundPlugin
     {
+        private static readonly PluginLog _log = new PluginLog("RTMPStreamer");
         private object _configMessageObj;
         private readonly ConcurrentDictionary<Guid, HelperProcess> _helpers = new ConcurrentDictionary<Guid, HelperProcess>();
         private Timer _monitorTimer;
@@ -36,31 +38,31 @@ namespace RTMPStreamer.Background
 
         public override void Init()
         {
-            PluginLog.Info("Background plugin initializing");
+            _log.Info("Background plugin initializing");
 
             var pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             _helperExePath = Path.Combine(pluginDir, "RTMPStreamerHelper.exe");
 
             if (!File.Exists(_helperExePath))
             {
-                PluginLog.Error($"Helper exe not found: {_helperExePath}");
+                _log.Error($"Helper exe not found: {_helperExePath}");
                 return;
             }
 
-            PluginLog.Info($"Helper exe: {_helperExePath}");
+            _log.Info($"Helper exe: {_helperExePath}");
 
             _milestoneDir = Path.GetDirectoryName(typeof(EnvironmentManager).Assembly.Location);
-            PluginLog.Info($"Milestone dir: {_milestoneDir}");
+            _log.Info($"Milestone dir: {_milestoneDir}");
 
             try
             {
                 var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
                 _serverUri = $"{serverId.ServerScheme}://{serverId.ServerHostname}:{serverId.Serverport}";
-                PluginLog.Info($"Management server URI: {_serverUri}");
+                _log.Info($"Management server URI: {_serverUri}");
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Failed to determine management server URI: {ex.Message}", ex);
+                _log.Error($"Failed to determine management server URI: {ex.Message}", ex);
                 return;
             }
 
@@ -70,8 +72,6 @@ namespace RTMPStreamer.Background
                     MessageId.Server.ConfigurationChangedIndication,
                     RTMPStreamerDefinition.PluginKindId));
 
-            SystemLog.Register();
-
             try
             {
                 var mcServerId = EnvironmentManager.Instance.MasterSite.ServerId;
@@ -80,23 +80,21 @@ namespace RTMPStreamer.Background
                 _statusRequestFilter = _mc.RegisterCommunicationFilter(
                     OnStatusRequest,
                     new CommunicationIdFilter(StreamMessageIds.StatusRequest));
-                PluginLog.Info("MessageCommunication initialized for live status");
+                _log.Info("MessageCommunication initialized for live status");
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Failed to init MessageCommunication: {ex.Message}", ex);
+                _log.Error($"Failed to init MessageCommunication: {ex.Message}", ex);
             }
 
             LoadAndStartStreams();
-
-            SystemLog.PluginStarted(_helpers.Count);
 
             _monitorTimer = new Timer(MonitorHelpers, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
         }
 
         public override void Close()
         {
-            PluginLog.Info("Background plugin closing, stopping all helpers");
+            _log.Info("Background plugin closing, stopping all helpers");
             _closing = true;
 
             _monitorTimer?.Dispose();
@@ -114,8 +112,6 @@ namespace RTMPStreamer.Background
                 _statusRequestFilter = null;
             }
             _mc = null;
-
-            SystemLog.PluginStopped();
 
             StopAllHelpers();
         }
@@ -150,11 +146,11 @@ namespace RTMPStreamer.Background
                 }
 
                 _lastConfigSnapshot = GetConfigSnapshot();
-                PluginLog.Info($"Loaded streams. Active helpers: {_helpers.Count}");
+                _log.Info($"Loaded streams. Active helpers: {_helpers.Count}");
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Error loading config: {ex.Message}", ex);
+                _log.Error($"Error loading config: {ex.Message}", ex);
             }
         }
 
@@ -165,7 +161,7 @@ namespace RTMPStreamer.Background
 
             try
             {
-                PluginLog.Info($"Launching helper: {cameraName} ({cameraId}) -> {rtmpUrl}");
+                _log.Info($"Launching helper: {cameraName} ({cameraId}) -> {rtmpUrl}");
 
                 var psi = new ProcessStartInfo
                 {
@@ -179,7 +175,7 @@ namespace RTMPStreamer.Background
                 var process = Process.Start(psi);
                 if (process == null)
                 {
-                    PluginLog.Error($"Failed to start helper process for {cameraName}");
+                    _log.Error($"Failed to start helper process for {cameraName}");
                     return;
                 }
 
@@ -219,14 +215,6 @@ namespace RTMPStreamer.Background
                             newStatus.StartsWith("Codec") ||
                             newStatus == "Stopped")
                         {
-                            // Write to Milestone System Log on significant transitions
-                            if (newStatus.StartsWith("Streaming") && !prev.StartsWith("Streaming"))
-                                SystemLog.StreamConnected(cameraName, rtmpUrl);
-                            else if ((newStatus.StartsWith("Error") || newStatus.StartsWith("Codec")) &&
-                                     !prev.StartsWith("Error") && !prev.StartsWith("Codec"))
-                                SystemLog.StreamError(cameraName, newStatus);
-                            else if (newStatus == "Stopped" && prev != "Stopped")
-                                SystemLog.StreamStopped(cameraName);
                         }
 
                         TransmitStatusUpdate(helper.ItemId, force: true);
@@ -234,17 +222,17 @@ namespace RTMPStreamer.Background
                     }
 
                     helper.AddLogLine(e.Data);
-                    PluginLog.Info($"[Helper:{cameraName}] {e.Data}");
+                    _log.Info($"[Helper:{cameraName}] {e.Data}");
                     TransmitStatusUpdate(helper.ItemId);
                 };
                 process.BeginErrorReadLine();
 
                 _helpers[itemId] = helper;
-                PluginLog.Info($"Helper launched: PID={process.Id}, camera={cameraName}");
+                _log.Info($"Helper launched: PID={process.Id}, camera={cameraName}");
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Failed to launch helper for {cameraName}: {ex.Message}", ex);
+                _log.Error($"Failed to launch helper for {cameraName}: {ex.Message}", ex);
             }
         }
 
@@ -261,14 +249,14 @@ namespace RTMPStreamer.Background
             {
                 if (helper.Process != null && !helper.Process.HasExited)
                 {
-                    PluginLog.Info($"Killing helper PID={helper.Process.Id} ({helper.CameraName})");
+                    _log.Info($"Killing helper PID={helper.Process.Id} ({helper.CameraName})");
                     helper.Process.Kill();
                     helper.Process.WaitForExit(3000);
                 }
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Error killing helper: {ex.Message}");
+                _log.Error($"Error killing helper: {ex.Message}");
             }
             finally
             {
@@ -291,8 +279,7 @@ namespace RTMPStreamer.Background
                     {
                         var exitCode = helper.Process?.ExitCode ?? -1;
                         var restartCount = helper.RestartCount + 1;
-                        PluginLog.Info($"Helper died (exit={exitCode}): {helper.CameraName}, restart #{restartCount}");
-                        SystemLog.HelperCrashed(helper.CameraName, restartCount);
+                        _log.Info($"Helper died (exit={exitCode}): {helper.CameraName}, restart #{restartCount}");
 
                         try { helper.Process?.Dispose(); } catch { }
                         LaunchHelper(itemId, helper.CameraId, helper.CameraName, helper.RtmpUrl, helper.AllowUntrustedCerts);
@@ -303,7 +290,7 @@ namespace RTMPStreamer.Background
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Error($"Monitor error for {helper.CameraName}: {ex.Message}");
+                    _log.Error($"Monitor error for {helper.CameraName}: {ex.Message}");
                 }
             }
 
@@ -337,7 +324,7 @@ namespace RTMPStreamer.Background
             if (currentConfig == _lastConfigSnapshot)
                 return null;
 
-            PluginLog.Info("Stream configuration changed, reloading helpers");
+            _log.Info("Stream configuration changed, reloading helpers");
             _lastConfigSnapshot = currentConfig;
 
             try
@@ -347,7 +334,7 @@ namespace RTMPStreamer.Background
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Error reloading config: {ex.Message}", ex);
+                _log.Error($"Error reloading config: {ex.Message}", ex);
             }
 
             return null;
@@ -400,7 +387,7 @@ namespace RTMPStreamer.Background
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Failed to transmit status update: {ex.Message}");
+                _log.Error($"Failed to transmit status update: {ex.Message}");
             }
         }
 
@@ -419,7 +406,7 @@ namespace RTMPStreamer.Background
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Error($"Failed to send status response: {ex.Message}");
+                    _log.Error($"Failed to send status response: {ex.Message}");
                 }
             }
             return null;

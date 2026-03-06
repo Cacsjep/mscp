@@ -1,4 +1,5 @@
 using System;
+using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Live;
 
@@ -10,6 +11,7 @@ namespace RTMPStreamer.Streaming
     /// </summary>
     internal class CameraFrameSource : IDisposable
     {
+        private static readonly PluginLog _log = new PluginLog("RTMPStreamer");
         private RawLiveSource _rawSource;
         private Item _cameraItem;
         private bool _started;
@@ -45,14 +47,14 @@ namespace RTMPStreamer.Streaming
         {
             _cameraItem = cameraItem ?? throw new ArgumentNullException(nameof(cameraItem));
 
-            PluginLog.Info($"[FrameSource] Creating RawLiveSource for camera: {_cameraItem.Name}, FQID={_cameraItem.FQID}");
+            _log.Info($"[FrameSource] Creating RawLiveSource for camera: {_cameraItem.Name}, FQID={_cameraItem.FQID}");
 
             _rawSource = new RawLiveSource(_cameraItem);
             _rawSource.LiveContentEvent += OnLiveContent;
             _rawSource.LiveStatusEvent += OnLiveStatus;
             _rawSource.Init();
 
-            PluginLog.Info($"[FrameSource] RawLiveSource initialized, setting LiveModeStart=true");
+            _log.Info($"[FrameSource] RawLiveSource initialized, setting LiveModeStart=true");
         }
 
         /// <summary>
@@ -134,7 +136,7 @@ namespace RTMPStreamer.Streaming
 
                 _framesEmitted++;
                 if (_framesEmitted == 1)
-                    PluginLog.Info($"[FrameSource] First H.264 frame: {frame.PayloadData.Length} bytes, keyframe={frame.IsKeyFrame}");
+                    _log.Info($"[FrameSource] First H.264 frame: {frame.PayloadData.Length} bytes, keyframe={frame.IsKeyFrame}");
 
                 FrameReceived?.Invoke(frame.PayloadData, frame.IsKeyFrame, frame.PictureTimestamp);
             }
