@@ -44,8 +44,9 @@ nav:
       - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md
-  - Support:
-    - Reporting Bugs: support/reporting-bugs.md
+  - Reporting Bugs: support/reporting-bugs.md
+  - Changelog: support/changelog.md
+  - Third-Party Notices: support/third-party-notices.md
 
 markdown_extensions:
   - admonition

@@ -1,3 +1,9 @@
+---
+hide:
+  - navigation
+  - toc
+---
+
 <div class="show-title" markdown>
 
 # Reporting Bugs
