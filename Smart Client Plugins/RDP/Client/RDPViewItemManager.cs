@@ -9,6 +9,7 @@ namespace RDP.Client
         private const string UsernamePropertyKey = "Username";
         private const string EnableNlaPropertyKey = "EnableNLA";
         private const string EnableClipboardPropertyKey = "EnableClipboard";
+        private const string PortPropertyKey = "Port";
 
         public RDPViewItemManager()
             : base("RDPViewItemManager")
@@ -43,6 +44,20 @@ namespace RDP.Client
         {
             get => (GetProperty(EnableClipboardPropertyKey) ?? "True") == "True";
             set => SetProperty(EnableClipboardPropertyKey, value ? "True" : "False");
+        }
+
+        public int Port
+        {
+            get
+            {
+                var s = GetProperty(PortPropertyKey);
+
+                if (int.TryParse(s, out var port))
+                    return port;
+
+                return 3389;
+            }
+            set => SetProperty(PortPropertyKey, value.ToString());
         }
 
         public void Save()

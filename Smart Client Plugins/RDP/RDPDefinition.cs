@@ -1,10 +1,8 @@
+using RDP.Client;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using RDP.Background;
-using RDP.Client;
 using VideoOS.Platform;
-using VideoOS.Platform.Background;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.UI.Controls;
 
@@ -39,8 +37,5 @@ namespace RDP
 
         public override List<ViewItemPlugin> ViewItemPlugins
             => new List<ViewItemPlugin> { new RDPViewItemPlugin() };
-
-        public override List<BackgroundPlugin> BackgroundPlugins
-            => new List<BackgroundPlugin> { new RDPBackgroundPlugin() };
     }
 }
