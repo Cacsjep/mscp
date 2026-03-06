@@ -76,7 +76,8 @@ namespace RTMPStreamer
 
         public override UserControl GenerateUserControl()
         {
-            return new Admin.HtmlHelpUserControl();
+            return new CommunitySDK.HtmlHelpUserControl(
+                System.Reflection.Assembly.GetExecutingAssembly(), "Admin", "HelpPage.html");
         }
 
         public override List<BackgroundPlugin> BackgroundPlugins => _backgroundPlugins;

@@ -73,6 +73,7 @@ mscp/
 │   ├── RTMPStreamer/              RTMP outbound streaming plugin
 │   ├── CertWatchdog/             SSL certificate expiry monitoring plugin
 │   └── Auditor/                 User access audit plugin
+├── CommunitySDK/                    Shared library (logging, messaging, UI helpers)
 ├── MSCPlugins.sln                 Visual Studio solution (all projects)
 ├── plugins.json                   Central plugin manifest (drives CI, build, installer)
 ├── Directory.Build.props          Shared MSBuild properties (paths, deploy flags)

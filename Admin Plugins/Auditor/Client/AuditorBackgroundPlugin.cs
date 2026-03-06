@@ -1,4 +1,5 @@
 using Auditor.Messaging;
+using CommunitySDK;
 using System;
 using System.Collections.Generic;
 using System.Threading;

@@ -1,5 +1,6 @@
 using Auditor.Admin;
 using Auditor.Client;
+using CommunitySDK;
 using FontAwesome5;
 using System;
 using System.Collections.Generic;
@@ -138,7 +139,8 @@ namespace Auditor
 
         public override UserControl GenerateUserControl()
         {
-            return new HtmlHelpUserControl();
+            return new HtmlHelpUserControl(
+                System.Reflection.Assembly.GetExecutingAssembly(), "Admin", "HelpPage.html");
         }
 
         public override List<BackgroundPlugin> BackgroundPlugins => _backgroundPlugins;
