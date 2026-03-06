@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Auditor</RootNamespace>
+    <AssemblyName>Auditor</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <PluginName>Auditor</PluginName>
+    <StopSmartClient>true</StopSmartClient>
+    <StopAdminClient>true</StopAdminClient>
+    <StopEventServer>true</StopEventServer>
+    <StartEventServer>true</StartEventServer>
+    <LaunchAdminClient>false</LaunchAdminClient>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform.SDK" Version="*-*" />
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

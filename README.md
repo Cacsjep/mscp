@@ -20,6 +20,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [SnapReport](Smart%20Client%20Plugins/SnapReport) | Smart Client | Camera snapshot PDF report generator for site surveys and compliance |
 | [MonitorRTMPStreamer](Smart%20Client%20Plugins/MonitorRTMPStreamer) | Smart Client | Capture desktop monitors and stream via RTMP |
 | [CertWatchdog](Admin%20Plugins/CertWatchdog) | Admin Plugin | Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints |
+| [Auditor](Admin%20Plugins/Auditor) | Admin Plugin | Audit user access to recorded video with per-user rules and reason prompts |
 
 ## Installation
 
@@ -44,6 +45,7 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 | SnapReport | `C:\Program Files\Milestone\MIPPlugins\SnapReport\` |
 | MonitorRTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\MonitorRTMPStreamer\` |
 | CertWatchdog | `C:\Program Files\Milestone\MIPPlugins\CertWatchdog\` |
+| Auditor | `C:\Program Files\Milestone\MIPPlugins\Auditor\` |
 
 > [!NOTE]
 > Always **unblock** downloaded ZIP files before extracting (right-click -> Properties -> Unblock). Windows marks downloaded files as untrusted and will block the DLLs from loading if you skip this step.
@@ -69,7 +71,8 @@ mscp/
 │   └── Rtmp/                      RTMP push stream driver
 ├── Admin Plugins/
 │   ├── RTMPStreamer/              RTMP outbound streaming plugin
-│   └── CertWatchdog/             SSL certificate expiry monitoring plugin
+│   ├── CertWatchdog/             SSL certificate expiry monitoring plugin
+│   └── Auditor/                 User access audit plugin
 ├── MSCPlugins.sln                 Visual Studio solution (all projects)
 ├── plugins.json                   Central plugin manifest (drives CI, build, installer)
 ├── Directory.Build.props          Shared MSBuild properties (paths, deploy flags)

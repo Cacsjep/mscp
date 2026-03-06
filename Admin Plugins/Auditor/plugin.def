@@ -1,0 +1,4 @@
+<plugin>
+   <file name="Auditor.dll"/>
+   <load env="Service, Administration, SmartClient"/>
+</plugin>
