@@ -39,7 +39,7 @@
     "displayName": "RTMP Push Driver",
     "path": "Device Drivers/Rtmp/RTMPDriver",
     "category": "DeviceDriver",
-    "outputPath": "bin/Release",
+    "outputPath": "bin/Release/net47",
     "description": "Receive RTMP push streams (H.264) directly into XProtect\u2122"
   },
   {

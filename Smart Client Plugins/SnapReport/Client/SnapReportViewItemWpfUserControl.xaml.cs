@@ -344,7 +344,7 @@ namespace SnapReport.Client
                         }
                         catch
                         {
-                            // Thumbnail failed — not critical, PDF still gets the raw bytes
+                            // Thumbnail failed - not critical, PDF still gets the raw bytes
                         }
                     }
 

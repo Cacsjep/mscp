@@ -202,7 +202,7 @@ namespace RTMPStreamer.Admin
                         {
                             if (_subscribeGeneration != generation)
                             {
-                                // Stale  user switched items while we were connecting.
+                                // Stale: user switched items while we were connecting.
                                 // Unregister the orphaned filters immediately.
                                 mc.UnRegisterCommunicationFilter(updateFilter);
                                 mc.UnRegisterCommunicationFilter(responseFilter);

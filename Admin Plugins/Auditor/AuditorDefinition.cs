@@ -169,6 +169,7 @@ namespace Auditor
 
             var encoder = new PngBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(rtb));
+            // MemoryStream intentionally not disposed - Bitmap requires the stream to remain open
             var ms = new MemoryStream();
             encoder.Save(ms);
             ms.Position = 0;

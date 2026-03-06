@@ -98,7 +98,7 @@ namespace Auditor.Client
                 UserName = userName ?? "(unknown)",
             };
 
-            _log.Info($"{eventType}");
+            _log.Info($"Export event: {eventType} user={userName ?? "(unknown)"}");
             EnvironmentManager.Instance.SendMessage(
                 new Message(AuditorBackgroundPlugin.AuditMessageId) { Data = auditData });
         }

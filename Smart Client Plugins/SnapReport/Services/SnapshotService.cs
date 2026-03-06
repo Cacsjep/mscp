@@ -56,7 +56,7 @@ namespace SnapReport.Services
 
                 src.LiveStatusEvent += (sender, e) =>
                 {
-                    // Swallow status events — we only care about content
+                    // Swallow status events - we only care about content
                 };
 
                 src.Init();

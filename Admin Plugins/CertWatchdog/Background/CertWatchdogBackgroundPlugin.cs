@@ -409,7 +409,7 @@ namespace CertWatchdog.Background
             }
             catch (Exception ex)
             {
-                _log.Error($"Failed to send cert data response: {ex.Message}");
+                _log.Error($"Failed to send cert data response: {ex.Message}", ex);
             }
 
             return null;

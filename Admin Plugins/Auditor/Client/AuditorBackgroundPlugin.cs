@@ -43,7 +43,6 @@ namespace Auditor.Client
             _log.Info("BackgroundPlugin Init starting");
             ReloadAuditRules();
 
-
             _msghandler.Register(OnExportRelay, new MessageIdFilter(AuditMessageId));
             _msghandler.Register(OnConfigChanged, new MessageIdFilter(MessageId.Server.ConfigurationChangedIndication));
             _msghandler.Register(OnModeChanged, new MessageIdFilter(MessageId.System.ModeChangedIndication));
@@ -55,8 +54,8 @@ namespace Auditor.Client
             // Track ImageViewerAddOns for independent playback
             ClientControl.Instance.NewImageViewerControlEvent += OnNewImageViewerControl;
 
-            // TODO:check if we need that
-            var timer = new Timer(_ => EmitCurrentMode(), null, 2000, Timeout.Infinite);
+            // Emit current mode after a short delay to capture initial state
+            _initTimer = new Timer(_ => EmitCurrentMode(), null, 2000, Timeout.Infinite);
             _log.Info("BackgroundPlugin Init complete - all receivers registered");
         }
 
@@ -147,6 +146,10 @@ namespace Auditor.Client
         public override void Close()
         {
             _log.Info("BackgroundPlugin closing");
+            _initTimer?.Dispose();
+            _initTimer = null;
+            _modeChangeTimer?.Dispose();
+            _modeChangeTimer = null;
             _msghandler.UnregisterAll();
 
             ClientControl.Instance.NewImageViewerControlEvent -= OnNewImageViewerControl;
@@ -185,6 +188,7 @@ namespace Auditor.Client
         private string _pendingMode;
         private List<string> _pendingCameras;
         private Timer _modeChangeTimer;
+        private Timer _initTimer;
 
         private object OnModeChanged(Message message, FQID destination, FQID sender)
         {
@@ -651,8 +655,6 @@ namespace Auditor.Client
         ExportCompleted,
         ExportCancelled,
         ExportFailed,
-        CameraAddedToView,
-        CameraRemovedFromView,
     }
 
     public class AuditEventData
