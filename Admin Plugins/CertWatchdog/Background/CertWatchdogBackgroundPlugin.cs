@@ -16,6 +16,7 @@ namespace CertWatchdog.Background
     public class CertWatchdogBackgroundPlugin : BackgroundPlugin
     {
         private static readonly PluginLog _log = new PluginLog("CertWatchdog");
+        private readonly SystemLog _sysLog = new SystemLog(_log);
         private Timer _checkTimer;
         private volatile bool _closing;
         private readonly object _certLock = new object();
@@ -59,6 +60,8 @@ namespace CertWatchdog.Background
         public override void Init()
         {
             _log.Info("Certificate Watchdog background plugin initializing");
+
+            _sysLog.Register();
 
             // Auto-create the plugin item if it doesn't exist
             EnsurePluginItem();
@@ -115,6 +118,7 @@ namespace CertWatchdog.Background
             }
             _mc = null;
 
+            _sysLog.PluginStopped();
         }
 
         private void RegisterConfigChangeReceivers()
@@ -269,7 +273,11 @@ namespace CertWatchdog.Background
             var endpoints = EndpointDiscoveryService.DiscoverHttpsEndpoints();
             _log.Info($"Discovered {endpoints.Count} HTTPS endpoint(s)");
 
-            if (endpoints.Count == 0) return;
+            if (endpoints.Count == 0)
+            {
+                _sysLog.PluginStarted(0);
+                return;
+            }
 
             // Check all certificates (parallel)
             var results = CertificateCheckService.CheckAllCertificates(endpoints);
@@ -299,6 +307,7 @@ namespace CertWatchdog.Background
                 }
             }
 
+            _sysLog.CertCheckComplete(results.Count, expiringCount);
             _log.Info($"Certificate check complete: {results.Count} checked, {expiringCount} expiring");
         }
 
@@ -409,6 +418,7 @@ namespace CertWatchdog.Background
                         RelatedFQID = sourceFqid
                     });
 
+                _sysLog.CertExpiring(cert.Endpoint, cert.DaysLeft);
                 _log.Info($"Fired {thresholdDays}-day {(isDeviceCert ? "device " : "")}event for {cert.Endpoint} ({cert.DaysLeft} days left)");
             }
             catch (Exception ex)

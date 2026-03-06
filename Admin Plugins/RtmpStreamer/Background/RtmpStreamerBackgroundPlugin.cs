@@ -16,6 +16,7 @@ namespace RTMPStreamer.Background
     public class RTMPStreamerBackgroundPlugin : BackgroundPlugin
     {
         private static readonly PluginLog _log = new PluginLog("RTMPStreamer");
+        private readonly SystemLog _sysLog = new SystemLog(_log);
         private object _configMessageObj;
         private readonly ConcurrentDictionary<Guid, HelperProcess> _helpers = new ConcurrentDictionary<Guid, HelperProcess>();
         private Timer _monitorTimer;
@@ -72,6 +73,8 @@ namespace RTMPStreamer.Background
                     MessageId.Server.ConfigurationChangedIndication,
                     RTMPStreamerDefinition.PluginKindId));
 
+            _sysLog.Register();
+
             try
             {
                 var mcServerId = EnvironmentManager.Instance.MasterSite.ServerId;
@@ -88,6 +91,8 @@ namespace RTMPStreamer.Background
             }
 
             LoadAndStartStreams();
+
+            _sysLog.PluginStarted(_helpers.Count);
 
             _monitorTimer = new Timer(MonitorHelpers, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
         }
@@ -112,6 +117,8 @@ namespace RTMPStreamer.Background
                 _statusRequestFilter = null;
             }
             _mc = null;
+
+            _sysLog.PluginStopped();
 
             StopAllHelpers();
         }
@@ -215,6 +222,13 @@ namespace RTMPStreamer.Background
                             newStatus.StartsWith("Codec") ||
                             newStatus == "Stopped")
                         {
+                            if (newStatus.StartsWith("Streaming") && !prev.StartsWith("Streaming"))
+                                _sysLog.StreamConnected(cameraName, rtmpUrl);
+                            else if ((newStatus.StartsWith("Error") || newStatus.StartsWith("Codec")) &&
+                                     !prev.StartsWith("Error") && !prev.StartsWith("Codec"))
+                                _sysLog.StreamError(cameraName, newStatus);
+                            else if (newStatus == "Stopped" && prev != "Stopped")
+                                _sysLog.StreamStopped(cameraName);
                         }
 
                         TransmitStatusUpdate(helper.ItemId, force: true);
@@ -280,6 +294,7 @@ namespace RTMPStreamer.Background
                         var exitCode = helper.Process?.ExitCode ?? -1;
                         var restartCount = helper.RestartCount + 1;
                         _log.Info($"Helper died (exit={exitCode}): {helper.CameraName}, restart #{restartCount}");
+                        _sysLog.HelperCrashed(helper.CameraName, restartCount);
 
                         try { helper.Process?.Dispose(); } catch { }
                         LaunchHelper(itemId, helper.CameraId, helper.CameraName, helper.RtmpUrl, helper.AllowUntrustedCerts);

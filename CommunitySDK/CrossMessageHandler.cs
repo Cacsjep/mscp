@@ -1,24 +1,23 @@
 using System;
+using System.Collections.Generic;
 using VideoOS.Platform;
 using VideoOS.Platform.Messaging;
 
 namespace CommunitySDK
 {
     /// <summary>
-    /// Helper for initializing and managing MessageCommunication instances.
+    /// Helper for initializing MessageCommunication and managing multiple communication filters.
     /// Wraps the common Start/Get/RegisterFilter/Cleanup pattern used across plugins.
     /// </summary>
-    public class MessageCommunicationHelper
+    public class CrossMessageHandler
     {
         private MessageCommunication _mc;
-        private object _filter;
-        private volatile bool _registered;
+        private readonly List<object> _filters = new List<object>();
         private readonly PluginLog _log;
 
         public MessageCommunication MessageCommunication => _mc;
-        public bool IsRegistered => _registered;
 
-        public MessageCommunicationHelper(PluginLog log)
+        public CrossMessageHandler(PluginLog log)
         {
             _log = log;
         }
@@ -30,7 +29,6 @@ namespace CommunitySDK
                 var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
                 MessageCommunicationManager.Start(serverId);
                 _mc = MessageCommunicationManager.Get(serverId);
-                _log.Info("MessageCommunication started");
                 return true;
             }
             catch (Exception ex)
@@ -40,22 +38,10 @@ namespace CommunitySDK
             }
         }
 
-        public bool RegisterFilter(MessageReceiver handler, CommunicationIdFilter filter)
+        public void Register(MessageReceiver handler, CommunicationIdFilter filter)
         {
-            if (_registered || _mc == null) return false;
-
-            try
-            {
-                _filter = _mc.RegisterCommunicationFilter(handler, filter);
-                _registered = true;
-                _log.Info("MC filter registered");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to register MC filter: {ex.Message}");
-                return false;
-            }
+            if (_mc == null) return;
+            _filters.Add(_mc.RegisterCommunicationFilter(handler, filter));
         }
 
         public void TransmitMessage(Message message)
@@ -65,13 +51,13 @@ namespace CommunitySDK
 
         public void Close()
         {
-            if (_mc != null && _filter != null)
+            if (_mc != null)
             {
-                _mc.UnRegisterCommunicationFilter(_filter);
-                _filter = null;
+                foreach (var f in _filters)
+                    _mc.UnRegisterCommunicationFilter(f);
+                _filters.Clear();
             }
             _mc = null;
-            _registered = false;
         }
     }
 }
