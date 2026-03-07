@@ -4,7 +4,8 @@ using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
+
+using CommunitySDK;
 
 namespace RTMPStreamer.Rtmp
 {
@@ -19,6 +20,7 @@ namespace RTMPStreamer.Rtmp
     /// </summary>
     internal class RtmpPublisher : IDisposable
     {
+        private static readonly PluginLog _log = new PluginLog("RTMPStreamer");
         private const int HandshakeSize = 1536;
         private const int DefaultChunkSize = 128;
         private const int OutputChunkSize = 4096;
@@ -64,7 +66,7 @@ namespace RTMPStreamer.Rtmp
         {
             ParseUrl(rtmpUrl);
 
-            PluginLog.Info($"[RTMP] Connecting to {_host}:{_port} (TLS={_useTls})");
+            _log.Info($"[RTMP] Connecting to {_host}:{_port} (TLS={_useTls})");
 
             _tcpClient = new TcpClient();
             _tcpClient.NoDelay = true;
@@ -73,20 +75,20 @@ namespace RTMPStreamer.Rtmp
             _tcpClient.SendBufferSize = 256 * 1024;
             _tcpClient.Connect(_host, _port);
 
-            PluginLog.Info($"[RTMP] TCP connected to {_host}:{_port}");
+            _log.Info($"[RTMP] TCP connected to {_host}:{_port}");
 
             _netStream = _tcpClient.GetStream();
 
             if (_useTls)
             {
-                PluginLog.Info("[RTMP] Starting TLS handshake");
+                _log.Info("[RTMP] Starting TLS handshake");
                 _sslStream = new SslStream(_netStream, false, (sender, cert, chain, errors) =>
                 {
                     if (allowUntrustedCerts) return true;
                     return errors == SslPolicyErrors.None;
                 });
                 _sslStream.AuthenticateAsClient(_host);
-                PluginLog.Info($"[RTMP] TLS handshake complete (protocol={_sslStream.SslProtocol})");
+                _log.Info($"[RTMP] TLS handshake complete (protocol={_sslStream.SslProtocol})");
                 _readStream = _sslStream;
                 _bufferedStream = new BufferedStream(_sslStream, 64 * 1024);
             }
@@ -98,25 +100,25 @@ namespace RTMPStreamer.Rtmp
 
             _chunkWriter = new RtmpChunkWriter(_bufferedStream);
 
-            PluginLog.Info("[RTMP] Performing RTMP handshake");
+            _log.Info("[RTMP] Performing RTMP handshake");
             PerformHandshake();
             _connected = true;
-            PluginLog.Info("[RTMP] RTMP handshake complete");
+            _log.Info("[RTMP] RTMP handshake complete");
 
-            PluginLog.Info($"[RTMP] Sending connect command (app={_app})");
+            _log.Info($"[RTMP] Sending connect command (app={_app})");
             SendConnect();
             ReadResponses(); // Read until we get connect result
-            PluginLog.Info("[RTMP] Connect accepted by server");
+            _log.Info("[RTMP] Connect accepted by server");
 
             SendReleaseStream();
             SendFCPublish();
             SendCreateStream();
             ReadResponses(); // Read until we get createStream result
-            PluginLog.Info($"[RTMP] Stream created (streamId={_streamId})");
+            _log.Info($"[RTMP] Stream created (streamId={_streamId})");
 
             SendPublish();
             ReadResponses(); // Read until we get onStatus publish start
-            PluginLog.Info("[RTMP] Publish started successfully");
+            _log.Info("[RTMP] Publish started successfully");
 
             // Set our output chunk size
             SendSetChunkSize(OutputChunkSize);
@@ -192,7 +194,7 @@ namespace RTMPStreamer.Rtmp
             _lastAudioTimestamp = 0;
 
             if (wasPublishing)
-                PluginLog.Info("[RTMP] Disconnecting from server");
+                _log.Info("[RTMP] Disconnecting from server");
 
             try
             {

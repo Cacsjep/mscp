@@ -3,7 +3,7 @@ using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Threading;
-using RTMPStreamer;
+using CommunitySDK;
 using RTMPStreamer.Streaming;
 using VideoOS.Platform;
 
@@ -11,6 +11,7 @@ namespace RTMPStreamerHelper
 {
     class Program
     {
+        private static readonly PluginLog _log = new PluginLog("RTMPStreamer");
         private static string[] _assemblySearchDirs;
 
         static int Main(string[] args)
@@ -33,15 +34,15 @@ namespace RTMPStreamerHelper
 
             if (!Guid.TryParse(cameraIdStr, out Guid cameraId))
             {
-                PluginLog.Error($"Invalid camera ID: {cameraIdStr}");
+                _log.Error($"Invalid camera ID: {cameraIdStr}");
                 return 1;
             }
 
-            PluginLog.Info($"Starting RTMP stream helper");
-            PluginLog.Info($"  Server: {serverUri}");
-            PluginLog.Info($"  Camera: {cameraId}");
-            PluginLog.Info($"  RTMP:   {rtmpUrl}");
-            PluginLog.Info($"  Assembly search dirs: {string.Join("; ", _assemblySearchDirs)}");
+            _log.Info($"Starting RTMP stream helper");
+            _log.Info($"  Server: {serverUri}");
+            _log.Info($"  Camera: {cameraId}");
+            _log.Info($"  RTMP:   {rtmpUrl}");
+            _log.Info($"  Assembly search dirs: {string.Join("; ", _assemblySearchDirs)}");
 
             StreamSession session = null;
             var exitEvent = new ManualResetEvent(false);
@@ -49,42 +50,42 @@ namespace RTMPStreamerHelper
             Console.CancelKeyPress += (s, e) =>
             {
                 e.Cancel = true;
-                PluginLog.Info("Ctrl+C received, shutting down...");
+                _log.Info("Ctrl+C received, shutting down...");
                 exitEvent.Set();
             };
 
             try
             {
                 // Initialize MIP SDK in standalone mode
-                PluginLog.Info("Initializing MIP SDK...");
+                _log.Info("Initializing MIP SDK...");
                 VideoOS.Platform.SDK.Environment.Initialize();
 
                 var uri = new Uri(serverUri);
                 VideoOS.Platform.SDK.Environment.AddServer(uri, CredentialCache.DefaultNetworkCredentials);
 
-                PluginLog.Info("Logging in to management server...");
+                _log.Info("Logging in to management server...");
                 VideoOS.Platform.SDK.Environment.Login(uri);
 
-                PluginLog.Info("Login successful, initializing media environment...");
+                _log.Info("Login successful, initializing media environment...");
                 VideoOS.Platform.SDK.Media.Environment.Initialize();
 
-                PluginLog.Info("Loading configuration...");
+                _log.Info("Loading configuration...");
 
                 // Resolve camera
                 var cameraItem = Configuration.Instance.GetItem(cameraId, Kind.Camera);
                 if (cameraItem == null)
                 {
-                    PluginLog.Error($"Camera not found: {cameraId}");
+                    _log.Error($"Camera not found: {cameraId}");
                     return 2;
                 }
 
-                PluginLog.Info($"Camera resolved: {cameraItem.Name}");
+                _log.Info($"Camera resolved: {cameraItem.Name}");
 
                 // Start streaming
                 session = new StreamSession(cameraItem, rtmpUrl, allowUntrustedCerts);
                 session.Start();
 
-                PluginLog.Info("Stream session started, waiting for exit signal...");
+                _log.Info("Stream session started, waiting for exit signal...");
 
                 // Report stats every 5 seconds so BackgroundPlugin can relay to admin
                 var statsTimer = new Timer(_ =>
@@ -108,12 +109,12 @@ namespace RTMPStreamerHelper
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Fatal error: {ex}");
+                _log.Error($"Fatal error: {ex}");
                 return 3;
             }
             finally
             {
-                PluginLog.Info("Shutting down...");
+                _log.Info("Shutting down...");
 
                 try { session?.Stop(); } catch { }
                 try { session?.Dispose(); } catch { }
@@ -122,7 +123,7 @@ namespace RTMPStreamerHelper
                 try { VideoOS.Platform.SDK.Environment.RemoveAllServers(); } catch { }
                 try { VideoOS.Platform.SDK.Environment.UnInitialize(); } catch { }
 
-                PluginLog.Info("Shutdown complete.");
+                _log.Info("Shutdown complete.");
             }
 
             return 0;

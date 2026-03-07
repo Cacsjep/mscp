@@ -1,189 +1,59 @@
 using System.Collections.Generic;
+using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Admin;
 using VideoOS.Platform.Log;
 
 namespace CertWatchdog
 {
-    internal static class SystemLog
+    internal class SystemLog : SystemLogBase
     {
-        private const string AppId = "CertWatchdog";
-        private const string ComponentId = "CertWatchdog";
-        private const string Version = "1.0";
-        private const string Culture = "en-US";
-        private const string ResourceType = "text";
+        public SystemLog(PluginLog log) : base("CertWatchdog", "Cert Watchdog", log) { }
 
-        private const string MsgPluginStarted = "PluginStarted";
-        private const string MsgPluginStopped = "PluginStopped";
-        private const string MsgCertExpiring = "CertExpiring";
-        private const string MsgCertCheckComplete = "CertCheckComplete";
-        private const string MsgCertCheckError = "CertCheckError";
-
-        private static bool _registered;
-
-        public static void Register()
+        protected override Dictionary<string, LogMessage> BuildMessages() => new Dictionary<string, LogMessage>
         {
-            if (_registered) return;
-
-            try
+            ["CertExpiring"] = new LogMessage
             {
-                var messages = new Dictionary<string, LogMessage>
-                {
-                    [MsgPluginStarted] = new LogMessage
-                    {
-                        Id = MsgPluginStarted,
-                        Group = Group.System,
-                        Severity = Severity.Info,
-                        Status = Status.Success,
-                        RelatedObjectKind = Kind.Server,
-                        Category = Category.VideoOut.ToString(),
-                        CategoryName = "Certificate Monitoring",
-                        Message = "Certificate Watchdog started, monitoring {p1} endpoint(s)"
-                    },
-                    [MsgPluginStopped] = new LogMessage
-                    {
-                        Id = MsgPluginStopped,
-                        Group = Group.System,
-                        Severity = Severity.Info,
-                        Status = Status.StatusQuo,
-                        RelatedObjectKind = Kind.Server,
-                        Category = Category.VideoOut.ToString(),
-                        CategoryName = "Certificate Monitoring",
-                        Message = "Certificate Watchdog stopped"
-                    },
-                    [MsgCertExpiring] = new LogMessage
-                    {
-                        Id = MsgCertExpiring,
-                        Group = Group.System,
-                        Severity = Severity.Warning,
-                        Status = Status.Failure,
-                        RelatedObjectKind = Kind.Server,
-                        Category = Category.VideoOut.ToString(),
-                        CategoryName = "Certificate Monitoring",
-                        Message = "Certificate for '{p1}' expires in {p2} days"
-                    },
-                    [MsgCertCheckComplete] = new LogMessage
-                    {
-                        Id = MsgCertCheckComplete,
-                        Group = Group.System,
-                        Severity = Severity.Info,
-                        Status = Status.Success,
-                        RelatedObjectKind = Kind.Server,
-                        Category = Category.VideoOut.ToString(),
-                        CategoryName = "Certificate Monitoring",
-                        Message = "Certificate check complete: {p1} endpoints checked, {p2} expiring"
-                    },
-                    [MsgCertCheckError] = new LogMessage
-                    {
-                        Id = MsgCertCheckError,
-                        Group = Group.System,
-                        Severity = Severity.Error,
-                        Status = Status.Failure,
-                        RelatedObjectKind = Kind.Server,
-                        Category = Category.VideoOut.ToString(),
-                        CategoryName = "Certificate Monitoring",
-                        Message = "Certificate check failed for '{p1}': {p2}"
-                    }
-                };
-
-                var dict = new LogMessageDictionary(
-                    culture: Culture,
-                    version: Version,
-                    application: AppId,
-                    component: ComponentId,
-                    logMessages: messages,
-                    resourceType: ResourceType);
-
-                LogClient.Instance.RegisterDictionary(dict);
-                LogClient.Instance.SetCulture(Culture);
-
-                _registered = true;
-            }
-            catch (System.Exception ex)
+                Id = "CertExpiring",
+                Group = Group.System,
+                Severity = Severity.Warning,
+                Status = Status.Failure,
+                RelatedObjectKind = Kind.Server,
+                Category = Category.VideoOut.ToString(),
+                CategoryName = "Certificate Monitoring",
+                Message = "Certificate for '{p1}' expires in {p2} days"
+            },
+            ["CertCheckComplete"] = new LogMessage
             {
-                PluginLog.Error($"Failed to register system log dictionary: {ex.Message}");
-            }
-        }
-
-        private static Item GetSiteItem()
-        {
-            try
+                Id = "CertCheckComplete",
+                Group = Group.System,
+                Severity = Severity.Info,
+                Status = Status.Success,
+                RelatedObjectKind = Kind.Server,
+                Category = Category.VideoOut.ToString(),
+                CategoryName = "Certificate Monitoring",
+                Message = "Certificate check complete: {p1} endpoints checked, {p2} expiring"
+            },
+            ["CertCheckError"] = new LogMessage
             {
-                return EnvironmentManager.Instance.GetSiteItem(
-                    EnvironmentManager.Instance.MasterSite);
+                Id = "CertCheckError",
+                Group = Group.System,
+                Severity = Severity.Error,
+                Status = Status.Failure,
+                RelatedObjectKind = Kind.Server,
+                Category = Category.VideoOut.ToString(),
+                CategoryName = "Certificate Monitoring",
+                Message = "Certificate check failed for '{p1}': {p2}"
             }
-            catch { return null; }
-        }
+        };
 
-        public static void PluginStarted(int endpointCount)
-        {
-            if (!_registered) return;
-            try
-            {
-                LogClient.Instance.NewEntry(AppId, ComponentId, MsgPluginStarted,
-                    GetSiteItem(),
-                    new Dictionary<string, string> { ["p1"] = endpointCount.ToString() });
-            }
-            catch { }
-        }
+        public void CertExpiring(string endpoint, int daysLeft) =>
+            WriteEntry("CertExpiring", new Dictionary<string, string> { ["p1"] = endpoint, ["p2"] = daysLeft.ToString() });
 
-        public static void PluginStopped()
-        {
-            if (!_registered) return;
-            try
-            {
-                LogClient.Instance.NewEntry(AppId, ComponentId, MsgPluginStopped,
-                    GetSiteItem(), null);
-            }
-            catch { }
-        }
+        public void CertCheckComplete(int totalChecked, int expiringCount) =>
+            WriteEntry("CertCheckComplete", new Dictionary<string, string> { ["p1"] = totalChecked.ToString(), ["p2"] = expiringCount.ToString() });
 
-        public static void CertExpiring(string endpoint, int daysLeft)
-        {
-            if (!_registered) return;
-            try
-            {
-                LogClient.Instance.NewEntry(AppId, ComponentId, MsgCertExpiring,
-                    GetSiteItem(),
-                    new Dictionary<string, string>
-                    {
-                        ["p1"] = endpoint,
-                        ["p2"] = daysLeft.ToString()
-                    });
-            }
-            catch { }
-        }
-
-        public static void CertCheckComplete(int totalChecked, int expiringCount)
-        {
-            if (!_registered) return;
-            try
-            {
-                LogClient.Instance.NewEntry(AppId, ComponentId, MsgCertCheckComplete,
-                    GetSiteItem(),
-                    new Dictionary<string, string>
-                    {
-                        ["p1"] = totalChecked.ToString(),
-                        ["p2"] = expiringCount.ToString()
-                    });
-            }
-            catch { }
-        }
-
-        public static void CertCheckError(string endpoint, string error)
-        {
-            if (!_registered) return;
-            try
-            {
-                LogClient.Instance.NewEntry(AppId, ComponentId, MsgCertCheckError,
-                    GetSiteItem(),
-                    new Dictionary<string, string>
-                    {
-                        ["p1"] = endpoint,
-                        ["p2"] = error
-                    });
-            }
-            catch { }
-        }
+        public void CertCheckError(string endpoint, string error) =>
+            WriteEntry("CertCheckError", new Dictionary<string, string> { ["p1"] = endpoint, ["p2"] = error });
     }
 }

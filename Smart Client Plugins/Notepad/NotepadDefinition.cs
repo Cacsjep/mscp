@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Notepad.Background;
 using Notepad.Client;
 using VideoOS.Platform;
-using VideoOS.Platform.Background;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.UI.Controls;
 
@@ -16,7 +14,6 @@ namespace Notepad
 
         internal static Guid NotepadPluginId = new Guid("F1A2B3C4-D5E6-7890-ABCD-EF1234600001");
         internal static Guid NotepadViewItemKind = new Guid("F1A2B3C4-D5E6-7890-ABCD-EF1234600002");
-        internal static Guid NotepadBackgroundPluginId = new Guid("F1A2B3C4-D5E6-7890-ABCD-EF1234600003");
 
         static NotepadDefinition()
         {
@@ -39,8 +36,5 @@ namespace Notepad
 
         public override List<ViewItemPlugin> ViewItemPlugins
             => new List<ViewItemPlugin> { new NotepadViewItemPlugin() };
-
-        public override List<BackgroundPlugin> BackgroundPlugins
-            => new List<BackgroundPlugin> { new NotepadBackgroundPlugin() };
     }
 }

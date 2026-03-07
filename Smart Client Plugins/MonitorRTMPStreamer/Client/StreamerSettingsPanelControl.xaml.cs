@@ -153,11 +153,11 @@ namespace MonitorRTMPStreamer.Client
 
             ResolutionStatus.Text = st.StitchedWidth > 0
                 ? $"{st.StitchedWidth} x {st.StitchedHeight}"
-                : "—";
+                : "-";
 
             PerfStatus.Text = st.IsCapturing
                 ? $"capture {st.CaptureMs}ms + encode {st.EncodeMs}ms = {st.TotalMs}ms total"
-                : "—";
+                : "-";
 
             if (st.IsStreaming)
             {
@@ -186,7 +186,7 @@ namespace MonitorRTMPStreamer.Client
             }
             else
             {
-                UptimeStatus.Text = "—";
+                UptimeStatus.Text = "-";
             }
 
             ErrorStatus.Text = string.IsNullOrEmpty(st.LastError) ? "" : st.LastError;

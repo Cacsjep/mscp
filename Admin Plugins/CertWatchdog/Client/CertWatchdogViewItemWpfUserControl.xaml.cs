@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows;
 using CertWatchdog.Messaging;
 using CertWatchdog.Models;
+using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.Messaging;
@@ -13,8 +14,8 @@ namespace CertWatchdog.Client
 {
     public partial class CertWatchdogViewItemWpfUserControl : ViewItemWpfUserControl
     {
-        private MessageCommunication _mc;
-        private object _responseFilter;
+        private static readonly PluginLog _log = new PluginLog("CertWatchdog");
+        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
         private Guid _pendingRequestId;
         private Timer _refreshTimer;
         private Timer _retryTimer;
@@ -34,13 +35,8 @@ namespace CertWatchdog.Client
             {
                 try
                 {
-                    var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
-                    MessageCommunicationManager.Start(serverId);
-                    _mc = MessageCommunicationManager.Get(serverId);
-
-                    _responseFilter = _mc.RegisterCommunicationFilter(
-                        OnCertDataResponse,
-                        new CommunicationIdFilter(CertMessageIds.CertDataResponse));
+                    _cmh.Start();
+                    _cmh.Register(OnCertDataResponse, new CommunicationIdFilter(CertMessageIds.CertDataResponse));
 
                     // Request cert data now and every 60 minutes
                     RequestCertData();
@@ -78,25 +74,18 @@ namespace CertWatchdog.Client
             _refreshTimer?.Dispose();
             _refreshTimer = null;
 
-            if (_mc != null && _responseFilter != null)
-            {
-                _mc.UnRegisterCommunicationFilter(_responseFilter);
-                _responseFilter = null;
-            }
-            _mc = null;
+            _cmh.Close();
         }
 
         private void RequestCertData()
         {
-            var mc = _mc;
-            if (_closing || mc == null) return;
+            if (_closing || _cmh.MessageCommunication == null) return;
 
             try
             {
                 _pendingRequestId = Guid.NewGuid();
                 var request = new CertDataRequest { RequestId = _pendingRequestId };
-                mc.TransmitMessage(
-                    new Message(CertMessageIds.CertDataRequest, request), null, null, null);
+                _cmh.TransmitMessage(new Message(CertMessageIds.CertDataRequest, request));
 
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
@@ -168,13 +157,11 @@ namespace CertWatchdog.Client
 
         private void OnRecollectClick(object sender, RoutedEventArgs e)
         {
-            var mc = _mc;
-            if (_closing || mc == null) return;
+            if (_closing || _cmh.MessageCommunication == null) return;
 
             try
             {
-                mc.TransmitMessage(
-                    new Message(CertMessageIds.CertRecollectRequest, null), null, null, null);
+                _cmh.TransmitMessage(new Message(CertMessageIds.CertRecollectRequest, null));
 
                 loadingText.Text = "Recollecting certificates...";
                 loadingOverlay.Visibility = Visibility.Visible;

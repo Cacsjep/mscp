@@ -45,7 +45,7 @@ namespace MonitorRTMPStreamer
                 }
                 catch
                 {
-                    // Corrupt config — return defaults
+                    // Corrupt config - return defaults
                 }
                 return config;
             }

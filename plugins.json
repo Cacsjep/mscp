@@ -39,7 +39,7 @@
     "displayName": "RTMP Push Driver",
     "path": "Device Drivers/Rtmp/RTMPDriver",
     "category": "DeviceDriver",
-    "outputPath": "bin/Release",
+    "outputPath": "bin/Release/net47",
     "description": "Receive RTMP push streams (H.264) directly into XProtect\u2122"
   },
   {
@@ -65,5 +65,12 @@
     "path": "Admin Plugins/CertWatchdog",
     "category": "AdminPlugin",
     "description": "Monitor SSL certificate expiry for all XProtect\u2122 HTTPS endpoints and devices with dashboard and alerts"
+  },
+  {
+    "name": "Auditor",
+    "displayName": "Auditor Plugin",
+    "path": "Admin Plugins/Auditor",
+    "category": "AdminPlugin",
+    "description": "Audit user access to recorded video with per-user rules and reason prompts"
   }
 ]

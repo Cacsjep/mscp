@@ -1,4 +1,5 @@
 using CertWatchdog.Models;
+using CommunitySDK;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,7 @@ namespace CertWatchdog.Services
 {
     internal static class EndpointDiscoveryService
     {
+        internal static readonly PluginLog _log = new PluginLog("CertWatchdog");
         /// <summary>
         /// Returns a list of EndpointInfo for all discovered HTTPS endpoints,
         /// including server endpoints and hardware device endpoints.
@@ -24,7 +26,7 @@ namespace CertWatchdog.Services
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Error discovering registered services: {ex.Message}", ex);
+                _log.Error($"Error discovering registered services: {ex.Message}", ex);
             }
 
             try
@@ -33,7 +35,7 @@ namespace CertWatchdog.Services
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Error discovering recording servers: {ex.Message}", ex);
+                _log.Error($"Error discovering recording servers: {ex.Message}", ex);
             }
 
             try
@@ -42,7 +44,7 @@ namespace CertWatchdog.Services
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Error discovering management server: {ex.Message}", ex);
+                _log.Error($"Error discovering management server: {ex.Message}", ex);
             }
 
             try
@@ -51,7 +53,7 @@ namespace CertWatchdog.Services
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Error discovering hardware devices: {ex.Message}", ex);
+                _log.Error($"Error discovering hardware devices: {ex.Message}", ex);
             }
 
             return endpoints.Values.ToList();
@@ -164,7 +166,7 @@ namespace CertWatchdog.Services
 
             foreach (var rs in management.RecordingServerFolder.RecordingServers)
             {
-                PluginLog.Info($"Checking recording server: {rs.Name}");
+                _log.Info($"Checking recording server: {rs.Name}");
 
                 foreach (var hw in rs.HardwareFolder.Hardwares)
                 {
@@ -195,7 +197,7 @@ namespace CertWatchdog.Services
                         }
                         catch (Exception ex)
                         {
-                            PluginLog.Error($"Error reading driver settings for '{hw.Name}': {ex.Message}");
+                            _log.Error($"Error reading driver settings for '{hw.Name}': {ex.Message}");
                         }
 
                         if (!httpsEnabled) continue;
@@ -229,17 +231,17 @@ namespace CertWatchdog.Services
                                 SourceItemId = cameraId
                             };
                             count++;
-                            PluginLog.Info($"  Hardware '{hw.Name}': {url} (HTTPS port {httpsPort})");
+                            _log.Info($"  Hardware '{hw.Name}': {url} (HTTPS port {httpsPort})");
                         }
                     }
                     catch (Exception ex)
                     {
-                        PluginLog.Error($"Error processing hardware '{hw.Name}': {ex.Message}");
+                        _log.Error($"Error processing hardware '{hw.Name}': {ex.Message}");
                     }
                 }
             }
 
-            PluginLog.Info($"Discovered {count} hardware HTTPS endpoint(s)");
+            _log.Info($"Discovered {count} hardware HTTPS endpoint(s)");
         }
     }
 }

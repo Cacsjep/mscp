@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
+using CommunitySDK;
 using VideoOS.Platform;
 
 namespace RTMPStreamer.Streaming
@@ -14,6 +15,7 @@ namespace RTMPStreamer.Streaming
     /// </summary>
     internal class StreamSessionManager : IDisposable
     {
+        private static readonly PluginLog _log = new PluginLog("RTMPStreamer");
         private readonly ConcurrentDictionary<string, StreamSession> _sessions = new ConcurrentDictionary<string, StreamSession>();
         private readonly object _configLock = new object();
 
@@ -178,16 +180,16 @@ namespace RTMPStreamer.Streaming
                     var cameraItem = Configuration.Instance.GetItem(config.CameraId, Kind.Camera);
                     if (cameraItem == null)
                     {
-                        PluginLog.Error($"Camera not found: {config.CameraId} ({config.CameraName})");
+                        _log.Error($"Camera not found: {config.CameraId} ({config.CameraName})");
                         continue;
                     }
 
                     AddStream(cameraItem, config.RtmpUrl);
-                    PluginLog.Info($"Started stream: {config.CameraName} -> {config.RtmpUrl}");
+                    _log.Info($"Started stream: {config.CameraName} -> {config.RtmpUrl}");
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Error($"Failed to start stream for {config.CameraName}: {ex.Message}", ex);
+                    _log.Error($"Failed to start stream for {config.CameraName}: {ex.Message}", ex);
                 }
             }
         }

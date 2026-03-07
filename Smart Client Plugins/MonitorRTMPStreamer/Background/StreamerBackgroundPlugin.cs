@@ -101,7 +101,7 @@ namespace MonitorRTMPStreamer.Background
                             }
                         }
 
-                        // Push frame — if it fails, dispose and let reconnect kick in
+                        // Push frame - if it fails, dispose and let reconnect kick in
                         if (_streamer?.IsRunning == true)
                         {
                             _streamer.PushFrame(stitched);

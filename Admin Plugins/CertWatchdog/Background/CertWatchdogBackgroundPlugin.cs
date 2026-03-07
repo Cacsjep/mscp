@@ -5,6 +5,7 @@ using System.Threading;
 using CertWatchdog.Messaging;
 using CertWatchdog.Models;
 using CertWatchdog.Services;
+using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
 using VideoOS.Platform.Data;
@@ -14,14 +15,14 @@ namespace CertWatchdog.Background
 {
     public class CertWatchdogBackgroundPlugin : BackgroundPlugin
     {
+        private static readonly PluginLog _log = new PluginLog("CertWatchdog");
+        private readonly SystemLog _sysLog = new SystemLog(_log);
         private Timer _checkTimer;
         private volatile bool _closing;
         private readonly object _certLock = new object();
         private List<CertificateInfo> _lastResults = new List<CertificateInfo>();
 
-        private MessageCommunication _mc;
-        private object _requestFilter;
-        private object _recollectFilter;
+        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
         private volatile bool _mcRegistered;
 
         // Config change receivers
@@ -56,24 +57,14 @@ namespace CertWatchdog.Background
 
         public override void Init()
         {
-            PluginLog.Info("Certificate Watchdog background plugin initializing");
+            _log.Info("Certificate Watchdog background plugin initializing");
 
-            SystemLog.Register();
+            _sysLog.Register();
 
             // Auto-create the plugin item if it doesn't exist
             EnsurePluginItem();
 
-            // Start MessageCommunication (session established asynchronously)
-            try
-            {
-                var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
-                MessageCommunicationManager.Start(serverId);
-                _mc = MessageCommunicationManager.Get(serverId);
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Error($"Failed to init MessageCommunication: {ex.Message}", ex);
-            }
+            _cmh.Start();
 
             // Register config change receivers for Hardware and Server kinds
             RegisterConfigChangeReceivers();
@@ -83,12 +74,12 @@ namespace CertWatchdog.Background
             // the CommunicationService is operational
             _checkTimer = new Timer(OnCheckTimer, null, InitialDelay, CheckInterval);
 
-            PluginLog.Info("Certificate Watchdog background plugin initialized");
+            _log.Info("Certificate Watchdog background plugin initialized");
         }
 
         public override void Close()
         {
-            PluginLog.Info("Certificate Watchdog background plugin closing");
+            _log.Info("Certificate Watchdog background plugin closing");
             _closing = true;
 
             _checkTimer?.Dispose();
@@ -100,22 +91,8 @@ namespace CertWatchdog.Background
             // Unregister config change receivers
             UnregisterConfigChangeReceivers();
 
-            if (_mc != null)
-            {
-                if (_requestFilter != null)
-                {
-                    _mc.UnRegisterCommunicationFilter(_requestFilter);
-                    _requestFilter = null;
-                }
-                if (_recollectFilter != null)
-                {
-                    _mc.UnRegisterCommunicationFilter(_recollectFilter);
-                    _recollectFilter = null;
-                }
-            }
-            _mc = null;
+            _cmh.Close();
 
-            SystemLog.PluginStopped();
         }
 
         private void RegisterConfigChangeReceivers()
@@ -134,11 +111,11 @@ namespace CertWatchdog.Background
                         MessageId.Server.ConfigurationChangedIndication,
                         KindServer));
 
-                PluginLog.Info("Config change receivers registered for Hardware and Server kinds");
+                _log.Info("Config change receivers registered for Hardware and Server kinds");
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Failed to register config change receivers: {ex.Message}", ex);
+                _log.Error($"Failed to register config change receivers: {ex.Message}", ex);
             }
         }
 
@@ -159,7 +136,7 @@ namespace CertWatchdog.Background
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Failed to unregister config change receivers: {ex.Message}", ex);
+                _log.Error($"Failed to unregister config change receivers: {ex.Message}", ex);
             }
         }
 
@@ -167,7 +144,7 @@ namespace CertWatchdog.Background
         {
             if (_closing) return null;
 
-            PluginLog.Info("Config change detected, scheduling cert re-check in 20s");
+            _log.Info("Config change detected, scheduling cert re-check in 20s");
 
             // Reset debounce timer to 20s from now
             _configChangeDebounce?.Dispose();
@@ -181,7 +158,7 @@ namespace CertWatchdog.Background
                     }
                     catch (Exception ex)
                     {
-                        PluginLog.Error($"Config-triggered certificate check failed: {ex.Message}", ex);
+                        _log.Error($"Config-triggered certificate check failed: {ex.Message}", ex);
                     }
                 }
             }, null, TimeSpan.FromSeconds(20), Timeout.InfiniteTimeSpan);
@@ -202,7 +179,7 @@ namespace CertWatchdog.Background
                     return;
                 }
 
-                PluginLog.Info("Creating Certificate Watchdog item");
+                _log.Info("Creating Certificate Watchdog item");
                 var fqid = new FQID(
                     EnvironmentManager.Instance.MasterSite.ServerId,
                     Guid.Empty,
@@ -214,11 +191,11 @@ namespace CertWatchdog.Background
                 item.Properties["CheckIntervalHours"] = "6";
                 Configuration.Instance.SaveItemConfiguration(CertWatchdogDefinition.PluginId, item);
                 _pluginItemFqid = fqid;
-                PluginLog.Info("Certificate Watchdog item created");
+                _log.Info("Certificate Watchdog item created");
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Failed to ensure plugin item: {ex.Message}", ex);
+                _log.Error($"Failed to ensure plugin item: {ex.Message}", ex);
             }
         }
 
@@ -237,44 +214,28 @@ namespace CertWatchdog.Background
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Certificate check failed: {ex.Message}", ex);
+                _log.Error($"Certificate check failed: {ex.Message}", ex);
             }
         }
 
         private void EnsureMessageCommunicationFilter()
         {
-            if (_mcRegistered || _mc == null) return;
+            if (_mcRegistered || _cmh.MessageCommunication == null) return;
 
-            try
-            {
-                _requestFilter = _mc.RegisterCommunicationFilter(
-                    OnCertDataRequest,
-                    new CommunicationIdFilter(CertMessageIds.CertDataRequest));
-                _recollectFilter = _mc.RegisterCommunicationFilter(
-                    OnRecollectRequest,
-                    new CommunicationIdFilter(CertMessageIds.CertRecollectRequest));
-                _mcRegistered = true;
-                PluginLog.Info("MessageCommunication filters registered");
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Error($"Failed to register MessageCommunication filter: {ex.Message}", ex);
-            }
+            _cmh.Register(OnCertDataRequest, new CommunicationIdFilter(CertMessageIds.CertDataRequest));
+            _cmh.Register(OnRecollectRequest, new CommunicationIdFilter(CertMessageIds.CertRecollectRequest));
+            _mcRegistered = true;
         }
 
         private void PerformCertCheck()
         {
-            PluginLog.Info("Starting certificate check");
+            _log.Info("Starting certificate check");
 
             // Discover endpoints
             var endpoints = EndpointDiscoveryService.DiscoverHttpsEndpoints();
-            PluginLog.Info($"Discovered {endpoints.Count} HTTPS endpoint(s)");
+            _log.Info($"Discovered {endpoints.Count} HTTPS endpoint(s)");
 
-            if (endpoints.Count == 0)
-            {
-                SystemLog.PluginStarted(0);
-                return;
-            }
+            if (endpoints.Count == 0) return;
 
             // Check all certificates (parallel)
             var results = CertificateCheckService.CheckAllCertificates(endpoints);
@@ -304,8 +265,8 @@ namespace CertWatchdog.Background
                 }
             }
 
-            SystemLog.CertCheckComplete(results.Count, expiringCount);
-            PluginLog.Info($"Certificate check complete: {results.Count} checked, {expiringCount} expiring");
+            _sysLog.CertCheckComplete(results.Count, expiringCount);
+            _log.Info($"Certificate check complete: {results.Count} checked, {expiringCount} expiring");
         }
 
         private void FireThresholdEvent(CertificateInfo cert, int thresholdDays)
@@ -415,12 +376,12 @@ namespace CertWatchdog.Background
                         RelatedFQID = sourceFqid
                     });
 
-                SystemLog.CertExpiring(cert.Endpoint, cert.DaysLeft);
-                PluginLog.Info($"Fired {thresholdDays}-day {(isDeviceCert ? "device " : "")}event for {cert.Endpoint} ({cert.DaysLeft} days left)");
+                _sysLog.CertExpiring(cert.Endpoint, cert.DaysLeft);
+                _log.Info($"Fired {thresholdDays}-day {(isDeviceCert ? "device " : "")}event for {cert.Endpoint} ({cert.DaysLeft} days left)");
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"Failed to fire event for {cert.Endpoint}: {ex.Message}", ex);
+                _log.Error($"Failed to fire event for {cert.Endpoint}: {ex.Message}", ex);
             }
         }
 
@@ -442,18 +403,13 @@ namespace CertWatchdog.Background
                 Timestamp = DateTime.UtcNow
             };
 
-            var mc = _mc;
-            if (mc != null)
+            try
             {
-                try
-                {
-                    mc.TransmitMessage(
-                        new Message(CertMessageIds.CertDataResponse, response), null, null, null);
-                }
-                catch (Exception ex)
-                {
-                    PluginLog.Error($"Failed to send cert data response: {ex.Message}");
-                }
+                _cmh.TransmitMessage(new Message(CertMessageIds.CertDataResponse, response));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to send cert data response: {ex.Message}", ex);
             }
 
             return null;
@@ -463,7 +419,7 @@ namespace CertWatchdog.Background
         {
             if (_closing) return null;
 
-            PluginLog.Info("Recollect requested by client");
+            _log.Info("Recollect requested by client");
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
@@ -472,7 +428,7 @@ namespace CertWatchdog.Background
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Error($"Recollect cert check failed: {ex.Message}", ex);
+                    _log.Error($"Recollect cert check failed: {ex.Message}", ex);
                 }
             });
 
