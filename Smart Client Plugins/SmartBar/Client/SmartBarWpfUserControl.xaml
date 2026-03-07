@@ -1,0 +1,12 @@
+<client:ToolbarPluginWpfUserControl x:Class="SmartBar.Client.SmartBarWpfUserControl"
+                                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                                    xmlns:client="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+                                    MinWidth="200" MinHeight="100">
+    <Grid Margin="10">
+        <TextBlock Text="Hello from Smart Bar!"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"
+                   FontSize="14" />
+    </Grid>
+</client:ToolbarPluginWpfUserControl>

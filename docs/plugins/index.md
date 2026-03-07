@@ -87,6 +87,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-monitor-share"></i></div>
     <div class="pt"><span class="pn">Monitor RTMP Streamer</span><span class="pd">Capture desktop monitors and stream via RTMP</span></div>
   </a>
+  <a class="pr" href="smart-client/smartbar/">
+    <div class="pi sc"><i class="mdi mdi-toolbar"></i></div>
+    <div class="pt"><span class="pn">Smart Bar</span><span class="pd">Workspace toolbar button for Smart Client</span></div>
+  </a>
 </div>
 
 ### Device Drivers

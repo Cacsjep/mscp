@@ -21,6 +21,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [MonitorRTMPStreamer](Smart%20Client%20Plugins/MonitorRTMPStreamer) | Smart Client | Capture desktop monitors and stream via RTMP |
 | [CertWatchdog](Admin%20Plugins/CertWatchdog) | Admin Plugin | Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints |
 | [Auditor](Admin%20Plugins/Auditor) | Admin Plugin | Audit user access to recorded video with per-user rules and reason prompts |
+| [SmartBar](Smart%20Client%20Plugins/SmartBar) | Smart Client | Workspace toolbar button for Smart Client |
 
 ## Installation
 
@@ -46,6 +47,7 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 | MonitorRTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\MonitorRTMPStreamer\` |
 | CertWatchdog | `C:\Program Files\Milestone\MIPPlugins\CertWatchdog\` |
 | Auditor | `C:\Program Files\Milestone\MIPPlugins\Auditor\` |
+| SmartBar | `C:\Program Files\Milestone\MIPPlugins\SmartBar\` |
 
 > [!NOTE]
 > Always **unblock** downloaded ZIP files before extracting (right-click -> Properties -> Unblock). Windows marks downloaded files as untrusted and will block the DLLs from loading if you skip this step.
@@ -66,7 +68,8 @@ mscp/
 │   ├── RDP/                       RDP view item plugin
 │   ├── Notepad/                   Notepad view item plugin
 │   ├── SnapReport/                Camera snapshot PDF report generator
-│   └── MonitorRTMPStreamer/        Desktop monitor RTMP streaming
+│   ├── MonitorRTMPStreamer/        Desktop monitor RTMP streaming
+│   └── SmartBar/                  Workspace toolbar plugin
 ├── Device Drivers/
 │   └── Rtmp/                      RTMP push stream driver
 ├── Admin Plugins/

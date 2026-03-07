@@ -1,0 +1,56 @@
+using System;
+using System.Collections.Generic;
+using VideoOS.Platform;
+using VideoOS.Platform.Client;
+
+namespace SmartBar.Client
+{
+    class SmartBarToolbarPluginInstance : WorkSpaceToolbarPluginInstance
+    {
+        public override void Init(Item window)
+        {
+            Title = "Smart Bar";
+            Tooltip = "Smart Bar";
+        }
+
+        public override ToolbarPluginWpfUserControl GenerateWpfUserControl()
+        {
+            return new SmartBarWpfUserControl();
+        }
+
+        public override void Close()
+        {
+        }
+    }
+
+    class SmartBarToolbarPlugin : WorkSpaceToolbarPlugin
+    {
+        public override Guid Id => SmartBarDefinition.SmartBarToolbarId;
+
+        public override string Name => "Smart Bar";
+
+        public override ToolbarPluginType ToolbarPluginType => ToolbarPluginType.UserControl;
+
+        public override void Init()
+        {
+            WorkSpaceToolbarPlaceDefinition.WorkSpaceIds = new List<Guid>
+            {
+                ClientControl.LiveBuildInWorkSpaceId,
+                ClientControl.PlaybackBuildInWorkSpaceId
+            };
+            WorkSpaceToolbarPlaceDefinition.WorkSpaceStates = new List<WorkSpaceState>
+            {
+                WorkSpaceState.Normal
+            };
+        }
+
+        public override void Close()
+        {
+        }
+
+        public override WorkSpaceToolbarPluginInstance GenerateWorkSpaceToolbarPluginInstance()
+        {
+            return new SmartBarToolbarPluginInstance();
+        }
+    }
+}

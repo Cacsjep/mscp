@@ -43,6 +43,7 @@ nav:
       - Notepad: plugins/smart-client/notepad.md
       - Snapshot Report: plugins/smart-client/snapreport.md
       - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
+      - Smart Bar: plugins/smart-client/smartbar.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md
   - Reporting Bugs: support/reporting-bugs.md

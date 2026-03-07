@@ -1,0 +1,546 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using VideoOS.Platform;
+using VideoOS.Platform.Client;
+using VideoOS.Platform.ConfigurationItems;
+using VideoOS.Platform.Messaging;
+
+namespace SmartBar.Client
+{
+    public partial class SmartBarWindow : Window
+    {
+        private static readonly SolidColorBrush SelectedBg = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1E, 0x1E, 0x1E));
+        private static readonly SolidColorBrush TransparentBg = System.Windows.Media.Brushes.Transparent;
+        private static readonly SolidColorBrush TextPrimary = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE8, 0xE8, 0xE8));
+        private static readonly SolidColorBrush TextSelected = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x58, 0xA6, 0xFF));
+        private static readonly SolidColorBrush TextGroup = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x50, 0x50, 0x50));
+
+        private List<CommandItem> _allItems;
+        private List<CommandItem> _filteredItems;
+        private readonly HashSet<CommandItem> _selectedCameras = new HashSet<CommandItem>();
+        private int _selectedIndex;
+
+        private bool _closing;
+
+        public SmartBarWindow()
+        {
+            InitializeComponent();
+            Loaded += OnLoaded;
+            Deactivated += OnDeactivated;
+        }
+
+        private void OnDeactivated(object sender, EventArgs e)
+        {
+            SafeClose();
+        }
+
+        private void SafeClose()
+        {
+            if (_closing) return;
+            _closing = true;
+            try { Close(); } catch { }
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            PositionOnActiveMonitor();
+            searchBox.Focus();
+            LoadItems();
+            ApplyFilter();
+        }
+
+        private void PositionOnActiveMonitor()
+        {
+            // Cover the same monitor as the Smart Client main window
+            var source = Application.Current.MainWindow;
+            if (source == null) return;
+
+            var screen = System.Windows.Forms.Screen.FromHandle(
+                new System.Windows.Interop.WindowInteropHelper(source).Handle);
+
+            var area = screen.WorkingArea;
+            Left = area.Left;
+            Top = area.Top;
+            Width = area.Width;
+            Height = area.Height;
+        }
+
+        private void LoadItems()
+        {
+            _allItems = new List<CommandItem>();
+
+            try { EnsureSmartBarViews(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] EnsureSmartBarViews failed: {ex}"); }
+
+            try
+            {
+                var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
+                var mgmt = new ManagementServer(EnvironmentManager.Instance.MasterSite);
+
+                foreach (var group in mgmt.CameraGroupFolder.CameraGroups)
+                    CollectCameras(group, serverId);
+
+                var viewGroups = ClientControl.Instance.GetViewGroupItems();
+                if (viewGroups != null)
+                {
+                    foreach (var vg in viewGroups)
+                        CollectViews(vg);
+                }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] LoadItems failed: {ex}"); }
+        }
+
+        private void CollectCameras(CameraGroup group, ServerId serverId)
+        {
+            foreach (var cam in group.CameraFolder.Cameras)
+            {
+                if (!cam.Enabled) continue;
+                var cameraId = new Guid(cam.Id);
+                var item = Configuration.Instance.GetItem(serverId, cameraId, Kind.Camera);
+                if (item == null) continue;
+
+                _allItems.Add(new CommandItem
+                {
+                    Name = cam.Name,
+                    Group = group.Name,
+                    Category = ItemCategory.Camera,
+                    PlatformItem = item
+                });
+            }
+
+            foreach (var sub in group.CameraGroupFolder.CameraGroups)
+                CollectCameras(sub, serverId);
+        }
+
+        private void CollectViews(Item viewGroup, string parentGroupName = null, int depth = 0)
+        {
+            var groupName = parentGroupName ?? viewGroup.Name;
+
+            foreach (var child in viewGroup.GetChildren())
+            {
+                // Skip our own SmartBar folder
+                if (child.Name == SmartBarGroupName) continue;
+
+                if (child.HasChildren != HasChildren.No && depth < 2)
+                {
+                    // This is a subfolder — recurse (but not into view items)
+                    CollectViews(child, child.Name, depth + 1);
+                }
+                else if (depth >= 1)
+                {
+                    // At depth 1+, items are views — add them
+                    _allItems.Add(new CommandItem
+                    {
+                        Name = child.Name,
+                        Group = groupName,
+                        Category = ItemCategory.View,
+                        PlatformItem = child
+                    });
+                }
+            }
+        }
+
+        private void ApplyFilter()
+        {
+            var query = searchBox.Text?.Trim() ?? string.Empty;
+
+            var matched = string.IsNullOrEmpty(query)
+                ? _allItems
+                : _allItems.Where(i => i.Name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
+                                    || i.Group.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            _filteredItems = matched
+                .OrderBy(i => i.Category)
+                .ThenBy(i => i.Group, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            _selectedIndex = _filteredItems.Count > 0 ? 0 : -1;
+            RebuildList();
+        }
+
+        private void RebuildList()
+        {
+            resultPanel.Children.Clear();
+
+            ItemCategory? lastCategory = null;
+            string lastGroup = null;
+            bool isFirst = true;
+
+            for (int i = 0; i < _filteredItems.Count; i++)
+            {
+                var item = _filteredItems[i];
+
+                if (lastCategory != item.Category)
+                {
+                    lastCategory = item.Category;
+                    lastGroup = null;
+                    var categoryLabel = item.Category == ItemCategory.Camera ? "Cameras" : "Views";
+                    resultPanel.Children.Add(new TextBlock
+                    {
+                        Text = categoryLabel,
+                        Foreground = TextGroup,
+                        FontSize = 10.5,
+                        FontWeight = FontWeights.SemiBold,
+                        Margin = new Thickness(10, isFirst ? 6 : 14, 0, 4)
+                    });
+                    isFirst = false;
+                }
+
+                if (item.Group != lastGroup)
+                {
+                    lastGroup = item.Group;
+                    resultPanel.Children.Add(new TextBlock
+                    {
+                        Text = item.Group,
+                        Foreground = TextGroup,
+                        FontSize = 10,
+                        Margin = new Thickness(10, 6, 0, 2)
+                    });
+                }
+
+                resultPanel.Children.Add(CreateRow(item, i));
+            }
+
+            if (_filteredItems.Count == 0)
+            {
+                resultPanel.Children.Add(new TextBlock
+                {
+                    Text = "No results found",
+                    Foreground = TextGroup,
+                    FontSize = 12,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 24, 0, 24)
+                });
+            }
+        }
+
+        private Border CreateRow(CommandItem item, int index)
+        {
+            bool isMultiSelected = _selectedCameras.Contains(item);
+
+            var nameBlock = new TextBlock
+            {
+                Text = isMultiSelected ? "\u2713  " + item.Name : item.Name,
+                Foreground = isMultiSelected ? TextSelected : TextPrimary,
+                FontSize = 12,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+
+            var row = new Border
+            {
+                Background = index == _selectedIndex ? SelectedBg : TransparentBg,
+                CornerRadius = new CornerRadius(5),
+                Padding = new Thickness(10, 5, 10, 5),
+                Cursor = Cursors.Hand,
+                Child = nameBlock,
+                Tag = index
+            };
+
+            row.MouseEnter += (s, _) =>
+            {
+                _selectedIndex = (int)((Border)s).Tag;
+                UpdateSelection();
+            };
+            row.MouseLeftButtonUp += (s, _) => ExecuteSelected();
+
+            return row;
+        }
+
+        private void UpdateSelection()
+        {
+            foreach (var child in resultPanel.Children)
+            {
+                if (child is Border border && border.Tag is int idx)
+                    border.Background = idx == _selectedIndex ? SelectedBg : TransparentBg;
+            }
+        }
+
+        private void UpdateSelectionBar()
+        {
+            if (_selectedCameras.Count > 0)
+            {
+                selectionBar.Visibility = Visibility.Visible;
+                selectionText.Text = $"{_selectedCameras.Count} camera(s) selected";
+            }
+            else
+            {
+                selectionBar.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void ToggleMultiSelect()
+        {
+            if (_selectedIndex < 0 || _selectedIndex >= _filteredItems.Count)
+                return;
+
+            var item = _filteredItems[_selectedIndex];
+            if (item.Category != ItemCategory.Camera)
+                return;
+
+            if (!_selectedCameras.Remove(item))
+                _selectedCameras.Add(item);
+
+            UpdateSelectionBar();
+            RebuildList();
+        }
+
+        private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+        {
+            searchPlaceholder.Visibility = string.IsNullOrEmpty(searchBox.Text)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            ApplyFilter();
+        }
+
+        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    e.Handled = true;
+                    if (_selectedCameras.Count > 0)
+                    {
+                        _selectedCameras.Clear();
+                        UpdateSelectionBar();
+                        RebuildList();
+                    }
+                    else
+                    {
+                        SafeClose();
+                    }
+                    break;
+
+                case Key.Down:
+                    e.Handled = true;
+                    if (_filteredItems.Count > 0)
+                    {
+                        _selectedIndex = (_selectedIndex + 1) % _filteredItems.Count;
+                        UpdateSelection();
+                        ScrollToSelected();
+                    }
+                    break;
+
+                case Key.Up:
+                    e.Handled = true;
+                    if (_filteredItems.Count > 0)
+                    {
+                        _selectedIndex = (_selectedIndex - 1 + _filteredItems.Count) % _filteredItems.Count;
+                        UpdateSelection();
+                        ScrollToSelected();
+                    }
+                    break;
+
+                case Key.Tab:
+                    e.Handled = true;
+                    ToggleMultiSelect();
+                    break;
+
+                case Key.Enter:
+                    e.Handled = true;
+                    ExecuteSelected();
+                    break;
+            }
+        }
+
+        private void OnBackdropMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource is System.Windows.Controls.Grid)
+                SafeClose();
+        }
+
+        private void ScrollToSelected()
+        {
+            foreach (var child in resultPanel.Children)
+            {
+                if (child is Border border && border.Tag is int idx && idx == _selectedIndex)
+                {
+                    border.BringIntoView();
+                    break;
+                }
+            }
+        }
+
+        private FQID GetMainWindowFQID()
+        {
+            var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
+            return windows.Count > 0 ? windows[0].FQID : null;
+        }
+
+        private void ExecuteSelected()
+        {
+            if (_selectedIndex < 0 || _selectedIndex >= _filteredItems.Count)
+                return;
+
+            var item = _filteredItems[_selectedIndex];
+
+            if (item.Category == ItemCategory.Camera)
+            {
+                var cameras = new List<CommandItem>(_selectedCameras);
+                if (cameras.Count == 0)
+                    cameras.Add(item);
+
+                if (cameras.Count == 1)
+                {
+                    SetCameraInSlot(0, cameras[0].PlatformItem.FQID);
+                }
+                else
+                {
+                    ShowCamerasInView(cameras);
+                }
+            }
+            else if (item.Category == ItemCategory.View)
+            {
+                NavigateToView(item);
+            }
+
+            SafeClose();
+        }
+
+        private void SetCameraInSlot(int index, FQID cameraFQID)
+        {
+            var dest = GetMainWindowFQID();
+            EnvironmentManager.Instance.SendMessage(
+                new Message(MessageId.SmartClient.SetCameraInViewCommand,
+                    new SetCameraInViewCommandData
+                    {
+                        Index = index,
+                        CameraFQID = cameraFQID
+                    }), dest);
+        }
+
+        private static readonly int[] GridSizes = { 1, 4, 9, 16 }; // 1x1, 2x2, 3x3, 4x4
+        private static readonly string SmartBarGroupName = "SmartBar";
+
+        private Item FindPrivateViewGroup()
+        {
+            var groups = ClientControl.Instance.GetViewGroupItems();
+            if (groups == null || groups.Count == 0) return null;
+
+            // GetViewGroupItems returns top-level groups: typically Private, Shared
+            // Use the first one (Private views)
+            return groups[0];
+        }
+
+        private void EnsureSmartBarViews()
+        {
+            var topGroup = FindPrivateViewGroup() as ConfigItem;
+            if (topGroup == null) return;
+
+            var sbGroup = topGroup.GetChildren()
+                .FirstOrDefault(c => c.Name == SmartBarGroupName) as ConfigItem;
+
+            if (sbGroup == null)
+                sbGroup = topGroup.AddChild(SmartBarGroupName, Kind.View, FolderType.UserDefined);
+
+            if (sbGroup == null) return;
+
+            var existing = sbGroup.GetChildren().Select(c => c.Name).ToHashSet();
+            bool changed = false;
+
+            foreach (var size in GridSizes)
+            {
+                int side = (int)Math.Sqrt(size);
+                string name = $"{side}x{side}";
+                if (existing.Contains(name)) continue;
+
+                var rects = new Rectangle[size];
+                int cellW = 1000 / side;
+                int cellH = 1000 / side;
+                for (int i = 0; i < size; i++)
+                {
+                    int col = i % side;
+                    int row = i / side;
+                    rects[i] = new Rectangle(col * cellW, row * cellH, cellW, cellH);
+                }
+
+                var view = sbGroup.AddChild(name, Kind.View, FolderType.No) as ViewAndLayoutItem;
+                if (view == null) continue;
+
+                view.Layout = rects;
+                for (int i = 0; i < size; i++)
+                {
+                    view.InsertBuiltinViewItem(i, ViewAndLayoutItem.CameraBuiltinId,
+                        new Dictionary<string, string> { { "CameraId", Guid.Empty.ToString() } });
+                }
+                view.Save();
+                changed = true;
+            }
+
+            if (changed)
+                topGroup.PropertiesModified();
+        }
+
+        private void ShowCamerasInView(List<CommandItem> cameras)
+        {
+            var topGroup = FindPrivateViewGroup();
+            if (topGroup == null) return;
+
+            var sbGroup = topGroup.GetChildren()
+                .FirstOrDefault(c => c.Name == SmartBarGroupName);
+            if (sbGroup == null) return;
+
+            // Pick smallest grid that fits
+            int needed = cameras.Count;
+            int gridSize = GridSizes.FirstOrDefault(s => s >= needed);
+            if (gridSize == 0) gridSize = GridSizes.Last();
+
+            int side = (int)Math.Sqrt(gridSize);
+            string viewName = $"{side}x{side}";
+
+            var viewItem = sbGroup.GetChildren().FirstOrDefault(c => c.Name == viewName);
+            if (viewItem == null) return;
+
+            // Navigate to the grid view first
+            var dest = GetMainWindowFQID();
+            EnvironmentManager.Instance.SendMessage(
+                new Message(MessageId.SmartClient.MultiWindowCommand,
+                    new MultiWindowCommandData
+                    {
+                        MultiWindowCommand = MultiWindowCommand.SetViewInWindow,
+                        View = viewItem.FQID,
+                        Window = dest
+                    }), dest);
+
+            // Insert cameras into the view slots
+            for (int i = 0; i < cameras.Count && i < gridSize; i++)
+            {
+                SetCameraInSlot(i, cameras[i].PlatformItem.FQID);
+            }
+        }
+
+        private void NavigateToView(CommandItem item)
+        {
+            var dest = GetMainWindowFQID();
+            EnvironmentManager.Instance.SendMessage(
+                new Message(MessageId.SmartClient.MultiWindowCommand,
+                    new MultiWindowCommandData
+                    {
+                        MultiWindowCommand = MultiWindowCommand.SetViewInWindow,
+                        View = item.PlatformItem.FQID,
+                        Window = dest
+                    }), dest);
+        }
+    }
+
+    enum ItemCategory
+    {
+        Camera,
+        View
+    }
+
+    class CommandItem
+    {
+        public string Name { get; set; }
+        public string Group { get; set; }
+        public ItemCategory Category { get; set; }
+        public Item PlatformItem { get; set; }
+    }
+}
