@@ -91,6 +91,8 @@ namespace SmartBar.Client
                     foreach (var vg in viewGroups)
                         CollectViews(vg);
                 }
+
+                LoadCommands();
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] LoadItems failed: {ex}"); }
         }
@@ -144,6 +146,58 @@ namespace SmartBar.Client
             }
         }
 
+        private void LoadCommands()
+        {
+            void AddCmd(string group, string name, Action action)
+            {
+                _allItems.Add(new CommandItem
+                {
+                    Name = "Command: " + name,
+                    Group = group,
+                    Category = ItemCategory.Command,
+                    Execute = action
+                });
+            }
+
+            // Application Control
+            AddCmd("Application", "Toggle Fullscreen", () =>
+                SendAppControl(ApplicationControlCommandData.ToggleFullScreenMode));
+            AddCmd("Application", "Enter Fullscreen", () =>
+                SendAppControl(ApplicationControlCommandData.EnterFullScreenMode));
+            AddCmd("Application", "Exit Fullscreen", () =>
+                SendAppControl(ApplicationControlCommandData.ExitFullScreenMode));
+            AddCmd("Application", "Show Side Panel", () =>
+                SendAppControl(ApplicationControlCommandData.ShowSidePanel));
+            AddCmd("Application", "Hide Side Panel", () =>
+                SendAppControl(ApplicationControlCommandData.HideSidePanel));
+            AddCmd("Application", "Maximize Window", () =>
+                SendAppControl(ApplicationControlCommandData.Maximize));
+            AddCmd("Application", "Minimize Window", () =>
+                SendAppControl(ApplicationControlCommandData.Minimize));
+            AddCmd("Application", "Restore Window", () =>
+                SendAppControl(ApplicationControlCommandData.Restore));
+            AddCmd("Application", "Reload Configuration", () =>
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.SmartClient.ReloadConfigurationCommand)));
+
+            // Mode Switching
+            AddCmd("Mode", "Switch to Live", () =>
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.SmartClient.ChangeModeCommand, "ClientLive")));
+            AddCmd("Mode", "Switch to Playback", () =>
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.SmartClient.ChangeModeCommand, "ClientPlayback")));
+            AddCmd("Mode", "Switch to Setup", () =>
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.SmartClient.ChangeModeCommand, "ClientSetup")));
+        }
+
+        private void SendAppControl(string command)
+        {
+            EnvironmentManager.Instance.SendMessage(
+                new Message(MessageId.SmartClient.ApplicationControlCommand, command));
+        }
+
         private void ApplyFilter()
         {
             var query = searchBox.Text?.Trim() ?? string.Empty;
@@ -179,7 +233,8 @@ namespace SmartBar.Client
                 {
                     lastCategory = item.Category;
                     lastGroup = null;
-                    var categoryLabel = item.Category == ItemCategory.Camera ? "Cameras" : "Views";
+                    var categoryLabel = item.Category == ItemCategory.Camera ? "Cameras"
+                        : item.Category == ItemCategory.View ? "Views" : "Commands";
                     resultPanel.Children.Add(new TextBlock
                     {
                         Text = categoryLabel,
@@ -197,9 +252,9 @@ namespace SmartBar.Client
                     resultPanel.Children.Add(new TextBlock
                     {
                         Text = item.Group,
-                        Foreground = TextGroup,
-                        FontSize = 10,
-                        Margin = new Thickness(10, 6, 0, 2)
+                        Foreground = TextSelected,
+                        FontSize = 11,
+                        Margin = new Thickness(10, 8, 0, 3)
                     });
                 }
 
@@ -236,7 +291,7 @@ namespace SmartBar.Client
             {
                 Background = index == _selectedIndex ? SelectedBg : TransparentBg,
                 CornerRadius = new CornerRadius(5),
-                Padding = new Thickness(10, 5, 10, 5),
+                Padding = new Thickness(22, 5, 10, 5),
                 Cursor = Cursors.Hand,
                 Child = nameBlock,
                 Tag = index
@@ -396,6 +451,10 @@ namespace SmartBar.Client
             {
                 NavigateToView(item);
             }
+            else if (item.Category == ItemCategory.Command)
+            {
+                item.Execute?.Invoke();
+            }
 
             SafeClose();
         }
@@ -529,7 +588,8 @@ namespace SmartBar.Client
     enum ItemCategory
     {
         Camera,
-        View
+        View,
+        Command
     }
 
     class CommandItem
@@ -538,5 +598,6 @@ namespace SmartBar.Client
         public string Group { get; set; }
         public ItemCategory Category { get; set; }
         public Item PlatformItem { get; set; }
+        public Action Execute { get; set; }
     }
 }
