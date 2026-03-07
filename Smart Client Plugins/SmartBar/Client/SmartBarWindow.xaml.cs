@@ -75,9 +75,6 @@ namespace SmartBar.Client
         {
             _allItems = new List<CommandItem>();
 
-            try { EnsureSmartBarViews(); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] EnsureSmartBarViews failed: {ex}"); }
-
             try
             {
                 var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
@@ -118,23 +115,17 @@ namespace SmartBar.Client
                 CollectCameras(sub, serverId);
         }
 
-        private void CollectViews(Item viewGroup, string parentGroupName = null, int depth = 0)
+        private void CollectViews(Item viewGroup, string parentGroupName = null)
         {
             var groupName = parentGroupName ?? viewGroup.Name;
 
             foreach (var child in viewGroup.GetChildren())
             {
-                // Skip our own SmartBar folder
                 if (child.Name == SmartBarGroupName) continue;
 
-                if (child.HasChildren != HasChildren.No && depth < 2)
+                if (child.FQID.FolderType == FolderType.No)
                 {
-                    // This is a subfolder — recurse (but not into view items)
-                    CollectViews(child, child.Name, depth + 1);
-                }
-                else if (depth >= 1)
-                {
-                    // At depth 1+, items are views — add them
+                    // This is a view (leaf item) — add it
                     _allItems.Add(new CommandItem
                     {
                         Name = child.Name,
@@ -142,6 +133,11 @@ namespace SmartBar.Client
                         Category = ItemCategory.View,
                         PlatformItem = child
                     });
+                }
+                else
+                {
+                    // This is a folder — recurse
+                    CollectViews(child, child.Name);
                 }
             }
         }
@@ -387,14 +383,7 @@ namespace SmartBar.Client
                 if (cameras.Count == 0)
                     cameras.Add(item);
 
-                if (cameras.Count == 1)
-                {
-                    SetCameraInSlot(0, cameras[0].PlatformItem.FQID);
-                }
-                else
-                {
-                    ShowCamerasInView(cameras);
-                }
+                ShowCamerasInView(cameras);
             }
             else if (item.Category == ItemCategory.View)
             {
@@ -419,7 +408,7 @@ namespace SmartBar.Client
         private static readonly int[] GridSizes = { 1, 4, 9, 16 }; // 1x1, 2x2, 3x3, 4x4
         private static readonly string SmartBarGroupName = "SmartBar";
 
-        private Item FindPrivateViewGroup()
+        private static Item FindPrivateViewGroup()
         {
             var groups = ClientControl.Instance.GetViewGroupItems();
             if (groups == null || groups.Count == 0) return null;
@@ -429,7 +418,7 @@ namespace SmartBar.Client
             return groups[0];
         }
 
-        private void EnsureSmartBarViews()
+        public static void EnsureSmartBarViews()
         {
             var topGroup = FindPrivateViewGroup() as ConfigItem;
             if (topGroup == null) return;

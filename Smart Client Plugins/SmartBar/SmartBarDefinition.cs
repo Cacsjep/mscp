@@ -43,6 +43,8 @@ namespace SmartBar
             {
                 _workSpaceToolbarPlugins.Add(new Client.SmartBarToolbarPlugin());
                 Client.SmartBarKeyHandler.Install();
+                try { Client.SmartBarWindow.EnsureSmartBarViews(); }
+                catch (System.Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] EnsureSmartBarViews failed: {ex}"); }
             }
         }
 
