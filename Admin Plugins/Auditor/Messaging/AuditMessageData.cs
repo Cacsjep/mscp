@@ -18,5 +18,6 @@ namespace Auditor.Messaging
         public string[] CamerasInView;
         public string Reason;
         public string Details;
+        public bool FireEvent;
     }
 }

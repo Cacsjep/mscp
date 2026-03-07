@@ -146,65 +146,73 @@ namespace Auditor.Background
                 }
             }
 
-            if (_pluginItemFqid == null)
+            if (report.FireEvent)
             {
-                _log.Info("No plugin item FQID available - refreshing");
-                RefreshPluginItemFqid();
                 if (_pluginItemFqid == null)
                 {
-                    _log.Error("Still no plugin item FQID - cannot fire analytics event (no audit rules configured?)");
-                    return null;
-                }
-            }
-
-            try
-            {
-                var eventTypeId = MapEventType(report.EventType);
-                if (eventTypeId == Guid.Empty)
-                {
-                    _log.Info($"Unknown event type '{report.EventType}' - skipping");
-                    return null;
-                }
-
-                var eventMessage = MapEventMessage(report.EventType);
-                var customTag = BuildCustomTag(report);
-
-                _log.Info($"Building AnalyticsEvent: message='{eventMessage}' customTag='{customTag}'");
-
-                var header = new EventHeader
-                {
-                    ID = Guid.NewGuid(),
-                    Class = "Operational",
-                    Type = $"Audit_{report.EventType}",
-                    Timestamp = report.Timestamp,
-                    Name = report.UserName ?? "(unknown)",
-                    Message = eventMessage,
-                    CustomTag = customTag,
-                    Priority = 3,
-                    Source = new EventSource
+                    _log.Info("No plugin item FQID available - refreshing");
+                    RefreshPluginItemFqid();
+                    if (_pluginItemFqid == null)
                     {
-                        Name = report.UserName ?? "Auditor",
-                        FQID = _pluginItemFqid
+                        _log.Error("Still no plugin item FQID - cannot fire analytics event (no audit rules configured?)");
+                        return null;
                     }
-                };
+                }
 
-                var analyticsEvent = new AnalyticsEvent
+                try
                 {
-                    EventHeader = header
-                };
-
-                EnvironmentManager.Instance.SendMessage(
-                    new Message(MessageId.Server.NewEventCommand)
+                    var eventTypeId = MapEventType(report.EventType);
+                    if (eventTypeId == Guid.Empty)
                     {
-                        Data = analyticsEvent,
-                        RelatedFQID = _pluginItemFqid
-                    });
+                        _log.Info($"Unknown event type '{report.EventType}' - skipping event trigger");
+                    }
+                    else
+                    {
+                        var eventMessage = MapEventMessage(report.EventType);
+                        var customTag = BuildCustomTag(report);
 
-                _log.Info($"Fired AnalyticsEvent '{eventMessage}' for user '{report.UserName}' (eventId={header.ID})");
+                        _log.Info($"Building AnalyticsEvent: message='{eventMessage}' customTag='{customTag}'");
+
+                        var header = new EventHeader
+                        {
+                            ID = Guid.NewGuid(),
+                            Class = "Operational",
+                            Type = $"Audit_{report.EventType}",
+                            Timestamp = report.Timestamp,
+                            Name = report.UserName ?? "(unknown)",
+                            Message = eventMessage,
+                            CustomTag = customTag,
+                            Priority = 3,
+                            Source = new EventSource
+                            {
+                                Name = report.UserName ?? "Auditor",
+                                FQID = _pluginItemFqid
+                            }
+                        };
+
+                        var analyticsEvent = new AnalyticsEvent
+                        {
+                            EventHeader = header
+                        };
+
+                        EnvironmentManager.Instance.SendMessage(
+                            new Message(MessageId.Server.NewEventCommand)
+                            {
+                                Data = analyticsEvent,
+                                RelatedFQID = _pluginItemFqid
+                            });
+
+                        _log.Info($"Fired AnalyticsEvent '{eventMessage}' for user '{report.UserName}' (eventId={header.ID})");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Failed to fire analytics event: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+            else
             {
-                _log.Error($"Failed to fire analytics event: {ex.Message}");
+                _log.Info($"Event trigger disabled for '{report.EventType}' - skipping analytics event");
             }
 
             return null;
@@ -218,8 +226,6 @@ namespace Auditor.Background
                 case "ExportStarted":
                 case "ExportWorkspaceEntered": return AuditorDefinition.EvtExportId;
                 case "IndependentPlaybackEnabled": return AuditorDefinition.EvtIndepPlaybackId;
-                case "RestrictedMediaCreated": return AuditorDefinition.EvtRestrictedMediaId;
-                case "ExportCompleted": return AuditorDefinition.EvtExportCompletedId;
                 default: return Guid.Empty;
             }
         }
@@ -232,8 +238,6 @@ namespace Auditor.Background
                 case "ExportStarted":
                 case "ExportWorkspaceEntered": return "Audit: Export Entry";
                 case "IndependentPlaybackEnabled": return "Audit: Independent Playback";
-                case "RestrictedMediaCreated": return "Audit: Restricted Media";
-                case "ExportCompleted": return "Audit: Export Completed";
                 default: return "Audit: Unknown";
             }
         }

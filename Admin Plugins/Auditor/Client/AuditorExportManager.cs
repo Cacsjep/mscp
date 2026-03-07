@@ -66,42 +66,9 @@ namespace Auditor.Client
                 new Message(AuditorBackgroundPlugin.AuditMessageId) { Data = auditData });
         }
 
-        public override void ExportCancelled()
-        {
-            SendExportAudit(AuditEventType.ExportCancelled);
-        }
-
-        public override void ExportFailed()
-        {
-            SendExportAudit(AuditEventType.ExportFailed);
-        }
-
-        public override void ExportComplete()
-        {
-            SendExportAudit(AuditEventType.ExportCompleted);
-        }
-
-        private void SendExportAudit(AuditEventType eventType)
-        {
-            string userName = null;
-            try
-            {
-                var ls = LoginSettingsCache.GetLoginSettings(EnvironmentManager.Instance.MasterSite);
-                userName = ls.UserName;
-            }
-            catch { }
-
-            var auditData = new AuditEventData
-            {
-                EventType = eventType,
-                Timestamp = DateTime.Now,
-                UserName = userName ?? "(unknown)",
-            };
-
-            _log.Info($"Export event: {eventType} user={userName ?? "(unknown)"}");
-            EnvironmentManager.Instance.SendMessage(
-                new Message(AuditorBackgroundPlugin.AuditMessageId) { Data = auditData });
-        }
+        public override void ExportCancelled() { }
+        public override void ExportFailed() { }
+        public override void ExportComplete() { }
 
         public override ulong? EstimateSizeOfExport()
         {

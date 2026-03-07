@@ -172,13 +172,10 @@ namespace Auditor.Client
             var auditData = message.Data as AuditEventData;
             if (auditData == null) return null;
 
-            switch (auditData.EventType)
+            if (auditData.EventType == AuditEventType.ExportStarted)
             {
-                case AuditEventType.ExportStarted:
-                case AuditEventType.ExportCompleted:
-                    _log.Info($"Relaying export event '{auditData.EventType}' from ExportManager to Event Server");
-                    SendToEventServer(auditData);
-                    break;
+                _log.Info($"Relaying export event '{auditData.EventType}' from ExportManager to Event Server");
+                SendToEventServer(auditData);
             }
             return null;
         }
@@ -247,14 +244,19 @@ namespace Auditor.Client
                 _log.Info("Mode changed to Playback");
                 var rule = _cachedRule;
                 string reason = null;
-                if (rule != null && (!rule.Properties.ContainsKey("AuditPlayback") || rule.Properties["AuditPlayback"] == "Yes"))
+                bool promptEnabled = rule != null && (!rule.Properties.ContainsKey("PromptPlayback") || rule.Properties["PromptPlayback"] == "Yes");
+                bool triggerEnabled = rule != null && (!rule.Properties.ContainsKey("TriggerPlayback") || rule.Properties["TriggerPlayback"] == "Yes");
+                if (promptEnabled)
                 {
                     _log.Info("Showing playback reason prompt (rule matched)");
                     reason = PromptForReason("Entering Playback Mode",
                         "You are switching to Playback mode.\nPlease provide a reason for accessing recorded footage.");
                     _log.Info($"Playback reason provided: '{reason}'");
                 }
-                SendAudit(AuditEventType.GeneralPlayback, null, null, cameras, reason);
+                if (promptEnabled || triggerEnabled)
+                    SendAudit(AuditEventType.GeneralPlayback, null, null, cameras, reason, fireEvent: triggerEnabled);
+                else
+                    SendAudit(AuditEventType.GeneralPlayback, null, null, cameras);
             }
             else
             {
@@ -323,14 +325,19 @@ namespace Auditor.Client
                 _log.Info("Entered Export workspace");
                 var rule = _cachedRule;
                 string reason = null;
-                if (rule != null && (!rule.Properties.ContainsKey("AuditExport") || rule.Properties["AuditExport"] == "Yes"))
+                bool promptEnabled = rule != null && (!rule.Properties.ContainsKey("PromptExport") || rule.Properties["PromptExport"] == "Yes");
+                bool triggerEnabled = rule != null && (!rule.Properties.ContainsKey("TriggerExport") || rule.Properties["TriggerExport"] == "Yes");
+                if (promptEnabled)
                 {
                     _log.Info("Showing export reason prompt (rule matched)");
                     reason = PromptForReason("Entering Export",
                         "You are entering the Export workspace.\nPlease provide a reason for exporting footage.");
                     _log.Info($"Export reason provided: '{reason}'");
                 }
-                SendAudit(AuditEventType.ExportWorkspaceEntered, null, null, reason: reason);
+                if (promptEnabled || triggerEnabled)
+                    SendAudit(AuditEventType.ExportWorkspaceEntered, null, null, reason: reason, fireEvent: triggerEnabled);
+                else
+                    SendAudit(AuditEventType.ExportWorkspaceEntered, null, null);
             }
             else if (!isExport && _inExportWorkspace)
             {
@@ -381,14 +388,19 @@ namespace Auditor.Client
                 }
                 var rule = _cachedRule;
                 string reason = null;
-                if (rule != null && (!rule.Properties.ContainsKey("AuditIndependentPlayback") || rule.Properties["AuditIndependentPlayback"] == "Yes"))
+                bool promptEnabled = rule != null && (!rule.Properties.ContainsKey("PromptIndependentPlayback") || rule.Properties["PromptIndependentPlayback"] == "Yes");
+                bool triggerEnabled = rule != null && (!rule.Properties.ContainsKey("TriggerIndependentPlayback") || rule.Properties["TriggerIndependentPlayback"] == "Yes");
+                if (promptEnabled)
                 {
                     _log.Info("Showing independent playback reason prompt (rule matched)");
                     reason = PromptForReason("Independent Playback Enabled",
                         $"Independent playback has been enabled for '{cameraName ?? "unknown"}'.\nPlease provide a reason for accessing this camera's recordings.");
                     _log.Info($"Independent playback reason provided: '{reason}'");
                 }
-                SendAudit(AuditEventType.IndependentPlaybackEnabled, cameraName, null, reason: reason);
+                if (promptEnabled || triggerEnabled)
+                    SendAudit(AuditEventType.IndependentPlaybackEnabled, cameraName, null, reason: reason, fireEvent: triggerEnabled);
+                else
+                    SendAudit(AuditEventType.IndependentPlaybackEnabled, cameraName, null);
             }
             else
             {
@@ -565,7 +577,7 @@ namespace Auditor.Client
 
         #region Send Audit
 
-        internal void SendAudit(AuditEventType eventType, string cameraName, DateTime? playbackDate, List<string> camerasInView = null, string reason = null, string details = null)
+        internal void SendAudit(AuditEventType eventType, string cameraName, DateTime? playbackDate, List<string> camerasInView = null, string reason = null, string details = null, bool fireEvent = true)
         {
             string userName = null;
             try
@@ -585,6 +597,7 @@ namespace Auditor.Client
                 CamerasInView = camerasInView,
                 Reason = reason,
                 Details = details,
+                FireEvent = fireEvent,
             };
 
             _log.Info($"SendAudit type={eventType} user={auditData.UserName} camera={cameraName ?? "(none)"} reason={reason ?? "(none)"}");
@@ -607,10 +620,8 @@ namespace Auditor.Client
             {
                 case AuditEventType.GeneralPlayback:
                 case AuditEventType.ExportStarted:
-                case AuditEventType.ExportCompleted:
                 case AuditEventType.ExportWorkspaceEntered:
                 case AuditEventType.IndependentPlaybackEnabled:
-                case AuditEventType.RestrictedMediaCreated:
                     break;
                 default:
                     return; // Don't send non-auditable events like PlaybackPosition, GeneralLive
@@ -628,6 +639,7 @@ namespace Auditor.Client
                     CamerasInView = auditData.CamerasInView?.ToArray(),
                     Reason = auditData.Reason,
                     Details = auditData.Details,
+                    FireEvent = auditData.FireEvent,
                 };
 
                 _cmh.TransmitMessage(new Message(AuditMessageIds.AuditEventReport, report));
@@ -649,12 +661,8 @@ namespace Auditor.Client
         IndependentPlaybackEnabled,
         IndependentPlaybackDisabled,
         PlaybackPosition,
-        RestrictedMediaCreated,
         ExportWorkspaceEntered,
         ExportStarted,
-        ExportCompleted,
-        ExportCancelled,
-        ExportFailed,
     }
 
     public class AuditEventData
@@ -667,5 +675,6 @@ namespace Auditor.Client
         public List<string> CamerasInView { get; set; }
         public string Reason { get; set; }
         public string Details { get; set; }
+        public bool FireEvent { get; set; }
     }
 }

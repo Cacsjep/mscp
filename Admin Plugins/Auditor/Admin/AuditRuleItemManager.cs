@@ -72,26 +72,6 @@ namespace Auditor.Admin
                     DefaultSourceKind = AuditorDefinition.AuditRuleKindId,
                     SourceKinds = sourceKinds
                 },
-                new EventType
-                {
-                    ID = AuditorDefinition.EvtRestrictedMediaId,
-                    Message = "Audit: Restricted Media",
-                    GroupID = AuditorDefinition.EventGroupId,
-                    StateGroupID = AuditorDefinition.StateGroupId,
-                    State = "Active",
-                    DefaultSourceKind = AuditorDefinition.AuditRuleKindId,
-                    SourceKinds = sourceKinds
-                },
-                new EventType
-                {
-                    ID = AuditorDefinition.EvtExportCompletedId,
-                    Message = "Audit: Export Completed",
-                    GroupID = AuditorDefinition.EventGroupId,
-                    StateGroupID = AuditorDefinition.StateGroupId,
-                    State = "Active",
-                    DefaultSourceKind = AuditorDefinition.AuditRuleKindId,
-                    SourceKinds = sourceKinds
-                }
             };
         }
 
@@ -167,11 +147,15 @@ namespace Auditor.Admin
 
         public override string GetItemName()
         {
+            if (_userControl != null)
+                return _userControl.DisplayName;
             return CurrentItem?.Name ?? "Audit Rule";
         }
 
         public override void SetItemName(string name)
         {
+            if (_userControl != null)
+                _userControl.DisplayName = name;
             if (CurrentItem != null)
                 CurrentItem.Name = name;
         }
@@ -198,9 +182,12 @@ namespace Auditor.Admin
         {
             CurrentItem = new Item(suggestedFQID, "New Audit Rule");
             CurrentItem.Properties["UserNames"] = "";
-            CurrentItem.Properties["AuditPlayback"] = "Yes";
-            CurrentItem.Properties["AuditExport"] = "Yes";
-            CurrentItem.Properties["AuditIndependentPlayback"] = "Yes";
+            CurrentItem.Properties["PromptPlayback"] = "Yes";
+            CurrentItem.Properties["PromptExport"] = "Yes";
+            CurrentItem.Properties["PromptIndependentPlayback"] = "Yes";
+            CurrentItem.Properties["TriggerPlayback"] = "Yes";
+            CurrentItem.Properties["TriggerExport"] = "Yes";
+            CurrentItem.Properties["TriggerIndependentPlayback"] = "Yes";
             CurrentItem.Properties["Enabled"] = "Yes";
 
             if (_userControl != null)
