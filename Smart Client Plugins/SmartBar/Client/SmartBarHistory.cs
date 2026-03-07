@@ -147,12 +147,17 @@ namespace SmartBar.Client
                 {
                     var prevId = _pendingClosedCamera != null ? _pendingClosedCamera.ObjectId.ToString() : "empty";
                     Log.Info($"PUSH Camera: slot={slotIndex} win={windowId} prev={prevId} -> {camId}");
+                    var newCamName = ResolveCameraName(cam);
+                    var desc = _pendingClosedCamera == null
+                        ? $"Camera: {newCamName} added to slot {slotIndex}"
+                        : $"Camera: {newCamName} replaced in slot {slotIndex}";
                     Push(new HistoryEntry
                     {
                         Type = HistoryType.Camera,
                         CameraFQID = _pendingClosedCamera,
                         SlotIndex = slotIndex,
-                        WindowId = windowId
+                        WindowId = windowId,
+                        Description = desc
                     });
                 }
 
@@ -246,7 +251,8 @@ namespace SmartBar.Client
                 {
                     Type = HistoryType.View,
                     ViewFQID = viewItem.FQID,
-                    WindowId = windowId
+                    WindowId = windowId,
+                    Description = "View: " + viewItem.Name
                 });
             }
             catch (Exception ex)
@@ -345,6 +351,47 @@ namespace SmartBar.Client
             }
         }
 
+        private static string ResolveCameraName(FQID cameraFQID)
+        {
+            if (cameraFQID == null) return "Unknown";
+            try
+            {
+                var item = Configuration.Instance.GetItem(cameraFQID);
+                if (item != null) return item.Name;
+            }
+            catch { }
+            return cameraFQID.ObjectId.ToString().Substring(0, 8);
+        }
+
+        /// <summary>Returns history descriptions from newest (index 0) to oldest.</summary>
+        public static List<string> GetHistoryDescriptions()
+        {
+            var result = new List<string>();
+            var node = _history.Last;
+            var windowNumbers = new Dictionary<Guid, int>();
+            // Pre-assign window numbers
+            var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
+            for (int i = 0; i < windows.Count; i++)
+                windowNumbers[windows[i].FQID.ObjectId] = i + 1;
+
+            while (node != null)
+            {
+                var entry = node.Value;
+                var winLabel = windowNumbers.ContainsKey(entry.WindowId)
+                    ? $"W{windowNumbers[entry.WindowId]}"
+                    : "W?";
+                result.Add($"[{winLabel}] {entry.Description ?? entry.Type.ToString()}");
+                node = node.Previous;
+            }
+            return result;
+        }
+
+        public static void GoBackN(int count)
+        {
+            for (int i = 0; i < count && _history.Count > 0; i++)
+                GoBack();
+        }
+
         private static FQID FindWindowFQID(Guid windowId)
         {
             var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
@@ -366,5 +413,6 @@ namespace SmartBar.Client
         public FQID CameraFQID;
         public Guid WindowId;
         public int SlotIndex;
+        public string Description;
     }
 }

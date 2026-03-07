@@ -100,6 +100,7 @@ namespace SmartBar.Client
 
                 LoadCommands();
                 LoadPrograms();
+                LoadUndoHistory();
             }
             catch (Exception ex) { Log.Error("LoadItems failed", ex); }
         }
@@ -242,6 +243,22 @@ namespace SmartBar.Client
             }
         }
 
+        private void LoadUndoHistory()
+        {
+            var descriptions = SmartBarHistory.GetHistoryDescriptions();
+            for (int i = 0; i < descriptions.Count; i++)
+            {
+                int undoCount = i + 1;
+                _allItems.Add(new CommandItem
+                {
+                    Name = $"Undo {undoCount}: {descriptions[i]}",
+                    Group = "Undo History",
+                    Category = ItemCategory.Undo,
+                    Execute = () => SmartBarHistory.GoBackN(undoCount)
+                });
+            }
+        }
+
         private void SendAppControl(string command)
         {
             EnvironmentManager.Instance.SendMessage(
@@ -283,7 +300,8 @@ namespace SmartBar.Client
                 {
                     lastCategory = item.Category;
                     lastGroup = null;
-                    var categoryLabel = item.Category == ItemCategory.Camera ? "Cameras"
+                    var categoryLabel = item.Category == ItemCategory.Undo ? "Undo History"
+                        : item.Category == ItemCategory.Camera ? "Cameras"
                         : item.Category == ItemCategory.View ? "Views"
                         : item.Category == ItemCategory.Program ? "Programs" : "Commands";
                     resultPanel.Children.Add(new TextBlock
@@ -354,6 +372,19 @@ namespace SmartBar.Client
             if (isMultiSelected)
             {
                 nameBlock.Inlines.Add(new System.Windows.Documents.Run("\u2713  " + item.Name) { Foreground = TextSelected });
+            }
+            else if (item.Category == ItemCategory.Undo && item.Name.StartsWith("Undo "))
+            {
+                var colonIdx = item.Name.IndexOf(": ", 5);
+                if (colonIdx > 0)
+                {
+                    nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name.Substring(0, colonIdx + 2)) { Foreground = TextGroup });
+                    nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name.Substring(colonIdx + 2)) { Foreground = TextPrimary });
+                }
+                else
+                {
+                    nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name) { Foreground = TextPrimary });
+                }
             }
             else if (item.Category == ItemCategory.Command && item.Name.StartsWith("Command: "))
             {
@@ -611,7 +642,7 @@ namespace SmartBar.Client
             {
                 NavigateToView(item);
             }
-            else if (item.Category == ItemCategory.Command || item.Category == ItemCategory.Program)
+            else if (item.Category == ItemCategory.Command || item.Category == ItemCategory.Program || item.Category == ItemCategory.Undo)
             {
                 item.Execute?.Invoke();
             }
@@ -755,7 +786,8 @@ namespace SmartBar.Client
         Camera,
         View,
         Command,
-        Program
+        Program,
+        Undo
     }
 
     class CommandItem
