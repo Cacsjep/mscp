@@ -1,3 +1,5 @@
+using CommunitySDK;
+using FontAwesome5;
 using System;
 using System.Collections.Generic;
 using VideoOS.Platform;
@@ -9,17 +11,18 @@ namespace SmartBar.Client
     {
         public override void Init(Item window)
         {
-            Title = "Smart Bar";
-            Tooltip = "Smart Bar";
+            Title = "Go Back";
+            Tooltip = "Go back to previous view or camera (SmartBar)";
+            IconSource = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_ArrowLeft, 12);
 
             // Only show on main window
             if (window != null && window.FQID.ObjectId != Kind.Window)
                 Visible = false;
         }
 
-        public override ToolbarPluginWpfUserControl GenerateWpfUserControl()
+        public override void Activate()
         {
-            return new SmartBarWpfUserControl();
+            SmartBarHistory.GoBack();
         }
 
         public override void Close()
@@ -33,7 +36,7 @@ namespace SmartBar.Client
 
         public override string Name => "Smart Bar";
 
-        public override ToolbarPluginType ToolbarPluginType => ToolbarPluginType.UserControl;
+        public override ToolbarPluginType ToolbarPluginType => ToolbarPluginType.Action;
 
         public override void Init()
         {

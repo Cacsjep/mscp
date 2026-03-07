@@ -16,6 +16,7 @@ namespace SmartBar
 
         internal static Guid SmartBarPluginId = new Guid("A7B8C9D0-E1F2-3456-7890-ABCDEF123456");
         internal static Guid SmartBarToolbarId = new Guid("A7B8C9D0-E1F2-3456-7890-ABCDEF123457");
+        internal static Guid SmartBarBackButtonId = new Guid("A7B8C9D0-E1F2-3456-7890-ABCDEF123458");
 
         private readonly List<WorkSpaceToolbarPlugin> _workSpaceToolbarPlugins = new List<WorkSpaceToolbarPlugin>();
 
@@ -43,6 +44,7 @@ namespace SmartBar
             {
                 _workSpaceToolbarPlugins.Add(new Client.SmartBarToolbarPlugin());
                 Client.SmartBarKeyHandler.Install();
+                Client.SmartBarHistory.Install();
                 try { Client.SmartBarWindow.EnsureSmartBarViews(); }
                 catch (System.Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] EnsureSmartBarViews failed: {ex}"); }
             }
@@ -51,6 +53,7 @@ namespace SmartBar
         public override void Close()
         {
             Client.SmartBarKeyHandler.Uninstall();
+            Client.SmartBarHistory.Uninstall();
             _workSpaceToolbarPlugins.Clear();
         }
 
