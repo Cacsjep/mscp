@@ -215,6 +215,9 @@ namespace SmartBar.Client
                         {
                             MultiWindowCommand = MultiWindowCommand.CloseAllWindows
                         })));
+
+            // Navigation
+            AddCmd("Navigation", "Undo / Go Back", () => SmartBarHistory.GoBack());
         }
 
         private void SendAppControl(string command)

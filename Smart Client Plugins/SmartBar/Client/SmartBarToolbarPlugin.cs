@@ -1,5 +1,3 @@
-using CommunitySDK;
-using FontAwesome5;
 using System;
 using System.Collections.Generic;
 using VideoOS.Platform;
@@ -13,7 +11,6 @@ namespace SmartBar.Client
         {
             Title = "Go Back";
             Tooltip = "Go back to previous view or camera (SmartBar)";
-            IconSource = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_ArrowLeft, 12);
 
             // Only show on main window
             if (window != null && window.FQID.ObjectId != Kind.Window)
