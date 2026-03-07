@@ -20,6 +20,7 @@ namespace SmartBar.Client
         private static readonly SolidColorBrush TextPrimary = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE8, 0xE8, 0xE8));
         private static readonly SolidColorBrush TextSelected = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x58, 0xA6, 0xFF));
         private static readonly SolidColorBrush TextGroup = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x50, 0x50, 0x50));
+        private static readonly SolidColorBrush TextCategory = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
 
         private List<CommandItem> _allItems;
         private List<CommandItem> _filteredItems;
@@ -27,6 +28,7 @@ namespace SmartBar.Client
         private int _selectedIndex;
 
         private bool _closing;
+        private bool _suppressMouseSelect;
 
         public SmartBarWindow()
         {
@@ -181,7 +183,7 @@ namespace SmartBar.Client
                     resultPanel.Children.Add(new TextBlock
                     {
                         Text = categoryLabel,
-                        Foreground = TextGroup,
+                        Foreground = TextCategory,
                         FontSize = 10.5,
                         FontWeight = FontWeights.SemiBold,
                         Margin = new Thickness(10, isFirst ? 6 : 14, 0, 4)
@@ -242,9 +244,11 @@ namespace SmartBar.Client
 
             row.MouseEnter += (s, _) =>
             {
+                if (_suppressMouseSelect) return;
                 _selectedIndex = (int)((Border)s).Tag;
                 UpdateSelection();
             };
+            row.MouseMove += (s, _) => _suppressMouseSelect = false;
             row.MouseLeftButtonUp += (s, _) => ExecuteSelected();
 
             return row;
@@ -284,8 +288,11 @@ namespace SmartBar.Client
             if (!_selectedCameras.Remove(item))
                 _selectedCameras.Add(item);
 
+            _suppressMouseSelect = true;
             UpdateSelectionBar();
             RebuildList();
+            ScrollToSelected();
+            searchBox.Focus();
         }
 
         private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
