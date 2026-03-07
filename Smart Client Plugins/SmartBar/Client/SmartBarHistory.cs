@@ -34,6 +34,7 @@ namespace SmartBar.Client
         // Window tracking
         private static Guid _currentBatchWindowId;
         private static int _knownWindowCount;
+        private static bool _viewBatchOccurred;
 
         struct ViewerInfo
         {
@@ -55,6 +56,7 @@ namespace SmartBar.Client
             {
                 _currentBatchWindowId = windows[0].FQID.ObjectId;
                 _nextSlotPerWindow[_currentBatchWindowId] = 0;
+                _viewBatchOccurred = true;
             }
 
             Log.Info("History tracking installed");
@@ -97,9 +99,9 @@ namespace SmartBar.Client
                     slotIndex = _pendingClosedSlot;
                     windowId = _pendingClosedWindowId;
                 }
-                else if (goBackActive && _pendingClosedSlot >= 0)
+                else if (goBackActive && _pendingClosedSlot >= 0 && _consecutiveCloses == 1)
                 {
-                    // GoBack replacement: inherit slot + window from closed viewer
+                    // GoBack single-camera replacement: inherit slot + window from closed viewer
                     slotIndex = _pendingClosedSlot;
                     windowId = _pendingClosedWindowId;
                 }
@@ -129,6 +131,8 @@ namespace SmartBar.Client
 
                     slotIndex = _nextSlotPerWindow[_currentBatchWindowId]++;
                     windowId = _currentBatchWindowId;
+                    if (!goBackActive)
+                        _viewBatchOccurred = true;
                 }
 
                 _viewerData[viewer] = new ViewerInfo { SlotIndex = slotIndex, WindowId = windowId };
@@ -211,6 +215,13 @@ namespace SmartBar.Client
 
                 var viewItem = message.Data as ViewAndLayoutItem;
                 if (viewItem?.FQID == null) return null;
+
+                if (!_viewBatchOccurred)
+                {
+                    Log.Info($"OnViewChanged: no viewer batch, ignoring focus event for {viewItem.Name}");
+                    return null;
+                }
+                _viewBatchOccurred = false;
 
                 // The viewers for this view were created just before OnViewChanged fires,
                 // so _currentBatchWindowId is the correct window.
