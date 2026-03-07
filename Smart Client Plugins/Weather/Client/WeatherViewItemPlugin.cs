@@ -12,7 +12,7 @@ namespace Weather.Client
 
         public override VideoOSIconSourceBase IconSource
         {
-            get => WeatherDefinition.PluginIcon;
+            get => WeatherDefinition.PluginIconSource;
             protected set => base.IconSource = value;
         }
 

@@ -19,6 +19,7 @@
     <PackageReference Include="SharpDX" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
     <PackageReference Include="SharpDX.DXGI" Version="4.2.0" />
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
   </ItemGroup>
 
@@ -28,10 +29,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="plugin.def">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Resource Include="Resources\PluginIcon.png" />
   </ItemGroup>
 
 </Project>

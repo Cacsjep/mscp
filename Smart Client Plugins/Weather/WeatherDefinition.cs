@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using Weather.Client;
+using CommunitySDK;
+using FontAwesome5;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.UI.Controls;
@@ -17,11 +17,10 @@ namespace Weather
 
         static WeatherDefinition()
         {
-            var packString = $"pack://application:,,,/{Assembly.GetExecutingAssembly().GetName().Name};component/Resources/PluginIcon.png";
-            _pluginIcon = new VideoOSIconUriSource { Uri = new Uri(packString) };
+            _pluginIcon = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_CloudSun);
         }
 
-        internal static VideoOSIconSourceBase PluginIcon => _pluginIcon;
+        internal static VideoOSIconSourceBase PluginIconSource => _pluginIcon;
 
         public override Guid Id => WeatherPluginId;
 
@@ -35,6 +34,6 @@ namespace Weather
             => VideoOS.Platform.UI.Util.ImageList.Images[VideoOS.Platform.UI.Util.PluginIx];
 
         public override List<ViewItemPlugin> ViewItemPlugins
-            => new List<ViewItemPlugin> { new WeatherViewItemPlugin() };
+            => new List<ViewItemPlugin> { new Client.WeatherViewItemPlugin() };
     }
 }
