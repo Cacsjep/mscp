@@ -34,7 +34,7 @@ namespace RTMPStreamer
         {
             try
             {
-                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Broadcast_Tower);
+                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_BroadcastTower);
                 _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
                 _cameraIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Video);
             }

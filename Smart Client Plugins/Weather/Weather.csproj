@@ -13,6 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
     <PackageReference Include="System.Text.Json" Version="8.*" />
   </ItemGroup>

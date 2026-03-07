@@ -145,11 +145,8 @@ namespace CertWatchdog
 
         public override UserControl GenerateUserControl()
         {
-            if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.Administration)
-            {
-                return new CertWatchdogAdminUserControl();
-            }
-            return null;
+            return new HtmlHelpUserControl(
+                System.Reflection.Assembly.GetExecutingAssembly(), "Admin", "HelpPage.html");
         }
 
         public override List<BackgroundPlugin> BackgroundPlugins => _backgroundPlugins;

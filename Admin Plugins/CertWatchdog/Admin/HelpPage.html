@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Certificate Watchdog Plugin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #222;
+            padding: 0px 28px;
+            line-height: 1.55;
+        }
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #1a1a1a;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: -4px 0 8px;
+            color: #333;
+        }
+        h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin: 12px 0 6px;
+            color: #444;
+        }
+        ul {
+            margin: 0 0 0 20px;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        p {
+            margin-bottom: 10px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #dde0e4;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+        }
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            margin-left: 0;
+        }
+        .steps li {
+            counter-increment: step;
+            padding-left: 28px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        .steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2868b8;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 20px;
+        }
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .header-row h1 {
+            margin-bottom: 0;
+        }
+        .chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        .chip-amber {
+            display: inline-block;
+            background: #fdf6ec;
+            border: 1px solid #e0b96a;
+            border-radius: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #7a5a1a;
+            white-space: nowrap;
+            margin-right: 3px;
+        }
+        .chip-blue {
+            display: inline-block;
+            background: #eef4fb;
+            border: 1px solid #a3c4e4;
+            border-radius: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #2a5a96;
+            white-space: nowrap;
+            margin-right: 3px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+        th, td {
+            text-align: left;
+            padding: 6px 10px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        th {
+            font-weight: 600;
+            color: #444;
+            background: #fafafa;
+        }
+        .diagram {
+            font-family: Consolas, Courier New, monospace;
+            font-size: 11px;
+            background: #f0f2f5;
+            border: 1px solid #dde0e4;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 8px 0 10px;
+            line-height: 1.6;
+            white-space: pre;
+            overflow-x: auto;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-row">
+        Monitor SSL/TLS certificate expiry for all XProtect&trade; HTTPS endpoints
+        <div class="chips">
+            <span class="chip-amber" title="This is an independent open-source project provided as-is under the MIT License, with no warranty. Not affiliated with Milestone Systems. Use at your own risk.">Open source &mdash; no warranty, use at own risk</span>
+            <span class="chip-blue" title="Certificates are checked automatically every 6 hours and within 20 seconds of configuration changes.">Auto-check every 6 hours</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>How It Works</h2>
+        <p>
+            The Certificate Watchdog plugin automatically discovers all HTTPS endpoints
+            in your XProtect installation &mdash; servers and devices &mdash; and monitors
+            their SSL/TLS certificate expiry dates.
+        </p>
+        <p>
+            When certificates approach expiry, XProtect analytics events are fired at
+            configurable thresholds (60, 30, and 15 days). A Smart Client workspace
+            dashboard provides a live overview of all certificate statuses.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Getting Started</h2>
+        <ol class="steps">
+            <li>The plugin works out of the box &mdash; no configuration required.</li>
+            <li>Open the <strong>Certificates</strong> workspace tab in the Smart Client to view all endpoint statuses.</li>
+            <li>Use the <strong>Recollect</strong> button to trigger an immediate certificate re-check.</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>Events</h2>
+
+        <h3>Server Certificate Events</h3>
+        <p>Source: Certificate Watchdog item</p>
+        <table>
+            <tr><th>Event</th><th>Description</th></tr>
+            <tr><td>Cert Expire (60 Days)</td><td>Server certificate expires within 60 days</td></tr>
+            <tr><td>Cert Expire (30 Days)</td><td>Server certificate expires within 30 days</td></tr>
+            <tr><td>Cert Expire (15 Days)</td><td>Server certificate expires within 15 days</td></tr>
+        </table>
+
+        <h3>Device Certificate Events</h3>
+        <p>Source: individual device/hardware</p>
+        <table>
+            <tr><th>Event</th><th>Description</th></tr>
+            <tr><td>Device Cert Expire (60 Days)</td><td>Hardware certificate expires within 60 days</td></tr>
+            <tr><td>Device Cert Expire (30 Days)</td><td>Hardware certificate expires within 30 days</td></tr>
+            <tr><td>Device Cert Expire (15 Days)</td><td>Hardware certificate expires within 15 days</td></tr>
+        </table>
+        <p>Use these events to trigger email notifications, alarms, or any other XProtect rule action.</p>
+    </div>
+
+    <div class="card">
+        <h2>Smart Client Dashboard</h2>
+        <p>
+            The <strong>Certificates</strong> workspace tab shows two sortable tables
+            for server and device certificates. Click any column header to sort.
+        </p>
+        <ul>
+            <li><strong>Recollect</strong> &mdash; Triggers a full certificate re-check on the Event Server (endpoint discovery, certificate validation, and event firing). Use after replacing a certificate.</li>
+            <li><strong>Refresh</strong> &mdash; Fetches the latest cached results from the Event Server without triggering a new check.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Permissions</h2>
+        <p>
+            The Smart Client dashboard is controlled by role-based security. In Management Client
+            under <strong>Security &gt; Roles</strong>, the plugin appears as
+            &ldquo;Certificate Watchdog&rdquo; with a <strong>Read</strong> permission.
+            Grant it to allow the Certificates workspace tab; deny or leave unset to hide it.
+            Event Server background checks and event firing are not affected.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Architecture</h2>
+        <p>The plugin consists of three components that run in different processes:</p>
+
+        <h3>Management Client (Admin UI)</h3>
+        <p>
+            Provides the configuration interface you are using now. The plugin node
+            appears in the sidebar. Configuration is minimal &mdash; the plugin
+            auto-discovers all HTTPS endpoints.
+        </p>
+
+        <h3>Event Server (Background Plugin)</h3>
+        <p>
+            Runs as a background service inside the Milestone Event Server. Discovers
+            HTTPS endpoints, checks certificate validity, and fires analytics events
+            at the configured expiry thresholds. Checks run automatically every 6 hours
+            and within 20 seconds of configuration changes.
+        </p>
+
+        <h3>Smart Client (Workspace Plugin)</h3>
+        <p>
+            Provides the Certificates workspace tab. Displays certificate status for all
+            server and device endpoints. Communicates with the Event Server to fetch
+            results and trigger re-checks.
+        </p>
+
+        <div class="diagram">Management Client          Event Server               Smart Client
+      (Admin UI)         (Background Plugin)       (Workspace Plugin)
+          |                       |                          |
+          |                       |-- Auto-discover endpoints|
+          |                       |-- Check certificates     |
+          |                       |-- Fire events at expiry  |
+          |                       |                          |
+          |                       |<--- Refresh/Recollect ---|
+          |                       |---- Cert status data --->|
+          |                       |                          |-- Display dashboard</div>
+    </div>
+
+    <div class="card" style="font-size:12px; line-height:1.5;">
+        <h2>Legal</h2>
+        <p>
+            This is an independent open-source project and is not affiliated with,
+            endorsed by, or supported by Milestone Systems.
+            XProtect&reg; is a registered trademark of Milestone Systems A/S.
+        </p>
+        <p>
+            This software is provided &ldquo;as is&rdquo;, without warranty of any kind,
+            express or implied, including but not limited to the warranties of
+            merchantability, fitness for a particular purpose, and noninfringement.
+            In no event shall the authors or copyright holders be liable for any claim,
+            damages, or other liability, whether in an action of contract, tort, or
+            otherwise, arising from, out of, or in connection with the software or the
+            use or other dealings in the software.
+        </p>
+        <p>
+            Use at your own risk. Always test in a non-production environment first.
+            This project is licensed under the MIT License.
+        </p>
+    </div>
+</body>
+</html>

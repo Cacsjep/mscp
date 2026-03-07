@@ -1,9 +1,9 @@
+using FontAwesome5;
 using System.Drawing;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using FontAwesome5;
 using VideoOS.Platform.UI.Controls;
 
 namespace CommunitySDK
@@ -12,12 +12,12 @@ namespace CommunitySDK
     {
         public static readonly System.Windows.Media.Color DefaultColor = System.Windows.Media.Color.FromRgb(33, 150, 243);
 
-        public static Image Render(EFontAwesomeIcon icon, int size = 24)
+        public static Image Render(EFontAwesomeIcon icon, int size = 16)
         {
             return Render(icon, DefaultColor, size);
         }
 
-        public static Image Render(EFontAwesomeIcon icon, System.Windows.Media.Color color, int size = 24)
+        public static Image Render(EFontAwesomeIcon icon, System.Windows.Media.Color color, int size = 16)
         {
             var rtb = RenderBitmap(icon, color, size);
             var encoder = new PngBitmapEncoder();
@@ -29,12 +29,12 @@ namespace CommunitySDK
             return new Bitmap(ms);
         }
 
-        public static VideoOSIconSourceBase RenderIconSource(EFontAwesomeIcon icon, int size = 24)
+        public static VideoOSIconSourceBase RenderIconSource(EFontAwesomeIcon icon, int size = 16)
         {
             return RenderIconSource(icon, DefaultColor, size);
         }
 
-        public static VideoOSIconSourceBase RenderIconSource(EFontAwesomeIcon icon, System.Windows.Media.Color color, int size = 24)
+        public static VideoOSIconSourceBase RenderIconSource(EFontAwesomeIcon icon, System.Windows.Media.Color color, int size = 16)
         {
             var rtb = RenderBitmap(icon, color, size);
             return new VideoOSIconBitmapSource { BitmapSource = rtb };
