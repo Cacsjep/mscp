@@ -104,7 +104,7 @@ Key points:
 - MIP SDK NuGet uses wildcard prerelease: `Version="*-*"`
 - `plugin.def` must be `CopyToOutputDirectory=Always`
 - Plugin icon is `<Resource>` (not `Content`)
-- Declare `PluginName` and deploy flags — the shared `Directory.Build.props` and `Directory.Build.targets` handle the stop/copy/start cycle automatically
+- Declare `PluginName` and deploy flags - the shared `Directory.Build.props` and `Directory.Build.targets` handle the stop/copy/start cycle automatically
 - No manual Pre/PostBuild targets needed
 
 ### MyPluginDefinition.cs

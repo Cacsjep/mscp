@@ -631,7 +631,7 @@ namespace SmartBar.Client
                     }), dest);
         }
 
-        // (rows, cols) — sorted by total slots ascending for best-fit selection
+        // (rows, cols) - sorted by total slots ascending for best-fit selection
         private static readonly (int rows, int cols)[] GridLayouts =
         {
             (1, 1), (1, 2), (1, 3), (2, 2), (2, 3),

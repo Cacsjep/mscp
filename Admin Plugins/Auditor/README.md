@@ -5,8 +5,8 @@ Audit user access to recorded video in Milestone XProtect. Tracks playback mode 
 ## Features
 
 - Per-user audit rules configured in the Management Client
-- **Reason Prompts** — force users to provide a reason, written to the Milestone audit log
-- **Event Triggers** — fire XProtect analytics events for use in rules, alarms, and notifications
+- **Reason Prompts** - force users to provide a reason, written to the Milestone audit log
+- **Event Triggers** - fire XProtect analytics events for use in rules, alarms, and notifications
 - Reason prompts and event triggers are independently configurable per activity
 - Tracks playback, export, and independent playback activities
 - Multi-environment plugin (Smart Client, Management Client, Event Server)

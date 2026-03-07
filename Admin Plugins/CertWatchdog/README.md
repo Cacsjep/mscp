@@ -51,8 +51,8 @@ The "Certificates" workspace tab shows two sortable tables. Click any column hea
 
 **Buttons:**
 
-- **Recollect** — Triggers a full certificate re-check on the Event Server (endpoint discovery, certificate validation, and event firing). Use this after replacing a certificate to immediately verify the change.
-- **Refresh** — Fetches the latest cached results from the Event Server without triggering a new check.
+- **Recollect** - Triggers a full certificate re-check on the Event Server (endpoint discovery, certificate validation, and event firing). Use this after replacing a certificate to immediately verify the change.
+- **Refresh** - Fetches the latest cached results from the Event Server without triggering a new check.
 
 > **Note:** The Event Server checks certificates automatically every 6 hours and within 20 seconds of hardware/server config changes. After a restart, the first check runs after approximately 30 seconds.
 

@@ -2,7 +2,9 @@
 
 # Smart Bar
 
-A command palette for the Milestone XProtect Smart Client. Press **Space** to open a searchable launcher for cameras, views, commands, and programs — with keyboard navigation, multi-select, multi-window targeting, and full undo history.
+A command palette for the Milestone XProtect Smart Client. 
+Press **Space** to open a searchable launcher for cameras, views, commands, and programs - with keyboard navigation, multi-select, 
+multi-window targeting, and full undo history.
 
 ## Quick Start
 
@@ -16,10 +18,10 @@ A command palette for the Milestone XProtect Smart Client. Press **Space** to op
 
 ### Command Palette
 
-- **Cameras** — Browse all cameras with folder breadcrumb paths. Select one to place it in the current view slot.
-- **Views** — Browse all views organized by folder hierarchy. Select one to navigate to that view.
-- **Commands** — Built-in application controls including fullscreen toggle, mode switching (Live/Playback/Setup), side panel, window management, configuration reload, and undo.
-- **Programs** — Launch external applications directly from Smart Bar. Configured in Settings.
+- **Cameras** - Browse all cameras with folder breadcrumb paths. Select one to place it in the current view slot.
+- **Views** - Browse all views organized by folder hierarchy. Select one to navigate to that view.
+- **Commands** - Built-in application controls including fullscreen toggle, mode switching (Live/Playback/Setup), side panel, window management, configuration reload, and undo.
+- **Programs** - Launch external applications directly from Smart Bar. Configured in Settings.
 
 ### Search & Filter
 
@@ -32,7 +34,8 @@ Type in the search box to filter across all categories. Matches against both ite
 3. Press **Enter** to create a grid view containing all selected cameras (best-fit from 1x1, 1x2, 1x3, 2x2, 2x3, 2x4, 3x3, 3x4, 4x4, 4x5)
 4. Press **Esc** to clear the selection
 
-Smart Bar automatically creates grid layout views (1x1, 1x2, 1x3, 2x2, 2x3, 2x4, 3x3, 3x4, 4x4, 4x5) in a "SmartBar" folder under Private Views. The smallest layout that fits the selected cameras is chosen automatically.
+Smart Bar automatically creates grid layout views (1x1, 1x2, 1x3, 2x2, 2x3, 2x4, 3x3, 3x4, 4x4, 4x5) in a "SmartBar" folder under Private Views. 
+The smallest layout that fits the selected cameras is chosen automatically.
 
 ### Multi-Window Support
 
@@ -41,9 +44,6 @@ When multiple Smart Client windows are open, window chips appear in the footer b
 ### Undo / Go Back
 
 Smart Bar tracks view changes and camera swaps. Press the **Undo** button in the toolbar or use the "Undo / Go Back" command to step backwards through your navigation history.
-
-- **View undo** — Returns to the previously active view
-- **Camera undo** — Restores the previous camera in the slot where it was changed
 
 The history depth is configurable (5–30 entries) in Settings.
 
@@ -77,28 +77,4 @@ Manage external programs that appear in the Smart Bar launcher:
 - Default: Notepad
 
 Programs appear in Smart Bar prefixed with "Program:" and can be searched like any other item.
-
-## Configuration
-
-Settings are stored in XML at:
-
-```
-%ProgramData%\Milestone\SmartBar\config.xml
-```
-
-## Toolbar Button
-
-An **Undo** action button appears in the workspace toolbar during Live and Playback modes (main window only). Click it to undo the last view or camera change.
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| Smart Bar doesn't open | Ensure the plugin is loaded. Check `MIPPlugins\SmartBar\` for DLLs. Restart Smart Client. |
-| Space key doesn't trigger | Smart Bar ignores Space when focus is in a text field or password box. Click outside any text input first. |
-| Button not showing | Verify `plugin.def` is present. Unblock the ZIP if installed manually. |
-| Undo not working | History only tracks changes made after the plugin loads. Switch a few views first to populate the history. |
-| Programs not appearing | Open Settings > Smart Bar and verify entries have both a name and a valid path. Save and reopen Smart Bar. |
-| Grid views missing | Smart Bar creates layout views on first launch in the "SmartBar" folder under Private Views. If deleted, restart the Smart Client to recreate them. |
-
 </div>

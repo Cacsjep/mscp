@@ -17,7 +17,7 @@ It's useful if you want to record what operators do.
 4. Choose a frame rate (1–10 FPS)
 5. Click **Save & Restart Stream**
 
-Leave the RTMP URL empty to disable streaming entirely — no capture or encoding will run.
+Leave the RTMP URL empty to disable streaming entirely - no capture or encoding will run.
 
 ## Settings
 
@@ -52,13 +52,13 @@ If DXGI loses access (e.g. display configuration change, UAC prompt), it automat
 
 The status panel updates every 500ms and shows:
 
-- **Capture** — number of active monitors
-- **Resolution** — stitched output resolution (e.g. 7280 x 1440 for three monitors)
-- **Capture Mode** — DXGI (GPU) or GDI (CPU)
-- **Performance** — capture time + encode time = total cycle time per frame
-- **Max FPS** — estimated maximum sustainable FPS based on measured cycle time
-- **Stream** — connection status and RTMP URL
-- **Uptime** — how long the current stream has been running
+- **Capture** - number of active monitors
+- **Resolution** - stitched output resolution (e.g. 7280 x 1440 for three monitors)
+- **Capture Mode** - DXGI (GPU) or GDI (CPU)
+- **Performance** - capture time + encode time = total cycle time per frame
+- **Max FPS** - estimated maximum sustainable FPS based on measured cycle time
+- **Stream** - connection status and RTMP URL
+- **Uptime** - how long the current stream has been running
 
 ## Troubleshooting
 

@@ -228,7 +228,7 @@ hide:
     c.strokeStyle = 'rgba(40,100,190,' + a * 0.7 + ')';
     c.stroke();
 
-    // Top face — glassy look with gradient
+    // Top face - glassy look with gradient
     c.beginPath();
     c.moveTo(sx, tty); c.lineTo(rx, try_); c.lineTo(sx, tby); c.lineTo(lx, tly);
     c.closePath();

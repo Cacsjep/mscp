@@ -145,7 +145,7 @@ namespace SmartBar.Client
 
                 if (isCameraSwap)
                 {
-                    var prevId = _pendingClosedCamera != null ? _pendingClosedCamera.ObjectId.ToString() : "null";
+                    var prevId = _pendingClosedCamera != null ? _pendingClosedCamera.ObjectId.ToString() : "empty";
                     Log.Info($"PUSH Camera: slot={slotIndex} win={windowId} prev={prevId} -> {camId}");
                     Push(new HistoryEntry
                     {

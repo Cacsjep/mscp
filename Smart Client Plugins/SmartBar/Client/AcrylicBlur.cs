@@ -36,7 +36,7 @@ namespace SmartBar.Client
             var hwnd = new WindowInteropHelper(window).Handle;
             if (hwnd == IntPtr.Zero) return;
 
-            // Tinted dark acrylic: 0xAARRGGBB — mostly opaque dark
+            // Tinted dark acrylic: 0xAARRGGBB - mostly opaque dark
             var accent = new AccentPolicy
             {
                 AccentState = ACCENT_ENABLE_ACRYLICBLURBEHIND,
