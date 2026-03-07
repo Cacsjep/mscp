@@ -11,6 +11,10 @@ namespace SmartBar.Client
         {
             Title = "Smart Bar";
             Tooltip = "Smart Bar";
+
+            // Only show on main window
+            if (window != null && window.FQID.ObjectId != Kind.Window)
+                Visible = false;
         }
 
         public override ToolbarPluginWpfUserControl GenerateWpfUserControl()
