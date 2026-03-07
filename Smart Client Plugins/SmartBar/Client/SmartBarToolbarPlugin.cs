@@ -9,8 +9,8 @@ namespace SmartBar.Client
     {
         public override void Init(Item window)
         {
-            Title = "Go Back";
-            Tooltip = "Go back to previous view or camera (SmartBar)";
+            Title = "Undo";
+            Tooltip = "Undo up to last 10 Operations regarding to cameras and views.";
 
             // Only show on main window
             if (window != null && window.FQID.ObjectId != Kind.Window)

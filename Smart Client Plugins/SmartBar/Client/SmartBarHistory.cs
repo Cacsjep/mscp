@@ -55,10 +55,13 @@ namespace SmartBar.Client
         {
             int slotIndex;
 
-            // Determine slot: if this follows a close (camera swap), inherit that slot; otherwise assign next
+            // A camera swap is exactly 1 close → 1 create in quick succession.
+            // Multiple consecutive closes = view switch (not a camera swap).
             var msSinceClose = (DateTime.UtcNow - _pendingCloseTime).TotalMilliseconds;
-            var msSinceViewChange = (DateTime.UtcNow - _lastViewChange).TotalMilliseconds;
-            bool isCameraSwap = _pendingClosedSlot >= 0 && msSinceClose < CloseCreateWindowMs && msSinceViewChange > CameraSuppressMs;
+            bool isCameraSwap = _pendingClosedSlot >= 0
+                && _consecutiveCloses == 1
+                && msSinceClose < CloseCreateWindowMs
+                && !_suppressCameraSwap;
 
             if (isCameraSwap)
             {
@@ -66,18 +69,21 @@ namespace SmartBar.Client
             }
             else
             {
+                // Multiple closes = view switch; reset slot counter for the new view's viewers
+                if (_consecutiveCloses > 1)
+                    _nextSlotIndex = 0;
                 slotIndex = _nextSlotIndex++;
             }
 
             _viewerSlots[viewer] = slotIndex;
             viewer.CloseEvent += OnViewerClose;
+            _consecutiveCloses = 0; // reset on create
 
             var cam = viewer.CameraFQID;
             System.Diagnostics.Debug.WriteLine(
-                $"[SmartBar] NewImageViewer slot {slotIndex}: CameraFQID={(cam != null ? cam.ObjectId.ToString() : "null")}");
+                $"[SmartBar] NewImageViewer slot {slotIndex}: CameraFQID={(cam != null ? cam.ObjectId.ToString() : "null")}, consCloses={_consecutiveCloses}");
 
-            // Record camera swap in history (but not if triggered by GoBack)
-            if (isCameraSwap && !_suppressCameraSwap)
+            if (isCameraSwap)
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[SmartBar] Camera swap detected in slot {_pendingClosedSlot}: " +
@@ -90,11 +96,6 @@ namespace SmartBar.Client
                     CameraFQID = _pendingClosedCamera,
                     SlotIndex = _pendingClosedSlot
                 });
-            }
-            else if (_pendingClosedSlot >= 0 && !isCameraSwap)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[SmartBar] NewImageViewer: pending close ignored (msSinceClose={msSinceClose:F0}, msSinceView={msSinceViewChange:F0})");
             }
             else if (_suppressCameraSwap)
             {
@@ -121,6 +122,7 @@ namespace SmartBar.Client
                 $"[SmartBar] ViewerClose slot {slotIndex}: CameraFQID={(closedCamera != null ? closedCamera.ObjectId.ToString() : "null")}");
 
             // Store pending close info for camera swap detection
+            _consecutiveCloses++;
             _pendingClosedCamera = closedCamera;
             _pendingClosedSlot = slotIndex;
             _pendingCloseTime = DateTime.UtcNow;
@@ -135,7 +137,6 @@ namespace SmartBar.Client
             }
 
             _lastViewChange = DateTime.UtcNow;
-            _nextSlotIndex = 0;
 
             var viewItem = message.Data as ViewAndLayoutItem;
             if (viewItem?.FQID == null) return null;
