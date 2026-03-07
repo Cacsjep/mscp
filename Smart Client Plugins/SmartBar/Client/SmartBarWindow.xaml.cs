@@ -30,6 +30,9 @@ namespace SmartBar.Client
         private bool _closing;
         private bool _suppressMouseSelect;
 
+        private List<Item> _windows;
+        private int _targetWindowIndex;
+
         public SmartBarWindow()
         {
             InitializeComponent();
@@ -53,6 +56,7 @@ namespace SmartBar.Client
         {
             PositionOnActiveMonitor();
             searchBox.Focus();
+            LoadWindows();
             LoadItems();
             ApplyFilter();
         }
@@ -190,6 +194,27 @@ namespace SmartBar.Client
             AddCmd("Mode", "Switch to Setup", () =>
                 EnvironmentManager.Instance.SendMessage(
                     new Message(MessageId.SmartClient.ChangeModeCommand, "ClientSetup")));
+
+            // Window
+            AddCmd("Window", "Close Target Window", () =>
+            {
+                var dest = GetTargetWindowFQID();
+                if (dest != null)
+                    EnvironmentManager.Instance.SendMessage(
+                        new Message(MessageId.SmartClient.MultiWindowCommand,
+                            new MultiWindowCommandData
+                            {
+                                MultiWindowCommand = MultiWindowCommand.CloseSelectedWindow,
+                                Window = dest
+                            }), dest);
+            });
+            AddCmd("Window", "Close All Floating Windows", () =>
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.SmartClient.MultiWindowCommand,
+                        new MultiWindowCommandData
+                        {
+                            MultiWindowCommand = MultiWindowCommand.CloseAllWindows
+                        })));
         }
 
         private void SendAppControl(string command)
@@ -434,6 +459,20 @@ namespace SmartBar.Client
                     e.Handled = true;
                     ExecuteSelected();
                     break;
+
+                case Key.D1: case Key.D2: case Key.D3: case Key.D4:
+                case Key.D5: case Key.D6: case Key.D7: case Key.D8: case Key.D9:
+                    if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                    {
+                        e.Handled = true;
+                        int winIdx = e.Key - Key.D1;
+                        if (_windows != null && winIdx < _windows.Count)
+                        {
+                            _targetWindowIndex = winIdx;
+                            RebuildWindowChips();
+                        }
+                    }
+                    break;
             }
         }
 
@@ -455,10 +494,71 @@ namespace SmartBar.Client
             }
         }
 
-        private FQID GetMainWindowFQID()
+        private void LoadWindows()
         {
-            var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
-            return windows.Count > 0 ? windows[0].FQID : null;
+            _windows = Configuration.Instance.GetItemsByKind(Kind.Window);
+            _targetWindowIndex = 0;
+            RebuildWindowChips();
+        }
+
+        private void RebuildWindowChips()
+        {
+            windowChipsPanel.Children.Clear();
+            if (_windows == null || _windows.Count <= 1) return;
+
+            for (int i = 0; i < _windows.Count; i++)
+            {
+                bool isActive = i == _targetWindowIndex;
+                var activeFg = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0x00, 0x00));
+                var inactiveFg = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x90, 0x90, 0x90));
+
+                var chip = new Border
+                {
+                    Background = isActive
+                        ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x58, 0xA6, 0xFF))
+                        : new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1E, 0x1E, 0x1E)),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(6, 3, 6, 3),
+                    Margin = new Thickness(0, 0, 4, 0),
+                    Cursor = Cursors.Hand,
+                    Tag = i
+                };
+
+                var content = new StackPanel { Orientation = Orientation.Horizontal };
+                content.Children.Add(new FontAwesome5.ImageAwesome
+                {
+                    Icon = FontAwesome5.EFontAwesomeIcon.Regular_WindowRestore,
+                    Foreground = isActive ? activeFg : inactiveFg,
+                    Width = 10,
+                    Height = 10,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 4, 0)
+                });
+                content.Children.Add(new TextBlock
+                {
+                    Text = (i + 1).ToString(),
+                    Foreground = isActive ? activeFg : inactiveFg,
+                    FontSize = 12,
+                    FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+
+                chip.Child = content;
+                chip.MouseLeftButtonUp += (s, _) =>
+                {
+                    _targetWindowIndex = (int)((Border)s).Tag;
+                    RebuildWindowChips();
+                };
+
+                windowChipsPanel.Children.Add(chip);
+            }
+        }
+
+        private FQID GetTargetWindowFQID()
+        {
+            if (_windows != null && _targetWindowIndex < _windows.Count)
+                return _windows[_targetWindowIndex].FQID;
+            return null;
         }
 
         private void ExecuteSelected()
@@ -490,7 +590,7 @@ namespace SmartBar.Client
 
         private void SetCameraInSlot(int index, FQID cameraFQID)
         {
-            var dest = GetMainWindowFQID();
+            var dest = GetTargetWindowFQID();
             EnvironmentManager.Instance.SendMessage(
                 new Message(MessageId.SmartClient.SetCameraInViewCommand,
                     new SetCameraInViewCommandData
@@ -583,7 +683,7 @@ namespace SmartBar.Client
             if (viewItem == null) return;
 
             // Navigate to the grid view first
-            var dest = GetMainWindowFQID();
+            var dest = GetTargetWindowFQID();
             EnvironmentManager.Instance.SendMessage(
                 new Message(MessageId.SmartClient.MultiWindowCommand,
                     new MultiWindowCommandData
@@ -602,7 +702,7 @@ namespace SmartBar.Client
 
         private void NavigateToView(CommandItem item)
         {
-            var dest = GetMainWindowFQID();
+            var dest = GetTargetWindowFQID();
             EnvironmentManager.Instance.SendMessage(
                 new Message(MessageId.SmartClient.MultiWindowCommand,
                     new MultiWindowCommandData
