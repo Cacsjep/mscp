@@ -97,6 +97,7 @@ namespace SmartBar.Client
                 }
 
                 LoadCommands();
+                LoadPrograms();
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] LoadItems failed: {ex}"); }
         }
@@ -220,6 +221,25 @@ namespace SmartBar.Client
             AddCmd("Navigation", "Undo / Go Back", () => SmartBarHistory.GoBack());
         }
 
+        private void LoadPrograms()
+        {
+            foreach (var prog in SmartBarConfig.Programs)
+            {
+                var path = prog.Path;
+                _allItems.Add(new CommandItem
+                {
+                    Name = "Program: " + prog.Name,
+                    Group = "Programs",
+                    Category = ItemCategory.Program,
+                    Execute = () =>
+                    {
+                        try { System.Diagnostics.Process.Start(path); }
+                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] Failed to start {path}: {ex.Message}"); }
+                    }
+                });
+            }
+        }
+
         private void SendAppControl(string command)
         {
             EnvironmentManager.Instance.SendMessage(
@@ -262,7 +282,8 @@ namespace SmartBar.Client
                     lastCategory = item.Category;
                     lastGroup = null;
                     var categoryLabel = item.Category == ItemCategory.Camera ? "Cameras"
-                        : item.Category == ItemCategory.View ? "Views" : "Commands";
+                        : item.Category == ItemCategory.View ? "Views"
+                        : item.Category == ItemCategory.Program ? "Programs" : "Commands";
                     resultPanel.Children.Add(new TextBlock
                     {
                         Text = categoryLabel,
@@ -335,6 +356,11 @@ namespace SmartBar.Client
             else if (item.Category == ItemCategory.Command && item.Name.StartsWith("Command: "))
             {
                 nameBlock.Inlines.Add(new System.Windows.Documents.Run("Command: ") { Foreground = TextGroup });
+                nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name.Substring(9)) { Foreground = TextPrimary });
+            }
+            else if (item.Category == ItemCategory.Program && item.Name.StartsWith("Program: "))
+            {
+                nameBlock.Inlines.Add(new System.Windows.Documents.Run("Program: ") { Foreground = TextGroup });
                 nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name.Substring(9)) { Foreground = TextPrimary });
             }
             else
@@ -583,7 +609,7 @@ namespace SmartBar.Client
             {
                 NavigateToView(item);
             }
-            else if (item.Category == ItemCategory.Command)
+            else if (item.Category == ItemCategory.Command || item.Category == ItemCategory.Program)
             {
                 item.Execute?.Invoke();
             }
@@ -721,7 +747,8 @@ namespace SmartBar.Client
     {
         Camera,
         View,
-        Command
+        Command,
+        Program
     }
 
     class CommandItem

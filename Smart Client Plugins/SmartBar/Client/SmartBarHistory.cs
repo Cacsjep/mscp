@@ -9,7 +9,7 @@ namespace SmartBar.Client
     static class SmartBarHistory
     {
         private static readonly LinkedList<HistoryEntry> _history = new LinkedList<HistoryEntry>();
-        private const int MaxHistory = 10;
+        private static int _maxHistory = 20;
         private static object _viewReceiver;
         private static bool _suppressNext;
         private static DateTime _lastViewChange = DateTime.MinValue;
@@ -163,7 +163,14 @@ namespace SmartBar.Client
         private static void Push(HistoryEntry entry)
         {
             _history.AddLast(entry);
-            if (_history.Count > MaxHistory)
+            if (_history.Count > _maxHistory)
+                _history.RemoveFirst();
+        }
+
+        public static void ApplyMaxHistory(int max)
+        {
+            _maxHistory = max;
+            while (_history.Count > _maxHistory)
                 _history.RemoveFirst();
         }
 

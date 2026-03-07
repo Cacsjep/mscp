@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using CommunitySDK;
@@ -42,6 +43,9 @@ namespace SmartBar
         {
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.SmartClient)
             {
+                SmartBarConfig.Load();
+                Client.SmartBarHistory.ApplyMaxHistory(SmartBarConfig.MaxHistory);
+
                 _workSpaceToolbarPlugins.Add(new Client.SmartBarToolbarPlugin());
                 Client.SmartBarKeyHandler.Install();
                 Client.SmartBarHistory.Install();
@@ -58,5 +62,8 @@ namespace SmartBar
         }
 
         public override List<WorkSpaceToolbarPlugin> WorkSpaceToolbarPlugins => _workSpaceToolbarPlugins;
+
+        public override Collection<SettingsPanelPlugin> SettingsPanelPlugins
+            => new Collection<SettingsPanelPlugin> { new Client.SmartBarSettingsPanel() };
     }
 }
