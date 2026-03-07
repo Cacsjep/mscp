@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.ConfigurationItems;
@@ -15,6 +16,7 @@ namespace SmartBar.Client
 {
     public partial class SmartBarWindow : Window
     {
+        private static readonly PluginLog Log = SmartBarDefinition.Log;
         private static readonly SolidColorBrush SelectedBg = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1E, 0x1E, 0x1E));
         private static readonly SolidColorBrush TransparentBg = System.Windows.Media.Brushes.Transparent;
         private static readonly SolidColorBrush TextPrimary = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE8, 0xE8, 0xE8));
@@ -99,7 +101,7 @@ namespace SmartBar.Client
                 LoadCommands();
                 LoadPrograms();
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] LoadItems failed: {ex}"); }
+            catch (Exception ex) { Log.Error("LoadItems failed", ex); }
         }
 
         private void CollectCameras(CameraGroup group, ServerId serverId, string parentPath = null)
@@ -234,7 +236,7 @@ namespace SmartBar.Client
                     Execute = () =>
                     {
                         try { System.Diagnostics.Process.Start(path); }
-                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] Failed to start {path}: {ex.Message}"); }
+                        catch (Exception ex) { Log.Error($"Failed to start program: {path}", ex); }
                     }
                 });
             }
@@ -629,7 +631,12 @@ namespace SmartBar.Client
                     }), dest);
         }
 
-        private static readonly int[] GridSizes = { 1, 4, 9, 16 }; // 1x1, 2x2, 3x3, 4x4
+        // (rows, cols) — sorted by total slots ascending for best-fit selection
+        private static readonly (int rows, int cols)[] GridLayouts =
+        {
+            (1, 1), (1, 2), (1, 3), (2, 2), (2, 3),
+            (2, 4), (3, 3), (3, 4), (4, 4), (4, 5)
+        };
         private static readonly string SmartBarGroupName = "SmartBar";
 
         private static Item FindPrivateViewGroup()
@@ -658,19 +665,19 @@ namespace SmartBar.Client
             var existing = sbGroup.GetChildren().Select(c => c.Name).ToHashSet();
             bool changed = false;
 
-            foreach (var size in GridSizes)
+            foreach (var (rows, cols) in GridLayouts)
             {
-                int side = (int)Math.Sqrt(size);
-                string name = $"{side}x{side}";
+                int total = rows * cols;
+                string name = $"{rows}x{cols}";
                 if (existing.Contains(name)) continue;
 
-                var rects = new Rectangle[size];
-                int cellW = 1000 / side;
-                int cellH = 1000 / side;
-                for (int i = 0; i < size; i++)
+                var rects = new Rectangle[total];
+                int cellW = 1000 / cols;
+                int cellH = 1000 / rows;
+                for (int i = 0; i < total; i++)
                 {
-                    int col = i % side;
-                    int row = i / side;
+                    int col = i % cols;
+                    int row = i / cols;
                     rects[i] = new Rectangle(col * cellW, row * cellH, cellW, cellH);
                 }
 
@@ -678,7 +685,7 @@ namespace SmartBar.Client
                 if (view == null) continue;
 
                 view.Layout = rects;
-                for (int i = 0; i < size; i++)
+                for (int i = 0; i < total; i++)
                 {
                     view.InsertBuiltinViewItem(i, ViewAndLayoutItem.CameraBuiltinId,
                         new Dictionary<string, string> { { "CameraId", Guid.Empty.ToString() } });
@@ -700,13 +707,13 @@ namespace SmartBar.Client
                 .FirstOrDefault(c => c.Name == SmartBarGroupName);
             if (sbGroup == null) return;
 
-            // Pick smallest grid that fits
+            // Pick smallest layout that fits all cameras
             int needed = cameras.Count;
-            int gridSize = GridSizes.FirstOrDefault(s => s >= needed);
-            if (gridSize == 0) gridSize = GridSizes.Last();
+            var layout = GridLayouts.FirstOrDefault(g => g.rows * g.cols >= needed);
+            if (layout.rows == 0) layout = GridLayouts[GridLayouts.Length - 1];
 
-            int side = (int)Math.Sqrt(gridSize);
-            string viewName = $"{side}x{side}";
+            int gridSize = layout.rows * layout.cols;
+            string viewName = $"{layout.rows}x{layout.cols}";
 
             var viewItem = sbGroup.GetChildren().FirstOrDefault(c => c.Name == viewName);
             if (viewItem == null) return;

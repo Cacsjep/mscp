@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Windows;
-using System.Windows.Input;
 using CommunitySDK;
 using FontAwesome5;
 using VideoOS.Platform;
@@ -14,6 +12,7 @@ namespace SmartBar
     public class SmartBarDefinition : PluginDefinition
     {
         private static readonly VideoOSIconSourceBase _pluginIcon;
+        internal static readonly PluginLog Log = new PluginLog("SmartBar");
 
         internal static Guid SmartBarPluginId = new Guid("A7B8C9D0-E1F2-3456-7890-ABCDEF123456");
         internal static Guid SmartBarToolbarId = new Guid("A7B8C9D0-E1F2-3456-7890-ABCDEF123457");
@@ -50,7 +49,9 @@ namespace SmartBar
                 Client.SmartBarKeyHandler.Install();
                 Client.SmartBarHistory.Install();
                 try { Client.SmartBarWindow.EnsureSmartBarViews(); }
-                catch (System.Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] EnsureSmartBarViews failed: {ex}"); }
+                catch (Exception ex) { Log.Error("EnsureSmartBarViews failed", ex); }
+
+                Log.Info("Plugin initialized");
             }
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.Messaging;
@@ -8,22 +9,37 @@ namespace SmartBar.Client
 {
     static class SmartBarHistory
     {
+        private static readonly PluginLog Log = SmartBarDefinition.Log;
         private static readonly LinkedList<HistoryEntry> _history = new LinkedList<HistoryEntry>();
         private static int _maxHistory = 20;
         private static object _viewReceiver;
-        private static bool _suppressNext;
-        private static DateTime _lastViewChange = DateTime.MinValue;
-        private const int CameraSuppressMs = 2000; // ignore camera changes for 2s after view switch
+        private static bool _suppressNextViewChange;
 
-        // Camera tracking — viewer close/create cycle detection
-        private static readonly Dictionary<ImageViewerAddOn, int> _viewerSlots = new Dictionary<ImageViewerAddOn, int>();
-        private static int _nextSlotIndex;
+        // GoBack suppression: time-based to cover all cascading close/create cycles
+        private static DateTime _goBackTime = DateTime.MinValue;
+        private const int GoBackSuppressMs = 1000;
+
+        // Per-viewer tracking: slot index + which window
+        private static readonly Dictionary<ImageViewerAddOn, ViewerInfo> _viewerData = new Dictionary<ImageViewerAddOn, ViewerInfo>();
+        private static readonly Dictionary<Guid, int> _nextSlotPerWindow = new Dictionary<Guid, int>();
+
+        // Camera swap detection
         private static FQID _pendingClosedCamera;
         private static int _pendingClosedSlot = -1;
+        private static Guid _pendingClosedWindowId;
         private static DateTime _pendingCloseTime = DateTime.MinValue;
-        private static int _consecutiveCloses; // >1 means view switch, not camera swap
+        private static int _consecutiveCloses;
         private const int CloseCreateWindowMs = 500;
-        private static bool _suppressCameraSwap; // prevent GoBack from creating new history
+
+        // Window tracking
+        private static Guid _currentBatchWindowId;
+        private static int _knownWindowCount;
+
+        struct ViewerInfo
+        {
+            public int SlotIndex;
+            public Guid WindowId;
+        }
 
         public static void Install()
         {
@@ -32,6 +48,16 @@ namespace SmartBar.Client
                 new MessageIdFilter(MessageId.SmartClient.SelectedViewChangedIndication));
 
             ClientControl.Instance.NewImageViewerControlEvent += OnNewImageViewer;
+
+            var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
+            _knownWindowCount = windows.Count;
+            if (windows.Count > 0)
+            {
+                _currentBatchWindowId = windows[0].FQID.ObjectId;
+                _nextSlotPerWindow[_currentBatchWindowId] = 0;
+            }
+
+            Log.Info("History tracking installed");
         }
 
         public static void Uninstall()
@@ -44,118 +70,178 @@ namespace SmartBar.Client
 
             ClientControl.Instance.NewImageViewerControlEvent -= OnNewImageViewer;
 
-            foreach (var kv in _viewerSlots)
-            {
+            foreach (var kv in _viewerData)
                 kv.Key.CloseEvent -= OnViewerClose;
-            }
-            _viewerSlots.Clear();
+            _viewerData.Clear();
+            _nextSlotPerWindow.Clear();
         }
 
         private static void OnNewImageViewer(ImageViewerAddOn viewer)
         {
-            int slotIndex;
-
-            // A camera swap is exactly 1 close → 1 create in quick succession.
-            // Multiple consecutive closes = view switch (not a camera swap).
-            var msSinceClose = (DateTime.UtcNow - _pendingCloseTime).TotalMilliseconds;
-            bool isCameraSwap = _pendingClosedSlot >= 0
-                && _consecutiveCloses == 1
-                && msSinceClose < CloseCreateWindowMs
-                && !_suppressCameraSwap;
-
-            if (isCameraSwap)
+            try
             {
-                slotIndex = _pendingClosedSlot;
-            }
-            else
-            {
-                // Multiple closes = view switch; reset slot counter for the new view's viewers
-                if (_consecutiveCloses > 1)
-                    _nextSlotIndex = 0;
-                slotIndex = _nextSlotIndex++;
-            }
+                int slotIndex;
+                Guid windowId;
 
-            _viewerSlots[viewer] = slotIndex;
-            viewer.CloseEvent += OnViewerClose;
-            _consecutiveCloses = 0; // reset on create
+                var msSinceClose = (DateTime.UtcNow - _pendingCloseTime).TotalMilliseconds;
+                bool goBackActive = (DateTime.UtcNow - _goBackTime).TotalMilliseconds < GoBackSuppressMs;
 
-            var cam = viewer.CameraFQID;
-            System.Diagnostics.Debug.WriteLine(
-                $"[SmartBar] NewImageViewer slot {slotIndex}: CameraFQID={(cam != null ? cam.ObjectId.ToString() : "null")}, consCloses={_consecutiveCloses}");
+                bool isCameraSwap = _pendingClosedSlot >= 0
+                    && _consecutiveCloses == 1
+                    && msSinceClose < CloseCreateWindowMs
+                    && !goBackActive;
 
-            if (isCameraSwap)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[SmartBar] Camera swap detected in slot {_pendingClosedSlot}: " +
-                    $"{(_pendingClosedCamera != null ? _pendingClosedCamera.ObjectId.ToString() : "empty")} -> " +
-                    $"{(cam != null ? cam.ObjectId.ToString() : "empty")}");
-
-                Push(new HistoryEntry
+                if (isCameraSwap)
                 {
-                    Type = HistoryType.Camera,
-                    CameraFQID = _pendingClosedCamera,
-                    SlotIndex = _pendingClosedSlot
-                });
-            }
-            else if (_suppressCameraSwap)
-            {
-                System.Diagnostics.Debug.WriteLine("[SmartBar] NewImageViewer: suppressed (GoBack in progress)");
-                _suppressCameraSwap = false;
-            }
+                    // Camera swap: inherit slot + window from closed viewer
+                    slotIndex = _pendingClosedSlot;
+                    windowId = _pendingClosedWindowId;
+                }
+                else if (goBackActive && _pendingClosedSlot >= 0)
+                {
+                    // GoBack replacement: inherit slot + window from closed viewer
+                    slotIndex = _pendingClosedSlot;
+                    windowId = _pendingClosedWindowId;
+                }
+                else
+                {
+                    if (_consecutiveCloses > 1)
+                    {
+                        // View switch batch: inherit window, reset slot counter
+                        _currentBatchWindowId = _pendingClosedWindowId;
+                        _nextSlotPerWindow[_currentBatchWindowId] = 0;
+                    }
+                    else if (_pendingClosedSlot == -1)
+                    {
+                        // No preceding close: startup or new window opened
+                        var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
+                        if (windows.Count > _knownWindowCount)
+                        {
+                            _currentBatchWindowId = windows[windows.Count - 1].FQID.ObjectId;
+                            _knownWindowCount = windows.Count;
+                            _nextSlotPerWindow[_currentBatchWindowId] = 0;
+                            Log.Info($"New window detected: {_currentBatchWindowId}");
+                        }
+                    }
 
-            // Clear pending
-            _pendingClosedCamera = null;
-            _pendingClosedSlot = -1;
+                    if (!_nextSlotPerWindow.ContainsKey(_currentBatchWindowId))
+                        _nextSlotPerWindow[_currentBatchWindowId] = 0;
+
+                    slotIndex = _nextSlotPerWindow[_currentBatchWindowId]++;
+                    windowId = _currentBatchWindowId;
+                }
+
+                _viewerData[viewer] = new ViewerInfo { SlotIndex = slotIndex, WindowId = windowId };
+                viewer.CloseEvent += OnViewerClose;
+                _consecutiveCloses = 0;
+
+                var cam = viewer.CameraFQID;
+                var camId = cam != null ? cam.ObjectId.ToString() : "null";
+                Log.Info($"NewViewer slot={slotIndex} win={windowId} cam={camId} swap={isCameraSwap} goBack={goBackActive}");
+
+                if (isCameraSwap)
+                {
+                    var prevId = _pendingClosedCamera != null ? _pendingClosedCamera.ObjectId.ToString() : "null";
+                    Log.Info($"PUSH Camera: slot={slotIndex} win={windowId} prev={prevId} -> {camId}");
+                    Push(new HistoryEntry
+                    {
+                        Type = HistoryType.Camera,
+                        CameraFQID = _pendingClosedCamera,
+                        SlotIndex = slotIndex,
+                        WindowId = windowId
+                    });
+                }
+
+                _pendingClosedCamera = null;
+                _pendingClosedSlot = -1;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("OnNewImageViewer failed", ex);
+            }
         }
 
         private static void OnViewerClose(object sender, EventArgs e)
         {
-            var viewer = (ImageViewerAddOn)sender;
-            viewer.CloseEvent -= OnViewerClose;
+            try
+            {
+                var viewer = (ImageViewerAddOn)sender;
+                viewer.CloseEvent -= OnViewerClose;
 
-            int slotIndex = -1;
-            FQID closedCamera = viewer.CameraFQID;
-            if (_viewerSlots.TryGetValue(viewer, out slotIndex))
-                _viewerSlots.Remove(viewer);
+                int slotIndex = -1;
+                Guid windowId = Guid.Empty;
+                FQID closedCamera = viewer.CameraFQID;
 
-            System.Diagnostics.Debug.WriteLine(
-                $"[SmartBar] ViewerClose slot {slotIndex}: CameraFQID={(closedCamera != null ? closedCamera.ObjectId.ToString() : "null")}");
+                ViewerInfo info;
+                if (_viewerData.TryGetValue(viewer, out info))
+                {
+                    _viewerData.Remove(viewer);
+                    slotIndex = info.SlotIndex;
+                    windowId = info.WindowId;
+                }
 
-            // Store pending close info for camera swap detection
-            _consecutiveCloses++;
-            _pendingClosedCamera = closedCamera;
-            _pendingClosedSlot = slotIndex;
-            _pendingCloseTime = DateTime.UtcNow;
+                // Reset counter if last close was long ago (stale from window close etc.)
+                if ((DateTime.UtcNow - _pendingCloseTime).TotalMilliseconds > CloseCreateWindowMs)
+                    _consecutiveCloses = 0;
+
+                _consecutiveCloses++;
+                _pendingClosedCamera = closedCamera;
+                _pendingClosedSlot = slotIndex;
+                _pendingClosedWindowId = windowId;
+                _pendingCloseTime = DateTime.UtcNow;
+
+                Log.Info($"ViewerClose slot={slotIndex} win={windowId} cam={(closedCamera != null ? closedCamera.ObjectId.ToString() : "null")} consCloses={_consecutiveCloses}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("OnViewerClose failed", ex);
+            }
         }
 
         private static object OnViewChanged(Message message, FQID dest, FQID source)
         {
-            if (_suppressNext)
+            try
             {
-                _suppressNext = false;
-                return null;
-            }
-
-            _lastViewChange = DateTime.UtcNow;
-
-            var viewItem = message.Data as ViewAndLayoutItem;
-            if (viewItem?.FQID == null) return null;
-
-            // Don't add duplicate
-            if (_history.Count > 0)
-            {
-                var last = _history.Last.Value;
-                if (last.Type == HistoryType.View && last.ViewFQID?.ObjectId == viewItem.FQID.ObjectId)
+                if (_suppressNextViewChange)
+                {
+                    _suppressNextViewChange = false;
+                    Log.Info("View change suppressed (GoBack)");
                     return null;
+                }
+
+                var viewItem = message.Data as ViewAndLayoutItem;
+                if (viewItem?.FQID == null) return null;
+
+                // The viewers for this view were created just before OnViewChanged fires,
+                // so _currentBatchWindowId is the correct window.
+                var windowId = _currentBatchWindowId;
+
+                // Don't add duplicate for same view on same window
+                if (_history.Count > 0)
+                {
+                    var last = _history.Last.Value;
+                    if (last.Type == HistoryType.View
+                        && last.ViewFQID?.ObjectId == viewItem.FQID.ObjectId
+                        && last.WindowId == windowId)
+                    {
+                        Log.Info($"OnViewChanged: duplicate {viewItem.Name} on win={windowId}, skipping");
+                        return null;
+                    }
+                }
+
+                Log.Info($"PUSH View: {viewItem.Name} win={windowId} (history will be {_history.Count + 1})");
+
+                Push(new HistoryEntry
+                {
+                    Type = HistoryType.View,
+                    ViewFQID = viewItem.FQID,
+                    WindowId = windowId
+                });
             }
-
-            System.Diagnostics.Debug.WriteLine($"[SmartBar] View history push: {viewItem.Name} (total: {_history.Count + 1})");
-
-            Push(new HistoryEntry
+            catch (Exception ex)
             {
-                Type = HistoryType.View,
-                ViewFQID = viewItem.FQID
-            });
+                Log.Error("OnViewChanged failed", ex);
+            }
 
             return null;
         }
@@ -178,64 +264,85 @@ namespace SmartBar.Client
 
         public static void GoBack()
         {
-            System.Diagnostics.Debug.WriteLine($"[SmartBar] GoBack called, history count: {_history.Count}");
             if (_history.Count == 0) return;
 
             var entry = _history.Last.Value;
             _history.RemoveLast();
-            System.Diagnostics.Debug.WriteLine($"[SmartBar] GoBack: popped {entry.Type}, remaining: {_history.Count}");
 
-            if (entry.Type == HistoryType.View)
+            _goBackTime = DateTime.UtcNow;
+
+            Log.Info($"GoBack: popped {entry.Type} win={entry.WindowId} slot={entry.SlotIndex}, remaining: {_history.Count}");
+
+            try
             {
-                // Need to find the view before this one to go back to
-                // The entry we just popped IS the current view, so find previous view
-                FQID previousView = null;
-                var node = _history.Last;
-                while (node != null)
+                FQID dest = FindWindowFQID(entry.WindowId);
+                if (dest == null)
                 {
-                    if (node.Value.Type == HistoryType.View)
-                    {
-                        previousView = node.Value.ViewFQID;
-                        break;
-                    }
-                    node = node.Previous;
-                }
-
-                if (previousView == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[SmartBar] GoBack: no previous view found");
+                    Log.Info("GoBack: target window not found, skipping");
                     return;
                 }
 
-                _suppressNext = true;
-                var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
-                var dest = windows.Count > 0 ? windows[0].FQID : null;
-
-                System.Diagnostics.Debug.WriteLine("[SmartBar] GoBack: navigating to previous view");
-                EnvironmentManager.Instance.SendMessage(
-                    new Message(MessageId.SmartClient.MultiWindowCommand,
-                        new MultiWindowCommandData
+                if (entry.Type == HistoryType.View)
+                {
+                    // Find previous view on the SAME window
+                    FQID previousView = null;
+                    var node = _history.Last;
+                    while (node != null)
+                    {
+                        if (node.Value.Type == HistoryType.View && node.Value.WindowId == entry.WindowId)
                         {
-                            MultiWindowCommand = MultiWindowCommand.SetViewInWindow,
-                            View = previousView,
-                            Window = dest
-                        }), dest);
+                            previousView = node.Value.ViewFQID;
+                            break;
+                        }
+                        node = node.Previous;
+                    }
+
+                    if (previousView == null)
+                    {
+                        Log.Info("GoBack: no previous view for this window");
+                        return;
+                    }
+
+                    _suppressNextViewChange = true;
+                    Log.Info($"GoBack: SetViewInWindow view={previousView.ObjectId} dest={dest.ObjectId}");
+
+                    EnvironmentManager.Instance.SendMessage(
+                        new Message(MessageId.SmartClient.MultiWindowCommand,
+                            new MultiWindowCommandData
+                            {
+                                MultiWindowCommand = MultiWindowCommand.SetViewInWindow,
+                                View = previousView,
+                                Window = dest
+                            }), dest);
+                }
+                else if (entry.Type == HistoryType.Camera)
+                {
+                    Log.Info($"GoBack: SetCameraInView slot={entry.SlotIndex} cam={entry.CameraFQID?.ObjectId} dest={dest.ObjectId}");
+
+                    EnvironmentManager.Instance.SendMessage(
+                        new Message(MessageId.SmartClient.SetCameraInViewCommand,
+                            new SetCameraInViewCommandData
+                            {
+                                Index = entry.SlotIndex,
+                                CameraFQID = entry.CameraFQID
+                            }), dest);
+                }
             }
-            else if (entry.Type == HistoryType.Camera)
+            catch (Exception ex)
             {
-                var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
-                var dest = windows.Count > 0 ? windows[0].FQID : null;
-
-                System.Diagnostics.Debug.WriteLine($"[SmartBar] GoBack: restoring camera in slot {entry.SlotIndex}");
-                _suppressCameraSwap = true;
-                EnvironmentManager.Instance.SendMessage(
-                    new Message(MessageId.SmartClient.SetCameraInViewCommand,
-                        new SetCameraInViewCommandData
-                        {
-                            Index = entry.SlotIndex,
-                            CameraFQID = entry.CameraFQID
-                        }), dest);
+                Log.Error("GoBack failed", ex);
             }
+        }
+
+        private static FQID FindWindowFQID(Guid windowId)
+        {
+            var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
+            foreach (var w in windows)
+            {
+                if (w.FQID.ObjectId == windowId)
+                    return w.FQID;
+            }
+            return windows.Count > 0 ? windows[0].FQID : null;
         }
     }
 
@@ -246,6 +353,7 @@ namespace SmartBar.Client
         public HistoryType Type;
         public FQID ViewFQID;
         public FQID CameraFQID;
+        public Guid WindowId;
         public int SlotIndex;
     }
 }

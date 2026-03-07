@@ -60,7 +60,19 @@
             <!-- Programs -->
             <TextBlock Text="Programs" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
             <TextBlock Text="Programs listed here appear in the Smart Bar as launchable items."
-                       Foreground="#FF666666" FontSize="11" Margin="4,0,0,12" />
+                       Foreground="#FF666666" FontSize="11" Margin="4,0,0,4" />
+
+            <!-- Column headers -->
+            <Grid Margin="4,8,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Name" Foreground="#FF888888" FontSize="11" />
+                <TextBlock Grid.Column="1" Text="Executable path" Foreground="#FF888888" FontSize="11" />
+            </Grid>
 
             <ItemsControl x:Name="programList">
                 <ItemsControl.ItemTemplate>
@@ -69,42 +81,54 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="1.5*" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0"
                                          Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource DarkTextBox}"
-                                         Margin="0,0,6,0"
-                                         Tag="Name" />
+                                         Margin="0,0,6,0" />
                                 <TextBox Grid.Column="1"
                                          Text="{Binding Path, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource DarkTextBox}"
-                                         Margin="0,0,6,0"
-                                         Tag="Path" />
+                                         Margin="0,0,6,0" />
                                 <Button Grid.Column="2"
-                                        Content="&#xD7;"
-                                        FontSize="16"
                                         Width="28" Height="28"
-                                        Style="{StaticResource SmallButton}"
+                                        Background="#FF2A2A2A"
+                                        BorderBrush="#FF444444"
+                                        BorderThickness="1"
+                                        Padding="0"
+                                        Cursor="Hand"
+                                        Click="OnBrowseProgram"
+                                        ToolTip="Browse for executable"
+                                        Margin="0,0,4,0">
+                                    <fa5:ImageAwesome Icon="Solid_FolderOpen"
+                                                      Foreground="#FF2196F3"
+                                                      Width="12" Height="12"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" />
+                                </Button>
+                                <Button Grid.Column="3"
+                                        Width="28" Height="28"
+                                        Background="#FF2A2A2A"
+                                        BorderBrush="#FF444444"
+                                        BorderThickness="1"
+                                        Padding="0"
+                                        Cursor="Hand"
                                         Click="OnRemoveProgram"
-                                        ToolTip="Remove program" />
+                                        ToolTip="Remove program">
+                                    <fa5:ImageAwesome Icon="Solid_Times"
+                                                      Foreground="#FFE05050"
+                                                      Width="10" Height="10"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" />
+                                </Button>
                             </Grid>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-
-            <!-- Column headers hint -->
-            <Grid Margin="0,0,0,4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Name" Foreground="#FF555555" FontSize="11" Margin="4,0,0,0" />
-                <TextBlock Grid.Column="1" Text="Executable path" Foreground="#FF555555" FontSize="11" Margin="4,0,0,0" />
-            </Grid>
 
             <Button x:Name="addButton"
                     Click="OnAddProgram"

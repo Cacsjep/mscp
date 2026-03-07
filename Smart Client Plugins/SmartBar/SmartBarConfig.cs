@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml.Linq;
+using CommunitySDK;
 
 namespace SmartBar
 {
@@ -13,6 +14,7 @@ namespace SmartBar
 
     static class SmartBarConfig
     {
+        private static readonly PluginLog Log = SmartBarDefinition.Log;
         private static readonly object _fileLock = new object();
         private static readonly string _configPath = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -27,7 +29,6 @@ namespace SmartBar
             {
                 if (!File.Exists(_configPath))
                 {
-                    // Set defaults
                     MaxHistory = 20;
                     Programs = new List<ProgramEntry>
                     {
@@ -60,9 +61,12 @@ namespace SmartBar
 
                     if (Programs.Count == 0)
                         Programs.Add(new ProgramEntry { Name = "Notepad", Path = "notepad.exe" });
+
+                    Log.Info($"Configuration loaded: MaxHistory={MaxHistory}, Programs={Programs.Count}");
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Log.Error("Failed to load configuration, using defaults", ex);
                     MaxHistory = 20;
                     Programs = new List<ProgramEntry>
                     {
@@ -96,10 +100,11 @@ namespace SmartBar
                             progsEl));
 
                     doc.Save(_configPath);
+                    Log.Info("Configuration saved");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[SmartBar] Config save failed: {ex.Message}");
+                    Log.Error("Failed to save configuration", ex);
                 }
             }
         }

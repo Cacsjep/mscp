@@ -10,7 +10,7 @@ namespace SmartBar.Client
         public override void Init(Item window)
         {
             Title = "Undo";
-            Tooltip = "Undo up to last 10 Operations regarding to cameras and views.";
+            Tooltip = "Undo last view or camera change";
 
             // Only show on main window
             if (window != null && window.FQID.ObjectId != Kind.Window)
