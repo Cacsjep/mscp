@@ -21,6 +21,8 @@ namespace MonitorRTMPStreamer
 
         public string RtmpUrl { get; set; } = "";
 
+        public int Fps { get; set; } = 1;
+
         public static StreamerConfig Load()
         {
             lock (_fileLock)
@@ -42,6 +44,10 @@ namespace MonitorRTMPStreamer
                     var rtmpEl = doc.Root?.Element("RtmpUrl");
                     if (rtmpEl != null)
                         config.RtmpUrl = rtmpEl.Value;
+
+                    var fpsEl = doc.Root?.Element("Fps");
+                    if (fpsEl != null && int.TryParse(fpsEl.Value, out var fps) && fps >= 1 && fps <= 10)
+                        config.Fps = fps;
                 }
                 catch
                 {
@@ -60,7 +66,8 @@ namespace MonitorRTMPStreamer
                     new XElement("StreamerConfig",
                         new XElement("EnabledMonitors",
                             EnabledMonitors.Select(m => new XElement("Monitor", m))),
-                        new XElement("RtmpUrl", RtmpUrl ?? "")));
+                        new XElement("RtmpUrl", RtmpUrl ?? ""),
+                        new XElement("Fps", Fps)));
                 doc.Save(ConfigPath);
             }
         }

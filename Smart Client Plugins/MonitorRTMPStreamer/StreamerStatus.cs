@@ -17,6 +17,7 @@ namespace MonitorRTMPStreamer
         public long EncodeMs { get; private set; }
         public long TotalMs { get; private set; }
         public string RtmpUrl { get; private set; } = "";
+        public string CaptureMethodName { get; private set; } = "";
         public string LastError { get; private set; } = "";
         public DateTime? StreamStarted { get; private set; }
 
@@ -35,6 +36,11 @@ namespace MonitorRTMPStreamer
                 EncodeMs = encodeMs;
                 TotalMs = totalMs;
             }
+        }
+
+        public void UpdateCaptureMethod(string name)
+        {
+            lock (_lock) { CaptureMethodName = name ?? ""; }
         }
 
         public void UpdateStreaming(bool streaming, string url)

@@ -24,6 +24,8 @@
                         <RowDefinition />
                         <RowDefinition />
                         <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Capture:" FontWeight="SemiBold" Margin="0,0,15,4" />
@@ -32,16 +34,22 @@
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Resolution:" FontWeight="SemiBold" Margin="0,0,15,4" />
                     <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ResolutionStatus" />
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Performance:" FontWeight="SemiBold" Margin="0,0,15,4" />
-                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PerfStatus" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Capture Mode:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CaptureModeStatus" />
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Stream:" FontWeight="SemiBold" Margin="0,0,15,4" />
-                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="StreamStatus" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Performance:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PerfStatus" />
 
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Uptime:" FontWeight="SemiBold" Margin="0,0,15,4" />
-                    <TextBlock Grid.Row="4" Grid.Column="1" x:Name="UptimeStatus" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Max FPS:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" x:Name="MaxFpsStatus" />
 
-                    <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ErrorStatus"
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Stream:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="5" Grid.Column="1" x:Name="StreamStatus" />
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Uptime:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="6" Grid.Column="1" x:Name="UptimeStatus" />
+
+                    <TextBlock Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ErrorStatus"
                                Foreground="#FF4444" TextWrapping="Wrap" Margin="0,6,0,0" />
                 </Grid>
             </Border>
@@ -62,6 +70,18 @@
             <TextBox Text="{Binding RtmpUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
             <TextBlock Text="e.g. rtmp://server:1935/live/stream  (leave empty to disable)"
                        Opacity="0.7" TextWrapping="Wrap" Margin="0,0,0,20" />
+
+            <!-- ═══ FPS ═══ -->
+            <TextBlock Text="Frame Rate" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,5" />
+            <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.7"
+                       Text="Controls how many frames per second are captured and streamed. Higher values produce smoother video but increase CPU and network usage. Check the 'Max FPS' value in the Status panel above to see what your system can sustain." />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <ComboBox x:Name="FpsCombo" Width="90" SelectedValuePath="Content" />
+                <TextBlock x:Name="FpsHint" Margin="10,0,0,0" VerticalAlignment="Center"
+                           FontStyle="Italic" Opacity="0.7" />
+            </StackPanel>
+            <TextBlock TextWrapping="Wrap" Margin="0,4,0,20" Opacity="0.55" FontSize="11"
+                       Text="Capture mode is auto-detected. DXGI (GPU) is used when available and provides very fast capture (~5-20ms) regardless of resolution or monitor count. GDI (CPU) is used as fallback (e.g. over RDP) and scales linearly with resolution (~40ms per monitor at 1080p). More monitors means a wider stitched image and higher encode time." />
 
             <!-- Save button + spinner -->
             <StackPanel Orientation="Horizontal">

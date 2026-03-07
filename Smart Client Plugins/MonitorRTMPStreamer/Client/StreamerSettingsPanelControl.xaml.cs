@@ -47,6 +47,10 @@ namespace MonitorRTMPStreamer.Client
                 IsEnabled = config.IsMonitorEnabled(s),
             }).ToList();
 
+            for (int i = 1; i <= 10; i++)
+                FpsCombo.Items.Add(new ComboBoxItem { Content = $"{i} FPS" });
+            FpsCombo.SelectedIndex = Math.Min(config.Fps - 1, 9);
+
             Loaded += (s, e) => DrawMonitorLayout();
             MonitorCanvas.SizeChanged += (s, e) => DrawMonitorLayout();
 
@@ -155,9 +159,31 @@ namespace MonitorRTMPStreamer.Client
                 ? $"{st.StitchedWidth} x {st.StitchedHeight}"
                 : "-";
 
+            CaptureModeStatus.Text = !string.IsNullOrEmpty(st.CaptureMethodName) ? st.CaptureMethodName : "-";
+
             PerfStatus.Text = st.IsCapturing
                 ? $"capture {st.CaptureMs}ms + encode {st.EncodeMs}ms = {st.TotalMs}ms total"
                 : "-";
+
+            // Calculate and show max sustainable FPS based on measured cycle time
+            if (st.IsCapturing && st.TotalMs > 0)
+            {
+                var maxFps = Math.Min(10, (int)(1000.0 / st.TotalMs));
+                maxFps = Math.Max(1, maxFps);
+                MaxFpsStatus.Text = $"~{maxFps} FPS (based on {st.TotalMs}ms per frame)";
+
+                var selectedFps = FpsCombo.SelectedIndex + 1;
+                var frameBudget = 1000 / selectedFps;
+                if (st.TotalMs > frameBudget)
+                    FpsHint.Text = $"Warning: {selectedFps} FPS needs < {frameBudget}ms, but cycle takes {st.TotalMs}ms";
+                else
+                    FpsHint.Text = $"{frameBudget - st.TotalMs}ms headroom per frame";
+            }
+            else
+            {
+                MaxFpsStatus.Text = "-";
+                FpsHint.Text = "";
+            }
 
             if (st.IsStreaming)
             {
@@ -222,6 +248,7 @@ namespace MonitorRTMPStreamer.Client
             var config = new StreamerConfig
             {
                 RtmpUrl = RtmpUrl ?? "",
+                Fps = FpsCombo.SelectedIndex + 1,
             };
 
             var enabled = Monitors.Where(m => m.IsEnabled).Select(m => m.DeviceName).ToList();
