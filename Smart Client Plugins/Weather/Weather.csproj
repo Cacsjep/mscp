@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
-    <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="System.Text.Json" Version="8.*" />
   </ItemGroup>
 
@@ -25,10 +24,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="plugin.def">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Resource Include="Resources\PluginIcon.png" />
   </ItemGroup>
 
 </Project>

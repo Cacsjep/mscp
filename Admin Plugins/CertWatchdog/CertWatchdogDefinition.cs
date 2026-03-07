@@ -1,9 +1,10 @@
 using CertWatchdog.Admin;
 using CertWatchdog.Client;
+using CommunitySDK;
+using FontAwesome5;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Reflection;
 using System.Windows.Forms;
 using VideoOS.Platform;
 using VideoOS.Platform.Admin;
@@ -51,10 +52,9 @@ namespace CertWatchdog
 
         static CertWatchdogDefinition()
         {
-            var packString = $"pack://application:,,,/{Assembly.GetExecutingAssembly().GetName().Name};component/Resources/PluginIcon.png";
             try
             {
-                _pluginIconSource = new VideoOSIconUriSource { Uri = new Uri(packString) };
+                _pluginIconSource = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_Certificate);
             }
             catch
             {
@@ -74,9 +74,17 @@ namespace CertWatchdog
 
         public override void Init()
         {
-            var images = VideoOS.Platform.UI.Util.ImageList.Images;
-            _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
-            _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+            try
+            {
+                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Certificate);
+                _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
+            }
+            catch
+            {
+                var images = VideoOS.Platform.UI.Util.ImageList.Images;
+                _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+                _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+            }
 
             var env = EnvironmentManager.Instance.EnvironmentType;
 

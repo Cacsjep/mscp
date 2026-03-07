@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Reflection;
+using CommunitySDK;
+using FontAwesome5;
 using MonitorRTMPStreamer.Background;
 using MonitorRTMPStreamer.Client;
 using VideoOS.Platform;
@@ -20,11 +21,10 @@ namespace MonitorRTMPStreamer
 
         static StreamerDefinition()
         {
-            var packString = $"pack://application:,,,/{Assembly.GetExecutingAssembly().GetName().Name};component/Resources/PluginIcon.png";
-            _pluginIcon = new VideoOSIconUriSource { Uri = new Uri(packString) };
+            _pluginIcon = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_Video);
         }
 
-        internal static VideoOSIconSourceBase PluginIcon => _pluginIcon;
+        internal static VideoOSIconSourceBase PluginIconSource => _pluginIcon;
 
         public override Guid Id => StreamerPluginId;
 

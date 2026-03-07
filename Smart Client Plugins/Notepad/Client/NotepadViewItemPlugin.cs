@@ -12,7 +12,7 @@ namespace Notepad.Client
 
         public override VideoOSIconSourceBase IconSource
         {
-            get => NotepadDefinition.PluginIcon;
+            get => NotepadDefinition.PluginIconSource;
             protected set => base.IconSource = value;
         }
 

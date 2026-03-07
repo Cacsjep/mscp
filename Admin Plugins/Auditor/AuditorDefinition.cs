@@ -5,11 +5,8 @@ using FontAwesome5;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using VideoOS.Platform;
 using VideoOS.Platform.Admin;
 using VideoOS.Platform.Background;
@@ -54,8 +51,8 @@ namespace Auditor
 
             try
             {
-                _pluginIcon = RenderFaIcon(EFontAwesomeIcon.Solid_ShieldAlt, 70, 130, 180);
-                _folderIcon = RenderFaIcon(EFontAwesomeIcon.Solid_FolderOpen, 180, 150, 50);
+                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_ShieldAlt);
+                _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
                 _log.Info("FontAwesome icons rendered");
             }
             catch (Exception ex)
@@ -150,28 +147,5 @@ namespace Auditor
             return new AuditorExportManager(exportParameters);
         }
 
-        private static Image RenderFaIcon(EFontAwesomeIcon icon, byte r, byte g, byte b, int size = 24)
-        {
-            var awesome = new ImageAwesome
-            {
-                Icon = icon,
-                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b)),
-                Width = size,
-                Height = size
-            };
-            awesome.Measure(new System.Windows.Size(size, size));
-            awesome.Arrange(new System.Windows.Rect(0, 0, size, size));
-
-            var rtb = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
-            rtb.Render(awesome);
-
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(rtb));
-            // MemoryStream intentionally not disposed - Bitmap requires the stream to remain open
-            var ms = new MemoryStream();
-            encoder.Save(ms);
-            ms.Position = 0;
-            return new Bitmap(ms);
-        }
     }
 }

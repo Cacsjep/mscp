@@ -12,7 +12,7 @@ namespace RDP.Client
 
         public override VideoOSIconSourceBase IconSource
         {
-            get => RDPDefinition.PluginIcon;
+            get => RDPDefinition.PluginIconSource;
             protected set => base.IconSource = value;
         }
 

@@ -1,3 +1,5 @@
+using CommunitySDK;
+using FontAwesome5;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -30,10 +32,19 @@ namespace RTMPStreamer
 
         public override void Init()
         {
-            var images = VideoOS.Platform.UI.Util.ImageList.Images;
-            _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
-            _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
-            _cameraIcon = images[VideoOS.Platform.UI.Util.CameraIconIx];
+            try
+            {
+                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Broadcast_Tower);
+                _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
+                _cameraIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Video);
+            }
+            catch
+            {
+                var images = VideoOS.Platform.UI.Util.ImageList.Images;
+                _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+                _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+                _cameraIcon = images[VideoOS.Platform.UI.Util.CameraIconIx];
+            }
 
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.Service)
             {

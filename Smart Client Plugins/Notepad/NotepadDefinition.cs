@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using CommunitySDK;
+using FontAwesome5;
 using Notepad.Client;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
@@ -17,11 +18,10 @@ namespace Notepad
 
         static NotepadDefinition()
         {
-            var packString = $"pack://application:,,,/{Assembly.GetExecutingAssembly().GetName().Name};component/Resources/PluginIcon.png";
-            _pluginIcon = new VideoOSIconUriSource { Uri = new Uri(packString) };
+            _pluginIcon = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_StickyNote);
         }
 
-        internal static VideoOSIconSourceBase PluginIcon => _pluginIcon;
+        internal static VideoOSIconSourceBase PluginIconSource => _pluginIcon;
 
         public override Guid Id => NotepadPluginId;
 

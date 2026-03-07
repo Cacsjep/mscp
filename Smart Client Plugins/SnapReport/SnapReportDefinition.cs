@@ -1,10 +1,11 @@
-using SnapReport.Client;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Reflection;
 using System.Threading.Tasks;
+using CommunitySDK;
+using FontAwesome5;
+using SnapReport.Client;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.UI.Controls;
@@ -26,10 +27,9 @@ namespace SnapReport
 
         static SnapReportDefinition()
         {
-            var packString = $"pack://application:,,,/{Assembly.GetExecutingAssembly().GetName().Name};component/Resources/PluginIcon.png";
             try
             {
-                _pluginIconSource = new VideoOSIconUriSource { Uri = new Uri(packString) };
+                _pluginIconSource = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_Camera);
             }
             catch
             {
@@ -53,8 +53,14 @@ namespace SnapReport
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
-            var images = VideoOS.Platform.UI.Util.ImageList.Images;
-            _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+            try
+            {
+                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Camera);
+            }
+            catch
+            {
+                _pluginIcon = VideoOS.Platform.UI.Util.ImageList.Images[VideoOS.Platform.UI.Util.PluginIx];
+            }
 
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.SmartClient)
             {

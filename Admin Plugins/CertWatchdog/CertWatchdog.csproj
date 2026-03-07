@@ -33,7 +33,6 @@
     <Content Include="plugin.def">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Resource Include="Resources\PluginIcon.png" />
   </ItemGroup>
 
 </Project>
