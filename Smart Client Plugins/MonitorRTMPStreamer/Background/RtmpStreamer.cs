@@ -19,18 +19,20 @@ namespace MonitorRTMPStreamer.Background
         private bool _headerWritten;
         private readonly int _width;
         private readonly int _height;
+        private readonly int _fps;
         private readonly string _rtmpUrl;
         private readonly Action<string> _log;
         private readonly Action<string> _logError;
 
         public bool IsRunning { get; private set; }
 
-        public RtmpStreamer(int width, int height, string rtmpUrl,
+        public RtmpStreamer(int width, int height, int fps, string rtmpUrl,
             Action<string> log, Action<string> logError)
         {
             // Ensure even dimensions for H.264
             _width = width % 2 == 0 ? width : width - 1;
             _height = height % 2 == 0 ? height : height - 1;
+            _fps = Math.Max(1, Math.Min(fps, 10));
             _rtmpUrl = rtmpUrl;
             _log = log;
             _logError = logError;
@@ -62,16 +64,16 @@ namespace MonitorRTMPStreamer.Background
 
                 // Create stream
                 _stream = ffmpeg.avformat_new_stream(_formatCtx, null);
-                _stream->time_base = new AVRational { num = 1, den = 1 };
+                _stream->time_base = new AVRational { num = 1, den = _fps };
 
                 // Setup encoder
                 _codecCtx = ffmpeg.avcodec_alloc_context3(codec);
                 _codecCtx->width = _width;
                 _codecCtx->height = _height;
-                _codecCtx->time_base = new AVRational { num = 1, den = 1 };
-                _codecCtx->framerate = new AVRational { num = 1, den = 1 };
+                _codecCtx->time_base = new AVRational { num = 1, den = _fps };
+                _codecCtx->framerate = new AVRational { num = _fps, den = 1 };
                 _codecCtx->pix_fmt = AVPixelFormat.AV_PIX_FMT_YUV420P;
-                _codecCtx->gop_size = 1; // All keyframes at 1 FPS
+                _codecCtx->gop_size = _fps; // one keyframe per second
                 _codecCtx->max_b_frames = 0;
 
                 // Ultrafast preset + zerolatency
@@ -123,7 +125,7 @@ namespace MonitorRTMPStreamer.Background
 
                 _pts = 0;
                 IsRunning = true;
-                _log($"RTMP stream started: {_rtmpUrl} ({_width}x{_height})");
+                _log($"RTMP stream started: {_rtmpUrl} ({_width}x{_height} @ {_fps} FPS)");
                 return true;
             }
             catch (Exception ex)
