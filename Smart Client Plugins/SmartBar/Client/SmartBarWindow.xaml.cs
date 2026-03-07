@@ -97,8 +97,10 @@ namespace SmartBar.Client
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SmartBar] LoadItems failed: {ex}"); }
         }
 
-        private void CollectCameras(CameraGroup group, ServerId serverId)
+        private void CollectCameras(CameraGroup group, ServerId serverId, string parentPath = null)
         {
+            var path = parentPath == null ? group.Name : parentPath + " › " + group.Name;
+
             foreach (var cam in group.CameraFolder.Cameras)
             {
                 if (!cam.Enabled) continue;
@@ -109,19 +111,19 @@ namespace SmartBar.Client
                 _allItems.Add(new CommandItem
                 {
                     Name = cam.Name,
-                    Group = group.Name,
+                    Group = path,
                     Category = ItemCategory.Camera,
                     PlatformItem = item
                 });
             }
 
             foreach (var sub in group.CameraGroupFolder.CameraGroups)
-                CollectCameras(sub, serverId);
+                CollectCameras(sub, serverId, path);
         }
 
-        private void CollectViews(Item viewGroup, string parentGroupName = null)
+        private void CollectViews(Item viewGroup, string parentPath = null)
         {
-            var groupName = parentGroupName ?? viewGroup.Name;
+            var path = parentPath == null ? viewGroup.Name : parentPath + " › " + viewGroup.Name;
 
             foreach (var child in viewGroup.GetChildren())
             {
@@ -129,19 +131,17 @@ namespace SmartBar.Client
 
                 if (child.FQID.FolderType == FolderType.No)
                 {
-                    // This is a view (leaf item) — add it
                     _allItems.Add(new CommandItem
                     {
                         Name = child.Name,
-                        Group = groupName,
+                        Group = path,
                         Category = ItemCategory.View,
                         PlatformItem = child
                     });
                 }
                 else
                 {
-                    // This is a folder — recurse
-                    CollectViews(child, child.Name);
+                    CollectViews(child, path);
                 }
             }
         }
@@ -241,7 +241,13 @@ namespace SmartBar.Client
                         Foreground = TextCategory,
                         FontSize = 10.5,
                         FontWeight = FontWeights.SemiBold,
-                        Margin = new Thickness(10, isFirst ? 6 : 14, 0, 4)
+                        Margin = new Thickness(10, isFirst ? 6 : 14, 0, 2)
+                    });
+                    resultPanel.Children.Add(new Border
+                    {
+                        BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x28, 0x28, 0x28)),
+                        BorderThickness = new Thickness(0, 1, 0, 0),
+                        Margin = new Thickness(10, 0, 10, 4)
                     });
                     isFirst = false;
                 }
@@ -380,6 +386,7 @@ namespace SmartBar.Client
                     e.Handled = true;
                     if (_filteredItems.Count > 0)
                     {
+                        _suppressMouseSelect = true;
                         _selectedIndex = (_selectedIndex + 1) % _filteredItems.Count;
                         UpdateSelection();
                         ScrollToSelected();
@@ -390,6 +397,7 @@ namespace SmartBar.Client
                     e.Handled = true;
                     if (_filteredItems.Count > 0)
                     {
+                        _suppressMouseSelect = true;
                         _selectedIndex = (_selectedIndex - 1 + _filteredItems.Count) % _filteredItems.Count;
                         UpdateSelection();
                         ScrollToSelected();
