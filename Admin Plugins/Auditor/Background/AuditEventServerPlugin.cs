@@ -14,6 +14,7 @@ namespace Auditor.Background
     {
         private static readonly PluginLog _log = new PluginLog("ES Auditor");
         private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
+        private readonly AuditLog _auditLog = new AuditLog(_log);
         private object _configChangedReceiver;
         private volatile bool _mcRegistered;
         private volatile bool _closing;
@@ -30,6 +31,7 @@ namespace Auditor.Background
         {
             _log.Info("Audit Event Server plugin initializing");
 
+            _auditLog.Register();
             RefreshPluginItemFqid();
 
             // Listen for config changes to pick up new audit rules
@@ -126,6 +128,23 @@ namespace Auditor.Background
             }
 
             _log.Info($"Received audit event from Smart Client: type={report.EventType} user={report.UserName} camera={report.CameraName ?? "(none)"} reason={report.Reason ?? "(none)"}");
+
+            if (!string.IsNullOrEmpty(report.Reason))
+            {
+                switch (report.EventType)
+                {
+                    case "GeneralPlayback":
+                        _auditLog.PlaybackMessage(report.UserName, report.Reason);
+                        break;
+                    case "ExportStarted":
+                    case "ExportWorkspaceEntered":
+                        _auditLog.ExportMessage(report.UserName, report.Reason);
+                        break;
+                    case "IndependentPlaybackEnabled":
+                        _auditLog.IndependentPlaybackMessage(report.UserName, report.Reason);
+                        break;
+                }
+            }
 
             if (_pluginItemFqid == null)
             {

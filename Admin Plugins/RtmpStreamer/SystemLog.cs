@@ -8,7 +8,7 @@ namespace RTMPStreamer
 {
     internal class SystemLog : SystemLogBase
     {
-        public SystemLog(PluginLog log) : base("RTMPStreamer", log) { }
+        public SystemLog(PluginLog log) : base("RTMPStreamer", "RTMP Streamer", log) { }
 
         protected override Dictionary<string, LogMessage> BuildMessages() => new Dictionary<string, LogMessage>
         {

@@ -9,17 +9,21 @@ using VideoOS.Platform.ConfigurationItems;
 
 namespace Auditor.Admin
 {
-    public class AuditRuleUserControl : UserControl
+    public partial class AuditRuleUserControl : UserControl
     {
+        private Label _lblUsers;
         private CheckedListBox _lstUsers;
         private Button _btnRefresh;
+        private Label _lblLoading;
         private CheckBox _chkAuditPlayback;
         private CheckBox _chkAuditExport;
         private CheckBox _chkAuditIndependentPlayback;
         private CheckBox _chkEnabled;
-        private Label _lblLoading;
 
         private List<string> _allUsers = new List<string>();
+        private Label label1;
+        private Label label2;
+        private Label label3;
         private readonly PluginLog _log = new PluginLog("Admin Auditor - AuditRule UC");
 
         internal event EventHandler ConfigurationChangedByUser;
@@ -27,6 +31,12 @@ namespace Auditor.Admin
         public AuditRuleUserControl()
         {
             InitializeComponent();
+            _btnRefresh.Click += OnBtnRefreshClick;
+            _lstUsers.ItemCheck += OnLstUsersItemCheck;
+            _chkAuditPlayback.CheckedChanged += OnUserChange;
+            _chkAuditExport.CheckedChanged += OnUserChange;
+            _chkAuditIndependentPlayback.CheckedChanged += OnUserChange;
+            _chkEnabled.CheckedChanged += OnUserChange;
             LoadUsersAsync();
         }
 
@@ -35,108 +45,161 @@ namespace Auditor.Admin
             ConfigurationChangedByUser?.Invoke(this, EventArgs.Empty);
         }
 
+        private void OnBtnRefreshClick(object sender, EventArgs e)
+        {
+            LoadUsersAsync();
+        }
+
+        private void OnLstUsersItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            BeginInvoke(new Action(() => OnUserChange(sender, e)));
+        }
+
         private void InitializeComponent()
         {
-            SuspendLayout();
+            this._lblUsers = new System.Windows.Forms.Label();
+            this._lstUsers = new System.Windows.Forms.CheckedListBox();
+            this._btnRefresh = new System.Windows.Forms.Button();
+            this._lblLoading = new System.Windows.Forms.Label();
+            this._chkAuditPlayback = new System.Windows.Forms.CheckBox();
+            this._chkAuditExport = new System.Windows.Forms.CheckBox();
+            this._chkAuditIndependentPlayback = new System.Windows.Forms.CheckBox();
+            this._chkEnabled = new System.Windows.Forms.CheckBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.SuspendLayout();
+            // 
+            // _lblUsers
+            // 
+            this._lblUsers.AutoSize = true;
+            this._lblUsers.Location = new System.Drawing.Point(12, 15);
+            this._lblUsers.Name = "_lblUsers";
+            this._lblUsers.Size = new System.Drawing.Size(37, 13);
+            this._lblUsers.TabIndex = 0;
+            this._lblUsers.Text = "Users:";
+            // 
+            // _lstUsers
+            // 
+            this._lstUsers.CheckOnClick = true;
+            this._lstUsers.Location = new System.Drawing.Point(15, 31);
+            this._lstUsers.Name = "_lstUsers";
+            this._lstUsers.Size = new System.Drawing.Size(458, 109);
+            this._lstUsers.TabIndex = 1;
+            // 
+            // _btnRefresh
+            // 
+            this._btnRefresh.Location = new System.Drawing.Point(302, 146);
+            this._btnRefresh.Name = "_btnRefresh";
+            this._btnRefresh.Size = new System.Drawing.Size(70, 23);
+            this._btnRefresh.TabIndex = 2;
+            this._btnRefresh.Text = "Refresh";
+            // 
+            // _lblLoading
+            // 
+            this._lblLoading.AutoSize = true;
+            this._lblLoading.Location = new System.Drawing.Point(290, 15);
+            this._lblLoading.Name = "_lblLoading";
+            this._lblLoading.Size = new System.Drawing.Size(82, 13);
+            this._lblLoading.TabIndex = 3;
+            this._lblLoading.Text = "Loading users...";
+            this._lblLoading.Visible = false;
+            // 
+            // _chkAuditPlayback
+            // 
+            this._chkAuditPlayback.AutoSize = true;
+            this._chkAuditPlayback.Checked = true;
+            this._chkAuditPlayback.CheckState = System.Windows.Forms.CheckState.Checked;
+            this._chkAuditPlayback.Location = new System.Drawing.Point(15, 181);
+            this._chkAuditPlayback.Name = "_chkAuditPlayback";
+            this._chkAuditPlayback.Size = new System.Drawing.Size(97, 17);
+            this._chkAuditPlayback.TabIndex = 4;
+            this._chkAuditPlayback.Text = "Audit Playback";
+            // 
+            // _chkAuditExport
+            // 
+            this._chkAuditExport.AutoSize = true;
+            this._chkAuditExport.Checked = true;
+            this._chkAuditExport.CheckState = System.Windows.Forms.CheckState.Checked;
+            this._chkAuditExport.Location = new System.Drawing.Point(15, 228);
+            this._chkAuditExport.Name = "_chkAuditExport";
+            this._chkAuditExport.Size = new System.Drawing.Size(83, 17);
+            this._chkAuditExport.TabIndex = 5;
+            this._chkAuditExport.Text = "Audit Export";
+            // 
+            // _chkAuditIndependentPlayback
+            // 
+            this._chkAuditIndependentPlayback.AutoSize = true;
+            this._chkAuditIndependentPlayback.Checked = true;
+            this._chkAuditIndependentPlayback.CheckState = System.Windows.Forms.CheckState.Checked;
+            this._chkAuditIndependentPlayback.Location = new System.Drawing.Point(15, 279);
+            this._chkAuditIndependentPlayback.Name = "_chkAuditIndependentPlayback";
+            this._chkAuditIndependentPlayback.Size = new System.Drawing.Size(160, 17);
+            this._chkAuditIndependentPlayback.TabIndex = 6;
+            this._chkAuditIndependentPlayback.Text = "Audit Independent Playback";
+            // 
+            // _chkEnabled
+            // 
+            this._chkEnabled.AutoSize = true;
+            this._chkEnabled.Checked = true;
+            this._chkEnabled.CheckState = System.Windows.Forms.CheckState.Checked;
+            this._chkEnabled.Location = new System.Drawing.Point(15, 336);
+            this._chkEnabled.Name = "_chkEnabled";
+            this._chkEnabled.Size = new System.Drawing.Size(65, 17);
+            this._chkEnabled.TabIndex = 7;
+            this._chkEnabled.Text = "Enabled";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
+            this.label1.Location = new System.Drawing.Point(14, 201);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(459, 13);
+            this.label1.TabIndex = 8;
+            this.label1.Text = "Shows a message prompt where user needs to enter the reason for entering the play" +
+    "back mode.";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
+            this.label2.Location = new System.Drawing.Point(14, 248);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(448, 13);
+            this.label2.TabIndex = 9;
+            this.label2.Text = "Shows a message prompt where user needs to enter the reason for enterting the exp" +
+    "ort mode.";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
+            this.label3.Location = new System.Drawing.Point(14, 299);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(433, 13);
+            this.label3.TabIndex = 10;
+            this.label3.Text = "Shows a message prompt where user needs to enter the reason for independent playb" +
+    "ack.";
+            // 
+            // AuditRuleUserControl
+            // 
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this._lblUsers);
+            this.Controls.Add(this._lstUsers);
+            this.Controls.Add(this._btnRefresh);
+            this.Controls.Add(this._lblLoading);
+            this.Controls.Add(this._chkAuditPlayback);
+            this.Controls.Add(this._chkAuditExport);
+            this.Controls.Add(this._chkAuditIndependentPlayback);
+            this.Controls.Add(this._chkEnabled);
+            this.Name = "AuditRuleUserControl";
+            this.Size = new System.Drawing.Size(1081, 590);
+            this.ResumeLayout(false);
+            this.PerformLayout();
 
-            var y = 12;
-            const int labelX = 12;
-            const int controlX = 180;
-            const int rowHeight = 30;
-
-            // Users label
-            var lblUsers = new Label
-            {
-                Text = "Users:",
-                Location = new System.Drawing.Point(labelX, y + 3),
-                AutoSize = true
-            };
-            Controls.Add(lblUsers);
-
-            // Refresh button
-            _btnRefresh = new Button
-            {
-                Text = "Refresh",
-                Location = new System.Drawing.Point(controlX + 260, y),
-                Width = 70,
-                Height = 23
-            };
-            _btnRefresh.Click += (s, e) => LoadUsersAsync();
-            Controls.Add(_btnRefresh);
-
-            // Loading label (shown while loading)
-            _lblLoading = new Label
-            {
-                Text = "Loading users...",
-                Location = new System.Drawing.Point(controlX, y + 3),
-                AutoSize = true,
-                Visible = false
-            };
-            Controls.Add(_lblLoading);
-
-            // Users CheckedListBox
-            _lstUsers = new CheckedListBox
-            {
-                Location = new System.Drawing.Point(controlX, y),
-                Width = 250,
-                Height = 120,
-                CheckOnClick = true
-            };
-            _lstUsers.ItemCheck += (s, e) => BeginInvoke(new Action(() => OnUserChange(s, e)));
-            Controls.Add(_lstUsers);
-            y += 124 + 4;
-
-            // Audit Playback
-            _chkAuditPlayback = new CheckBox
-            {
-                Text = "Audit Playback",
-                Location = new System.Drawing.Point(controlX, y),
-                Checked = true,
-                AutoSize = true
-            };
-            _chkAuditPlayback.CheckedChanged += OnUserChange;
-            Controls.Add(_chkAuditPlayback);
-            y += rowHeight;
-
-            // Audit Export
-            _chkAuditExport = new CheckBox
-            {
-                Text = "Audit Export",
-                Location = new System.Drawing.Point(controlX, y),
-                Checked = true,
-                AutoSize = true
-            };
-            _chkAuditExport.CheckedChanged += OnUserChange;
-            Controls.Add(_chkAuditExport);
-            y += rowHeight;
-
-            // Audit Independent Playback
-            _chkAuditIndependentPlayback = new CheckBox
-            {
-                Text = "Audit Independent Playback",
-                Location = new System.Drawing.Point(controlX, y),
-                Checked = true,
-                AutoSize = true
-            };
-            _chkAuditIndependentPlayback.CheckedChanged += OnUserChange;
-            Controls.Add(_chkAuditIndependentPlayback);
-            y += rowHeight;
-
-            // Enabled
-            _chkEnabled = new CheckBox
-            {
-                Text = "Enabled",
-                Location = new System.Drawing.Point(controlX, y),
-                Checked = true,
-                AutoSize = true
-            };
-            _chkEnabled.CheckedChanged += OnUserChange;
-            Controls.Add(_chkEnabled);
-
-            Name = "AuditRuleUserControl";
-            Size = new System.Drawing.Size(520, y + rowHeight + 12);
-            ResumeLayout(false);
-            PerformLayout();
         }
 
         private void LoadUsersAsync()

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using VideoOS.Platform;
-using VideoOS.Platform.Admin;
 using VideoOS.Platform.Log;
 
 namespace CommunitySDK
@@ -15,16 +14,18 @@ namespace CommunitySDK
     public abstract class SystemLogBase
     {
         private readonly string _appId;
+        private readonly string _appName;
         private readonly string _componentId;
         private readonly PluginLog _log;
         private bool _registered;
 
-        protected SystemLogBase(string appId, PluginLog log)
-            : this(appId, appId, log) { }
+        protected SystemLogBase(string appId, string appName, PluginLog log)
+            : this(appId, appName, appId, log) { }
 
-        protected SystemLogBase(string appId, string componentId, PluginLog log)
+        protected SystemLogBase(string appId, string appName, string componentId, PluginLog log)
         {
             _appId = appId;
+            _appName = appName;
             _componentId = componentId;
             _log = log;
         }
@@ -41,6 +42,7 @@ namespace CommunitySDK
                     culture: "en-US",
                     version: "1.0",
                     application: _appId,
+                    applicationName: _appName,
                     component: _componentId,
                     logMessages: BuildMessages(),
                     resourceType: "text");
@@ -64,6 +66,17 @@ namespace CommunitySDK
             }
             catch { }
         }
+
+        protected void WriteAuditEntry(string messageId, Dictionary<string, string> parameters = null, string permissionState = PermissionState.Default)
+        {
+            if (!_registered) return;
+            try
+            {
+                LogClient.Instance.AuditEntry(_appId, _componentId, messageId, GetSiteItem(), parameters, permissionState);
+            }
+            catch { }
+        }
+
 
         private static Item GetSiteItem()
         {

@@ -8,7 +8,7 @@ namespace CertWatchdog
 {
     internal class SystemLog : SystemLogBase
     {
-        public SystemLog(PluginLog log) : base("CertWatchdog", log) { }
+        public SystemLog(PluginLog log) : base("CertWatchdog", "Cert Watchdog", log) { }
 
         protected override Dictionary<string, LogMessage> BuildMessages() => new Dictionary<string, LogMessage>
         {
