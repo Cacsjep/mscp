@@ -74,6 +74,7 @@ namespace Auditor.Admin
 
         private void OnLstUsersItemCheck(object sender, ItemCheckEventArgs e)
         {
+            if (_filling) return;
             BeginInvoke(new Action(() => OnUserChange(sender, e)));
         }
 
@@ -103,50 +104,50 @@ namespace Auditor.Admin
             this._grpReasonPrompts.SuspendLayout();
             this._grpEventTriggers.SuspendLayout();
             this.SuspendLayout();
-            //
+            // 
             // _lblName
-            //
+            // 
             this._lblName.AutoSize = true;
             this._lblName.Location = new System.Drawing.Point(12, 15);
             this._lblName.Name = "_lblName";
             this._lblName.Size = new System.Drawing.Size(38, 13);
             this._lblName.TabIndex = 0;
             this._lblName.Text = "Name:";
-            //
+            // 
             // _txtName
-            //
+            // 
             this._txtName.Location = new System.Drawing.Point(15, 31);
             this._txtName.Name = "_txtName";
             this._txtName.Size = new System.Drawing.Size(458, 20);
             this._txtName.TabIndex = 1;
-            //
+            // 
             // _lblUsers
-            //
+            // 
             this._lblUsers.AutoSize = true;
             this._lblUsers.Location = new System.Drawing.Point(12, 60);
             this._lblUsers.Name = "_lblUsers";
             this._lblUsers.Size = new System.Drawing.Size(37, 13);
             this._lblUsers.TabIndex = 2;
             this._lblUsers.Text = "Users:";
-            //
+            // 
             // _lstUsers
-            //
+            // 
             this._lstUsers.CheckOnClick = true;
             this._lstUsers.Location = new System.Drawing.Point(15, 76);
             this._lstUsers.Name = "_lstUsers";
             this._lstUsers.Size = new System.Drawing.Size(458, 109);
             this._lstUsers.TabIndex = 3;
-            //
+            // 
             // _btnRefresh
-            //
+            // 
             this._btnRefresh.Location = new System.Drawing.Point(403, 191);
             this._btnRefresh.Name = "_btnRefresh";
             this._btnRefresh.Size = new System.Drawing.Size(70, 23);
             this._btnRefresh.TabIndex = 4;
             this._btnRefresh.Text = "Refresh";
-            //
+            // 
             // _lblLoading
-            //
+            // 
             this._lblLoading.AutoSize = true;
             this._lblLoading.Location = new System.Drawing.Point(391, 60);
             this._lblLoading.Name = "_lblLoading";
@@ -154,9 +155,9 @@ namespace Auditor.Admin
             this._lblLoading.TabIndex = 5;
             this._lblLoading.Text = "Loading users...";
             this._lblLoading.Visible = false;
-            //
+            // 
             // _grpReasonPrompts
-            //
+            // 
             this._grpReasonPrompts.Controls.Add(this._chkPromptPlayback);
             this._grpReasonPrompts.Controls.Add(this._lblPromptPlaybackDesc);
             this._grpReasonPrompts.Controls.Add(this._chkPromptExport);
@@ -247,7 +248,7 @@ namespace Auditor.Admin
             this._grpEventTriggers.Size = new System.Drawing.Size(458, 155);
             this._grpEventTriggers.TabIndex = 5;
             this._grpEventTriggers.TabStop = false;
-            this._grpEventTriggers.Text = "Event Triggers (Analytics Events)";
+            this._grpEventTriggers.Text = "Event Triggers (Rule Events)";
             // 
             // _chkTriggerPlayback
             // 
@@ -266,9 +267,9 @@ namespace Auditor.Admin
             this._lblTriggerPlaybackDesc.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
             this._lblTriggerPlaybackDesc.Location = new System.Drawing.Point(27, 42);
             this._lblTriggerPlaybackDesc.Name = "_lblTriggerPlaybackDesc";
-            this._lblTriggerPlaybackDesc.Size = new System.Drawing.Size(280, 13);
+            this._lblTriggerPlaybackDesc.Size = new System.Drawing.Size(343, 13);
             this._lblTriggerPlaybackDesc.TabIndex = 1;
-            this._lblTriggerPlaybackDesc.Text = "Fires an analytics event when user enters playback mode.";
+            this._lblTriggerPlaybackDesc.Text = "Fires an event when user enters playback mode. Combine it with Rules.";
             // 
             // _chkTriggerExport
             // 
@@ -287,9 +288,9 @@ namespace Auditor.Admin
             this._lblTriggerExportDesc.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
             this._lblTriggerExportDesc.Location = new System.Drawing.Point(27, 85);
             this._lblTriggerExportDesc.Name = "_lblTriggerExportDesc";
-            this._lblTriggerExportDesc.Size = new System.Drawing.Size(266, 13);
+            this._lblTriggerExportDesc.Size = new System.Drawing.Size(329, 13);
             this._lblTriggerExportDesc.TabIndex = 3;
-            this._lblTriggerExportDesc.Text = "Fires an analytics event when user enters export mode.";
+            this._lblTriggerExportDesc.Text = "Fires an event when user enters export mode. Combine it with Rules.";
             // 
             // _chkTriggerIndependentPlayback
             // 
@@ -308,9 +309,9 @@ namespace Auditor.Admin
             this._lblTriggerIndependentPlaybackDesc.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
             this._lblTriggerIndependentPlaybackDesc.Location = new System.Drawing.Point(27, 128);
             this._lblTriggerIndependentPlaybackDesc.Name = "_lblTriggerIndependentPlaybackDesc";
-            this._lblTriggerIndependentPlaybackDesc.Size = new System.Drawing.Size(321, 13);
+            this._lblTriggerIndependentPlaybackDesc.Size = new System.Drawing.Size(384, 13);
             this._lblTriggerIndependentPlaybackDesc.TabIndex = 5;
-            this._lblTriggerIndependentPlaybackDesc.Text = "Fires an analytics event when user enables independent playback.";
+            this._lblTriggerIndependentPlaybackDesc.Text = "Fires an event when user enables independent playback. Combine it with Rules.";
             // 
             // _chkEnabled
             // 

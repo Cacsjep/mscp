@@ -531,7 +531,7 @@ namespace Auditor.Client
                 TextWrapping = TextWrapping.Wrap,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 FontSize = 12,
-                Background = new SolidColorBrush(Color.FromRgb(0x0D, 0x11, 0x17)),
+                Background = new SolidColorBrush(Color.FromRgb(0x05, 0x08, 0x0B)),
                 Foreground = new SolidColorBrush(Color.FromRgb(0xE6, 0xED, 0xF3)),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(0x30, 0x36, 0x3D)),
                 CaretBrush = new SolidColorBrush(Colors.White),

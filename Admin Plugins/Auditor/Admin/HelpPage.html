@@ -145,15 +145,15 @@
         <h2>How It Works</h2>
         <p>
             The Auditor plugin monitors operator activity in the Smart Client and
-            generates analytics events when users access recorded video. It tracks
-            playback mode changes, export operations, and independent playback on
-            individual cameras.
+            tracks playback mode changes, export operations, and independent playback
+            on individual cameras.
         </p>
         <p>
             Administrators configure audit rules in the Management Client to select
-            which users are monitored. When a monitored user enters playback or
-            starts an export, they are prompted to provide a reason. All audit
-            events are recorded as XProtect analytics events.
+            which users are monitored. Each rule has two independent sets of toggles:
+            <strong>Reason Prompts</strong> force the user to provide a reason (written
+            to the Milestone audit log), and <strong>Event Triggers</strong> fire
+            XProtect analytics events that can be used in rules and alarms.
         </p>
     </div>
 
@@ -162,18 +162,27 @@
         <ol class="steps">
             <li>Click on the <strong>Audit Rules</strong> node in the tree on the left.</li>
             <li>Right-click and select <strong>Create New</strong> to add an audit rule.</li>
-            <li>Select the users to monitor and choose which activities to audit, then click <strong>Save</strong>.</li>
+            <li>Give the rule a name, select the users to monitor, configure reason prompts and event triggers, then click <strong>Save</strong>.</li>
         </ol>
     </div>
 
     <div class="card">
-        <h2>Audited Activities</h2>
+        <h2>Reason Prompts (Audit Log)</h2>
+        <p>When enabled, the user is shown a dialog and must enter a reason. The reason is written to the Milestone system audit log.</p>
         <ul>
-            <li><strong>Playback Entry</strong> - User switches to playback mode</li>
-            <li><strong>Export Entry</strong> - User enters the export workspace</li>
-            <li><strong>Export Started/Completed</strong> - Export operation lifecycle</li>
-            <li><strong>Independent Playback</strong> - User enables independent playback on a camera</li>
-            <li><strong>Restricted Media</strong> - Restricted media access detected</li>
+            <li><strong>Playback Reason Prompt</strong> - When entering playback mode</li>
+            <li><strong>Export Reason Prompt</strong> - When entering the export workspace</li>
+            <li><strong>Independent Playback Reason Prompt</strong> - When enabling independent playback on a camera</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Event Triggers (Rule Events)</h2>
+        <p>When enabled, an XProtect analytics event is fired that can be used in rules, alarms, and notifications.</p>
+        <ul>
+            <li><strong>Playback Trigger Event</strong> - User switches to playback mode</li>
+            <li><strong>Export Trigger Event</strong> - User enters the export workspace</li>
+            <li><strong>Independent Playback Trigger Event</strong> - User enables independent playback on a camera</li>
         </ul>
     </div>
 
@@ -184,23 +193,22 @@
         <h3>Management Client (Admin UI)</h3>
         <p>
             Provides the configuration interface you are using now. Lets you create,
-            edit, and delete audit rules. Each rule defines which users are monitored
-            and which activities are audited.
+            edit, and delete audit rules. Each rule defines which users are monitored,
+            which reason prompts are shown, and which events are triggered.
         </p>
 
         <h3>Smart Client (Background Plugin)</h3>
         <p>
             Runs invisibly in the Smart Client. Monitors mode changes, export operations,
-            and independent playback. When a monitored user triggers an audited activity,
-            a reason prompt is shown. Audit events are sent to the Event Server via
-            MessageCommunication.
+            and independent playback. Shows reason prompts when configured and sends
+            audit reports to the Event Server via MessageCommunication.
         </p>
 
         <h3>Event Server (Background Plugin)</h3>
         <p>
-            Receives audit events from Smart Clients and converts them into XProtect
-            analytics events. These events appear in the alarm system and can trigger
-            rules, notifications, and alarms.
+            Receives audit reports from Smart Clients. Writes reason prompts to the
+            Milestone audit log and fires XProtect analytics events when event triggers
+            are enabled. These events can trigger rules, notifications, and alarms.
         </p>
 
         <div class="diagram">Management Client          Smart Client               Event Server
@@ -208,14 +216,16 @@
           |                       |                          |
           |--- Save Rules ------->|                          |
           |                       |-- User enters playback ->|
-          |                       |   (reason prompt shown)  |
+          |                       |   (prompt if enabled)    |
           |                       |--- MC: AuditReport ----->|
-          |                       |                          |-- Fire AnalyticsEvent
+          |                       |                          |-- Write Audit Log (if reason)
+          |                       |                          |-- Fire Event (if trigger on)
           |                       |                          |
           |                       |-- User starts export --->|
-          |                       |   (reason prompt shown)  |
+          |                       |   (prompt if enabled)    |
           |                       |--- MC: AuditReport ----->|
-          |                       |                          |-- Fire AnalyticsEvent</div>
+          |                       |                          |-- Write Audit Log (if reason)
+          |                       |                          |-- Fire Event (if trigger on)</div>
     </div>
 
     <div class="card" style="font-size:12px; line-height:1.5;">

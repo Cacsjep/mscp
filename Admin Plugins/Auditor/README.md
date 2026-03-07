@@ -1,13 +1,14 @@
 # Auditor
 
-Audit user access to recorded video in Milestone XProtect. Tracks playback mode changes, export operations, and independent playback on individual cameras. Generates XProtect analytics events with configurable per-user audit rules.
+Audit user access to recorded video in Milestone XProtect. Tracks playback mode changes, export operations, and independent playback on individual cameras. Per-user audit rules with independent reason prompts (audit log) and event triggers (analytics events).
 
 ## Features
 
 - Per-user audit rules configured in the Management Client
-- Reason prompts when monitored users enter playback or export
+- **Reason Prompts** — force users to provide a reason, written to the Milestone audit log
+- **Event Triggers** — fire XProtect analytics events for use in rules, alarms, and notifications
+- Reason prompts and event triggers are independently configurable per activity
 - Tracks playback, export, and independent playback activities
-- Generates XProtect analytics events for alarm and rule integration
 - Multi-environment plugin (Smart Client, Management Client, Event Server)
 
 ## Installation
@@ -25,19 +26,29 @@ Restart the Smart Client, Management Client, and Event Server.
 1. Open the Management Client
 2. Navigate to the **Auditor** node in the sidebar
 3. Create a new **Audit Rule**
-4. Select the users to monitor and choose which activities to audit
-5. Save the rule
+4. Give the rule a name and select the users to monitor
+5. Configure which reason prompts and event triggers to enable
+6. Save the rule
 
-## Audited Activities
+## Reason Prompts (Audit Log)
 
-| Event | Description |
+When enabled, a dialog is shown to the user who must enter a reason. The reason is written to the Milestone system audit log.
+
+| Prompt | When |
 |---|---|
-| Playback Entry | User switches from live to playback mode |
-| Export Entry | User enters the export workspace |
-| Export Started | Export operation begins |
-| Export Completed | Export operation finishes |
-| Independent Playback | User enables independent playback on a camera |
-| Restricted Media | Restricted media access detected |
+| Playback Reason Prompt | User enters playback mode |
+| Export Reason Prompt | User enters the export workspace |
+| Independent Playback Reason Prompt | User enables independent playback on a camera |
+
+## Event Triggers (Rule Events)
+
+When enabled, an XProtect analytics event is fired that can be used in rules, alarms, and notifications.
+
+| Event | When |
+|---|---|
+| Audit: Playback Entry | User enters playback mode |
+| Audit: Export Entry | User enters the export workspace |
+| Audit: Independent Playback | User enables independent playback on a camera |
 
 ## Requirements
 
