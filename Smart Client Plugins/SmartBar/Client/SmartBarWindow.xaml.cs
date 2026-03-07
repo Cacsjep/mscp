@@ -255,13 +255,22 @@ namespace SmartBar.Client
                 if (item.Group != lastGroup)
                 {
                     lastGroup = item.Group;
-                    resultPanel.Children.Add(new TextBlock
+                    var groupBlock = new TextBlock
                     {
-                        Text = item.Group,
-                        Foreground = TextSelected,
                         FontSize = 11,
                         Margin = new Thickness(10, 8, 0, 3)
-                    });
+                    };
+                    var parts = item.Group.Split(new[] { " › " }, StringSplitOptions.None);
+                    for (int p = 0; p < parts.Length; p++)
+                    {
+                        if (p > 0)
+                            groupBlock.Inlines.Add(new System.Windows.Documents.Run(" › ") { Foreground = TextGroup });
+                        groupBlock.Inlines.Add(new System.Windows.Documents.Run(parts[p])
+                        {
+                            Foreground = p == parts.Length - 1 ? TextSelected : TextGroup
+                        });
+                    }
+                    resultPanel.Children.Add(groupBlock);
                 }
 
                 resultPanel.Children.Add(CreateRow(item, i));
@@ -286,12 +295,24 @@ namespace SmartBar.Client
 
             var nameBlock = new TextBlock
             {
-                Text = isMultiSelected ? "\u2713  " + item.Name : item.Name,
-                Foreground = isMultiSelected ? TextSelected : TextPrimary,
                 FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
+
+            if (isMultiSelected)
+            {
+                nameBlock.Inlines.Add(new System.Windows.Documents.Run("\u2713  " + item.Name) { Foreground = TextSelected });
+            }
+            else if (item.Category == ItemCategory.Command && item.Name.StartsWith("Command: "))
+            {
+                nameBlock.Inlines.Add(new System.Windows.Documents.Run("Command: ") { Foreground = TextGroup });
+                nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name.Substring(9)) { Foreground = TextPrimary });
+            }
+            else
+            {
+                nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name) { Foreground = TextPrimary });
+            }
 
             var row = new Border
             {
