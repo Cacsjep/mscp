@@ -21,7 +21,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [MonitorRTMPStreamer](Smart%20Client%20Plugins/MonitorRTMPStreamer) | Smart Client | Capture desktop monitors and stream via RTMP |
 | [CertWatchdog](Admin%20Plugins/CertWatchdog) | Admin Plugin | Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints |
 | [Auditor](Admin%20Plugins/Auditor) | Admin Plugin | Audit user access to recorded video with per-user rules and reason prompts |
-| [SmartBar](Smart%20Client%20Plugins/SmartBar) | Smart Client | Workspace toolbar button for Smart Client |
+| [SmartBar](Smart%20Client%20Plugins/SmartBar) | Smart Client | Command palette for quickly finding and launching cameras, views, commands, events, outputs and programs |
 
 ## Installation
 
@@ -36,28 +36,12 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 
 Individual ZIPs for each plugin/driver are also available on the [Releases](../../releases) page. See each plugin's README for manual installation instructions:
 
-| Plugin | Install Path |
-|---|---|
-| Weather | `C:\Program Files\Milestone\MIPPlugins\Weather\` |
-| RDP | `C:\Program Files\Milestone\MIPPlugins\RDP\` |
-| Notepad | `C:\Program Files\Milestone\MIPPlugins\Notepad\` |
-| RTMPDriver | `C:\Program Files\Milestone\MIPDrivers\RTMPDriver\` |
-| RTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\` |
-| SnapReport | `C:\Program Files\Milestone\MIPPlugins\SnapReport\` |
-| MonitorRTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\MonitorRTMPStreamer\` |
-| CertWatchdog | `C:\Program Files\Milestone\MIPPlugins\CertWatchdog\` |
-| Auditor | `C:\Program Files\Milestone\MIPPlugins\Auditor\` |
-| SmartBar | `C:\Program Files\Milestone\MIPPlugins\SmartBar\` |
+#### Install Path
+
+`C:\Program Files\Milestone\MIPPlugins\`
 
 > [!NOTE]
 > Always **unblock** downloaded ZIP files before extracting (right-click -> Properties -> Unblock). Windows marks downloaded files as untrusted and will block the DLLs from loading if you skip this step.
-
-## Requirements
-
-- Milestone XProtect™ (Professional+, Expert, Corporate, or Essential+)
-- Smart Client plugins require the **Smart Client**
-- Device drivers require the **Recording Server**
-- Admin plugins require the **Event Server** and **Management Client**
 
 ## Repository Structure
 
