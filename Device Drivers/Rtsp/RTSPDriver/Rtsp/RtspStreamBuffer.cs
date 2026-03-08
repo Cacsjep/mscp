@@ -132,7 +132,8 @@ namespace RTSPDriver.Rtsp
             {
                 _isLive = true;
                 _frameQueue.Clear();
-                Toolbox.Log.Trace("RtspStreamBuffer[{0}]: SetLive", _channelName);
+                _pushCount = 0;
+                _popCount = 0;
             }
             _frameAvailable.Reset();
         }
@@ -143,8 +144,10 @@ namespace RTSPDriver.Rtsp
         public void SetOffline()
         {
             int remaining;
+            bool wasLive;
             lock (_lock)
             {
+                wasLive = _isLive;
                 _isLive = false;
                 _codecName = null;
                 _width = 0;
@@ -152,7 +155,11 @@ namespace RTSPDriver.Rtsp
                 remaining = _frameQueue.Count;
             }
             _frameAvailable.Set();
-            Toolbox.Log.Trace("RtspStreamBuffer[{0}]: SetOffline, {1} frames remaining to drain, pushed={2} popped={3}", _channelName, remaining, _pushCount, _popCount);
+            if (wasLive)
+            {
+                Toolbox.Log.Trace("RtspStreamBuffer[{0}]: Offline, {1} frames to drain, pushed={2} popped={3}",
+                    _channelName, remaining, _pushCount, _popCount);
+            }
         }
 
         public bool HasFrames

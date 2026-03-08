@@ -24,8 +24,8 @@ namespace RTSPDriver
         private string _host;
         private string _userName;
         private string _password;
-        private int _connectionTimeoutSec = 10;
-        private int _reconnectIntervalSec = 5;
+        private int _connectionTimeoutSec = 2;
+        private int _reconnectIntervalSec = 10;
         private int _rtpBufferSizeKB = 256;
 
         public Uri HardwareUri { get; private set; }

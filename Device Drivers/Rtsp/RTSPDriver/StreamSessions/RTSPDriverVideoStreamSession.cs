@@ -27,6 +27,9 @@ namespace RTSPDriver
         private bool _channelEnabled;
         private int _channelIndex;
         private string _deviceName;
+        private int _reconnectIntervalSec = 10;
+        private int _connectionTimeoutSec = 2;
+        private int _rtpBufferSizeKB = 256;
         private RtspStreamBuffer _streamBuffer;
         private bool _wasLive;
         private DateTime _lastKeyFrameTimestamp = DateTime.MinValue;
@@ -102,24 +105,28 @@ namespace RTSPDriver
             bool.TryParse(enabledSetting?.Value ?? "true", out bool newEnabled);
 
             // Update hardware-level settings
-            var timeoutSetting = _settingsManager.GetSetting(new HardwareSetting(Constants.ConnectionTimeoutSec, "10"));
-            int.TryParse(timeoutSetting?.Value ?? "10", out int timeout);
+            var timeoutSetting = _settingsManager.GetSetting(new HardwareSetting(Constants.ConnectionTimeoutSec, "2"));
+            int.TryParse(timeoutSetting?.Value ?? "2", out int timeout);
 
-            var reconnectSetting = _settingsManager.GetSetting(new HardwareSetting(Constants.ReconnectIntervalSec, "5"));
-            int.TryParse(reconnectSetting?.Value ?? "5", out int reconnect);
+            var reconnectSetting = _settingsManager.GetSetting(new HardwareSetting(Constants.ReconnectIntervalSec, "10"));
+            int.TryParse(reconnectSetting?.Value ?? "10", out int reconnect);
 
             var bufferSetting = _settingsManager.GetSetting(new HardwareSetting(Constants.RtpBufferSizeKB, "256"));
             int.TryParse(bufferSetting?.Value ?? "256", out int bufSize);
 
             _connectionManager.UpdateSettings(timeout, reconnect, bufSize);
 
-            // Check if channel needs restart
-            bool needsRestart = newPort != _rtspPort || newPath != _rtspPath || newTransport != _transport || newEnabled != _channelEnabled;
+            // Check if channel needs restart (includes hardware settings that are baked into worker constructor)
+            bool needsRestart = newPort != _rtspPort || newPath != _rtspPath || newTransport != _transport || newEnabled != _channelEnabled
+                || timeout != _connectionTimeoutSec || reconnect != _reconnectIntervalSec || bufSize != _rtpBufferSizeKB;
 
             _rtspPort = newPort;
             _rtspPath = newPath;
             _transport = newTransport;
             _channelEnabled = newEnabled;
+            _reconnectIntervalSec = reconnect;
+            _connectionTimeoutSec = timeout;
+            _rtpBufferSizeKB = bufSize;
 
             _streamBuffer = _connectionManager.GetOrCreateBuffer(_channelIndex);
 
@@ -159,14 +166,16 @@ namespace RTSPDriver
             if (isLive && !_wasLive)
             {
                 _wasLive = true;
+                _prevFrameTs = DateTime.MinValue;
+                _prevDeliverTick = 0;
                 _eventManager?.NewEvent(_deviceId, Constants.StreamStarted);
-                Toolbox.Log.Trace("RTSPVideoStreamSession: Stream started event fired for channel {0}", _channelIndex + 1);
+                Toolbox.Log.Trace("RTSPVideoStreamSession: Stream started for channel {0}", _channelIndex + 1);
             }
             else if (!isLive && _wasLive)
             {
                 _wasLive = false;
                 _eventManager?.NewEvent(_deviceId, Constants.StreamStopped);
-                Toolbox.Log.Trace("RTSPVideoStreamSession: Stream stopped event fired for channel {0}", _channelIndex + 1);
+                Toolbox.Log.Trace("RTSPVideoStreamSession: Stream stopped for channel {0}", _channelIndex + 1);
             }
 
             // Live video path - block until a frame arrives or stream goes offline
@@ -211,7 +220,7 @@ namespace RTSPDriver
 
                     _frameCount++;
                     var diagNow = DateTime.UtcNow;
-                    if ((diagNow - _lastDiagLog).TotalSeconds >= 20)
+                    if ((diagNow - _lastDiagLog).TotalSeconds >= 60)
                     {
                         Toolbox.Log.Trace("Session[ch{0}]: frames={1} queued={2} codec={3} isLive={4}",
                             _channelIndex + 1, _frameCount, _streamBuffer.QueueDepth, _streamBuffer.CodecName, _streamBuffer.IsLive);
@@ -243,6 +252,27 @@ namespace RTSPDriver
                 if (sleepMs > 0)
                     Thread.Sleep(sleepMs);
             }
+
+            // Re-check after idle sleep — stream may have gone live during the wait
+            if (_streamBuffer != null && _streamBuffer.IsLive &&
+                _streamBuffer.TryGetFrame(out byte[] liveData, out bool liveKey, out bool liveHevc, out DateTime liveTs))
+            {
+                if (!_wasLive)
+                {
+                    _wasLive = true;
+                    _prevFrameTs = DateTime.MinValue;
+                    _prevDeliverTick = 0;
+                    _eventManager?.NewEvent(_deviceId, Constants.StreamStarted);
+                    Toolbox.Log.Trace("RTSPVideoStreamSession: Stream started for channel {0}", _channelIndex + 1);
+                }
+                _prevFrameTs = liveTs;
+                _prevDeliverTick = Stopwatch.GetTimestamp();
+                _frameCount++;
+                data = liveData;
+                header = BuildVideoHeader(liveData, liveKey, liveHevc, liveTs);
+                return true;
+            }
+
             _lastFrameTime = DateTime.UtcNow;
 
             data = GenerateStatusFrame();
@@ -287,8 +317,11 @@ namespace RTSPDriver
                 case RtspWorkerState.Connecting:
                     return StatusFrameGenerator.GenerateConnectingFrame(_deviceName, displayUrl, transport, attempt);
 
+                case RtspWorkerState.AwaitingKeyFrame:
+                    return StatusFrameGenerator.GenerateAwaitingKeyFrameFrame(_deviceName, displayUrl, transport);
+
                 case RtspWorkerState.Reconnecting:
-                    return StatusFrameGenerator.GenerateReconnectingFrame(_deviceName, displayUrl, transport, lastError, attempt, 5);
+                    return StatusFrameGenerator.GenerateReconnectingFrame(_deviceName, displayUrl, transport, lastError, attempt, _reconnectIntervalSec);
 
                 case RtspWorkerState.Error:
                     if (lastError != null && lastError.Contains("401"))

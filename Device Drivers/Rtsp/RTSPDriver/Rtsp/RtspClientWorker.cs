@@ -10,7 +10,7 @@ namespace RTSPDriver.Rtsp
     /// <summary>
     /// Per-channel RTSP pull client using FFmpeg.
     /// Connects to an RTSP source, demuxes video, and pushes Annex B frames to a buffer.
-    /// Uses bitstream filters to ensure SPS/PPS are injected into keyframes.
+    /// Prepends SPS/PPS extradata to keyframes for Milestone's decoder.
     /// </summary>
     internal unsafe class RtspClientWorker
     {
@@ -85,9 +85,11 @@ namespace RTSPDriver.Rtsp
         public void Stop()
         {
             _running = false;
-            _thread?.Join(5000);
-            _thread = null;
-            _buffer.SetOffline();
+            if (_thread != null)
+            {
+                _thread.Join(5000);
+                _thread = null;
+            }
             _state = RtspWorkerState.Idle;
         }
 
@@ -116,13 +118,13 @@ namespace RTSPDriver.Rtsp
                 }
 
                 _buffer.SetOffline();
-                _state = RtspWorkerState.Reconnecting;
                 _connectedSince = DateTime.MinValue;
 
                 if (!_running) break;
 
-                Toolbox.Log.Trace("RtspClientWorker[{0}]: Reconnecting in {1}s (attempt {2})",
-                    _channelIndex + 1, _reconnectIntervalSec, _reconnectAttempt);
+                _state = RtspWorkerState.Reconnecting;
+                Toolbox.Log.Trace("RtspClientWorker[{0}]: {1} — reconnecting in {2}s (attempt {3})",
+                    _channelIndex + 1, _lastError ?? "Disconnected", _reconnectIntervalSec, _reconnectAttempt);
 
                 // Wait for reconnect interval, checking _running periodically
                 for (int i = 0; i < _reconnectIntervalSec * 10 && _running; i++)
@@ -148,11 +150,16 @@ namespace RTSPDriver.Rtsp
 
                 // Set RTSP options
                 AVDictionary* opts = null;
-                if (_transport != "auto")
-                    ffmpeg.av_dict_set(&opts, "rtsp_transport", _transport, 0);
-                else
-                    ffmpeg.av_dict_set(&opts, "rtsp_flags", "prefer_tcp", 0);
-                ffmpeg.av_dict_set(&opts, "stimeout", (_connectionTimeoutSec * 1_000_000).ToString(), 0);
+                if (_transport == "tcp")
+                    ffmpeg.av_dict_set(&opts, "rtsp_transport", "tcp", 0);
+                else if (_transport == "udp")
+                    ffmpeg.av_dict_set(&opts, "rtsp_transport", "udp", 0);
+                // else "auto": FFmpeg defaults to UDP, which is preferred for LAN surveillance
+
+                long timeoutUs = _connectionTimeoutSec * 1_000_000L;
+                ffmpeg.av_dict_set(&opts, "stimeout", timeoutUs.ToString(), 0);     // RTSP socket connect/setup timeout
+                ffmpeg.av_dict_set(&opts, "rw_timeout", timeoutUs.ToString(), 0);    // I/O read/write timeout (detects camera unplug)
+                ffmpeg.av_dict_set(&opts, "timeout", timeoutUs.ToString(), 0);       // General socket timeout
                 ffmpeg.av_dict_set(&opts, "buffer_size", (_rtpBufferSizeKB * 1024).ToString(), 0);
                 ffmpeg.av_dict_set(&opts, "max_delay", "500000", 0);
                 ffmpeg.av_dict_set(&opts, "allowed_media_types", "video", 0);
@@ -220,23 +227,15 @@ namespace RTSPDriver.Rtsp
                 {
                     extradata = new byte[codecpar->extradata_size];
                     Marshal.Copy((IntPtr)codecpar->extradata, extradata, 0, codecpar->extradata_size);
-                    Toolbox.Log.Trace("RtspClientWorker[{0}]: extradata {1} bytes, first bytes: {2:X2} {3:X2} {4:X2} {5:X2} {6:X2}",
-                        _channelIndex + 1, extradata.Length,
-                        extradata.Length > 0 ? extradata[0] : 0,
-                        extradata.Length > 1 ? extradata[1] : 0,
-                        extradata.Length > 2 ? extradata[2] : 0,
-                        extradata.Length > 3 ? extradata[3] : 0,
-                        extradata.Length > 4 ? extradata[4] : 0);
                 }
 
                 _buffer.SetStreamInfo(detectedCodec, width, height);
-                _buffer.SetLive();
-                _state = RtspWorkerState.Streaming;
+                _state = RtspWorkerState.AwaitingKeyFrame;
                 _connectedSince = DateTime.UtcNow;
                 _reconnectAttempt = 0;
 
-                Toolbox.Log.Trace("RtspClientWorker[{0}]: Connected codec={1} {2}x{3} transport={4}",
-                    _channelIndex + 1, detectedCodec, width, height, _transport);
+                Toolbox.Log.Trace("RtspClientWorker[{0}]: Connected codec={1} {2}x{3} transport={4} extradata={5}B, awaiting keyframe",
+                    _channelIndex + 1, detectedCodec, width, height, _transport, extradata?.Length ?? 0);
 
                 var timeBase = fmtCtx->streams[videoStreamIndex]->time_base;
                 long firstPts = ffmpeg.AV_NOPTS_VALUE;
@@ -277,7 +276,9 @@ namespace RTSPDriver.Rtsp
                             continue;
                         }
                         gotFirstKeyFrame = true;
-                        Toolbox.Log.Trace("RtspClientWorker[{0}]: First keyframe at frame #{1}, size={2}",
+                        _buffer.SetLive();
+                        _state = RtspWorkerState.Streaming;
+                        Toolbox.Log.Trace("RtspClientWorker[{0}]: First keyframe at frame #{1}, size={2}, streaming",
                             _channelIndex + 1, totalFrames, pkt->size);
                     }
 
@@ -306,19 +307,6 @@ namespace RTSPDriver.Rtsp
                     else
                     {
                         frameData = pktData;
-                    }
-
-                    // Log first keyframe delivery details
-                    if (keyFrames == 1 && isKeyFrame)
-                    {
-                        Toolbox.Log.Trace("RtspClientWorker[{0}]: Delivering first keyframe: extradata={1}B + pkt={2}B = {3}B, first bytes: {4:X2} {5:X2} {6:X2} {7:X2} {8:X2}",
-                            _channelIndex + 1,
-                            extradata?.Length ?? 0, pktData.Length, frameData.Length,
-                            frameData.Length > 0 ? frameData[0] : 0,
-                            frameData.Length > 1 ? frameData[1] : 0,
-                            frameData.Length > 2 ? frameData[2] : 0,
-                            frameData.Length > 3 ? frameData[3] : 0,
-                            frameData.Length > 4 ? frameData[4] : 0);
                     }
 
                     _buffer.PushFrame(frameData, isKeyFrame, isHevc, frameTs);
@@ -370,20 +358,28 @@ namespace RTSPDriver.Rtsp
         {
             string ffmpegMsg = FfmpegError(errorCode);
 
+            // Log the raw FFmpeg error for diagnostics
+            Toolbox.Log.Trace("RtspClientWorker[{0}]: FFmpeg error {1}: {2}",
+                _channelIndex + 1, errorCode, ffmpegMsg);
+
             if (ffmpegMsg.Contains("Connection refused"))
                 return $"Connection refused ({_transport.ToUpper()}) - device unreachable or port blocked";
 
             if (ffmpegMsg.Contains("Connection timed out") || ffmpegMsg.Contains("Timed out"))
                 return $"Connection timed out after {_connectionTimeoutSec}s - check network and IP address";
 
-            if (ffmpegMsg.Contains("401") || ffmpegMsg.Contains("Unauthorized"))
-                return "Authentication failed (401) - check username and password in Management Client";
-
-            if (ffmpegMsg.Contains("403") || ffmpegMsg.Contains("Forbidden"))
-                return "Access forbidden (403) - user does not have permission to access this stream";
-
+            // Check 404 before 401 — some cameras return 401 for invalid paths
             if (ffmpegMsg.Contains("404") || ffmpegMsg.Contains("Not Found"))
                 return "Stream not found (404) - check RTSP path";
+
+            if (ffmpegMsg.Contains("401") || ffmpegMsg.Contains("Unauthorized"))
+                return "Authentication failed (401) - check username/password and RTSP path (some cameras return 401 for invalid paths)";
+
+            if (ffmpegMsg.Contains("403") || ffmpegMsg.Contains("Forbidden"))
+                return "Access forbidden (403) - user lacks permission";
+
+            if (ffmpegMsg.Contains("453") || ffmpegMsg.Contains("Not Enough Bandwidth"))
+                return "Not enough bandwidth (453) - too many streams or reduce resolution";
 
             if (ffmpegMsg.Contains("Name or service not known") || ffmpegMsg.Contains("resolve"))
                 return "DNS resolution failed - cannot resolve hostname";
@@ -394,8 +390,13 @@ namespace RTSPDriver.Rtsp
             return $"Connection failed: {ffmpegMsg}";
         }
 
+        private static volatile bool _ffmpegPathSet;
+
         private static void SetupFfmpegPath()
         {
+            if (_ffmpegPathSet) return;
+            _ffmpegPathSet = true;
+
             var asmDir = Path.GetDirectoryName(typeof(RtspClientWorker).Assembly.Location);
             var x64Dir = Path.Combine(asmDir, "x64");
             if (Directory.Exists(x64Dir))
@@ -415,6 +416,7 @@ namespace RTSPDriver.Rtsp
     {
         Idle,
         Connecting,
+        AwaitingKeyFrame,
         Streaming,
         Reconnecting,
         Error,

@@ -72,8 +72,8 @@ namespace RTSPDriver
         {
             return new Dictionary<string, string>()
             {
-                {Constants.ConnectionTimeoutSec, "10"},
-                {Constants.ReconnectIntervalSec, "5"},
+                {Constants.ConnectionTimeoutSec, "2"},
+                {Constants.ReconnectIntervalSec, "10"},
                 {Constants.RtpBufferSizeKB, "256"},
             };
         }
@@ -88,9 +88,9 @@ namespace RTSPDriver
                 DisplayName = "Connection Timeout (seconds)",
                 ReferenceId = Constants.ConnectionTimeoutSecRefId,
                 MinValue = 1,
-                MaxValue = 60,
+                MaxValue = 30,
                 Resolution = 1,
-                DefaultValue = 10,
+                DefaultValue = 2,
             });
 
             fields.Add(new NumberSetupField()
@@ -99,9 +99,9 @@ namespace RTSPDriver
                 DisplayName = "Reconnect Interval (seconds)",
                 ReferenceId = Constants.ReconnectIntervalSecRefId,
                 MinValue = 1,
-                MaxValue = 300,
+                MaxValue = 60,
                 Resolution = 1,
-                DefaultValue = 5,
+                DefaultValue = 10,
             });
 
             fields.Add(new NumberSetupField()
@@ -143,7 +143,7 @@ namespace RTSPDriver
                 DefaultValue = "auto",
                 EnumList = new List<StringSetupField>
                 {
-                    new StringSetupField { Key = "auto", DisplayName = "Auto (prefer TCP)" },
+                    new StringSetupField { Key = "auto", DisplayName = "Auto (prefer UDP)" },
                     new StringSetupField { Key = "tcp", DisplayName = "TCP (interleaved)" },
                     new StringSetupField { Key = "udp", DisplayName = "UDP" },
                 }

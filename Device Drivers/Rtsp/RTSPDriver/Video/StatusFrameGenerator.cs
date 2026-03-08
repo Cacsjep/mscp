@@ -43,6 +43,25 @@ namespace RTSPDriver.Video
         }
 
         /// <summary>
+        /// Generate a frame showing "Awaiting Keyframe" after RTSP connect but before first IDR.
+        /// </summary>
+        public static byte[] GenerateAwaitingKeyFrameFrame(string deviceName, string displayUrl, string transport)
+        {
+            return RenderFrame((g, w, h) =>
+            {
+                DrawHeader(g, w, deviceName);
+                DrawCenterTitle(g, w, h, "Awaiting Keyframe...", CyanColor);
+
+                float detailY = h * 0.52f;
+                DrawDetailLine(g, w, ref detailY, $"URL: {displayUrl}");
+                DrawDetailLine(g, w, ref detailY, $"Transport: {transport.ToUpper()}");
+                DrawDetailLine(g, w, ref detailY, "Connected, waiting for first keyframe (IDR)");
+
+                DrawPulsingDots(g, w, h * 0.38f);
+            });
+        }
+
+        /// <summary>
         /// Generate a frame showing the error message prominently after a connection failure.
         /// </summary>
         public static byte[] GenerateReconnectingFrame(string deviceName, string displayUrl, string transport, string lastError, int attempt, int reconnectSec)
