@@ -79,5 +79,12 @@
     "path": "Smart Client Plugins/SmartBar",
     "category": "SmartClient",
     "description": "Workspace toolbar button for Smart Client"
+  },
+  {
+    "name": "RTSPDriver",
+    "displayName": "RTSP Pull Driver",
+    "path": "Device Drivers/Rtsp/RTSPDriver",
+    "category": "DeviceDriver",
+    "description": "4-channel RTSP pull driver with rich diagnostics (H.264/H.265)"
   }
 ]
