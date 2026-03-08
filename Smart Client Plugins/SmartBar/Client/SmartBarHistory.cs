@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
@@ -14,6 +15,9 @@ namespace SmartBar.Client
         private static int _maxHistory = 20;
         private static object _viewReceiver;
         private static bool _suppressNextViewChange;
+
+        // Recent items: last N unique cameras/views used
+        private static readonly List<RecentItem> _recentItems = new List<RecentItem>();
 
         // GoBack suppression: time-based to cover all cascading close/create cycles
         private static DateTime _goBackTime = DateTime.MinValue;
@@ -162,6 +166,8 @@ namespace SmartBar.Client
                         WindowId = windowId,
                         Description = desc
                     });
+                    if (cam != null)
+                        AddRecent(RecentType.Camera, cam, newCamName);
                 }
 
                 _pendingClosedCamera = null;
@@ -278,6 +284,7 @@ namespace SmartBar.Client
                     Description = "View: " + viewItem.Name,
                     ViewSnapshot = snapshot
                 });
+                AddRecent(RecentType.View, viewItem.FQID, viewItem.Name);
             }
             catch (Exception ex)
             {
@@ -432,6 +439,21 @@ namespace SmartBar.Client
                 GoBack();
         }
 
+        private static void AddRecent(RecentType type, FQID fqid, string name)
+        {
+            if (fqid == null) return;
+            var id = fqid.ObjectId;
+            _recentItems.RemoveAll(r => r.ObjectId == id);
+            _recentItems.Insert(0, new RecentItem { Type = type, ObjectId = id, Name = name });
+            while (_recentItems.Count > SmartBarConfig.MaxRecent)
+                _recentItems.RemoveAt(_recentItems.Count - 1);
+        }
+
+        public static List<RecentItem> GetRecentItems()
+        {
+            return _recentItems.ToList();
+        }
+
         private static FQID FindWindowFQID(Guid windowId)
         {
             var windows = Configuration.Instance.GetItemsByKind(Kind.Window);
@@ -445,6 +467,14 @@ namespace SmartBar.Client
     }
 
     enum HistoryType { View, Camera }
+    enum RecentType { Camera, View }
+
+    struct RecentItem
+    {
+        public RecentType Type;
+        public Guid ObjectId;
+        public string Name;
+    }
 
     class HistoryEntry
     {

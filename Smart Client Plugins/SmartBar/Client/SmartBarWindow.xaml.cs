@@ -98,6 +98,7 @@ namespace SmartBar.Client
                         CollectViews(vg);
                 }
 
+                LoadRecentItems();
                 LoadCommands();
                 LoadPrograms();
                 LoadUndoHistory();
@@ -243,6 +244,68 @@ namespace SmartBar.Client
             }
         }
 
+        private void LoadRecentItems()
+        {
+            var recents = SmartBarHistory.GetRecentItems();
+            if (recents.Count == 0) return;
+
+            var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
+            foreach (var r in recents)
+            {
+                if (r.Type == RecentType.Camera)
+                {
+                    var item = Configuration.Instance.GetItem(serverId, r.ObjectId, Kind.Camera);
+                    if (item == null) continue;
+                    _allItems.Add(new CommandItem
+                    {
+                        Name = r.Name,
+                        Group = "Recent",
+                        Category = ItemCategory.Recent,
+                        PlatformItem = item
+                    });
+                }
+                else
+                {
+                    // Find the view item by ObjectId
+                    var viewItem = FindViewByObjectId(r.ObjectId);
+                    if (viewItem == null) continue;
+                    _allItems.Add(new CommandItem
+                    {
+                        Name = r.Name,
+                        Group = "Recent",
+                        Category = ItemCategory.Recent,
+                        PlatformItem = viewItem
+                    });
+                }
+            }
+        }
+
+        private Item FindViewByObjectId(Guid objectId)
+        {
+            var viewGroups = ClientControl.Instance.GetViewGroupItems();
+            if (viewGroups == null) return null;
+            foreach (var vg in viewGroups)
+            {
+                var found = FindViewRecursive(vg, objectId);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private Item FindViewRecursive(Item parent, Guid objectId)
+        {
+            foreach (var child in parent.GetChildren())
+            {
+                if (child.FQID.ObjectId == objectId) return child;
+                if (child.FQID.FolderType != FolderType.No)
+                {
+                    var found = FindViewRecursive(child, objectId);
+                    if (found != null) return found;
+                }
+            }
+            return null;
+        }
+
         private void LoadUndoHistory()
         {
             var descriptions = SmartBarHistory.GetHistoryDescriptions();
@@ -300,7 +363,8 @@ namespace SmartBar.Client
                 {
                     lastCategory = item.Category;
                     lastGroup = null;
-                    var categoryLabel = item.Category == ItemCategory.Undo ? "Undo History"
+                    var categoryLabel = item.Category == ItemCategory.Recent ? "Recent"
+                        : item.Category == ItemCategory.Undo ? "Undo History"
                         : item.Category == ItemCategory.Camera ? "Cameras"
                         : item.Category == ItemCategory.View ? "Views"
                         : item.Category == ItemCategory.Program ? "Programs" : "Commands";
@@ -642,6 +706,14 @@ namespace SmartBar.Client
             {
                 NavigateToView(item);
             }
+            else if (item.Category == ItemCategory.Recent)
+            {
+                // Recent items can be cameras or views — check the Kind
+                if (item.PlatformItem?.FQID?.Kind == Kind.Camera)
+                    ShowCamerasInView(new List<CommandItem> { item });
+                else
+                    NavigateToView(item);
+            }
             else if (item.Category == ItemCategory.Command || item.Category == ItemCategory.Program || item.Category == ItemCategory.Undo)
             {
                 item.Execute?.Invoke();
@@ -783,6 +855,7 @@ namespace SmartBar.Client
 
     enum ItemCategory
     {
+        Recent,
         Camera,
         View,
         Command,

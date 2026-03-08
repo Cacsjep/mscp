@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace SmartBar.Client
 {
@@ -33,7 +34,10 @@ namespace SmartBar.Client
             if (!_installed || _isOpen)
                 return;
 
-            if (e.Key != Key.Space)
+            var key = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (key != SmartBarConfig.InvokeKey)
+                return;
+            if (Keyboard.Modifiers != SmartBarConfig.InvokeModifiers)
                 return;
 
             if (Keyboard.FocusedElement is TextBoxBase ||
@@ -43,6 +47,16 @@ namespace SmartBar.Client
             // Don't trigger from our own window
             if (sender is SmartBarWindow)
                 return;
+
+            // Don't trigger while settings panel is open
+            if (Keyboard.FocusedElement is DependencyObject focused)
+            {
+                for (DependencyObject d = focused; d != null; d = VisualTreeHelper.GetParent(d))
+                {
+                    if (d is SmartBarSettingsPanelControl)
+                        return;
+                }
+            }
 
             e.Handled = true;
 

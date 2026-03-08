@@ -24,6 +24,62 @@
             <Setter Property="Padding" Value="12,4" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF363636" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF555555" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF404040" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SaveButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="#FF3399FF" />
+            <Setter Property="BorderBrush" Value="#FF2277CC" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="20,8" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF2288DD" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF1166AA" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Background" Value="#FF2A2A2A" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF444444" />
+                                <Setter Property="Foreground" Value="#FF666666" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style x:Key="DarkTextBox" TargetType="TextBox">
             <Setter Property="Background" Value="#FF2A2A2A" />
@@ -39,9 +95,29 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
         <StackPanel MaxWidth="600">
 
+            <!-- General -->
+            <TextBlock Text="General" Style="{StaticResource SectionHeader}" />
+            <Border Background="#FF252525" CornerRadius="6" Padding="14,10" Margin="0,0,0,4">
+                <DockPanel>
+                    <TextBlock Text="Invoke key:" Style="{StaticResource LabelText}" />
+                    <Border x:Name="keyRecorderBorder"
+                            DockPanel.Dock="Right" HorizontalAlignment="Right"
+                            Background="#FF2A2A2A" BorderBrush="#FF444444" BorderThickness="1"
+                            CornerRadius="3" Padding="12,4" MinWidth="80" Cursor="Hand"
+                            MouseLeftButtonUp="OnKeyRecorderClick"
+                            Focusable="True" KeyDown="OnKeyRecorderKeyDown"
+                            LostFocus="OnKeyRecorderLostFocus">
+                        <TextBlock x:Name="keyRecorderText" Foreground="#FFD0D0D0" FontSize="13"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+                </DockPanel>
+            </Border>
+            <TextBlock Text="Click to change, then press the desired key. Letters, digits, Esc, Enter, arrows, and Tab are reserved."
+                       Foreground="#FF666666" FontSize="11" Margin="4,0,0,0" TextWrapping="Wrap" />
+
             <!-- History Settings -->
             <TextBlock Text="History" Style="{StaticResource SectionHeader}" />
-            <Border Background="#FF252525" CornerRadius="6" Padding="14,10" Margin="0,0,0,8">
+            <Border Background="#FF252525" CornerRadius="6" Padding="14,10" Margin="0,0,0,4">
                 <DockPanel>
                     <TextBlock Text="Max undo history entries:" Style="{StaticResource LabelText}" />
                     <ComboBox x:Name="maxHistoryCombo"
@@ -55,6 +131,22 @@
                 </DockPanel>
             </Border>
             <TextBlock Text="Number of view and camera changes to remember for undo."
+                       Foreground="#FF666666" FontSize="11" Margin="4,0,0,0" />
+
+            <Border Background="#FF252525" CornerRadius="6" Padding="14,10" Margin="0,4,0,4">
+                <DockPanel>
+                    <TextBlock Text="Max recent items:" Style="{StaticResource LabelText}" />
+                    <ComboBox x:Name="maxRecentCombo"
+                              DockPanel.Dock="Right"
+                              HorizontalAlignment="Right"
+                              Width="80"
+                              Background="#FF2A2A2A"
+                              Foreground="#FFD0D0D0"
+                              BorderBrush="#FF444444"
+                              FontSize="13" />
+                </DockPanel>
+            </Border>
+            <TextBlock Text="Number of recently used cameras and views shown at the top."
                        Foreground="#FF666666" FontSize="11" Margin="4,0,0,0" />
 
             <!-- Programs -->
@@ -94,33 +186,27 @@
                                          Style="{StaticResource DarkTextBox}"
                                          Margin="0,0,6,0" />
                                 <Button Grid.Column="2"
-                                        Width="28" Height="28"
-                                        Background="#FF2A2A2A"
-                                        BorderBrush="#FF444444"
-                                        BorderThickness="1"
+                                        Width="24" Height="24"
+                                        Style="{StaticResource SmallButton}"
                                         Padding="0"
-                                        Cursor="Hand"
                                         Click="OnBrowseProgram"
                                         ToolTip="Browse for executable"
                                         Margin="0,0,4,0">
                                     <fa5:ImageAwesome Icon="Solid_FolderOpen"
                                                       Foreground="#FF2196F3"
-                                                      Width="12" Height="12"
+                                                      Width="10" Height="10"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center" />
                                 </Button>
                                 <Button Grid.Column="3"
-                                        Width="28" Height="28"
-                                        Background="#FF2A2A2A"
-                                        BorderBrush="#FF444444"
-                                        BorderThickness="1"
+                                        Width="24" Height="24"
+                                        Style="{StaticResource SmallButton}"
                                         Padding="0"
-                                        Cursor="Hand"
                                         Click="OnRemoveProgram"
                                         ToolTip="Remove program">
                                     <fa5:ImageAwesome Icon="Solid_Times"
                                                       Foreground="#FFE05050"
-                                                      Width="10" Height="10"
+                                                      Width="9" Height="9"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center" />
                                 </Button>
@@ -141,6 +227,21 @@
                     <TextBlock Text="Add program" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
+
+            <!-- Save -->
+            <StackPanel Margin="0,24,0,0">
+                <Button x:Name="saveButton"
+                        Content="Save"
+                        Click="OnSave"
+                        Style="{StaticResource SaveButton}"
+                        HorizontalAlignment="Left" />
+                <TextBlock x:Name="validationHint"
+                           Foreground="#FFE05050" FontSize="11" Margin="2,6,0,0"
+                           Visibility="Collapsed" />
+                <TextBlock x:Name="savedHint"
+                           Text="Settings saved" Foreground="#FF4CAF50" FontSize="11"
+                           Margin="2,6,0,0" Visibility="Collapsed" />
+            </StackPanel>
 
         </StackPanel>
     </ScrollViewer>
