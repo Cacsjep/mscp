@@ -19,6 +19,8 @@ multi-window targeting, recent items, and full undo history.
 - **Recent** - Recently used cameras and views appear at the top for quick re-access. Configurable limit (5–20 items).
 - **Cameras** - Browse all cameras with folder breadcrumb paths. Select one to place it in the current view slot.
 - **Views** - Browse all views organized by folder hierarchy. Select one to navigate to that view.
+- **Outputs** - Activate or deactivate hardware outputs (gates, sirens, door locks, etc.) directly from Smart Bar. Each output appears twice: `Output: Name Activate` and `Output: Name Deactivate`. Requires Corporate/Expert edition. Can be disabled in Settings.
+- **Events** - Trigger user-defined events configured in XProtect Management Client. Each event appears as `Event: Name`. Can be disabled in Settings.
 - **Commands** - Built-in application controls including fullscreen toggle, mode switching (Live/Playback/Setup), side panel, window management, configuration reload, and undo.
 - **Programs** - Launch external applications directly from Smart Bar. Configured in Settings.
 
@@ -81,6 +83,13 @@ Reserved keys that cannot be used as the invoke key (without a modifier): letter
 - **Max undo history entries** (5–30) - Number of view and camera changes to remember for undo.
 - **Max recent items** (5–20) - Number of recently used cameras and views shown at the top of Smart Bar.
 
+### Categories
+
+Toggle which item categories appear in the Smart Bar launcher:
+
+- **Show hardware outputs** - List all hardware outputs with activate/deactivate commands. Enabled by default.
+- **Show user-defined events** - List all user-defined events with trigger commands. Enabled by default.
+
 ### Programs
 
 Manage external programs that appear in the Smart Bar launcher:
@@ -108,6 +117,8 @@ C:\ProgramData\Milestone\SmartBar\config.xml
 | `MaxRecent` | int | 10 | Maximum recent items shown |
 | `InvokeKey` | Key enum | Space | Keyboard key to open Smart Bar |
 | `InvokeModifiers` | ModifierKeys enum | None | Modifier keys (Ctrl, Alt, Shift) for invoke |
+| `ShowOutputs` | bool | true | Show hardware output commands |
+| `ShowEvents` | bool | true | Show user-defined event commands |
 | `Programs` | list | Notepad | External programs to show in launcher |
 
 </div>

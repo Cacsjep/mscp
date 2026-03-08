@@ -101,6 +101,8 @@ namespace SmartBar.Client
                 LoadRecentItems();
                 LoadCommands();
                 LoadPrograms();
+                LoadOutputs();
+                LoadEvents();
                 LoadUndoHistory();
             }
             catch (Exception ex) { Log.Error("LoadItems failed", ex); }
@@ -244,6 +246,106 @@ namespace SmartBar.Client
             }
         }
 
+        private void LoadOutputs()
+        {
+            if (!SmartBarConfig.ShowOutputs) return;
+
+            try
+            {
+                var outputs = Configuration.Instance.GetItemsByKind(Kind.Output);
+                foreach (var output in outputs)
+                    CollectOutputItems(output);
+            }
+            catch (Exception ex) { Log.Error("LoadOutputs failed", ex); }
+        }
+
+        private void CollectOutputItems(Item item)
+        {
+            if (item.FQID.FolderType == FolderType.No)
+            {
+                var fqid = item.FQID;
+                _allItems.Add(new CommandItem
+                {
+                    Name = "Output: " + item.Name + " Activate",
+                    Group = "Outputs",
+                    Category = ItemCategory.Output,
+                    Execute = () =>
+                    {
+                        try
+                        {
+                            EnvironmentManager.Instance.SendMessage(
+                                new Message(MessageId.Control.OutputActivate) { RelatedFQID = fqid }, fqid);
+                            Log.Info($"Output activated: {item.Name}");
+                        }
+                        catch (Exception ex) { Log.Error($"OutputActivate failed: {item.Name}", ex); }
+                    }
+                });
+                _allItems.Add(new CommandItem
+                {
+                    Name = "Output: " + item.Name + " Deactivate",
+                    Group = "Outputs",
+                    Category = ItemCategory.Output,
+                    Execute = () =>
+                    {
+                        try
+                        {
+                            EnvironmentManager.Instance.SendMessage(
+                                new Message(MessageId.Control.OutputDeactivate) { RelatedFQID = fqid }, fqid);
+                            Log.Info($"Output deactivated: {item.Name}");
+                        }
+                        catch (Exception ex) { Log.Error($"OutputDeactivate failed: {item.Name}", ex); }
+                    }
+                });
+            }
+            else
+            {
+                foreach (var child in item.GetChildren())
+                    CollectOutputItems(child);
+            }
+        }
+
+        private void LoadEvents()
+        {
+            if (!SmartBarConfig.ShowEvents) return;
+
+            try
+            {
+                var events = Configuration.Instance.GetItemsByKind(Kind.TriggerEvent);
+                foreach (var ev in events)
+                    CollectEventItems(ev);
+            }
+            catch (Exception ex) { Log.Error("LoadEvents failed", ex); }
+        }
+
+        private void CollectEventItems(Item item)
+        {
+            if (item.FQID.FolderType == FolderType.No)
+            {
+                var fqid = item.FQID;
+                _allItems.Add(new CommandItem
+                {
+                    Name = "Event: " + item.Name,
+                    Group = "Events",
+                    Category = ItemCategory.Event,
+                    Execute = () =>
+                    {
+                        try
+                        {
+                            EnvironmentManager.Instance.SendMessage(
+                                new Message(MessageId.Control.TriggerCommand) { RelatedFQID = fqid }, fqid);
+                            Log.Info($"Event triggered: {item.Name}");
+                        }
+                        catch (Exception ex) { Log.Error($"TriggerEvent failed: {item.Name}", ex); }
+                    }
+                });
+            }
+            else
+            {
+                foreach (var child in item.GetChildren())
+                    CollectEventItems(child);
+            }
+        }
+
         private void LoadRecentItems()
         {
             var recents = SmartBarHistory.GetRecentItems();
@@ -347,6 +449,8 @@ namespace SmartBar.Client
             RebuildList();
         }
 
+        private const int MaxVisibleItems = 50;
+
         private void RebuildList()
         {
             resultPanel.Children.Clear();
@@ -354,9 +458,12 @@ namespace SmartBar.Client
             ItemCategory? lastCategory = null;
             string lastGroup = null;
             bool isFirst = true;
+            int rendered = 0;
 
             for (int i = 0; i < _filteredItems.Count; i++)
             {
+                if (rendered >= MaxVisibleItems) break;
+
                 var item = _filteredItems[i];
 
                 if (lastCategory != item.Category)
@@ -367,6 +474,8 @@ namespace SmartBar.Client
                         : item.Category == ItemCategory.Undo ? "Undo History"
                         : item.Category == ItemCategory.Camera ? "Cameras"
                         : item.Category == ItemCategory.View ? "Views"
+                        : item.Category == ItemCategory.Output ? "Outputs"
+                        : item.Category == ItemCategory.Event ? "Events"
                         : item.Category == ItemCategory.Program ? "Programs" : "Commands";
                     resultPanel.Children.Add(new TextBlock
                     {
@@ -407,6 +516,20 @@ namespace SmartBar.Client
                 }
 
                 resultPanel.Children.Add(CreateRow(item, i));
+                rendered++;
+            }
+
+            if (_filteredItems.Count > MaxVisibleItems)
+            {
+                int remaining = _filteredItems.Count - MaxVisibleItems;
+                resultPanel.Children.Add(new TextBlock
+                {
+                    Text = $"{remaining} more results, keep typing to filter...",
+                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xB3, 0x00)),
+                    FontSize = 11,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 10, 0, 6)
+                });
             }
 
             if (_filteredItems.Count == 0)
@@ -459,6 +582,12 @@ namespace SmartBar.Client
             {
                 nameBlock.Inlines.Add(new System.Windows.Documents.Run("Program: ") { Foreground = TextGroup });
                 nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name.Substring(9)) { Foreground = TextPrimary });
+            }
+            else if ((item.Category == ItemCategory.Output || item.Category == ItemCategory.Event)
+                && item.Name.IndexOf(": ") is int ci && ci > 0)
+            {
+                nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name.Substring(0, ci + 2)) { Foreground = TextGroup });
+                nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name.Substring(ci + 2)) { Foreground = TextPrimary });
             }
             else
             {
@@ -559,7 +688,8 @@ namespace SmartBar.Client
                     if (_filteredItems.Count > 0)
                     {
                         _suppressMouseSelect = true;
-                        _selectedIndex = (_selectedIndex + 1) % _filteredItems.Count;
+                        int maxIdx = Math.Min(_filteredItems.Count, MaxVisibleItems) - 1;
+                        _selectedIndex = _selectedIndex >= maxIdx ? 0 : _selectedIndex + 1;
                         UpdateSelection();
                         ScrollToSelected();
                     }
@@ -570,7 +700,8 @@ namespace SmartBar.Client
                     if (_filteredItems.Count > 0)
                     {
                         _suppressMouseSelect = true;
-                        _selectedIndex = (_selectedIndex - 1 + _filteredItems.Count) % _filteredItems.Count;
+                        int maxIdx = Math.Min(_filteredItems.Count, MaxVisibleItems) - 1;
+                        _selectedIndex = _selectedIndex <= 0 ? maxIdx : _selectedIndex - 1;
                         UpdateSelection();
                         ScrollToSelected();
                     }
@@ -714,7 +845,9 @@ namespace SmartBar.Client
                 else
                     NavigateToView(item);
             }
-            else if (item.Category == ItemCategory.Command || item.Category == ItemCategory.Program || item.Category == ItemCategory.Undo)
+            else if (item.Category == ItemCategory.Command || item.Category == ItemCategory.Program
+                || item.Category == ItemCategory.Undo || item.Category == ItemCategory.Output
+                || item.Category == ItemCategory.Event)
             {
                 item.Execute?.Invoke();
             }
@@ -858,6 +991,8 @@ namespace SmartBar.Client
         Recent,
         Camera,
         View,
+        Output,
+        Event,
         Command,
         Program,
         Undo

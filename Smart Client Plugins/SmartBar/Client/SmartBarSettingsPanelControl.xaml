@@ -149,6 +149,21 @@
             <TextBlock Text="Number of recently used cameras and views shown at the top."
                        Foreground="#FF666666" FontSize="11" Margin="4,0,0,0" />
 
+            <!-- Categories -->
+            <TextBlock Text="Categories" Style="{StaticResource SectionHeader}" />
+            <Border Background="#FF252525" CornerRadius="6" Padding="14,10" Margin="0,0,0,4">
+                <StackPanel>
+                    <CheckBox x:Name="showOutputsCheck" Foreground="#FFD0D0D0" FontSize="13" Margin="0,0,0,6">
+                        <TextBlock Text="Show hardware outputs (activate / deactivate)" Foreground="#FFD0D0D0" />
+                    </CheckBox>
+                    <CheckBox x:Name="showEventsCheck" Foreground="#FFD0D0D0" FontSize="13">
+                        <TextBlock Text="Show user-defined events (trigger)" Foreground="#FFD0D0D0" />
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+            <TextBlock Text="Toggle which device categories appear in the Smart Bar launcher."
+                       Foreground="#FF666666" FontSize="11" Margin="4,0,0,0" />
+
             <!-- Programs -->
             <TextBlock Text="Programs" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
             <TextBlock Text="Programs listed here appear in the Smart Bar as launchable items."

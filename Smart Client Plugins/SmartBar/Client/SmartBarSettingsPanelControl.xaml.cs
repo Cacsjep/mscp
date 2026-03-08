@@ -38,6 +38,9 @@ namespace SmartBar.Client
             _invokeModifiers = SmartBarConfig.InvokeModifiers;
             keyRecorderText.Text = FormatKeyCombo(_invokeModifiers, _invokeKey);
 
+            showOutputsCheck.IsChecked = SmartBarConfig.ShowOutputs;
+            showEventsCheck.IsChecked = SmartBarConfig.ShowEvents;
+
             foreach (var p in SmartBarConfig.Programs)
                 AddTrackedProgram(new ProgramEntry { Name = p.Name, Path = p.Path });
 
@@ -216,6 +219,8 @@ namespace SmartBar.Client
             SmartBarConfig.MaxRecent = maxRecentCombo.SelectedItem is int mr ? mr : 10;
             SmartBarConfig.InvokeKey = _invokeKey;
             SmartBarConfig.InvokeModifiers = _invokeModifiers;
+            SmartBarConfig.ShowOutputs = showOutputsCheck.IsChecked == true;
+            SmartBarConfig.ShowEvents = showEventsCheck.IsChecked == true;
 
             SmartBarConfig.Programs.Clear();
             foreach (var p in _programs)
