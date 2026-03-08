@@ -31,6 +31,9 @@ namespace SmartBar.Client
         private static int _consecutiveCloses;
         private const int CloseCreateWindowMs = 500;
 
+        // View destroy snapshot: cameras captured during batch close
+        private static readonly List<SlotCamera> _pendingViewSnapshot = new List<SlotCamera>();
+
         // Window tracking
         private static Guid _currentBatchWindowId;
         private static int _knownWindowCount;
@@ -191,13 +194,21 @@ namespace SmartBar.Client
 
                 // Reset counter if last close was long ago (stale from window close etc.)
                 if ((DateTime.UtcNow - _pendingCloseTime).TotalMilliseconds > CloseCreateWindowMs)
+                {
                     _consecutiveCloses = 0;
+                    _pendingViewSnapshot.Clear();
+                }
 
                 _consecutiveCloses++;
                 _pendingClosedCamera = closedCamera;
                 _pendingClosedSlot = slotIndex;
                 _pendingClosedWindowId = windowId;
                 _pendingCloseTime = DateTime.UtcNow;
+
+                // Capture camera for view destroy snapshot (skip during GoBack)
+                bool goBackActive = (DateTime.UtcNow - _goBackTime).TotalMilliseconds < GoBackSuppressMs;
+                if (closedCamera != null && !goBackActive)
+                    _pendingViewSnapshot.Add(new SlotCamera { SlotIndex = slotIndex, CameraFQID = closedCamera });
 
                 Log.Info($"ViewerClose slot={slotIndex} win={windowId} cam={(closedCamera != null ? closedCamera.ObjectId.ToString() : "null")} consCloses={_consecutiveCloses}");
             }
@@ -221,16 +232,25 @@ namespace SmartBar.Client
                 var viewItem = message.Data as ViewAndLayoutItem;
                 if (viewItem?.FQID == null) return null;
 
-                if (!_viewBatchOccurred)
+                Guid windowId;
+                if (_viewBatchOccurred)
+                {
+                    // Normal view switch: NewViewers were created, use their window
+                    _viewBatchOccurred = false;
+                    windowId = _currentBatchWindowId;
+                }
+                else if (_consecutiveCloses > 1)
+                {
+                    // View switch to non-ImageViewer view (e.g., mixed layouts):
+                    // batch close happened but no new ImageViewers were created
+                    windowId = _pendingClosedWindowId;
+                    Log.Info($"OnViewChanged: no new viewers but batch close detected ({_consecutiveCloses} closes)");
+                }
+                else
                 {
                     Log.Info($"OnViewChanged: no viewer batch, ignoring focus event for {viewItem.Name}");
                     return null;
                 }
-                _viewBatchOccurred = false;
-
-                // The viewers for this view were created just before OnViewChanged fires,
-                // so _currentBatchWindowId is the correct window.
-                var windowId = _currentBatchWindowId;
 
                 // Don't add duplicate for same view on same window
                 if (_history.Count > 0)
@@ -245,14 +265,18 @@ namespace SmartBar.Client
                     }
                 }
 
-                Log.Info($"PUSH View: {viewItem.Name} win={windowId} (history will be {_history.Count + 1})");
+                var snapshot = _pendingViewSnapshot.Count > 0 ? new List<SlotCamera>(_pendingViewSnapshot) : null;
+                _pendingViewSnapshot.Clear();
+
+                Log.Info($"PUSH View: {viewItem.Name} win={windowId} snapshot={snapshot?.Count ?? 0} (history will be {_history.Count + 1})");
 
                 Push(new HistoryEntry
                 {
                     Type = HistoryType.View,
                     ViewFQID = viewItem.FQID,
                     WindowId = windowId,
-                    Description = "View: " + viewItem.Name
+                    Description = "View: " + viewItem.Name,
+                    ViewSnapshot = snapshot
                 });
             }
             catch (Exception ex)
@@ -331,6 +355,22 @@ namespace SmartBar.Client
                                 View = previousView,
                                 Window = dest
                             }), dest);
+
+                    // Re-apply cameras that were in the destroyed view
+                    if (entry.ViewSnapshot != null)
+                    {
+                        foreach (var sc in entry.ViewSnapshot)
+                        {
+                            Log.Info($"GoBack: restore camera slot={sc.SlotIndex} cam={sc.CameraFQID?.ObjectId}");
+                            EnvironmentManager.Instance.SendMessage(
+                                new Message(MessageId.SmartClient.SetCameraInViewCommand,
+                                    new SetCameraInViewCommandData
+                                    {
+                                        Index = sc.SlotIndex,
+                                        CameraFQID = sc.CameraFQID
+                                    }), dest);
+                        }
+                    }
                 }
                 else if (entry.Type == HistoryType.Camera)
                 {
@@ -414,5 +454,13 @@ namespace SmartBar.Client
         public Guid WindowId;
         public int SlotIndex;
         public string Description;
+        /// <summary>Cameras that were in the destroyed view when this view change occurred.</summary>
+        public List<SlotCamera> ViewSnapshot;
+    }
+
+    struct SlotCamera
+    {
+        public int SlotIndex;
+        public FQID CameraFQID;
     }
 }
