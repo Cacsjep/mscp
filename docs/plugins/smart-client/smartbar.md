@@ -12,6 +12,10 @@ multi-window targeting, recent items, and full undo history.
 4. Start typing to filter cameras, views, commands, or programs
 5. Use **Arrow keys** to navigate, **Enter** to select
 
+<video controls width="100%">
+  <source src="../vids/smartbar.mp4" type="video/mp4">
+</video>
+
 ## Features
 
 ### Command Palette
