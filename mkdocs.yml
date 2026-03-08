@@ -47,6 +47,7 @@ nav:
       - Smart Bar: plugins/smart-client/smartbar.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md
+    - RTSP Driver: plugins/device-drivers/rtsp.md
   - Reporting Bugs: support/reporting-bugs.md
   - Changelog: support/changelog.md
   - Third-Party Notices: support/third-party-notices.md

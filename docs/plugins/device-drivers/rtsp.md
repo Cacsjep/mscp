@@ -1,8 +1,8 @@
 <div class="show-title" markdown>
 
-# RTSP Pull Driver
+# RTSP Driver
 
-A Milestone XProtect device driver that pulls RTSP streams from IP cameras and encoders. Supports H.264 and H.265/HEVC with rich visual status frames showing connection state, errors, and diagnostics — unlike the built-in Universal Driver which shows no feedback when things go wrong.
+A Milestone XProtect device driver that pulls RTSP streams from IP cameras and encoders. Supports H.264 and H.265/HEVC with rich visual status frames showing connection state, errors, and diagnostics - unlike the built-in Universal Driver which shows no feedback when things go wrong.
 
 ## Quick Start
 
@@ -49,7 +49,7 @@ The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). Th
 | **Bosch** | `rtsp://ip/video1` | `/video1` |
 
 !!! tip "Leading slash"
-    The driver auto-adds a leading `/` if you forget it — both `axis-media/media.amp` and `/axis-media/media.amp` work.
+    The driver auto-adds a leading `/` if you forget it - both `axis-media/media.amp` and `/axis-media/media.amp` work.
 
 ## Configuration
 
@@ -95,12 +95,12 @@ When the channel is not streaming live video, the driver shows rich JPEG status 
 |---|---|
 | **Not Configured** | "Not Configured" with RTSP path examples for common camera brands |
 | **Connecting** | "Connecting..." with URL, transport, and attempt number |
-| **Awaiting Keyframe** | "Awaiting Keyframe..." — connected, waiting for first IDR frame |
+| **Awaiting Keyframe** | "Awaiting Keyframe..." - connected, waiting for first IDR frame |
 | **Streaming** | Live video from the camera |
 | **Reconnecting** | The error message prominently displayed with reconnect countdown |
 | **Auth Failed** | Lock icon with "Authentication Failed" and instructions |
 | **Connection Error** | The specific error (timeout, refused, DNS, etc.) |
-| **Unsupported Codec** | Warning with codec name — only H.264 and H.265 are supported |
+| **Unsupported Codec** | Warning with codec name - only H.264 and H.265 are supported |
 | **No Video Track** | Warning that the RTSP source has no video stream |
 | **Channel Disabled** | "Channel Disabled" with instructions to enable |
 
@@ -122,7 +122,7 @@ To monitor more than 4 streams, add multiple driver instances with different por
 | No video in Smart Client | Check RTSP Path is correct. Verify credentials. Check driver log. |
 | "Not Configured" shown | Set the RTSP Path in Management Client for the channel. |
 | "Authentication Failed" | Verify username/password match the camera's RTSP credentials. |
-| "Stream not found (404)" | Check RTSP path — try accessing the full URL with VLC first. |
+| "Stream not found (404)" | Check RTSP path - try accessing the full URL with VLC first. |
 | "Connection timed out" | Verify camera IP is reachable. Check firewall rules. |
 | "Connection refused" | Camera is not responding on the configured RTSP port. Check port setting. |
 | "Unsupported Codec" | Camera is sending a codec other than H.264 or H.265. Change camera settings. |
@@ -156,8 +156,5 @@ C:\ProgramData\Milestone\XProtect Recording Server\Logs\DriverFramework_RTSPDriv
 
 - **H.264 and H.265 only**: Other codecs (MJPEG, MPEG-4, etc.) are not supported
 - **Video only**: Audio streams are ignored
-- **No PTZ**: The driver does not support PTZ control
-- **No playback**: Only live streaming is supported (no edge recording retrieval)
-- **4 channels per instance**: Add multiple instances for more channels
 
 </div>
