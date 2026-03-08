@@ -537,7 +537,7 @@ namespace SmartBar.Client
                 resultPanel.Children.Add(new TextBlock
                 {
                     Text = "No results found",
-                    Foreground = TextGroup,
+                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xB3, 0x00)),
                     FontSize = 12,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     Margin = new Thickness(0, 24, 0, 24)
