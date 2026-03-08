@@ -72,5 +72,12 @@
     "path": "Admin Plugins/Auditor",
     "category": "AdminPlugin",
     "description": "Audit user access to recorded video with per-user rules and reason prompts"
+  },
+  {
+    "name": "SmartBar",
+    "displayName": "Smart Bar",
+    "path": "Smart Client Plugins/SmartBar",
+    "category": "SmartClient",
+    "description": "Workspace toolbar button for Smart Client"
   }
 ]

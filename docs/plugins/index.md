@@ -81,11 +81,15 @@ hide:
   </a>
   <a class="pr" href="smart-client/snapreport/">
     <div class="pi sc"><i class="mdi mdi-file-pdf-box"></i></div>
-    <div class="pt"><span class="pn">SnapReport</span><span class="pd">Camera snapshot PDF report generator</span></div>
+    <div class="pt"><span class="pn">Snapshot Report</span><span class="pd">Camera snapshot PDF report generator</span></div>
   </a>
   <a class="pr" href="smart-client/monitor-rtmp-streamer/">
     <div class="pi sc"><i class="mdi mdi-monitor-share"></i></div>
     <div class="pt"><span class="pn">Monitor RTMP Streamer</span><span class="pd">Capture desktop monitors and stream via RTMP</span></div>
+  </a>
+  <a class="pr" href="smart-client/smartbar/">
+    <div class="pi sc"><i class="mdi mdi-ballot"></i></div>
+    <div class="pt"><span class="pn">Smart Bar</span><span class="pd">Workspace toolbar button for Smart Client</span></div>
   </a>
 </div>
 

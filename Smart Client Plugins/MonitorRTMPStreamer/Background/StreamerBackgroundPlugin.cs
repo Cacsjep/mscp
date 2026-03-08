@@ -92,7 +92,7 @@ namespace MonitorRTMPStreamer.Background
 
                     sw = Stopwatch.StartNew();
 
-                    // Capture() returns a reusable bitmap — do NOT dispose it
+                    // Capture() returns a reusable bitmap - do NOT dispose it
                     var stitched = _capture.Capture();
 
                     var captureMs = sw.ElapsedMilliseconds;

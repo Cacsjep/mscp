@@ -89,6 +89,7 @@ Individual ZIPs for each plugin/driver are available on the [Releases](https://g
 | RTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\` |
 | CertWatchdog | `C:\Program Files\Milestone\MIPPlugins\CertWatchdog\` |
 | Auditor | `C:\Program Files\Milestone\MIPPlugins\Auditor\` |
+| SmartBar | `C:\Program Files\Milestone\MIPPlugins\SmartBar\` |
 
 ### Services 
 

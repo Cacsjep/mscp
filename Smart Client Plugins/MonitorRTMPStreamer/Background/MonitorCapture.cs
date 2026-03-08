@@ -177,7 +177,7 @@ namespace MonitorRTMPStreamer.Background
 
         /// <summary>
         /// Capture and stitch all screens into a single bitmap.
-        /// The returned bitmap is owned by this instance — do NOT dispose it.
+        /// The returned bitmap is owned by this instance - do NOT dispose it.
         /// It is valid until the next call to Capture() or Dispose().
         /// </summary>
         public Bitmap Capture()
