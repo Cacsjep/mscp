@@ -12,6 +12,10 @@ Audit user access to recorded video in XProtect. Tracks playback mode changes, e
 4. Give the rule a name, select users to monitor, configure reason prompts and event triggers
 5. Save the rule
 
+<video controls width="100%">
+  <source src="../vids/auditor.mp4" type="video/mp4">
+</video>
+
 ## Reason Prompts (Audit Log)
 
 When enabled, the user is shown a dialog and must enter a reason. The reason is written to the Milestone system audit log.
