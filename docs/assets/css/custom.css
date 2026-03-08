@@ -36,6 +36,32 @@
   display: block !important;
 }
 
+/* ── Header: GitHub + Discord icons ── */
+.md-header__source {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.md-header__source .md-header-icon {
+  color: currentColor;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.md-header__source .md-header-icon:hover {
+  opacity: 1;
+}
+
+.md-header__source .md-header-icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.md-header-icon--discord {
+  margin-left: 5px !important;
+}
+
 /* ── Smaller body text ── */
 .md-typeset {
   font-size: 0.75rem;

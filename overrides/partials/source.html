@@ -1,0 +1,7 @@
+<a href="{{ config.repo_url }}" title="{{ config.repo_name }}" class="md-header-icon md-icon">
+  {% set icon = config.theme.icon.repo or "fontawesome/brands/github" %}
+  {% include ".icons/" ~ icon ~ ".svg" %}
+</a>
+<a href="https://discord.gg/EU2HX4Qc" title="Join our Discord" class="md-header-icon md-icon md-header-icon--discord">
+  {% include ".icons/fontawesome/brands/discord.svg" %}
+</a>

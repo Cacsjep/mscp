@@ -6,6 +6,7 @@ repo_name: Cacsjep/mscp
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     scheme: slate
     primary: blue
@@ -73,6 +74,8 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Cacsjep/mscp
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/EU2HX4Qc
 
 copyright: >
   MSC Community Plugins | Not affiliated with or supported by Milestone Systems.
