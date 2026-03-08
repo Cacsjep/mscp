@@ -94,8 +94,11 @@ SmartBar is a command palette plugin for Milestone XProtect Smart Client, opened
 
 ## Settings
 - Max undo history: configurable via ComboBox in settings panel
+- Max recent items: configurable (5–20)
+- Category toggles: ShowOutputs, ShowEvents, ShowCommands, ShowRecent (all default true)
+- ShowRecent=false also prevents collection of recent items in SmartBarHistory
 - Programs: list of name + executable path, launchable from SmartBar
-- Settings stored via plugin's built-in options mechanism
+- Settings stored in XML at `%ProgramData%\Milestone\SmartBar\config.xml`
 
 ## Dependencies
 - `CommunitySDK` — community wrapper for MIP SDK

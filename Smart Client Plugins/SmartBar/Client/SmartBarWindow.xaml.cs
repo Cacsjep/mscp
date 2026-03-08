@@ -159,6 +159,8 @@ namespace SmartBar.Client
 
         private void LoadCommands()
         {
+            if (!SmartBarConfig.ShowCommands) return;
+
             void AddCmd(string group, string name, Action action)
             {
                 _allItems.Add(new CommandItem
@@ -348,6 +350,8 @@ namespace SmartBar.Client
 
         private void LoadRecentItems()
         {
+            if (!SmartBarConfig.ShowRecent) return;
+
             var recents = SmartBarHistory.GetRecentItems();
             if (recents.Count == 0) return;
 

@@ -48,6 +48,8 @@ namespace SmartBar
         public static ModifierKeys InvokeModifiers { get; set; } = ModifierKeys.None;
         public static bool ShowOutputs { get; set; } = true;
         public static bool ShowEvents { get; set; } = true;
+        public static bool ShowCommands { get; set; } = true;
+        public static bool ShowRecent { get; set; } = true;
         public static List<ProgramEntry> Programs { get; set; } = new List<ProgramEntry>();
 
         public static void Load()
@@ -89,6 +91,12 @@ namespace SmartBar
                     var showEventsEl = root?.Element("ShowEvents");
                     ShowEvents = showEventsEl == null || !bool.TryParse(showEventsEl.Value, out var se) || se;
 
+                    var showCommandsEl = root?.Element("ShowCommands");
+                    ShowCommands = showCommandsEl == null || !bool.TryParse(showCommandsEl.Value, out var sc) || sc;
+
+                    var showRecentEl = root?.Element("ShowRecent");
+                    ShowRecent = showRecentEl == null || !bool.TryParse(showRecentEl.Value, out var sr) || sr;
+
                     Programs = new List<ProgramEntry>();
                     var progsEl = root?.Element("Programs");
                     if (progsEl != null)
@@ -116,6 +124,8 @@ namespace SmartBar
                     InvokeModifiers = ModifierKeys.None;
                     ShowOutputs = true;
                     ShowEvents = true;
+                    ShowCommands = true;
+                    ShowRecent = true;
                     Programs = new List<ProgramEntry>
                     {
                         new ProgramEntry { Name = "Notepad", Path = "notepad.exe" }
@@ -150,6 +160,8 @@ namespace SmartBar
                             new XElement("InvokeModifiers", InvokeModifiers.ToString()),
                             new XElement("ShowOutputs", ShowOutputs),
                             new XElement("ShowEvents", ShowEvents),
+                            new XElement("ShowCommands", ShowCommands),
+                            new XElement("ShowRecent", ShowRecent),
                             progsEl));
 
                     doc.Save(_configPath);

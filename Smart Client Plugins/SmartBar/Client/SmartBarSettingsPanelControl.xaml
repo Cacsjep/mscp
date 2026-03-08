@@ -156,8 +156,14 @@
                     <CheckBox x:Name="showOutputsCheck" Foreground="#FFD0D0D0" FontSize="13" Margin="0,0,0,6">
                         <TextBlock Text="Show hardware outputs (activate / deactivate)" Foreground="#FFD0D0D0" />
                     </CheckBox>
-                    <CheckBox x:Name="showEventsCheck" Foreground="#FFD0D0D0" FontSize="13">
+                    <CheckBox x:Name="showEventsCheck" Foreground="#FFD0D0D0" FontSize="13" Margin="0,0,0,6">
                         <TextBlock Text="Show user-defined events (trigger)" Foreground="#FFD0D0D0" />
+                    </CheckBox>
+                    <CheckBox x:Name="showCommandsCheck" Foreground="#FFD0D0D0" FontSize="13" Margin="0,0,0,6">
+                        <TextBlock Text="Show application commands" Foreground="#FFD0D0D0" />
+                    </CheckBox>
+                    <CheckBox x:Name="showRecentCheck" Foreground="#FFD0D0D0" FontSize="13">
+                        <TextBlock Text="Show recent items" Foreground="#FFD0D0D0" />
                     </CheckBox>
                 </StackPanel>
             </Border>

@@ -93,6 +93,8 @@ Toggle which item categories appear in the Smart Bar launcher:
 
 - **Show hardware outputs** - List all hardware outputs with activate/deactivate commands. Enabled by default.
 - **Show user-defined events** - List all user-defined events with trigger commands. Enabled by default.
+- **Show application commands** - List built-in application commands (fullscreen, mode switching, window management, etc.). Enabled by default.
+- **Show recent items** - Show recently used cameras and views at the top of Smart Bar. When disabled, recent items are also not collected. Enabled by default.
 
 ### Programs
 
@@ -123,6 +125,8 @@ C:\ProgramData\Milestone\SmartBar\config.xml
 | `InvokeModifiers` | ModifierKeys enum | None | Modifier keys (Ctrl, Alt, Shift) for invoke |
 | `ShowOutputs` | bool | true | Show hardware output commands |
 | `ShowEvents` | bool | true | Show user-defined event commands |
+| `ShowCommands` | bool | true | Show application commands |
+| `ShowRecent` | bool | true | Show and collect recent items |
 | `Programs` | list | Notepad | External programs to show in launcher |
 
 </div>

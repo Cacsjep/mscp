@@ -40,6 +40,8 @@ namespace SmartBar.Client
 
             showOutputsCheck.IsChecked = SmartBarConfig.ShowOutputs;
             showEventsCheck.IsChecked = SmartBarConfig.ShowEvents;
+            showCommandsCheck.IsChecked = SmartBarConfig.ShowCommands;
+            showRecentCheck.IsChecked = SmartBarConfig.ShowRecent;
 
             foreach (var p in SmartBarConfig.Programs)
                 AddTrackedProgram(new ProgramEntry { Name = p.Name, Path = p.Path });
@@ -221,6 +223,8 @@ namespace SmartBar.Client
             SmartBarConfig.InvokeModifiers = _invokeModifiers;
             SmartBarConfig.ShowOutputs = showOutputsCheck.IsChecked == true;
             SmartBarConfig.ShowEvents = showEventsCheck.IsChecked == true;
+            SmartBarConfig.ShowCommands = showCommandsCheck.IsChecked == true;
+            SmartBarConfig.ShowRecent = showRecentCheck.IsChecked == true;
 
             SmartBarConfig.Programs.Clear();
             foreach (var p in _programs)
