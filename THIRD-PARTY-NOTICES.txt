@@ -9,7 +9,7 @@ software. Their licenses and copyright notices are reproduced below.
 FFmpeg
 ------------------------------------------------------------------------
 
-The MonitorRTMPStreamer plugin ships FFmpeg shared libraries (avcodec,
+The MonitorRTMPStreamer plugin and RTSPDriver ship FFmpeg shared libraries (avcodec,
 avformat, avutil, swscale, swresample, avfilter, avdevice) obtained via
 the FFmpeg.GPL NuGet package. These libraries are compiled with GPL-
 licensed encoders (including libx264).
@@ -41,7 +41,7 @@ licensed encoders (including libx264).
 FFmpeg.AutoGen
 ------------------------------------------------------------------------
 
-C# bindings for FFmpeg used by the MonitorRTMPStreamer plugin.
+C# bindings for FFmpeg used by the MonitorRTMPStreamer plugin and RTSPDriver.
 
   License:    GNU Lesser General Public License v3.0 (LGPL-3.0)
   Repository: https://github.com/Ruslan-B/FFmpeg.AutoGen

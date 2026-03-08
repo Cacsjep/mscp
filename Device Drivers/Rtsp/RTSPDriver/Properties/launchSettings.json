@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Management Client": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Milestone\\XProtect Management Client\\VideoOS.Administration.exe"
+    }
+  }
+}

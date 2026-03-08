@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>RTSPDriver</RootNamespace>
+    <AssemblyName>RTSPDriver</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PluginName>RTSPDriver</PluginName>
+    <MIPPluginDir>$(MIPDriversRoot)\$(PluginName)\</MIPPluginDir>
+    <StopAdminClient>true</StopAdminClient>
+    <StopRecordingServer>true</StopRecordingServer>
+    <StartRecordingServer>true</StartRecordingServer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform.DriverFramework" Version="*" />
+    <PackageReference Include="FFmpeg.AutoGen" Version="8.0.0" />
+    <PackageReference Include="FFmpeg.GPL" Version="20260305.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.ServiceModel" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="RTSPDriver.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

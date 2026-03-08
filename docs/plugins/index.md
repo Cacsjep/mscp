@@ -100,6 +100,10 @@ hide:
     <div class="pi dd"><i class="mdi mdi-video-input-antenna"></i></div>
     <div class="pt"><span class="pn">RTMP Push Driver</span><span class="pd">Receive RTMP/RTMPS push streams (H.264) directly into XProtect™</span></div>
   </a>
+  <a class="pr" href="device-drivers/rtsp/">
+    <div class="pi dd"><i class="mdi mdi-cctv"></i></div>
+    <div class="pt"><span class="pn">RTSP Driver</span><span class="pd">Pull RTSP streams (H.264/H.265) from IP cameras with rich status/logging informations.</span></div>
+  </a>
 </div>
 
 ### Admin Plugins
