@@ -2,8 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0] - 2026-03-08
+## [1.3.0] - 2026-03-08
 
+- Add: RTSP Driver
 - Add: Smart Bar Plugin
 
 ## [1.1.0] - 2026-03-07
