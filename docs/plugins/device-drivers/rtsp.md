@@ -34,6 +34,10 @@ After adding the hardware, configure each channel:
 
 The driver will connect immediately when a path is configured. Until then, the channel shows a "Not Configured" status frame with RTSP path examples for common camera brands.
 
+<video controls width="100%">
+  <source src="../rtsp-vids/add.mp4" type="video/mp4">
+</video>
+
 ## RTSP Path Examples
 
 The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). The driver constructs the full URL using the hardware IP, credentials, and per-channel port and path settings.
