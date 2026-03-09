@@ -12,12 +12,12 @@ namespace CommunitySDK
     {
         public static readonly System.Windows.Media.Color DefaultColor = System.Windows.Media.Color.FromRgb(33, 150, 243);
 
-        public static Image Render(EFontAwesomeIcon icon, int size = 16)
+        public static Image Render(EFontAwesomeIcon icon, int size = 15)
         {
             return Render(icon, DefaultColor, size);
         }
 
-        public static Image Render(EFontAwesomeIcon icon, System.Windows.Media.Color color, int size = 16)
+        public static Image Render(EFontAwesomeIcon icon, System.Windows.Media.Color color, int size = 15)
         {
             var rtb = RenderBitmap(icon, color, size);
             var encoder = new PngBitmapEncoder();
@@ -29,12 +29,12 @@ namespace CommunitySDK
             return new Bitmap(ms);
         }
 
-        public static VideoOSIconSourceBase RenderIconSource(EFontAwesomeIcon icon, int size = 16)
+        public static VideoOSIconSourceBase RenderIconSource(EFontAwesomeIcon icon, int size = 15)
         {
             return RenderIconSource(icon, DefaultColor, size);
         }
 
-        public static VideoOSIconSourceBase RenderIconSource(EFontAwesomeIcon icon, System.Windows.Media.Color color, int size = 16)
+        public static VideoOSIconSourceBase RenderIconSource(EFontAwesomeIcon icon, System.Windows.Media.Color color, int size = 15)
         {
             var rtb = RenderBitmap(icon, color, size);
             return new VideoOSIconBitmapSource { BitmapSource = rtb };
