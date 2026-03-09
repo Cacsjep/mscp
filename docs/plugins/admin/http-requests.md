@@ -2,7 +2,7 @@
 
 # HTTP Requests
 
-Configure and execute HTTP requests as XProtect rule actions. Create request folders containing individual requests (like Postman), with custom JSON payloads merged with Milestone event data and flexible authentication options.
+HTTP requests that are more powerful and flexible.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ Configure and execute HTTP requests as XProtect rule actions. Create request fol
 4. Expand the folder, right-click and **Create New** to add an HTTP Request
 5. Configure method, URL, payload, authentication, and headers
 6. Save the configuration
-7. Create a **Rule** with the **Execute HTTP Request** action — target a specific request, all in a folder, or all requests
+7. Create a **Rule** with the **Execute HTTP Request** action - target a specific request, all in a folder, or all requests
 
 ## Request Configuration
 
@@ -20,31 +20,32 @@ Configure and execute HTTP requests as XProtect rule actions. Create request fol
 |---|---|
 | **Method** | GET, POST, PUT, DELETE, PATCH (body hidden for GET/DELETE) |
 | **URL** | Target endpoint (http:// or https://) |
-| **Payload Type** | `json`, `form`, or `none` |
-| **User Payload** | Custom JSON body (merged with event data) |
+| **Payload Type** | JSON, form-urlencoded, or none |
+| **User Payload** | Custom JSON body (merged with event data when enabled) |
 | **Custom Headers** | Key-value header pairs (Headers tab) |
 | **Query Params** | Key-value URL parameters (Query Params tab) |
 | **Authentication** | None, Basic, Bearer, or Digest |
-| **Timeout** | Request timeout in milliseconds |
+| **Timeout** | Request timeout in milliseconds (default: 10000) |
 | **Include Event Data** | Merge Milestone event data into the payload |
 | **Skip Cert Validation** | Disable HTTPS certificate verification |
+| **Enabled** | Enable/disable individual requests |
 
 ## Authentication
 
 | Type | Header Sent | Credentials Format |
 |---|---|---|
-| **None** | *(no auth header)* | — |
-| **Basic** | `Authorization: Basic <base64>` | `username:password` |
+| **None** | *(no auth header)* | - |
+| **Basic** | `Authorization: Basic <base64>` | Username + Password |
 | **Bearer** | `Authorization: Bearer <token>` | Token value |
-| **Digest** | *(negotiated automatically)* | `username:password` |
+| **Digest** | *(negotiated automatically)* | Username + Password |
 
 ## Rule Action
 
 The plugin registers one action: **Execute HTTP Request**. The XProtect Rules engine lets you choose the scope:
 
-- **Specific request** — select an individual HTTP Request item
-- **All in a folder** — select a Request Folder; all enabled requests execute
-- **All requests** — select "ALL HTTP Requests" to execute every enabled request
+- **Specific request** - select an individual HTTP Request item
+- **All in a folder** - select a Request Folder; all enabled requests execute
+- **All requests** - select "ALL HTTP Requests" to execute every enabled request
 
 This targeting is handled natively by the Milestone Rules engine.
 
@@ -58,16 +59,17 @@ When **Include Milestone event data** is enabled, your custom payload is merged 
   "zone": "parking_lot",
   "Event": {
     "EventHeader": {
-      "ID": "e0d6726f-fa1a-4ade-b1c0-fb01e1a175bf",
-      "Timestamp": "2026-03-09T06:16:58.258Z",
+      "ID": "2b09afeb-8676-4a05-b415-4ffcc9b2944e",
+      "Timestamp": "2026-03-09T08:38:41.0760000Z",
       "Type": "System Event",
       "Name": "Motion Detected",
       "Message": "Motion Detected",
       "Priority": 1,
+      "CustomTag": "",
       "Source": {
-        "Name": "Camera 512",
+        "Name": "RTSP Source (10.0.0.48) - Channel 1",
         "FQID": {
-          "ObjectId": "35f564f6-4af8-4f59-a1b0-3e0eaf88ac04",
+          "ObjectId": "57a5944c-0a55-4e62-bb6c-e87b527fa8cd",
           "Kind": "5135ba21-f1dc-4321-806a-6ce2017343c0"
         }
       }
@@ -82,34 +84,47 @@ When **Include Milestone event data** is enabled, your custom payload is merged 
 
 Your keys (`alert_type`, `zone`) come first, then `Event` and `Site` are appended automatically.
 
+### GET request with query parameters
+
+For GET and DELETE requests, the body section is hidden. Use the **Query Params** tab to add key-value parameters, or include them directly in the URL. No body is sent for GET/DELETE requests.
+
 ## Events
 
-The plugin fires analytics events that can be used in further rules:
+The plugin fires events that can be used in further rules:
 
 | Event | Description |
 |---|---|
 | HTTP Request Executed | Request completed successfully |
 | HTTP Request Failed | Request failed (timeout, connection error, HTTP error) |
 
-## vs. Milestone Webhooks
+## vs. Webhooks
 
 | Feature | Milestone Webhooks | HTTP Requests Plugin |
 |---|---|---|
 | HTTP Methods | POST only | GET, POST, PUT, DELETE, PATCH |
-| Custom payload | No (fixed schema) | Yes (fully customizable + event merge) |
-| Custom headers | No | Yes |
+| Custom JSON payload | No (fixed schema) | Yes (fully customizable + event merge) |
+| Custom HTTP headers | No | Yes (key-value pairs) |
 | Authentication | OAuth 2.0 | Basic, Bearer, Digest |
 | Cert validation skip | No | Yes (per request) |
-| Batch execution | No | Yes (target folder or all from one rule) |
-| Result events | No | Yes (success/failure for chaining) |
-| XProtect version | 2023 R3+ (add-on license) | Any MIP SDK version, no extra license |
+| Configurable timeout | No | Yes (per request) |
+| Query parameter editor | Manual (in URL) | Yes (dedicated key-value editor) |
+| Postman-like UI | No | Yes (method, URL, headers, body, auth, test, duplicate) |
+| Result events | No | Yes (success/failure for chaining rules) |
+| System Log entries | Limited | Yes (per-request logging) |
+| Payload types | JSON (fixed) | JSON, form-urlencoded, or none |
 
-## Architecture
+## Logging
 
-| Component | Environment | Role |
-|---|---|---|
-| Admin UI | Management Client | Configure request folders and individual requests |
-| Background Plugin | Event Server | Execute HTTP requests when rules fire, log results |
+### Milestone System Log
+
+All request executions are logged to the Milestone System Log (*Logs > System Log* in the Management Client):
+
+- **Request Executed** - method, URL, status code, elapsed time
+- **Request Failed** - method, URL, error message
+
+### Event Server Log Files
+
+Detailed plugin logs at: `C:\ProgramData\Milestone\XProtect Event Server\logs\MIPLogs\MIP<date>.log`
 
 ## Troubleshooting
 
@@ -120,5 +135,6 @@ The plugin fires analytics events that can be used in further rules:
 | Timeout errors | Increase the timeout value (default: 10000ms) |
 | Auth errors (401/403) | Verify credentials format matches the auth type |
 | No event data in payload | Ensure **Include Milestone event data** is checked |
+| JSON validation fails | Check syntax in the body editor - the plugin validates JSON before sending |
 
 </div>

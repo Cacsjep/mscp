@@ -187,7 +187,7 @@
     <div class="header-row">
         <h1>HTTP Requests</h1>
         <div class="chips">
-            <span class="chip-amber" title="Open-source, no warranty.">Open source &mdash; no warranty, use at own risk</span>
+            <span class="chip-amber" title="Open-source, no warranty.">Open source - no warranty, use at own risk</span>
             <span class="chip-blue">Admin + Event Server Plugin</span>
             <span class="chip-green">Rule Action</span>
         </div>
@@ -231,14 +231,14 @@
             When creating a rule, the XProtect Rules engine lets you choose the scope:
         </p>
         <ul>
-            <li><strong>Specific request</strong> &mdash; select an individual HTTP Request item.</li>
-            <li><strong>All in a folder</strong> &mdash; select a Request Folder; all <strong>enabled</strong>
+            <li><strong>Specific request</strong> - select an individual HTTP Request item.</li>
+            <li><strong>All in a folder</strong> - select a Request Folder; all <strong>enabled</strong>
                 requests inside it will be executed.</li>
-            <li><strong>All requests</strong> &mdash; select "ALL HTTP Requests" to execute every
+            <li><strong>All requests</strong> - select "ALL HTTP Requests" to execute every
                 enabled request across all folders.</li>
         </ul>
         <p>
-            This targeting is handled natively by the Milestone Rules engine &mdash; no
+            This targeting is handled natively by the Milestone Rules engine - no
             additional configuration is needed in the plugin.
         </p>
     </div>
@@ -247,12 +247,12 @@
         <h2>Authentication</h2>
         <p>Each request supports the following authentication methods:</p>
         <ul>
-            <li><strong>None</strong> &mdash; No authentication header is sent.</li>
-            <li><strong>Basic</strong> &mdash; Sends <code>Authorization: Basic &lt;base64&gt;</code>.
+            <li><strong>None</strong> - No authentication header is sent.</li>
+            <li><strong>Basic</strong> - Sends <code>Authorization: Basic &lt;base64&gt;</code>.
                 Enter credentials as <code>username:password</code>.</li>
-            <li><strong>Bearer</strong> &mdash; Sends <code>Authorization: Bearer &lt;token&gt;</code>.
+            <li><strong>Bearer</strong> - Sends <code>Authorization: Bearer &lt;token&gt;</code>.
                 Enter the raw token value.</li>
-            <li><strong>Digest</strong> &mdash; Uses HTTP Digest authentication (RFC 7616).
+            <li><strong>Digest</strong> - Uses HTTP Digest authentication (RFC 7616).
                 Enter credentials as <code>username:password</code>.
                 The client will negotiate the digest challenge automatically.</li>
         </ul>
@@ -352,7 +352,7 @@
     </div>
 
     <div class="card">
-        <h2>Comparison: HTTP Requests Plugin vs. Milestone Webhooks</h2>
+        <h2>Comparison: HTTP Requests Plugin vs. Webhooks</h2>
         <p>
             Milestone XProtect&trade; includes a built-in
             <a href="https://doc.milestonesys.com/latest/en-US/add-ons/add-on_webhooks/create_webhooks.htm" target="_blank">Webhooks add-on</a>.
@@ -372,13 +372,13 @@
             </tr>
             <tr>
                 <td>Custom JSON payload</td>
-                <td class="no">No &mdash; fixed schema</td>
-                <td><span class="yes">Yes &mdash; fully customizable, merged with event</span></td>
+                <td class="no">No - fixed schema</td>
+                <td><span class="yes">Yes - fully customizable, merged with event</span></td>
             </tr>
             <tr>
                 <td>Custom HTTP headers</td>
                 <td class="no">No</td>
-                <td><span class="yes">Yes &mdash; arbitrary key-value pairs</span></td>
+                <td><span class="yes">Yes - arbitrary key-value pairs</span></td>
             </tr>
             <tr>
                 <td>Authentication</td>
@@ -388,42 +388,37 @@
             <tr>
                 <td>Certificate validation skip</td>
                 <td class="no">No</td>
-                <td><span class="yes">Yes &mdash; per request toggle</span></td>
-            </tr>
-            <tr>
-                <td>Batch execution</td>
-                <td class="no">No &mdash; one webhook per rule</td>
-                <td><span class="yes">Yes &mdash; target a folder or all requests from one rule</span></td>
+                <td><span class="yes">Yes - per request toggle</span></td>
             </tr>
             <tr>
                 <td>Configurable timeout</td>
                 <td class="no">No</td>
-                <td><span class="yes">Yes &mdash; per request</span></td>
+                <td><span class="yes">Yes - per request</span></td>
             </tr>
             <tr>
                 <td>Postman-like UI</td>
                 <td class="no">No</td>
-                <td><span class="yes">Yes &mdash; method, URL, headers, body, auth</span></td>
+                <td><span class="yes">Yes - method, URL, headers, body, auth, test, duplicate</span></td>
+            </tr>
+            <tr>
+                <td>Query parameter editor</td>
+                <td>Manual (in URL)</td>
+                <td><span class="yes">Yes - dedicated key-value editor</span></td>
             </tr>
             <tr>
                 <td>Result events</td>
                 <td class="no">No feedback events</td>
-                <td><span class="yes">Yes &mdash; fires success/failure events for chaining rules</span></td>
+                <td><span class="yes">Yes - fires success/failure events for chaining rules</span></td>
             </tr>
             <tr>
                 <td>System Log entries</td>
                 <td>Limited</td>
-                <td><span class="yes">Yes &mdash; detailed per-request logging</span></td>
+                <td><span class="yes">Yes - detailed per-request logging</span></td>
             </tr>
             <tr>
                 <td>Payload types</td>
                 <td>JSON (fixed)</td>
                 <td><span class="yes">JSON, form-urlencoded, or none</span></td>
-            </tr>
-            <tr>
-                <td>XProtect version</td>
-                <td>2023 R3+ (add-on license)</td>
-                <td><span class="yes">Any version with MIP SDK support, no extra license</span></td>
             </tr>
         </table>
     </div>
@@ -471,14 +466,14 @@
             (<em>Logs &gt; System Log</em> in the Management Client):
         </p>
         <ul>
-            <li><strong>Request Executed</strong> &mdash; method, URL, status code, elapsed time</li>
-            <li><strong>Request Failed</strong> &mdash; method, URL, error message</li>
+            <li><strong>Request Executed</strong> - method, URL, status code, elapsed time</li>
+            <li><strong>Request Failed</strong> - method, URL, error message</li>
         </ul>
 
         <h3>Event Server Log Files</h3>
         <p>
             Detailed logs at:<br />
-            <code>C:\ProgramData\Milestone\XProtect Event Server\Logs\</code>
+            <code>C:\ProgramData\Milestone\XProtect Event Server\logs\MIPLogs\MIP&lt;date&gt;.log</code>
         </p>
     </div>
 

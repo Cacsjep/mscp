@@ -44,8 +44,6 @@ namespace HttpRequests.Background
                 return;
             }
 
-            _log.Info($"sourceEvent type: {sourceEvent?.GetType().FullName ?? "null"}, hasHeader: {(sourceEvent?.EventHeader != null)}");
-
             foreach (var fqid in actionItems)
             {
                 try

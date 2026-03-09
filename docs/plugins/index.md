@@ -123,6 +123,6 @@ hide:
   </a>
   <a class="pr" href="admin/http-requests/">
     <div class="pi ap"><i class="mdi mdi-send"></i></div>
-    <div class="pt"><span class="pn">HTTP Requests</span><span class="pd">Execute HTTP requests as rule actions with custom payloads and authentication</span></div>
+    <div class="pt"><span class="pn">HTTP Requests</span><span class="pd">HTTP requests actions that are more powerful and flexible.</span></div>
   </a>
 </div>
