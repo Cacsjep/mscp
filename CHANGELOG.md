@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1] - 2026-03-09
+
+- Add: Command line args for Smart Bar Programms
+- Change: Use 6 args logclient ctor for broader compatiblity
+
 ## [1.4.0] - 2026-03-09
 
 - Add: HTTP Requests Plugin
