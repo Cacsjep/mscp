@@ -44,7 +44,10 @@ namespace SmartBar.Client
             showRecentCheck.IsChecked = SmartBarConfig.ShowRecent;
 
             foreach (var p in SmartBarConfig.Programs)
-                AddTrackedProgram(new ProgramEntry { Name = p.Name, Path = p.Path });
+            {
+                var args = p.Args ?? string.Empty;
+                AddTrackedProgram(new ProgramEntry { Name = p.Name, Path = p.Path, Args = args, ArgsVisible = !string.IsNullOrEmpty(args) });
+            }
 
             _programs.CollectionChanged += (s, ev) => ValidateSave();
 
@@ -98,6 +101,17 @@ namespace SmartBar.Client
             var entry = btn?.DataContext as ProgramEntry;
             if (entry != null)
                 _programs.Remove(entry);
+        }
+
+        private void OnToggleArgs(object sender, RoutedEventArgs e)
+        {
+            var btn = sender as Button;
+            var entry = btn?.DataContext as ProgramEntry;
+            if (entry == null) return;
+
+            entry.ArgsVisible = !entry.ArgsVisible;
+            if (!entry.ArgsVisible)
+                entry.Args = string.Empty;
         }
 
         private void OnBrowseProgram(object sender, RoutedEventArgs e)
@@ -230,7 +244,7 @@ namespace SmartBar.Client
             foreach (var p in _programs)
             {
                 if (!string.IsNullOrWhiteSpace(p.Name) && !string.IsNullOrWhiteSpace(p.Path))
-                    SmartBarConfig.Programs.Add(new ProgramEntry { Name = p.Name, Path = p.Path });
+                    SmartBarConfig.Programs.Add(new ProgramEntry { Name = p.Name, Path = p.Path, Args = p.Args?.Trim() ?? string.Empty });
             }
 
             SmartBarConfig.Save();

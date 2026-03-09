@@ -13,6 +13,8 @@ namespace SmartBar
     {
         private string _name;
         private string _path;
+        private string _args;
+        private bool _argsVisible;
 
         public string Name
         {
@@ -24,6 +26,18 @@ namespace SmartBar
         {
             get => _path;
             set { _path = value; OnPropertyChanged(); }
+        }
+
+        public string Args
+        {
+            get => _args;
+            set { _args = value; OnPropertyChanged(); }
+        }
+
+        public bool ArgsVisible
+        {
+            get => _argsVisible;
+            set { _argsVisible = value; OnPropertyChanged(); }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -105,8 +119,9 @@ namespace SmartBar
                         {
                             var name = p.Element("Name")?.Value;
                             var path = p.Element("Path")?.Value;
+                            var args = p.Element("Args")?.Value;
                             if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(path))
-                                Programs.Add(new ProgramEntry { Name = name, Path = path });
+                                Programs.Add(new ProgramEntry { Name = name, Path = path, Args = args ?? string.Empty });
                         }
                     }
 
@@ -147,9 +162,12 @@ namespace SmartBar
                     var progsEl = new XElement("Programs");
                     foreach (var p in Programs)
                     {
-                        progsEl.Add(new XElement("Program",
+                        var progEl = new XElement("Program",
                             new XElement("Name", p.Name),
-                            new XElement("Path", p.Path)));
+                            new XElement("Path", p.Path));
+                        if (!string.IsNullOrEmpty(p.Args))
+                            progEl.Add(new XElement("Args", p.Args));
+                        progsEl.Add(progEl);
                     }
 
                     var doc = new XDocument(

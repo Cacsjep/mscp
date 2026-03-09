@@ -9,7 +9,7 @@ namespace Auditor.Background
     internal class AuditLog : SystemLogBase
     {
 
-        public AuditLog(PluginLog log) : base("Auditor", "Auditor", log) { }
+        public AuditLog(PluginLog log) : base("Auditor", log) { }
 
         protected override Dictionary<string, LogMessage> BuildMessages() => new Dictionary<string, LogMessage>
         {

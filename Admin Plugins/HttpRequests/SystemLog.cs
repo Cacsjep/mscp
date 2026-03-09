@@ -8,7 +8,7 @@ namespace HttpRequests
 {
     internal class SystemLog : SystemLogBase
     {
-        public SystemLog(PluginLog log) : base("HttpRequests", "HTTP Requests", log) { }
+        public SystemLog(PluginLog log) : base("HttpRequests", log) { }
 
         protected override Dictionary<string, LogMessage> BuildMessages() => new Dictionary<string, LogMessage>
         {

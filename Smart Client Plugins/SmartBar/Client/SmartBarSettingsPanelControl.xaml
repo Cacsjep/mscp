@@ -5,6 +5,7 @@
              Background="#FF1E1E1E">
 
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <Style x:Key="SectionHeader" TargetType="TextBlock">
             <Setter Property="Foreground" Value="#FF2196F3" />
             <Setter Property="FontSize" Value="14" />
@@ -175,26 +176,29 @@
             <TextBlock Text="Programs listed here appear in the Smart Bar as launchable items."
                        Foreground="#FF666666" FontSize="11" Margin="4,0,0,4" />
 
-            <!-- Column headers -->
-            <Grid Margin="4,8,0,4">
+            <!-- Column headers (margins match Border Padding="10,8" + button widths) -->
+            <Grid Margin="10,8,10,4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="1.5*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="24" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="Name" Foreground="#FF888888" FontSize="11" />
-                <TextBlock Grid.Column="1" Text="Executable path" Foreground="#FF888888" FontSize="11" />
+                <TextBlock Grid.Column="1" Text="Executable path" Foreground="#FF888888" FontSize="11" Margin="6,0,0,0" />
             </Grid>
 
             <ItemsControl x:Name="programList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Background="#FF252525" CornerRadius="6" Padding="10,8" Margin="0,0,0,4">
+                            <StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="1.5*" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
@@ -210,6 +214,19 @@
                                         Width="24" Height="24"
                                         Style="{StaticResource SmallButton}"
                                         Padding="0"
+                                        Click="OnToggleArgs"
+                                        ToolTip="Edit command line arguments"
+                                        Margin="0,0,4,0">
+                                    <fa5:ImageAwesome Icon="Solid_Terminal"
+                                                      Foreground="#FF2196F3"
+                                                      Width="10" Height="10"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" />
+                                </Button>
+                                <Button Grid.Column="3"
+                                        Width="24" Height="24"
+                                        Style="{StaticResource SmallButton}"
+                                        Padding="0"
                                         Click="OnBrowseProgram"
                                         ToolTip="Browse for executable"
                                         Margin="0,0,4,0">
@@ -219,7 +236,7 @@
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center" />
                                 </Button>
-                                <Button Grid.Column="3"
+                                <Button Grid.Column="4"
                                         Width="24" Height="24"
                                         Style="{StaticResource SmallButton}"
                                         Padding="0"
@@ -232,6 +249,19 @@
                                                       VerticalAlignment="Center" />
                                 </Button>
                             </Grid>
+                            <Grid Visibility="{Binding ArgsVisible, Converter={StaticResource BoolToVis}}" Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Args:" Foreground="#FF888888" FontSize="11"
+                                           VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding Args, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource DarkTextBox}"
+                                         FontSize="12" />
+                            </Grid>
+                            </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

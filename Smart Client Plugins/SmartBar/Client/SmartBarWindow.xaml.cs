@@ -234,6 +234,7 @@ namespace SmartBar.Client
             foreach (var prog in SmartBarConfig.Programs)
             {
                 var path = prog.Path;
+                var args = prog.Args;
                 _allItems.Add(new CommandItem
                 {
                     Name = "Program: " + prog.Name,
@@ -241,7 +242,13 @@ namespace SmartBar.Client
                     Category = ItemCategory.Program,
                     Execute = () =>
                     {
-                        try { System.Diagnostics.Process.Start(path); }
+                        try
+                        {
+                            if (string.IsNullOrEmpty(args))
+                                System.Diagnostics.Process.Start(path);
+                            else
+                                System.Diagnostics.Process.Start(path, args);
+                        }
                         catch (Exception ex) { Log.Error($"Failed to start program: {path}", ex); }
                     }
                 });
