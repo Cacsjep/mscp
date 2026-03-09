@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using FastColoredTextBoxNS;
 using HttpRequests.Background;
 using VideoOS.Platform;
 
@@ -14,6 +16,15 @@ namespace HttpRequests.Admin
         internal event EventHandler ConfigurationChangedByUser;
         internal event EventHandler DuplicateRequested;
 
+        // JSON syntax highlighting styles (GitHub light theme)
+        private static readonly Style _jsonKeyStyle = new TextStyle(new SolidBrush(Color.FromArgb(5, 80, 174)), null, FontStyle.Regular);
+        private static readonly Style _jsonStringStyle = new TextStyle(new SolidBrush(Color.FromArgb(10, 48, 105)), null, FontStyle.Regular);
+        private static readonly Style _jsonNumberStyle = new TextStyle(new SolidBrush(Color.FromArgb(17, 99, 41)), null, FontStyle.Regular);
+        private static readonly Style _jsonBoolNullStyle = new TextStyle(new SolidBrush(Color.FromArgb(5, 80, 174)), null, FontStyle.Regular);
+        private static readonly Style _jsonBraceStyle = new TextStyle(new SolidBrush(Color.FromArgb(31, 35, 40)), null, FontStyle.Regular);
+
+        private readonly System.Windows.Forms.Timer _jsonValidationTimer = new System.Windows.Forms.Timer { Interval = 500 };
+
         public HttpRequestUserControl()
         {
             InitializeComponent();
@@ -22,6 +33,7 @@ namespace HttpRequests.Admin
                 _txtTestResponse.Top = _lblTestStatus.Bottom + 4;
                 _txtTestResponse.Height = _grpTestResult.ClientSize.Height - _txtTestResponse.Top - 4;
             };
+            _jsonValidationTimer.Tick += OnJsonValidationTick;
         }
 
         public string DisplayName => _txtName.Text;
@@ -326,6 +338,55 @@ namespace HttpRequests.Admin
             ConfigurationChangedByUser?.Invoke(this, EventArgs.Empty);
         }
 
+        private void OnPayloadTextChanged(object sender, TextChangedEventArgs e)
+        {
+            var range = e.ChangedRange;
+            range.ClearStyle(_jsonKeyStyle, _jsonStringStyle, _jsonNumberStyle, _jsonBoolNullStyle, _jsonBraceStyle);
+
+            // Keys: "key":
+            range.SetStyle(_jsonKeyStyle, @"(""[^""\\]*(?:\\.[^""\\]*)*"")\s*:", RegexOptions.None);
+            // Strings (values only - not followed by colon)
+            range.SetStyle(_jsonStringStyle, @":\s*(""[^""\\]*(?:\\.[^""\\]*)*"")", RegexOptions.None);
+            // Numbers
+            range.SetStyle(_jsonNumberStyle, @"\b-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?\b");
+            // Booleans and null
+            range.SetStyle(_jsonBoolNullStyle, @"\b(?:true|false|null)\b");
+            // Braces and brackets
+            range.SetStyle(_jsonBraceStyle, @"[\[\]{}]");
+
+            // Debounce JSON validation
+            _jsonValidationTimer.Stop();
+            _jsonValidationTimer.Start();
+
+            OnUserChange(sender, EventArgs.Empty);
+        }
+
+        private void OnJsonValidationTick(object sender, EventArgs e)
+        {
+            _jsonValidationTimer.Stop();
+
+            var payloadType = _cboPayloadType.SelectedItem?.ToString() ?? "None";
+            var text = _txtPayload.Text;
+            if (payloadType == "JSON" && !string.IsNullOrWhiteSpace(text))
+            {
+                string jsonError = GetJsonError(text.Trim());
+                if (jsonError != null)
+                {
+                    _lblJsonHint.ForeColor = Color.Red;
+                    _lblJsonHint.Text = jsonError;
+                }
+                else
+                {
+                    _lblJsonHint.ForeColor = Color.Green;
+                    _lblJsonHint.Text = "Valid JSON";
+                }
+            }
+            else
+            {
+                _lblJsonHint.Text = "";
+            }
+        }
+
         private void OnGridCellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
             OnUserChange(sender, EventArgs.Empty);
@@ -437,12 +498,35 @@ namespace HttpRequests.Admin
 
         private static bool IsValidJson(string text)
         {
-            if (string.IsNullOrWhiteSpace(text)) return false;
+            return GetJsonError(text) == null;
+        }
+
+        private static string GetJsonError(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return "Empty input";
             int pos = 0;
-            bool ok = JsonParseValue(text, ref pos);
-            if (!ok) return false;
+            string error = JsonParseValue(text, ref pos);
+            if (error != null) return error;
             JsonSkipWhitespace(text, ref pos);
-            return pos == text.Length;
+            if (pos < text.Length)
+                return $"Unexpected character '{text[pos]}' at position {pos + 1}";
+            return null;
+        }
+
+        private static void GetLineCol(string s, int pos, out int line, out int col)
+        {
+            line = 1; col = 1;
+            for (int i = 0; i < pos && i < s.Length; i++)
+            {
+                if (s[i] == '\n') { line++; col = 1; }
+                else col++;
+            }
+        }
+
+        private static string JsonErrorAt(string s, int pos, string message)
+        {
+            GetLineCol(s, pos, out int line, out int col);
+            return $"{message} (line {line}, col {col})";
         }
 
         private static void JsonSkipWhitespace(string s, ref int pos)
@@ -451,10 +535,10 @@ namespace HttpRequests.Admin
                 pos++;
         }
 
-        private static bool JsonParseValue(string s, ref int pos)
+        private static string JsonParseValue(string s, ref int pos)
         {
             JsonSkipWhitespace(s, ref pos);
-            if (pos >= s.Length) return false;
+            if (pos >= s.Length) return JsonErrorAt(s, pos, "Unexpected end of input");
             var c = s[pos];
             if (c == '"') return JsonParseString(s, ref pos);
             if (c == '{') return JsonParseObject(s, ref pos);
@@ -463,94 +547,99 @@ namespace HttpRequests.Admin
             if (c == 'f') return JsonParseLiteral(s, ref pos, "false");
             if (c == 'n') return JsonParseLiteral(s, ref pos, "null");
             if (c == '-' || (c >= '0' && c <= '9')) return JsonParseNumber(s, ref pos);
-            return false;
+            return JsonErrorAt(s, pos, $"Unexpected character '{c}'");
         }
 
-        private static bool JsonParseObject(string s, ref int pos)
+        private static string JsonParseObject(string s, ref int pos)
         {
-            if (pos >= s.Length || s[pos] != '{') return false;
+            if (pos >= s.Length || s[pos] != '{') return JsonErrorAt(s, pos, "Expected '{'");
             pos++;
             JsonSkipWhitespace(s, ref pos);
-            if (pos < s.Length && s[pos] == '}') { pos++; return true; }
+            if (pos < s.Length && s[pos] == '}') { pos++; return null; }
             while (true)
             {
                 JsonSkipWhitespace(s, ref pos);
-                if (pos >= s.Length || s[pos] != '"') return false;
-                if (!JsonParseString(s, ref pos)) return false;
+                if (pos >= s.Length) return JsonErrorAt(s, pos, "Unexpected end of input, expected key");
+                if (s[pos] != '"') return JsonErrorAt(s, pos, "Expected '\"' for object key");
+                var err = JsonParseString(s, ref pos);
+                if (err != null) return err;
                 JsonSkipWhitespace(s, ref pos);
-                if (pos >= s.Length || s[pos] != ':') return false;
+                if (pos >= s.Length || s[pos] != ':') return JsonErrorAt(s, pos, "Expected ':' after key");
                 pos++;
-                if (!JsonParseValue(s, ref pos)) return false;
+                err = JsonParseValue(s, ref pos);
+                if (err != null) return err;
                 JsonSkipWhitespace(s, ref pos);
-                if (pos >= s.Length) return false;
-                if (s[pos] == '}') { pos++; return true; }
-                if (s[pos] != ',') return false;
+                if (pos >= s.Length) return JsonErrorAt(s, pos, "Unexpected end of input, expected '}' or ','");
+                if (s[pos] == '}') { pos++; return null; }
+                if (s[pos] != ',') return JsonErrorAt(s, pos, $"Expected ',' or '}}', got '{s[pos]}'");
                 pos++;
             }
         }
 
-        private static bool JsonParseArray(string s, ref int pos)
+        private static string JsonParseArray(string s, ref int pos)
         {
-            if (pos >= s.Length || s[pos] != '[') return false;
+            if (pos >= s.Length || s[pos] != '[') return JsonErrorAt(s, pos, "Expected '['");
             pos++;
             JsonSkipWhitespace(s, ref pos);
-            if (pos < s.Length && s[pos] == ']') { pos++; return true; }
+            if (pos < s.Length && s[pos] == ']') { pos++; return null; }
             while (true)
             {
-                if (!JsonParseValue(s, ref pos)) return false;
+                var err = JsonParseValue(s, ref pos);
+                if (err != null) return err;
                 JsonSkipWhitespace(s, ref pos);
-                if (pos >= s.Length) return false;
-                if (s[pos] == ']') { pos++; return true; }
-                if (s[pos] != ',') return false;
+                if (pos >= s.Length) return JsonErrorAt(s, pos, "Unexpected end of input, expected ']' or ','");
+                if (s[pos] == ']') { pos++; return null; }
+                if (s[pos] != ',') return JsonErrorAt(s, pos, $"Expected ',' or ']', got '{s[pos]}'");
                 pos++;
             }
         }
 
-        private static bool JsonParseString(string s, ref int pos)
+        private static string JsonParseString(string s, ref int pos)
         {
-            if (pos >= s.Length || s[pos] != '"') return false;
+            if (pos >= s.Length || s[pos] != '"') return JsonErrorAt(s, pos, "Expected '\"'");
+            int start = pos;
             pos++;
             while (pos < s.Length)
             {
                 var c = s[pos];
                 if (c == '\\') { pos += 2; continue; }
-                if (c == '"') { pos++; return true; }
-                if (c < 0x20) return false;
+                if (c == '"') { pos++; return null; }
+                if (c < 0x20) return JsonErrorAt(s, pos, "Control character in string");
                 pos++;
             }
-            return false;
+            return JsonErrorAt(s, start, "Unterminated string");
         }
 
-        private static bool JsonParseNumber(string s, ref int pos)
+        private static string JsonParseNumber(string s, ref int pos)
         {
             int start = pos;
             if (pos < s.Length && s[pos] == '-') pos++;
-            if (pos >= s.Length || s[pos] < '0' || s[pos] > '9') return false;
+            if (pos >= s.Length || s[pos] < '0' || s[pos] > '9') return JsonErrorAt(s, pos, "Expected digit");
             if (s[pos] == '0') pos++;
             else { while (pos < s.Length && s[pos] >= '0' && s[pos] <= '9') pos++; }
             if (pos < s.Length && s[pos] == '.')
             {
                 pos++;
-                if (pos >= s.Length || s[pos] < '0' || s[pos] > '9') return false;
+                if (pos >= s.Length || s[pos] < '0' || s[pos] > '9') return JsonErrorAt(s, pos, "Expected digit after '.'");
                 while (pos < s.Length && s[pos] >= '0' && s[pos] <= '9') pos++;
             }
             if (pos < s.Length && (s[pos] == 'e' || s[pos] == 'E'))
             {
                 pos++;
                 if (pos < s.Length && (s[pos] == '+' || s[pos] == '-')) pos++;
-                if (pos >= s.Length || s[pos] < '0' || s[pos] > '9') return false;
+                if (pos >= s.Length || s[pos] < '0' || s[pos] > '9') return JsonErrorAt(s, pos, "Expected digit in exponent");
                 while (pos < s.Length && s[pos] >= '0' && s[pos] <= '9') pos++;
             }
-            return pos > start;
+            return pos > start ? null : JsonErrorAt(s, pos, "Invalid number");
         }
 
-        private static bool JsonParseLiteral(string s, ref int pos, string literal)
+        private static string JsonParseLiteral(string s, ref int pos, string literal)
         {
-            if (pos + literal.Length > s.Length) return false;
+            if (pos + literal.Length > s.Length) return JsonErrorAt(s, pos, $"Expected '{literal}'");
             for (int i = 0; i < literal.Length; i++)
-                if (s[pos + i] != literal[i]) return false;
+                if (s[pos + i] != literal[i]) return JsonErrorAt(s, pos, $"Expected '{literal}'");
             pos += literal.Length;
-            return true;
+            return null;
         }
 
         private static string GetProp(Item item, string key, string defaultValue)

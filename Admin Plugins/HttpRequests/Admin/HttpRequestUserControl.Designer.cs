@@ -26,7 +26,7 @@ namespace HttpRequests.Admin
             this._grpBody = new System.Windows.Forms.GroupBox();
             this._labelPayloadType = new System.Windows.Forms.Label();
             this._cboPayloadType = new System.Windows.Forms.ComboBox();
-            this._txtPayload = new System.Windows.Forms.TextBox();
+            this._txtPayload = new FastColoredTextBoxNS.FastColoredTextBox();
             this._chkIncludeEventData = new System.Windows.Forms.CheckBox();
             this._tabControl = new System.Windows.Forms.TabControl();
             this._tabUrlParams = new System.Windows.Forms.TabPage();
@@ -179,9 +179,11 @@ namespace HttpRequests.Admin
             //
             // _grpBody
             //
+            this._lblJsonHint = new System.Windows.Forms.Label();
             this._grpBody.Controls.Add(this._labelPayloadType);
             this._grpBody.Controls.Add(this._cboPayloadType);
             this._grpBody.Controls.Add(this._txtPayload);
+            this._grpBody.Controls.Add(this._lblJsonHint);
             this._grpBody.Controls.Add(this._chkIncludeEventData);
             this._grpBody.Location = new System.Drawing.Point(12, 164);
             this._grpBody.Name = "_grpBody";
@@ -212,14 +214,28 @@ namespace HttpRequests.Admin
             //
             this._txtPayload.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top
             | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
-            this._txtPayload.Font = new System.Drawing.Font("Consolas", 8.25F);
+            this._txtPayload.Font = new System.Drawing.Font("Consolas", 9.75F);
             this._txtPayload.Location = new System.Drawing.Point(10, 50);
-            this._txtPayload.Multiline = true;
             this._txtPayload.Name = "_txtPayload";
-            this._txtPayload.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this._txtPayload.Size = new System.Drawing.Size(470, 85);
             this._txtPayload.TabIndex = 2;
-            this._txtPayload.TextChanged += new System.EventHandler(this.OnUserChange);
+            this._txtPayload.Language = FastColoredTextBoxNS.Language.Custom;
+            this._txtPayload.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this._txtPayload.ShowLineNumbers = true;
+            this._txtPayload.TextChanged += new System.EventHandler<FastColoredTextBoxNS.TextChangedEventArgs>(this.OnPayloadTextChanged);
+            //
+            // _lblJsonHint
+            //
+            this._lblJsonHint.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this._lblJsonHint.Font = new System.Drawing.Font("Segoe UI", 8F);
+            this._lblJsonHint.ForeColor = System.Drawing.Color.Red;
+            this._lblJsonHint.Location = new System.Drawing.Point(180, 24);
+            this._lblJsonHint.Name = "_lblJsonHint";
+            this._lblJsonHint.Size = new System.Drawing.Size(300, 15);
+            this._lblJsonHint.TabIndex = 4;
+            this._lblJsonHint.Text = "";
+            this._lblJsonHint.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             //
             // _chkIncludeEventData
             //
@@ -621,7 +637,8 @@ namespace HttpRequests.Admin
         private System.Windows.Forms.GroupBox _grpBody;
         private System.Windows.Forms.Label _labelPayloadType;
         private System.Windows.Forms.ComboBox _cboPayloadType;
-        private System.Windows.Forms.TextBox _txtPayload;
+        private FastColoredTextBoxNS.FastColoredTextBox _txtPayload;
+        private System.Windows.Forms.Label _lblJsonHint;
         private System.Windows.Forms.CheckBox _chkIncludeEventData;
         private System.Windows.Forms.TabControl _tabControl;
         private System.Windows.Forms.TabPage _tabUrlParams;

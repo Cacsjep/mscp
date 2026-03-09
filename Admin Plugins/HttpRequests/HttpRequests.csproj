@@ -16,6 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FCTB" Version="2.16.24" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
   </ItemGroup>
 
