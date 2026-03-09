@@ -169,8 +169,18 @@ namespace HttpRequests.Admin
 
         public override void DeleteItem(Item item)
         {
-            if (item != null)
-                Configuration.Instance.DeleteItemConfiguration(HttpRequestsDefinition.PluginId, item);
+            if (item == null) return;
+
+            // Delete all child requests first to avoid ghost items
+            var children = Configuration.Instance.GetItemConfigurations(
+                HttpRequestsDefinition.PluginId, item, HttpRequestsDefinition.RequestKindId);
+            if (children != null)
+            {
+                foreach (var child in children)
+                    Configuration.Instance.DeleteItemConfiguration(HttpRequestsDefinition.PluginId, child);
+            }
+
+            Configuration.Instance.DeleteItemConfiguration(HttpRequestsDefinition.PluginId, item);
         }
 
         #endregion
