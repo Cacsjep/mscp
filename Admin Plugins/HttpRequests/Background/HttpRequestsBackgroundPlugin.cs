@@ -119,7 +119,7 @@ namespace HttpRequests.Background
             return null;
         }
 
-        public void HandleAction(FQID targetFqid, AnalyticsEvent triggeringEvent)
+        public void HandleAction(FQID targetFqid, BaseEvent triggeringEvent)
         {
             if (_closing) return;
 
@@ -136,7 +136,7 @@ namespace HttpRequests.Background
             });
         }
 
-        private void ExecuteForItem(FQID targetFqid, AnalyticsEvent triggeringEvent)
+        private void ExecuteForItem(FQID targetFqid, BaseEvent triggeringEvent)
         {
             var targetId = targetFqid.ObjectId;
 
@@ -157,7 +157,7 @@ namespace HttpRequests.Background
             }
         }
 
-        private bool ExecuteRequest(Item requestItem, AnalyticsEvent triggeringEvent)
+        private bool ExecuteRequest(Item requestItem, BaseEvent triggeringEvent)
         {
             var method = GetProp(requestItem, "HttpMethod", "POST");
             var url = GetProp(requestItem, "Url", "");
@@ -259,7 +259,7 @@ namespace HttpRequests.Background
             return result;
         }
 
-        private string BuildJsonPayload(string userPayload, AnalyticsEvent triggeringEvent, bool includeEvent)
+        private string BuildJsonPayload(string userPayload, BaseEvent triggeringEvent, bool includeEvent)
         {
             var hasUserPayload = !string.IsNullOrWhiteSpace(userPayload);
             string userJsonInner = "";
@@ -290,7 +290,7 @@ namespace HttpRequests.Background
             return "{" + string.Join(", ", parts) + "}";
         }
 
-        private string BuildEventJson(AnalyticsEvent evt)
+        private string BuildEventJson(BaseEvent evt)
         {
             if (evt?.EventHeader == null)
                 return "\"Event\": {}";
@@ -363,7 +363,7 @@ namespace HttpRequests.Background
             return sb.ToString();
         }
 
-        private void FireEvent(Item requestItem, AnalyticsEvent triggeringEvent, bool success, HttpRequestResult result)
+        private void FireEvent(Item requestItem, BaseEvent triggeringEvent, bool success, HttpRequestResult result)
         {
             try
             {

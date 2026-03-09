@@ -89,14 +89,44 @@ namespace HttpRequests.Admin
         {
             _userControl = new HttpRequestUserControl();
             _userControl.ConfigurationChangedByUser += ConfigurationChangedByUserHandler;
+            _userControl.DuplicateRequested += OnDuplicateRequested;
             return _userControl;
         }
 
         public override void ReleaseUserControl()
         {
             if (_userControl != null)
+            {
                 _userControl.ConfigurationChangedByUser -= ConfigurationChangedByUserHandler;
+                _userControl.DuplicateRequested -= OnDuplicateRequested;
+            }
             _userControl = null;
+        }
+
+        private void OnDuplicateRequested(object sender, EventArgs e)
+        {
+            if (CurrentItem == null) return;
+
+            var src = CurrentItem;
+            var newFqid = new FQID(
+                src.FQID.ServerId,
+                src.FQID.ParentId,
+                Guid.NewGuid(),
+                FolderType.No,
+                _kind);
+
+            var newItem = new Item(newFqid, "Copy of " + src.Name);
+
+            foreach (var kvp in src.Properties)
+                newItem.Properties[kvp.Key] = kvp.Value;
+
+            Configuration.Instance.SaveItemConfiguration(HttpRequestsDefinition.PluginId, newItem);
+
+            MessageBox.Show(
+                $"Created \"{newItem.Name}\".\n\nRefresh the tree (collapse/expand the folder) to see it.",
+                "Duplicated",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         public override void FillUserControl(Item item)

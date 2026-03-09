@@ -44,14 +44,14 @@ namespace HttpRequests.Background
                 return;
             }
 
-            var analyticsEvent = sourceEvent as AnalyticsEvent;
+            _log.Info($"sourceEvent type: {sourceEvent?.GetType().FullName ?? "null"}, hasHeader: {(sourceEvent?.EventHeader != null)}");
 
             foreach (var fqid in actionItems)
             {
                 try
                 {
                     _log.Info($"Rule action triggered: targetKind={fqid.Kind}, targetId={fqid.ObjectId}");
-                    bgPlugin.HandleAction(fqid, analyticsEvent);
+                    bgPlugin.HandleAction(fqid, sourceEvent);
                 }
                 catch (Exception ex)
                 {

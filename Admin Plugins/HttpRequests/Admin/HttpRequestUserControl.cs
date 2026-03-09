@@ -12,6 +12,7 @@ namespace HttpRequests.Admin
     public partial class HttpRequestUserControl : UserControl
     {
         internal event EventHandler ConfigurationChangedByUser;
+        internal event EventHandler DuplicateRequested;
 
         public HttpRequestUserControl()
         {
@@ -161,6 +162,13 @@ namespace HttpRequests.Admin
             UpdateBodyVisibility();
             UpdatePayloadUI();
             UpdateAuthUI();
+        }
+
+        // ─── Duplicate ──────────────────────────────────────
+
+        private void OnDuplicateClick(object sender, EventArgs e)
+        {
+            DuplicateRequested?.Invoke(this, EventArgs.Empty);
         }
 
         // ─── Test ───────────────────────────────────────────
