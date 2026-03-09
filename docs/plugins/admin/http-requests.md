@@ -14,6 +14,10 @@ HTTP requests that are more powerful and flexible.
 6. Save the configuration
 7. Create a **Rule** with the **Execute HTTP Request** action - target a specific request, all in a folder, or all requests
 
+<video controls width="100%">
+  <source src="../vids/rec_usage.mp4" type="video/mp4">
+</video>
+
 ## Request Configuration
 
 | Property | Description |
