@@ -53,6 +53,9 @@ hide:
   </div>
 </div>
 
+!!! warning "Minimum Version"
+    All plugins and drivers require **Milestone XProtect 2022 R3** or newer.
+
 !!! info "Windows SmartScreen"
     The installer is not code-signed, so Windows SmartScreen may show a **"Windows protected your PC"** dialog when you run it. This is normal for unsigned open-source software. Click **More info** and then **Run anyway** to proceed with the installation.
 
