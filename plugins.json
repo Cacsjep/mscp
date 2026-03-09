@@ -74,6 +74,13 @@
     "description": "Audit user access to recorded video with per-user rules and reason prompts"
   },
   {
+    "name": "HttpRequests",
+    "displayName": "HTTP Requests Plugin",
+    "path": "Admin Plugins/HttpRequests",
+    "category": "AdminPlugin",
+    "description": "Configure and execute HTTP requests as rule actions with custom payloads, authentication, and batch execution"
+  },
+  {
     "name": "SmartBar",
     "displayName": "Smart Bar",
     "path": "Smart Client Plugins/SmartBar",

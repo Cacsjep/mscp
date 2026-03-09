@@ -121,4 +121,8 @@ hide:
     <div class="pi ap"><i class="mdi mdi-shield-check"></i></div>
     <div class="pt"><span class="pn">Auditor</span><span class="pd">Audit user access to recorded video with per-user rules</span></div>
   </a>
+  <a class="pr" href="admin/http-requests/">
+    <div class="pi ap"><i class="mdi mdi-send"></i></div>
+    <div class="pt"><span class="pn">HTTP Requests</span><span class="pd">HTTP requests actions that are more powerful and flexible.</span></div>
+  </a>
 </div>

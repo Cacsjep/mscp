@@ -1,13 +1,21 @@
-# Adding a New Smart Client Plugin
+# Adding a New Plugin
 
-Step-by-step guide based on the Weather, RDP, and Notepad plugin patterns.
+Step-by-step guide for Smart Client Plugins and Admin Plugins.
 
 ## Prerequisites
 
 - Visual Studio 2022+
 - .NET Framework 4.8 SDK
-- Milestone XProtect Smart Client installed (for testing)
-- Generate **4 unique GUIDs** before starting (use `[guid]::NewGuid()` in PowerShell)
+- Milestone XProtect installed (for testing)
+- Generate unique GUIDs before starting (`[guid]::NewGuid()` in PowerShell)
+
+---
+
+# Smart Client Plugin
+
+Based on Weather, RDP, and Notepad plugin patterns.
+
+## GUIDs Needed
 
 | GUID | Purpose | Used In |
 |------|---------|---------|
@@ -17,9 +25,7 @@ Step-by-step guide based on the Weather, RDP, and Notepad plugin patterns.
 | GUID 4 | ViewItemPlugin.Id | `*ViewItemPlugin.cs` |
 | GUID 5 | Project GUID | `MSCPlugins.sln` |
 
----
-
-## 1. Create the Plugin Directory
+## Directory Structure
 
 ```
 Smart Client Plugins/
@@ -27,7 +33,6 @@ Smart Client Plugins/
     MyPlugin.csproj
     plugin.def
     MyPluginDefinition.cs
-    README.md
     Resources/
       PluginIcon.png
     Properties/
@@ -43,13 +48,7 @@ Smart Client Plugins/
       MyPluginBackgroundPlugin.cs
 ```
 
-For Device Drivers, use `Device Drivers/MyDriver/`. For Admin Plugins, use `Admin Plugins/MyPlugin/`.
-
----
-
-## 2. Source Files
-
-### plugin.def
+## plugin.def
 
 ```xml
 <plugin>
@@ -58,16 +57,10 @@ For Device Drivers, use `Device Drivers/MyDriver/`. For Admin Plugins, use `Admi
 </plugin>
 ```
 
-The `env` value depends on category:
-- Smart Client Plugin: `SmartClient`
-- Device Driver: `Service`
-- Admin Plugin: `Service, Administration`
-
-### MyPlugin.csproj
+## .csproj
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -95,7 +88,6 @@ The `env` value depends on category:
     </Content>
     <Resource Include="Resources\PluginIcon.png" />
   </ItemGroup>
-
 </Project>
 ```
 
@@ -104,10 +96,9 @@ Key points:
 - MIP SDK NuGet uses wildcard prerelease: `Version="*-*"`
 - `plugin.def` must be `CopyToOutputDirectory=Always`
 - Plugin icon is `<Resource>` (not `Content`)
-- Declare `PluginName` and deploy flags - the shared `Directory.Build.props` and `Directory.Build.targets` handle the stop/copy/start cycle automatically
-- No manual Pre/PostBuild targets needed
+- `PluginName` + deploy flags are used by `Directory.Build.props`/`Directory.Build.targets`
 
-### MyPluginDefinition.cs
+## PluginDefinition
 
 ```csharp
 using System;
@@ -157,7 +148,7 @@ namespace MyPlugin
 
 Three internal static GUIDs: `PluginId`, `ViewItemKind`, `BackgroundPluginId`. Icon loaded via WPF pack URI from embedded resource.
 
-### Client/MyPluginViewItemPlugin.cs
+## ViewItemPlugin
 
 ```csharp
 using System;
@@ -169,7 +160,6 @@ namespace MyPlugin.Client
     public class MyPluginViewItemPlugin : ViewItemPlugin
     {
         public override Guid Id => new Guid("GUID-4-HERE");
-
         public override string Name => "MyPlugin";
 
         public override VideoOSIconSourceBase IconSource
@@ -179,9 +169,7 @@ namespace MyPlugin.Client
         }
 
         public override ViewItemManager GenerateViewItemManager()
-        {
-            return new MyPluginViewItemManager();
-        }
+            => new MyPluginViewItemManager();
 
         public override void Init() { }
         public override void Close() { }
@@ -189,9 +177,7 @@ namespace MyPlugin.Client
 }
 ```
 
-Gets its own unique GUID (4th one). `Name` is the short display name without "Plugin" suffix.
-
-### Client/MyPluginViewItemManager.cs
+## ViewItemManager
 
 ```csharp
 using VideoOS.Platform.Client;
@@ -200,50 +186,31 @@ namespace MyPlugin.Client
 {
     public class MyPluginViewItemManager : ViewItemManager
     {
-        // Property keys
         private const string SomePropertyKey = "SomeProperty";
 
-        public MyPluginViewItemManager()
-            : base("MyPluginViewItemManager")
-        {
-        }
+        public MyPluginViewItemManager() : base("MyPluginViewItemManager") { }
 
-        // Properties use GetProperty/SetProperty for XProtect storage
         public string SomeProperty
         {
             get => GetProperty(SomePropertyKey) ?? string.Empty;
             set => SetProperty(SomePropertyKey, value);
         }
 
-        public void Save()
-        {
-            SaveProperties();
-        }
-
+        public void Save() => SaveProperties();
         public override void PropertiesLoaded() { }
 
         public override ViewItemWpfUserControl GenerateViewItemWpfUserControl()
-        {
-            return new MyPluginViewItemWpfUserControl(this);
-        }
+            => new MyPluginViewItemWpfUserControl(this);
 
         public override PropertiesWpfUserControl GeneratePropertiesWpfUserControl()
-        {
-            return new MyPluginPropertiesWpfUserControl(this);
-        }
+            => new MyPluginPropertiesWpfUserControl(this);
     }
 }
 ```
 
-**Property storage pattern:**
-- `private const string` key for each property
-- Getter: `GetProperty(key) ?? defaultValue`
-- Setter: `SetProperty(key, value)`
-- String defaults: `string.Empty` for text, `"14"` for numbers
-- `Save()` wraps `SaveProperties()`
-- Constructor base call passes class name: `base("MyPluginViewItemManager")`
+Property storage: `GetProperty(key) ?? defaultValue` / `SetProperty(key, value)` / `SaveProperties()`.
 
-### Client/MyPluginViewItemWpfUserControl.xaml
+## ViewItemWpfUserControl
 
 ```xml
 <external:ViewItemWpfUserControl
@@ -251,29 +218,19 @@ namespace MyPlugin.Client
     x:Class="MyPlugin.Client.MyPluginViewItemWpfUserControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    mc:Ignorable="d"
-    d:DesignHeight="400"
-    d:DesignWidth="600"
     PreviewMouseLeftButtonUp="OnMouseLeftUp"
     PreviewMouseDoubleClick="OnMouseDoubleClick">
     <Grid Background="#FF1C2326">
-        <!-- Your Live mode UI here -->
-
-        <!-- Setup mode overlay (shown in ClientSetup mode) -->
+        <!-- Live mode UI -->
         <Grid x:Name="setupOverlay" Visibility="Collapsed">
-            <!-- Setup info -->
+            <!-- Setup mode overlay -->
         </Grid>
     </Grid>
 </external:ViewItemWpfUserControl>
 ```
 
-### Client/MyPluginViewItemWpfUserControl.xaml.cs
-
 ```csharp
 using System;
-using System.Windows;
 using System.Windows.Input;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
@@ -294,11 +251,9 @@ namespace MyPlugin.Client
 
         public override void Init()
         {
-            // Register for mode changes (Setup <-> Live)
             _modeChangedReceiver = EnvironmentManager.Instance.RegisterReceiver(
                 new MessageReceiver(OnModeChanged),
                 new MessageIdFilter(MessageId.System.ModeChangedIndication));
-
             ApplyMode(EnvironmentManager.Instance.Mode);
         }
 
@@ -313,23 +268,12 @@ namespace MyPlugin.Client
 
         private void ApplyMode(Mode mode)
         {
-            if (mode == Mode.ClientSetup)
-            {
-                // Show setup overlay, hide live UI
-            }
-            else
-            {
-                // Show live UI, hide setup overlay
-                // Load properties from manager
-            }
+            // Switch between Setup and Live UI
         }
 
         private object OnModeChanged(Message message, FQID destination, FQID sender)
         {
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                ApplyMode((Mode)message.Data);
-            }));
+            Dispatcher.BeginInvoke(new Action(() => ApplyMode((Mode)message.Data)));
             return null;
         }
 
@@ -345,11 +289,10 @@ namespace MyPlugin.Client
 
 Key patterns:
 - Register `ModeChangedIndication` in `Init()`, unregister in `Close()`
-- Use `Dispatcher.BeginInvoke` for mode change handler (comes from non-UI thread)
-- `ApplyMode()` switches between Setup and Live UI
-- `FireClickEvent()` and `FireDoubleClickEvent()` for Smart Client selection
+- Use `Dispatcher.BeginInvoke` for mode change handler (non-UI thread)
+- `FireClickEvent()`/`FireDoubleClickEvent()` for Smart Client selection
 
-### Client/MyPluginPropertiesWpfUserControl.xaml
+## PropertiesWpfUserControl
 
 ```xml
 <external:PropertiesWpfUserControl
@@ -358,17 +301,15 @@ Key patterns:
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel Margin="10">
-        <GroupBox Header="MyPlugin Settings" Foreground="White" Margin="0,0,0,10">
+        <GroupBox Header="Settings" Foreground="White">
             <StackPanel Margin="8">
                 <TextBlock Text="Some Property:" Foreground="White" Margin="0,0,0,4" />
-                <TextBox x:Name="somePropertyBox" Margin="0,0,0,8" />
+                <TextBox x:Name="somePropertyBox" />
             </StackPanel>
         </GroupBox>
     </StackPanel>
 </external:PropertiesWpfUserControl>
 ```
-
-### Client/MyPluginPropertiesWpfUserControl.xaml.cs
 
 ```csharp
 using VideoOS.Platform.Client;
@@ -387,13 +328,11 @@ namespace MyPlugin.Client
 
         public override void Init()
         {
-            // Load current values from manager
             somePropertyBox.Text = _viewItemManager.SomeProperty;
         }
 
         public override void Close()
         {
-            // Save values back to manager
             _viewItemManager.SomeProperty = somePropertyBox.Text;
             _viewItemManager.Save();
         }
@@ -401,9 +340,9 @@ namespace MyPlugin.Client
 }
 ```
 
-`Init()` loads from manager, `Close()` saves back. Validation goes in `Close()`.
+`Init()` loads from manager, `Close()` saves back.
 
-### Background/MyPluginBackgroundPlugin.cs
+## BackgroundPlugin (Smart Client)
 
 ```csharp
 using System;
@@ -416,28 +355,18 @@ namespace MyPlugin.Background
     public class MyPluginBackgroundPlugin : BackgroundPlugin
     {
         public override Guid Id => MyPluginDefinition.MyPluginBackgroundPluginId;
-
         public override string Name => "MyPlugin BackgroundPlugin";
 
         public override List<EnvironmentType> TargetEnvironments
             => new List<EnvironmentType> { EnvironmentType.SmartClient };
 
-        public override void Init()
-        {
-            EnvironmentManager.Instance.Log(false, nameof(MyPluginBackgroundPlugin),
-                "MyPlugin plugin started.");
-        }
-
-        public override void Close()
-        {
-            EnvironmentManager.Instance.Log(false, nameof(MyPluginBackgroundPlugin),
-                "MyPlugin plugin stopped.");
-        }
+        public override void Init() { }
+        public override void Close() { }
     }
 }
 ```
 
-### Properties/launchSettings.json
+## launchSettings.json
 
 ```json
 {
@@ -452,23 +381,613 @@ namespace MyPlugin.Background
 
 ---
 
-## 3. Modify MSCPlugins.sln
+# Admin Plugin (Management Client + Event Server)
 
-Three changes needed:
+Based on HttpRequests, CertWatchdog, and Auditor plugin patterns.
 
-### Project Entry
+## GUIDs Needed
 
-Add after the last `EndProject` before `Global`:
+| GUID | Purpose | Used In |
+|------|---------|---------|
+| GUID 1 | PluginId | `*Definition.cs` |
+| GUID 2 | FolderKindId (parent item) | `*Definition.cs`, `ItemNode` |
+| GUID 3 | ItemKindId (child item) | `*Definition.cs`, `ItemNode` |
+| GUID 4 | BackgroundPluginId | `*Definition.cs` |
+| GUID 5 | Project GUID | `MSCPlugins.sln` |
+| GUID 6+ | Event/State/Action GUIDs | If using Rules, events, or actions |
+
+## Directory Structure
 
 ```
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyPlugin", "Smart Client Plugins\MyPlugin\MyPlugin.csproj", "{YOUR-PROJECT-GUID}"
+Admin Plugins/
+  MyPlugin/
+    MyPlugin.csproj
+    plugin.def
+    MyPluginDefinition.cs
+    SystemLog.cs            (optional - CommunitySDK SystemLogBase)
+    Admin/
+      HelpPage.html         (in-app help, loaded by GenerateUserControl)
+      MyFolderItemManager.cs
+      MyFolderUserControl.cs / .Designer.cs
+      MyItemManager.cs
+      MyItemUserControl.cs / .Designer.cs
+    Background/
+      MyBackgroundPlugin.cs
+      MyActionManager.cs    (optional - for Rules integration)
+    Messaging/              (optional - for cross-environment communication)
+      MessageIds.cs
+      CrossMessageHandler.cs
+```
+
+## plugin.def
+
+```xml
+<plugin>
+   <file name="MyPlugin.dll"/>
+   <load env="Service, Administration"/>
+</plugin>
+```
+
+`Service` = Event Server background plugin, `Administration` = Management Client admin UI.
+
+## .csproj
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>MyPlugin</RootNamespace>
+    <AssemblyName>MyPlugin</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <PluginName>MyPlugin</PluginName>
+    <StopAdminClient>true</StopAdminClient>
+    <StopEventServer>true</StopEventServer>
+    <StartEventServer>true</StartEventServer>
+    <LaunchAdminClient>false</LaunchAdminClient>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Admin\HelpPage.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
+```
+
+Key differences from Smart Client:
+- Deploy flags: `StopAdminClient`, `StopEventServer`, `StartEventServer` instead of `StopSmartClient`/`LaunchSmartClient`
+- References CommunitySDK for `PluginLog`, `PluginIcon`, `SystemLogBase`, `CrossMessageHandler`
+- Admin UI is WinForms (not WPF), so `System.Windows.Forms` is required
+- `HelpPage.html` is `Content` with `CopyToOutputDirectory=Always`
+
+## PluginDefinition (Admin)
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Windows.Forms;
+using CommunitySDK;
+using FontAwesome5;
+using MyPlugin.Admin;
+using MyPlugin.Background;
+using VideoOS.Platform;
+using VideoOS.Platform.Admin;
+using VideoOS.Platform.Background;
+using VideoOS.Platform.RuleAction;
+
+namespace MyPlugin
+{
+    public class MyPluginDefinition : PluginDefinition
+    {
+        internal static readonly Guid PluginId = new Guid("GUID-1-HERE");
+        internal static readonly Guid FolderKindId = new Guid("GUID-2-HERE");
+        internal static readonly Guid ItemKindId = new Guid("GUID-3-HERE");
+        internal static readonly Guid BackgroundPluginId = new Guid("GUID-4-HERE");
+
+        // Optional: Event/State GUIDs for Rules integration
+        internal static readonly Guid EventGroupId = new Guid("...");
+        internal static readonly Guid EvtSuccessId = new Guid("...");
+        internal static readonly Guid EvtFailedId = new Guid("...");
+        internal static readonly Guid StateGroupId = new Guid("...");
+
+        private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
+        private List<ItemNode> _itemNodes;
+        private MyActionManager _actionManager;    // optional
+        private Image _pluginIcon, _folderIcon, _itemIcon;
+
+        public override Guid Id => PluginId;
+        public override string Name => "My Plugin";
+        public override string SharedNodeName => "My Plugin";
+        public override string VersionString => "1.0.0.0";
+        public override string Manufacturer => "https://github.com/Cacsjep";
+        public override Image Icon => _pluginIcon;
+
+        public override void Init()
+        {
+            // Icons via FontAwesome (CommunitySDK)
+            try
+            {
+                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Cog);
+                _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
+                _itemIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_File);
+            }
+            catch
+            {
+                var images = VideoOS.Platform.UI.Util.ImageList.Images;
+                _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+                _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+                _itemIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+            }
+
+            // Only register background plugin on Event Server
+            if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.Service)
+                _backgroundPlugins.Add(new MyBackgroundPlugin());
+
+            // Optional: ActionManager for Rules integration
+            _actionManager = new MyActionManager();
+        }
+
+        public override void Close()
+        {
+            _itemNodes = null;
+            _backgroundPlugins.Clear();
+        }
+
+        // IMPORTANT: Nested ItemNode structure (children inside parent)
+        public override List<ItemNode> ItemNodes
+        {
+            get
+            {
+                var env = EnvironmentManager.Instance.EnvironmentType;
+                if (env == EnvironmentType.Administration || env == EnvironmentType.Service)
+                {
+                    if (_itemNodes == null)
+                    {
+                        _itemNodes = new List<ItemNode>
+                        {
+                            new ItemNode(
+                                FolderKindId, Guid.Empty,
+                                "Folder", _folderIcon,
+                                "Folders", _folderIcon,
+                                Category.Text, true, ItemsAllowed.Many,
+                                new MyFolderItemManager(FolderKindId),
+                                new List<ItemNode>    // <-- child items nested here
+                                {
+                                    new ItemNode(
+                                        ItemKindId, FolderKindId,
+                                        "Item", _itemIcon,
+                                        "Items", _itemIcon,
+                                        Category.Text, true, ItemsAllowed.Many,
+                                        new MyItemManager(ItemKindId),
+                                        null)
+                                })
+                        };
+                    }
+                    return _itemNodes;
+                }
+                return null;
+            }
+        }
+
+        // In-app help page (shown when clicking the plugin root node)
+        public override UserControl GenerateUserControl()
+        {
+            return new HtmlHelpUserControl(
+                System.Reflection.Assembly.GetExecutingAssembly(), "Admin", "HelpPage.html");
+        }
+
+        public override List<BackgroundPlugin> BackgroundPlugins => _backgroundPlugins;
+
+        // Optional: expose ActionManager for Rules
+        public override ActionManager ActionManager => _actionManager;
+    }
+}
+```
+
+**Critical: ItemNode nesting** - child ItemNodes go in the parent's children list parameter, NOT as separate entries in the flat `_itemNodes` list. This is required for the Rules engine to offer folder/individual/all targeting.
+
+## ItemManager (Admin - Parent Folder)
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Windows.Forms;
+using VideoOS.Platform;
+using VideoOS.Platform.Admin;
+
+namespace MyPlugin.Admin
+{
+    public class MyFolderItemManager : ItemManager
+    {
+        private MyFolderUserControl _userControl;
+        private readonly Guid _kind;
+
+        public MyFolderItemManager(Guid kind) { _kind = kind; }
+
+        public override void Init() { }
+        public override void Close() { ReleaseUserControl(); }
+
+        // ---- Event Registration (MUST be on parent ItemManager) ----
+        // The Rules engine discovers events from the top-level ItemManager
+
+        public override Collection<VideoOS.Platform.Data.EventGroup> GetKnownEventGroups(CultureInfo culture)
+        {
+            return new Collection<VideoOS.Platform.Data.EventGroup>
+            {
+                new VideoOS.Platform.Data.EventGroup
+                {
+                    ID = MyPluginDefinition.EventGroupId,
+                    Name = "My Plugin"
+                }
+            };
+        }
+
+        public override Collection<VideoOS.Platform.Data.EventType> GetKnownEventTypes(CultureInfo culture)
+        {
+            var sourceKinds = new List<Guid>
+            {
+                MyPluginDefinition.ItemKindId,
+                MyPluginDefinition.FolderKindId
+            };
+
+            return new Collection<VideoOS.Platform.Data.EventType>
+            {
+                new VideoOS.Platform.Data.EventType
+                {
+                    ID = MyPluginDefinition.EvtSuccessId,
+                    Message = "Action Succeeded",
+                    GroupID = MyPluginDefinition.EventGroupId,
+                    StateGroupID = MyPluginDefinition.StateGroupId,
+                    State = "Success",
+                    DefaultSourceKind = MyPluginDefinition.FolderKindId,
+                    SourceKinds = sourceKinds
+                },
+                new VideoOS.Platform.Data.EventType
+                {
+                    ID = MyPluginDefinition.EvtFailedId,
+                    Message = "Action Failed",
+                    GroupID = MyPluginDefinition.EventGroupId,
+                    StateGroupID = MyPluginDefinition.StateGroupId,
+                    State = "Failed",
+                    DefaultSourceKind = MyPluginDefinition.FolderKindId,
+                    SourceKinds = sourceKinds
+                }
+            };
+        }
+
+        public override Collection<VideoOS.Platform.Data.StateGroup> GetKnownStateGroups(CultureInfo culture)
+        {
+            return new Collection<VideoOS.Platform.Data.StateGroup>
+            {
+                new VideoOS.Platform.Data.StateGroup
+                {
+                    ID = MyPluginDefinition.StateGroupId,
+                    Name = "My Plugin Status",
+                    States = new[] { "Success", "Failed" }
+                }
+            };
+        }
+
+        // ---- User Control ----
+
+        public override UserControl GenerateDetailUserControl()
+        {
+            _userControl = new MyFolderUserControl();
+            _userControl.ConfigurationChangedByUser += ConfigurationChangedByUserHandler;
+            return _userControl;
+        }
+
+        public override void ReleaseUserControl()
+        {
+            if (_userControl != null)
+                _userControl.ConfigurationChangedByUser -= ConfigurationChangedByUserHandler;
+            _userControl = null;
+        }
+
+        public override void FillUserControl(Item item)
+        {
+            CurrentItem = item;
+            _userControl?.FillContent(item);
+        }
+
+        public override void ClearUserControl()
+        {
+            CurrentItem = null;
+            _userControl?.ClearContent();
+        }
+
+        public override bool ValidateAndSaveUserControl()
+        {
+            if (CurrentItem != null && _userControl != null)
+            {
+                _userControl.UpdateItem(CurrentItem);
+                Configuration.Instance.SaveItemConfiguration(MyPluginDefinition.PluginId, CurrentItem);
+            }
+            return true;
+        }
+
+        // ---- Item CRUD ----
+
+        public override string GetItemName() => _userControl?.DisplayName ?? "";
+        public override void SetItemName(string name) { if (CurrentItem != null) CurrentItem.Name = name; }
+
+        public override List<Item> GetItems()
+            => Configuration.Instance.GetItemConfigurations(MyPluginDefinition.PluginId, null, _kind);
+
+        public override List<Item> GetItems(Item parentItem)
+            => Configuration.Instance.GetItemConfigurations(MyPluginDefinition.PluginId, parentItem, _kind);
+
+        public override Item GetItem(FQID fqid)
+            => Configuration.Instance.GetItemConfiguration(MyPluginDefinition.PluginId, _kind, fqid.ObjectId);
+
+        public override Item CreateItem(Item parentItem, FQID suggestedFQID)
+        {
+            CurrentItem = new Item(suggestedFQID, "New Folder");
+            _userControl?.FillContent(CurrentItem);
+            Configuration.Instance.SaveItemConfiguration(MyPluginDefinition.PluginId, CurrentItem);
+            return CurrentItem;
+        }
+
+        public override void DeleteItem(Item item)
+        {
+            if (item != null)
+                Configuration.Instance.DeleteItemConfiguration(MyPluginDefinition.PluginId, item);
+        }
+
+        public override OperationalState GetOperationalState(Item item) => OperationalState.Ok;
+    }
+}
+```
+
+**Critical: Event registration on the parent ItemManager.** `GetKnownEventGroups`, `GetKnownEventTypes`, `GetKnownStateGroups` must be on the top-level (folder) ItemManager for the Rules engine to discover them.
+
+## ItemManager (Admin - Child Item)
+
+Same pattern as parent but without event registration overrides. Add validation, duplicate support:
+
+```csharp
+public override UserControl GenerateDetailUserControl()
+{
+    _userControl = new MyItemUserControl();
+    _userControl.ConfigurationChangedByUser += ConfigurationChangedByUserHandler;
+    _userControl.DuplicateRequested += OnDuplicateRequested;
+    return _userControl;
+}
+
+private void OnDuplicateRequested(object sender, EventArgs e)
+{
+    if (CurrentItem == null) return;
+
+    var src = CurrentItem;
+    var newFqid = new FQID(
+        src.FQID.ServerId,
+        src.FQID.ParentId,    // same parent folder
+        Guid.NewGuid(),        // new unique ID
+        FolderType.No,
+        _kind);
+
+    var newItem = new Item(newFqid, "Copy of " + src.Name);
+
+    foreach (var kvp in src.Properties)
+        newItem.Properties[kvp.Key] = kvp.Value;
+
+    Configuration.Instance.SaveItemConfiguration(MyPluginDefinition.PluginId, newItem);
+
+    MessageBox.Show(
+        $"Created \"{newItem.Name}\".\n\nCollapse/expand the folder to see it.",
+        "Duplicated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+}
+```
+
+FQID constructor: `new FQID(ServerId, ParentId, ObjectId, FolderType, Kind)` - 5 parameters.
+
+## ActionManager (Rules Integration)
+
+```csharp
+using System;
+using System.Collections.ObjectModel;
+using VideoOS.Platform;
+using VideoOS.Platform.Data;
+using VideoOS.Platform.RuleAction;
+
+namespace MyPlugin.Background
+{
+    public class MyActionManager : ActionManager
+    {
+        internal static readonly Guid ExecuteActionId = new Guid("...");
+
+        public override Collection<ActionDefinition> GetActionDefinitions()
+        {
+            return new Collection<ActionDefinition>
+            {
+                new ActionDefinition
+                {
+                    Id = ExecuteActionId,
+                    Name = "Execute My Action",
+                    SelectionText = "Execute <My Item>",
+                    DescriptionText = "Execute {0}",
+                    ActionItemKind = new ActionElement
+                    {
+                        DefaultText = "My Item",
+                        ItemKinds = new Collection<Guid> { MyPluginDefinition.ItemKindId }
+                    }
+                }
+            };
+        }
+
+        public override void ExecuteAction(Guid actionId, Collection<FQID> actionItems, BaseEvent sourceEvent)
+        {
+            if (actionId != ExecuteActionId) return;
+
+            // IMPORTANT: sourceEvent is BaseEvent, NOT AnalyticsEvent
+            // Cast to AnalyticsEvent will return null for most rule triggers
+            // Use sourceEvent.EventHeader directly
+
+            foreach (var fqid in actionItems)
+            {
+                // The Rules engine resolves targeting:
+                // - Individual item: one FQID
+                // - All in folder: all item FQIDs in that folder
+                // - ALL: every item FQID
+                MyBackgroundPlugin.Instance.HandleAction(fqid, sourceEvent);
+            }
+        }
+    }
+}
+```
+
+**Critical: `sourceEvent` is `BaseEvent`, not `AnalyticsEvent`.** The Rules engine passes `BaseEvent` which has `EventHeader`. Casting to `AnalyticsEvent` returns `null` and you lose event data.
+
+One action definition is sufficient - the Rules engine automatically provides individual / folder / all targeting in the UI.
+
+## BackgroundPlugin (Event Server)
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using VideoOS.Platform;
+using VideoOS.Platform.Background;
+using VideoOS.Platform.Data;
+using VideoOS.Platform.Messaging;
+
+namespace MyPlugin.Background
+{
+    public class MyBackgroundPlugin : BackgroundPlugin
+    {
+        internal static MyBackgroundPlugin Instance { get; private set; }
+
+        private List<Item> _items = new List<Item>();
+        private readonly object _configLock = new object();
+        private object _configMessageObj;
+        private volatile bool _closing;
+
+        public override Guid Id => MyPluginDefinition.BackgroundPluginId;
+        public override string Name => "My Plugin Background";
+        public override List<EnvironmentType> TargetEnvironments
+            => new List<EnvironmentType> { EnvironmentType.Service };
+
+        public override void Init()
+        {
+            Instance = this;
+            LoadConfig();
+
+            // Listen for config changes
+            _configMessageObj = EnvironmentManager.Instance.RegisterReceiver(
+                OnConfigurationChanged,
+                new MessageIdAndRelatedKindFilter(
+                    MessageId.Server.ConfigurationChangedIndication,
+                    MyPluginDefinition.ItemKindId));
+        }
+
+        public override void Close()
+        {
+            _closing = true;
+            if (_configMessageObj != null)
+            {
+                EnvironmentManager.Instance.UnRegisterReceiver(_configMessageObj);
+                _configMessageObj = null;
+            }
+        }
+
+        private void LoadConfig()
+        {
+            // Load items from Configuration.Instance
+        }
+
+        private object OnConfigurationChanged(Message message, FQID dest, FQID sender)
+        {
+            if (!_closing) LoadConfig();
+            return null;
+        }
+
+        public void HandleAction(FQID targetFqid, BaseEvent triggeringEvent)
+        {
+            if (_closing) return;
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                // Find item by targetFqid.ObjectId, execute action
+                // Use triggeringEvent.EventHeader for event data
+            });
+        }
+    }
+}
+```
+
+Key patterns:
+- `Instance` static property for ActionManager to call into
+- `volatile bool _closing` for clean shutdown
+- `_configLock` for thread-safe config access
+- `ThreadPool.QueueUserWorkItem` for async action execution
+- Register `ConfigurationChangedIndication` to reload config on changes
+
+## Admin UserControl (WinForms)
+
+Admin plugins use WinForms UserControls (not WPF). Use the Designer for layout.
+
+```csharp
+public partial class MyItemUserControl : UserControl
+{
+    internal event EventHandler ConfigurationChangedByUser;
+    internal event EventHandler DuplicateRequested;
+
+    public string DisplayName => _txtName.Text;
+
+    public void FillContent(Item item) { /* load item.Properties into controls */ }
+    public void ClearContent() { /* reset all controls */ }
+    public void UpdateItem(Item item) { /* save controls back to item.Properties */ }
+    public string ValidateInput() { /* return error string or null if valid */ }
+}
+```
+
+Property storage uses `item.Properties["Key"] = "value"` (string dictionary).
+
+## Context Menu
+
+The MIP SDK admin tree only supports three context menu commands:
+- `ADD` - "Create New..."
+- `DELETE` - "Delete..."
+- `RENAME` - F2 inline rename
+
+Override `IsContextMenuValid(string command)` in ItemManager to enable/disable these. Custom context menu items are NOT supported. Use buttons in the detail UserControl instead (e.g. Duplicate).
+
+---
+
+# Common Steps (Both Plugin Types)
+
+## Modify MSCPlugins.sln
+
+Three changes:
+
+### Project Entry
+```
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyPlugin", "Admin Plugins\MyPlugin\MyPlugin.csproj", "{YOUR-PROJECT-GUID}"
 EndProject
 ```
 
 ### Platform Configuration
-
-Add inside `ProjectConfigurationPlatforms`:
-
 ```
 {YOUR-PROJECT-GUID}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 {YOUR-PROJECT-GUID}.Debug|Any CPU.Build.0 = Debug|Any CPU
@@ -480,14 +999,9 @@ Add inside `ProjectConfigurationPlatforms`:
 {YOUR-PROJECT-GUID}.Release|x64.Build.0 = Release|Any CPU
 ```
 
-Note: For SDK-style Any CPU projects, the `x64` solution platform maps to `Any CPU` project platform.
-
 ### NestedProjects
-
-Add inside `NestedProjects`:
-
 ```
-{YOUR-PROJECT-GUID} = {A0000001-0000-0000-0000-000000000001}
+{YOUR-PROJECT-GUID} = {SOLUTION-FOLDER-GUID}
 ```
 
 Solution folder GUIDs:
@@ -495,82 +1009,49 @@ Solution folder GUIDs:
 - `{A0000002-...02}` = Device Drivers
 - `{A0000003-...03}` = Admin Plugins
 
----
-
-## 4. Add to plugins.json
-
-Add one entry to `plugins.json`. This single change automatically configures the CI workflow, `build.ps1`, and the NSIS installer.
+## Add to plugins.json
 
 ```json
 {
   "name": "MyPlugin",
   "displayName": "My Plugin",
-  "path": "Smart Client Plugins/MyPlugin",
-  "category": "SmartClient",
+  "path": "Admin Plugins/MyPlugin",
+  "category": "AdminPlugin",
   "description": "Short description for the NSIS installer"
 }
 ```
 
-**Required fields:**
-
 | Field | Description |
 |---|---|
-| `name` | Plugin name (used for assembly, staging dir, ZIP name, registry key) |
-| `displayName` | Human-readable name shown in the NSIS installer |
-| `path` | Relative path to the project folder from the repo root |
+| `name` | Plugin name (assembly, staging dir, ZIP, registry key) |
+| `displayName` | Human-readable name in NSIS installer |
+| `path` | Relative path from repo root |
 | `category` | `SmartClient`, `DeviceDriver`, or `AdminPlugin` |
-| `description` | One-line description for the NSIS component selection page |
+| `description` | One-line description for NSIS component page |
 
-**Optional fields (with defaults):**
+Optional: `project`, `platform`, `outputPath`, `extraProjects`, `extraStagingDirs`, `extraStagingFiles`.
 
-| Field | Default | Description |
-|---|---|---|
-| `project` | `{name}.csproj` | Project file name if different from the plugin name |
-| `platform` | `AnyCPU` | MSBuild platform (`AnyCPU` or `x64`) |
-| `outputPath` | `bin/Release/net48` | Build output path (auto-adjusts to `bin/x64/Release/net48` for x64) |
-| `extraProjects` | `[]` | Additional .csproj files to build (e.g. helper projects) |
-| `extraStagingDirs` | `[]` | Extra directories to copy into the staging folder |
-| `extraStagingFiles` | `[]` | Extra individual files to copy into the staging folder |
+## Update Documentation
 
-This entry automatically configures:
-- GitHub Actions build matrix and release job
-- `build.ps1` staging, zipping, and NSIS arguments
-- NSIS installer sections, descriptions, ComponentsLeave logic, and uninstall cleanup
+- `README.md` - add to Plugins & Drivers table and Manual install paths
+- `docs/plugins/index.md` - add plugin card
+- `docs/plugins/admin/my-plugin.md` or `docs/plugins/smart-client/my-plugin.md` - plugin docs page
 
----
+## Checklist
 
-## 5. Update Documentation
-
-### README.md
-
-Add to the Plugins & Drivers table:
-
-```markdown
-| [MyPlugin](Smart%20Client%20Plugins/MyPlugin) | Smart Client | Description |
-```
-
-Add to the Manual install paths table:
-
-```markdown
-| MyPlugin | `C:\Program Files\Milestone\MIPPlugins\MyPlugin\` |
-```
-
-### docs/index.html
-
-- Add a plugin card row in the Smart Client Plugins section
-
-### Plugin README.md
-
-Create `Smart Client Plugins/MyPlugin/README.md` following the Weather/RDP/Notepad pattern (Quick Start, Installation, Configuration table, Features).
-
----
-
-## 6. Checklist
-
-- [ ] Plugin folder with `.csproj`, `plugin.def`, source files, `README.md`
-- [ ] 4 unique GUIDs generated and used correctly
-- [ ] Project added to `MSCPlugins.sln` (project entry + platform config + NestedProjects)
+- [ ] Plugin folder with `.csproj`, `plugin.def`, source files
+- [ ] Unique GUIDs generated and used correctly
+- [ ] Project added to `MSCPlugins.sln` (project + platform config + NestedProjects)
 - [ ] Entry added to `plugins.json`
-- [ ] `README.md` updated (plugin table + install paths)
-- [ ] `docs/index.html` updated (plugin card)
-- [ ] Build verified locally with `.\build.ps1`
+- [ ] `README.md` updated
+- [ ] `docs/` updated
+- [ ] Build verified locally
+
+### Admin Plugin Extra Checks
+
+- [ ] ItemNodes are nested (child in parent's children list, not flat)
+- [ ] Event registration (`GetKnownEventGroups/Types/StateGroups`) on the parent (folder) ItemManager
+- [ ] ActionManager uses `BaseEvent` not `AnalyticsEvent` in `ExecuteAction`
+- [ ] BackgroundPlugin has static `Instance` property for ActionManager access
+- [ ] Config change listener registered for auto-reload
+- [ ] `HelpPage.html` included as Content with CopyToOutputDirectory=Always
