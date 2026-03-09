@@ -38,6 +38,7 @@ nav:
       - RTMP Streamer: plugins/admin/rtmp-streamer.md
       - Certificate Watchdog: plugins/admin/cert-watchdog.md
       - Auditor: plugins/admin/auditor.md
+      - HTTP Requests: plugins/admin/http-requests.md
     - Smart Client:
       - Weather: plugins/smart-client/weather.md
       - RDP: plugins/smart-client/rdp.md

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>HTTP Requests Plugin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #222;
+            padding: 0px 28px;
+            line-height: 1.55;
+        }
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #1a1a1a;
+        }
+        h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: -4px 0 8px;
+            color: #333;
+        }
+        h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin: 12px 0 6px;
+            color: #444;
+        }
+        ul, ol {
+            margin: 0 0 0 20px;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        p {
+            margin-bottom: 10px;
+        }
+        code {
+            font-family: Consolas, Courier New, monospace;
+            font-size: 12px;
+            background: #f0f2f5;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #dde0e4;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+        }
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            margin-left: 0;
+        }
+        .steps li {
+            counter-increment: step;
+            padding-left: 28px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        .steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2868b8;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 20px;
+        }
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .header-row h1 {
+            margin-bottom: 0;
+        }
+        .chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        .chip-amber {
+            display: inline-block;
+            background: #fdf6ec;
+            border: 1px solid #e0b96a;
+            border-radius: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #7a5a1a;
+            white-space: nowrap;
+        }
+        .chip-blue {
+            display: inline-block;
+            background: #eef4fb;
+            border: 1px solid #a3c4e4;
+            border-radius: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #2a5a96;
+            white-space: nowrap;
+        }
+        .chip-green {
+            display: inline-block;
+            background: #edf7ed;
+            border: 1px solid #81c784;
+            border-radius: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #2e7d32;
+            white-space: nowrap;
+        }
+        .diagram {
+            font-family: Consolas, Courier New, monospace;
+            font-size: 11px;
+            background: #f0f2f5;
+            border: 1px solid #dde0e4;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 8px 0 10px;
+            line-height: 1.6;
+            white-space: pre;
+            overflow-x: auto;
+            color: #333;
+        }
+        .json-block {
+            font-family: Consolas, Courier New, monospace;
+            font-size: 11px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 8px 0 10px;
+            line-height: 1.5;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        .json-block .key { color: #9cdcfe; }
+        .json-block .string { color: #ce9178; }
+        .json-block .number { color: #b5cea8; }
+        .json-block .comment { color: #6a9955; }
+        table.compare {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        table.compare th {
+            background: #f0f2f5;
+            border: 1px solid #dde0e4;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        table.compare td {
+            border: 1px solid #dde0e4;
+            padding: 8px 12px;
+            vertical-align: top;
+        }
+        table.compare tr:nth-child(even) {
+            background: #fafbfc;
+        }
+        .yes { color: #2e7d32; font-weight: 600; }
+        .no { color: #c62828; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="header-row">
+        <h1>HTTP Requests</h1>
+        <div class="chips">
+            <span class="chip-amber" title="Open-source, no warranty.">Open source &mdash; no warranty, use at own risk</span>
+            <span class="chip-blue">Admin + Event Server Plugin</span>
+            <span class="chip-green">Rule Action</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>How It Works</h2>
+        <p>
+            This plugin lets you configure HTTP requests (similar to Postman) that execute
+            automatically when triggered by Milestone XProtect&trade; rules. You create
+            <strong>Request Folders</strong> containing individual <strong>HTTP Requests</strong>.
+            When a rule fires, the <em>"Execute HTTP Request"</em> action runs on the
+            Event Server. The Rules engine lets you target a specific request,
+            all requests in a folder, or all requests across all folders.
+        </p>
+        <p>
+            Your custom JSON payload is merged with the Milestone event data, giving
+            the receiving system both your custom fields and the full event context.
+            For GET and DELETE requests, the body section is hidden automatically.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Getting Started</h2>
+        <ol class="steps">
+            <li>Click <strong>HTTP Requests</strong> in the tree on the left.</li>
+            <li>Right-click and select <strong>Create New</strong> to add a Request Folder.</li>
+            <li>Expand the folder, right-click it, and select <strong>Create New</strong> to add an HTTP Request.</li>
+            <li>Configure the request: method, URL, payload, authentication, and headers.</li>
+            <li>Click <strong>Save</strong> to persist the configuration.</li>
+            <li>Go to <em>Rules and Events &gt; Rules</em> and create a rule with the
+                <strong>Execute HTTP Request</strong> action. You can target a specific request,
+                all requests in a folder, or all requests.</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>Rule Action</h2>
+        <p>
+            The plugin registers one rule action: <strong>Execute HTTP Request</strong>.
+            When creating a rule, the XProtect Rules engine lets you choose the scope:
+        </p>
+        <ul>
+            <li><strong>Specific request</strong> &mdash; select an individual HTTP Request item.</li>
+            <li><strong>All in a folder</strong> &mdash; select a Request Folder; all <strong>enabled</strong>
+                requests inside it will be executed.</li>
+            <li><strong>All requests</strong> &mdash; select "ALL HTTP Requests" to execute every
+                enabled request across all folders.</li>
+        </ul>
+        <p>
+            This targeting is handled natively by the Milestone Rules engine &mdash; no
+            additional configuration is needed in the plugin.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Authentication</h2>
+        <p>Each request supports the following authentication methods:</p>
+        <ul>
+            <li><strong>None</strong> &mdash; No authentication header is sent.</li>
+            <li><strong>Basic</strong> &mdash; Sends <code>Authorization: Basic &lt;base64&gt;</code>.
+                Enter credentials as <code>username:password</code>.</li>
+            <li><strong>Bearer</strong> &mdash; Sends <code>Authorization: Bearer &lt;token&gt;</code>.
+                Enter the raw token value.</li>
+            <li><strong>Digest</strong> &mdash; Uses HTTP Digest authentication (RFC 7616).
+                Enter credentials as <code>username:password</code>.
+                The client will negotiate the digest challenge automatically.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>JSON Payload Examples</h2>
+
+        <h3>POST with user payload + event data (merged)</h3>
+        <p>
+            When <em>"Include Milestone event data"</em> is checked, your JSON payload is
+            merged with the event data. Your keys come first, then <code>Event</code> and
+            <code>Site</code> are appended automatically.
+        </p>
+
+        <p><strong>Your payload (configured in the request):</strong></p>
+<div class="json-block">{
+  <span class="key">"alert_type"</span>: <span class="string">"motion"</span>,
+  <span class="key">"zone"</span>: <span class="string">"parking_lot"</span>,
+  <span class="key">"severity"</span>: <span class="string">"high"</span>
+}</div>
+
+        <p><strong>Resulting payload sent to the endpoint:</strong></p>
+<div class="json-block">{
+  <span class="key">"alert_type"</span>: <span class="string">"motion"</span>,
+  <span class="key">"zone"</span>: <span class="string">"parking_lot"</span>,
+  <span class="key">"severity"</span>: <span class="string">"high"</span>,
+  <span class="key">"Event"</span>: {
+    <span class="key">"EventHeader"</span>: {
+      <span class="key">"ID"</span>: <span class="string">"e0d6726f-fa1a-4ade-b1c0-fb01e1a175bf"</span>,
+      <span class="key">"Timestamp"</span>: <span class="string">"2026-03-09T06:16:58.258Z"</span>,
+      <span class="key">"Type"</span>: <span class="string">"System Event"</span>,
+      <span class="key">"Name"</span>: <span class="string">"Motion Detected"</span>,
+      <span class="key">"Message"</span>: <span class="string">"Motion Detected"</span>,
+      <span class="key">"Priority"</span>: <span class="number">1</span>,
+      <span class="key">"CustomTag"</span>: <span class="string">""</span>,
+      <span class="key">"Source"</span>: {
+        <span class="key">"Name"</span>: <span class="string">"Camera 512"</span>,
+        <span class="key">"FQID"</span>: {
+          <span class="key">"ObjectId"</span>: <span class="string">"35f564f6-4af8-4f59-a1b0-3e0eaf88ac04"</span>,
+          <span class="key">"Kind"</span>: <span class="string">"5135ba21-f1dc-4321-806a-6ce2017343c0"</span>
+        }
+      }
+    }
+  },
+  <span class="key">"Site"</span>: {
+    <span class="key">"ServerHostname"</span>: <span class="string">"acs"</span>,
+    <span class="key">"AbsoluteUri"</span>: <span class="string">"https://acs/"</span>
+  }
+}</div>
+
+        <h3>POST with event data only (empty user payload)</h3>
+        <p>Leave the user payload empty and check <em>"Include Milestone event data"</em>:</p>
+<div class="json-block">{
+  <span class="key">"Event"</span>: {
+    <span class="key">"EventHeader"</span>: {
+      <span class="key">"ID"</span>: <span class="string">"eba5eb9a-b31f-4b1f-99ec-3d52258fcbae"</span>,
+      <span class="key">"Timestamp"</span>: <span class="string">"2026-03-09T06:16:58.935Z"</span>,
+      <span class="key">"Type"</span>: <span class="string">"System Event"</span>,
+      <span class="key">"Name"</span>: <span class="string">"Motion Detected"</span>,
+      <span class="key">"Message"</span>: <span class="string">"Motion Detected"</span>,
+      <span class="key">"Priority"</span>: <span class="number">1</span>,
+      <span class="key">"CustomTag"</span>: <span class="string">""</span>,
+      <span class="key">"Source"</span>: {
+        <span class="key">"Name"</span>: <span class="string">"RTSP Source (10.0.0.48) - Channel 1"</span>,
+        <span class="key">"FQID"</span>: {
+          <span class="key">"ObjectId"</span>: <span class="string">"57a5944c-0a55-4e62-bb6c-e87b527fa8cd"</span>,
+          <span class="key">"Kind"</span>: <span class="string">"5135ba21-f1dc-4321-806a-6ce2017343c0"</span>
+        }
+      }
+    }
+  },
+  <span class="key">"Site"</span>: {
+    <span class="key">"ServerHostname"</span>: <span class="string">"acs"</span>,
+    <span class="key">"AbsoluteUri"</span>: <span class="string">"https://acs/"</span>
+  }
+}</div>
+
+        <h3>POST with user payload only (no event data)</h3>
+        <p>Uncheck <em>"Include Milestone event data"</em> to send only your custom JSON:</p>
+<div class="json-block">{
+  <span class="key">"alert_type"</span>: <span class="string">"motion"</span>,
+  <span class="key">"zone"</span>: <span class="string">"parking_lot"</span>,
+  <span class="key">"severity"</span>: <span class="string">"high"</span>
+}</div>
+
+        <h3>GET request with query parameters</h3>
+        <p>
+            For GET and DELETE requests, the body section is hidden. Use the
+            <strong>Query Params</strong> tab to add key-value parameters, or include
+            them directly in the URL:
+        </p>
+<div class="json-block"><span class="comment">Method: GET</span>
+<span class="comment">URL:    https://api.example.com/notify</span>
+<span class="comment">Query Params: type=motion, camera=Camera512</span>
+<span class="comment">No body is sent for GET/DELETE requests.</span></div>
+    </div>
+
+    <div class="card">
+        <h2>Comparison: HTTP Requests Plugin vs. Milestone Webhooks</h2>
+        <p>
+            Milestone XProtect&trade; includes a built-in
+            <a href="https://doc.milestonesys.com/latest/en-US/add-ons/add-on_webhooks/create_webhooks.htm" target="_blank">Webhooks add-on</a>.
+            This plugin provides additional flexibility beyond the built-in feature:
+        </p>
+
+        <table class="compare">
+            <tr>
+                <th>Feature</th>
+                <th>Milestone Webhooks (built-in)</th>
+                <th>HTTP Requests Plugin</th>
+            </tr>
+            <tr>
+                <td>HTTP Methods</td>
+                <td>POST only</td>
+                <td><span class="yes">GET, POST, PUT, DELETE, PATCH</span></td>
+            </tr>
+            <tr>
+                <td>Custom JSON payload</td>
+                <td class="no">No &mdash; fixed schema</td>
+                <td><span class="yes">Yes &mdash; fully customizable, merged with event</span></td>
+            </tr>
+            <tr>
+                <td>Custom HTTP headers</td>
+                <td class="no">No</td>
+                <td><span class="yes">Yes &mdash; arbitrary key-value pairs</span></td>
+            </tr>
+            <tr>
+                <td>Authentication</td>
+                <td>OAuth 2.0 (client credentials)</td>
+                <td><span class="yes">Basic, Bearer, Digest</span></td>
+            </tr>
+            <tr>
+                <td>Certificate validation skip</td>
+                <td class="no">No</td>
+                <td><span class="yes">Yes &mdash; per request toggle</span></td>
+            </tr>
+            <tr>
+                <td>Batch execution</td>
+                <td class="no">No &mdash; one webhook per rule</td>
+                <td><span class="yes">Yes &mdash; target a folder or all requests from one rule</span></td>
+            </tr>
+            <tr>
+                <td>Configurable timeout</td>
+                <td class="no">No</td>
+                <td><span class="yes">Yes &mdash; per request</span></td>
+            </tr>
+            <tr>
+                <td>Postman-like UI</td>
+                <td class="no">No</td>
+                <td><span class="yes">Yes &mdash; method, URL, headers, body, auth</span></td>
+            </tr>
+            <tr>
+                <td>Result events</td>
+                <td class="no">No feedback events</td>
+                <td><span class="yes">Yes &mdash; fires success/failure events for chaining rules</span></td>
+            </tr>
+            <tr>
+                <td>System Log entries</td>
+                <td>Limited</td>
+                <td><span class="yes">Yes &mdash; detailed per-request logging</span></td>
+            </tr>
+            <tr>
+                <td>Payload types</td>
+                <td>JSON (fixed)</td>
+                <td><span class="yes">JSON, form-urlencoded, or none</span></td>
+            </tr>
+            <tr>
+                <td>XProtect version</td>
+                <td>2023 R3+ (add-on license)</td>
+                <td><span class="yes">Any version with MIP SDK support, no extra license</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Architecture</h2>
+        <p>The plugin has two components:</p>
+
+        <h3>Management Client (Admin UI)</h3>
+        <p>
+            Provides this configuration interface. Lets you create, edit, and delete
+            request folders and individual HTTP requests. Configuration is stored in
+            the Milestone configuration database.
+        </p>
+
+        <h3>Event Server (Background Plugin)</h3>
+        <p>
+            Runs inside the Milestone Event Server. Listens for configuration changes
+            and executes HTTP requests when triggered by rules. Results are logged to
+            the System Log and fired as analytics events for rule chaining.
+        </p>
+
+        <div class="diagram">Management Client              Event Server
+    (Admin UI)              (Background Plugin)
+        |                           |
+        |--- Save Config ---------->|
+        |                           |--- Load folders + requests
+        |                           |
+        |   [Rule fires]            |
+        |                           |<-- NewEventCommand (trigger)
+        |                           |--- Execute HTTP request(s)
+        |                           |--- POST https://api.example.com/
+        |                           |--- Log result to System Log
+        |                           |--- Fire success/failure event
+        |<-- MessageComm -----------|
+        |   (execution result)      |</div>
+    </div>
+
+    <div class="card">
+        <h2>Logging &amp; Diagnostics</h2>
+
+        <h3>Milestone System Log</h3>
+        <p>
+            All request executions are logged to the Milestone System Log
+            (<em>Logs &gt; System Log</em> in the Management Client):
+        </p>
+        <ul>
+            <li><strong>Request Executed</strong> &mdash; method, URL, status code, elapsed time</li>
+            <li><strong>Request Failed</strong> &mdash; method, URL, error message</li>
+        </ul>
+
+        <h3>Event Server Log Files</h3>
+        <p>
+            Detailed logs at:<br />
+            <code>C:\ProgramData\Milestone\XProtect Event Server\Logs\</code>
+        </p>
+    </div>
+
+    <div class="card" style="font-size:12px; line-height:1.5;">
+        <h2>Legal</h2>
+        <p>
+            This is an independent open-source project and is not affiliated with,
+            endorsed by, or supported by Milestone Systems.
+            XProtect&reg; is a registered trademark of Milestone Systems A/S.
+        </p>
+        <p>
+            This software is provided &ldquo;as is&rdquo;, without warranty of any kind,
+            express or implied, including but not limited to the warranties of
+            merchantability, fitness for a particular purpose, and noninfringement.
+            In no event shall the authors or copyright holders be liable for any claim,
+            damages, or other liability, whether in an action of contract, tort, or
+            otherwise, arising from, out of, or in connection with the software or the
+            use or other dealings in the software.
+        </p>
+        <p>
+            Use at your own risk. Always test in a non-production environment first.
+            This project is licensed under the MIT License.
+        </p>
+    </div>
+</body>
+</html>

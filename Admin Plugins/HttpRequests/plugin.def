@@ -1,0 +1,4 @@
+<plugin>
+   <file name="HttpRequests.dll"/>
+   <load env="Service, Administration"/>
+</plugin>

@@ -21,6 +21,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [MonitorRTMPStreamer](Smart%20Client%20Plugins/MonitorRTMPStreamer) | Smart Client | Capture desktop monitors and stream via RTMP |
 | [CertWatchdog](Admin%20Plugins/CertWatchdog) | Admin Plugin | Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints |
 | [Auditor](Admin%20Plugins/Auditor) | Admin Plugin | Audit user access to recorded video with per-user rules and reason prompts |
+| [HttpRequests](Admin%20Plugins/HttpRequests) | Admin Plugin | Configure and execute HTTP requests as rule actions with custom payloads and flexible authentication |
 | [SmartBar](Smart%20Client%20Plugins/SmartBar) | Smart Client | Command palette for quickly finding and launching cameras, views, commands, events, outputs and programs |
 
 ## Installation
