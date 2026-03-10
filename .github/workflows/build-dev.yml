@@ -124,8 +124,8 @@ jobs:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}.zip
 
-  # ── Build installers and upload as artifacts (no release) ──
-  installers:
+  # ── Build installer and upload as artifacts (no release) ──
+  installer:
     needs: [setup, build]
     runs-on: windows-latest
 
@@ -172,12 +172,6 @@ jobs:
             -b installer/wix `
             -pdbtype none `
             -o "MSCPlugins-dev-Setup.msi"
-
-      - name: Upload NSIS installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: NSIS-Installer
-          path: MSCPlugins-*-Setup.exe
 
       - name: Upload MSI installer
         uses: actions/upload-artifact@v4

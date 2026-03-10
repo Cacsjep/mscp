@@ -23,8 +23,8 @@
     <Property Id="MsiLogging" Value="voicewarmupx!" />
     <Property Id="MsiLogFileLocation" Value="[%TEMP]\MSCPlugins-install.log" />
 
-    <!-- Embed the cab into the MSI -->
-    <MediaTemplate EmbedCab="yes" />
+    <!-- Embed the cab into the MSI with max compression -->
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
     <!-- License -->
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
