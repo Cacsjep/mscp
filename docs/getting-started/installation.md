@@ -108,15 +108,17 @@ After manual installation, restart the relevant service, if you update, you need
 fetch("https://api.github.com/repos/Cacsjep/mscp/releases/latest")
   .then(function(r) { return r.json(); })
   .then(function(data) {
+    var btn = document.getElementById("installer-download");
+    if (!btn) return;
     var asset = data.assets.find(function(a) {
-      return a.name.match(/MSCPlugins.*Setup\.msi$/i);
+      return a.name.match(/MSCPlugins.*\.msi$/i);
     });
     if (asset) {
-      var btn = document.getElementById("installer-download");
-      if (btn) {
-        btn.href = asset.browser_download_url;
-        btn.textContent = "Download " + asset.name;
-      }
+      btn.href = asset.browser_download_url;
+      btn.textContent = "Download " + asset.name;
+    } else {
+      btn.href = data.html_url;
+      btn.textContent = "Go to " + data.tag_name + " Release";
     }
   });
 </script>
