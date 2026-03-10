@@ -147,32 +147,6 @@ jobs:
             Expand-Archive -Path $zip.FullName -DestinationPath staging -Force
           }
 
-      - name: Install NSIS
-        run: choco install nsis -y --no-progress
-        shell: pwsh
-
-      - name: Generate NSIS sections
-        shell: pwsh
-        run: pwsh installer/generate-nsi.ps1
-
-      - name: Build NSIS installer
-        shell: pwsh
-        run: |
-          $version = if ('${{ github.ref_name }}' -match '^d') { '${{ github.ref_name }}' -replace '^d','' } else { "0.0.0-dev.${{ github.run_number }}" }
-          $plugins = Get-Content plugins.json -Raw | ConvertFrom-Json
-          $outDir = (Resolve-Path '.').Path
-
-          $nsisArgs = @("/DVERSION=$version")
-          foreach ($p in $plugins) {
-            $dirName = "$($p.name.ToUpper())_DIR"
-            $dirPath = (Resolve-Path "staging\$($p.name)").Path
-            $nsisArgs += "/D${dirName}=$dirPath"
-          }
-          $nsisArgs += "/DOUTDIR=$outDir"
-          $nsisArgs += "installer\MSCPlugins.nsi"
-
-          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" @nsisArgs
-
       - name: Install WiX Toolset
         shell: pwsh
         run: |
