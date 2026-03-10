@@ -46,8 +46,6 @@
     "name": "RTMPStreamer",
     "displayName": "RTMP Streamer Plugin",
     "path": "Admin Plugins/RTMPStreamer",
-    "platform": "x64",
-    "outputPath": "bin/Release/net48",
     "category": "AdminPlugin",
     "description": "Stream XProtect\u2122 cameras to RTMP destinations (YouTube, Twitch, etc.)",
     "extraProjects": [
