@@ -163,7 +163,10 @@ jobs:
       - name: Build MSI installer
         shell: pwsh
         run: |
-          $version = if ('${{ github.ref_name }}' -match '^d') { ('${{ github.ref_name }}' -replace '^d','') + '.0' } else { "0.0.${{ github.run_number }}.0" }
+          $tag = '${{ github.ref_name }}'
+          if ($tag -match '^d(\d+\.\d+\.\d+)') { $version = $Matches[1] }
+          elseif ($tag -match '^d(\d+\.\d+)') { $version = "$($Matches[1]).0" }
+          else { $version = "0.0.${{ github.run_number }}" }
           wix build installer/wix/Product.wxs installer/wix/Components.wxs `
             -ext WixToolset.UI.wixext `
             -ext WixToolset.Util.wixext `
