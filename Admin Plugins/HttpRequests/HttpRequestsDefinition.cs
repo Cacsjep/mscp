@@ -45,36 +45,40 @@ namespace HttpRequests
 
         public override void Init()
         {
-            _log.Info($"PluginDefinition Init - environment: {EnvironmentManager.Instance.EnvironmentType}");
+            var env = EnvironmentManager.Instance.EnvironmentType;
+            _log.Info($"PluginDefinition Init - environment: {env}");
 
-            try
+            if (env != EnvironmentType.Service)
             {
-                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_PaperPlane);
-                _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
-                _requestIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Globe);
-                _log.Info("FontAwesome icons rendered");
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to render FA icons: {ex.Message}");
                 try
                 {
-                    var images = VideoOS.Platform.UI.Util.ImageList.Images;
-                    _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
-                    _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
-                    _requestIcon = images[VideoOS.Platform.UI.Util.PluginIx];
-                    _log.Info("Fallback to SDK icons succeeded");
+                    _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_PaperPlane);
+                    _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
+                    _requestIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Globe);
+                    _log.Info("FontAwesome icons rendered");
                 }
-                catch (Exception ex2)
+                catch (Exception ex)
                 {
-                    _log.Error($"Fallback to SDK icons also failed: {ex2.Message}");
+                    _log.Error($"Failed to render FA icons: {ex.Message}");
+                    try
+                    {
+                        var images = VideoOS.Platform.UI.Util.ImageList.Images;
+                        _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+                        _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+                        _requestIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+                        _log.Info("Fallback to SDK icons succeeded");
+                    }
+                    catch (Exception ex2)
+                    {
+                        _log.Error($"Fallback to SDK icons also failed: {ex2.Message}");
+                    }
                 }
+
+                // Reset cached ItemNodes so they pick up the real icons
+                _itemNodes = null;
             }
 
-            // Reset cached ItemNodes so they pick up the real icons
-            _itemNodes = null;
-
-            if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.Service)
+            if (env == EnvironmentType.Service)
             {
                 _log.Info("Registering HttpRequestsBackgroundPlugin (Event Server)");
                 _backgroundPlugins.Add(new HttpRequestsBackgroundPlugin());
