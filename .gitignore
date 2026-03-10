@@ -31,3 +31,4 @@ site/
 ## DLLs (except checked-in interop libs)
 *.dll
 !Smart Client Plugins/RDP/lib/*.dll
+*.msi
