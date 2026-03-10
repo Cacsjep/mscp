@@ -46,8 +46,8 @@ namespace CertWatchdog
             new SecurityAction("GENERIC_READ", "Read"),
         };
 
-        private Image _pluginIcon;
-        private Image _folderIcon;
+        private Image _pluginIcon = PluginIcon.FallbackIcon;
+        private Image _folderIcon = PluginIcon.FallbackIcon;
         private static VideoOSIconSourceBase _pluginIconSource;
         private static readonly PluginLog _log = new PluginLog("CertWatchdog - PluginDefinition");
 
@@ -98,6 +98,9 @@ namespace CertWatchdog
                     _log.Error($"Fallback to SDK icons also failed: {ex2.Message}");
                 }
             }
+
+            // Reset cached ItemNodes so they pick up the real icons
+            _itemNodes = null;
 
             var env = EnvironmentManager.Instance.EnvironmentType;
 

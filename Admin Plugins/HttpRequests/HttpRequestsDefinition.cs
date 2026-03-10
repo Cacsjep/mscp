@@ -29,9 +29,9 @@ namespace HttpRequests
         private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
         private List<ItemNode> _itemNodes;
         private HttpRequestsActionManager _actionManager;
-        private Image _pluginIcon;
-        private Image _folderIcon;
-        private Image _requestIcon;
+        private Image _pluginIcon = PluginIcon.FallbackIcon;
+        private Image _folderIcon = PluginIcon.FallbackIcon;
+        private Image _requestIcon = PluginIcon.FallbackIcon;
 
         private static readonly PluginLog _log = new PluginLog("HttpRequests - PluginDefinition");
 
@@ -70,6 +70,9 @@ namespace HttpRequests
                     _log.Error($"Fallback to SDK icons also failed: {ex2.Message}");
                 }
             }
+
+            // Reset cached ItemNodes so they pick up the real icons
+            _itemNodes = null;
 
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.Service)
             {

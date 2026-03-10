@@ -18,9 +18,9 @@ namespace RTMPStreamer
 
         private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
         private List<ItemNode> _itemNodes;
-        private Image _pluginIcon;
-        private Image _folderIcon;
-        private Image _cameraIcon;
+        private Image _pluginIcon = PluginIcon.FallbackIcon;
+        private Image _folderIcon = PluginIcon.FallbackIcon;
+        private Image _cameraIcon = PluginIcon.FallbackIcon;
         private static readonly PluginLog _log = new PluginLog("RTMPStreamer - PluginDefinition");
 
         public override Guid Id => PluginId;
@@ -59,10 +59,33 @@ namespace RTMPStreamer
                 }
             }
 
+            // Reset cached ItemNodes so they pick up the real icons
+            _itemNodes = null;
+
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.Service)
             {
                 _backgroundPlugins.Add(new Background.RTMPStreamerBackgroundPlugin());
             }
+        }
+
+        private List<ItemNode> BuildItemNodes()
+        {
+            return new List<ItemNode>
+            {
+                new ItemNode(
+                    PluginKindId,
+                    Guid.Empty,
+                    "RTMP Stream",
+                    _cameraIcon,
+                    "RTMP Streams",
+                    _folderIcon,
+                    Category.Text,
+                    true,
+                    ItemsAllowed.Many,
+                    new Admin.RTMPStreamerItemManager(PluginKindId),
+                    null
+                )
+            };
         }
 
         public override void Close()
@@ -77,22 +100,7 @@ namespace RTMPStreamer
             {
                 if (_itemNodes == null)
                 {
-                    _itemNodes = new List<ItemNode>
-                    {
-                        new ItemNode(
-                            PluginKindId,
-                            Guid.Empty,
-                            "RTMP Stream",          // singular item name
-                            _cameraIcon,            // node image
-                            "RTMP Streams",         // plural/group name
-                            _folderIcon,            // group image
-                            Category.Text,
-                            true,                   // includeInExport
-                            ItemsAllowed.Many,
-                            new Admin.RTMPStreamerItemManager(PluginKindId),
-                            null
-                        )
-                    };
+                    _itemNodes = BuildItemNodes();
                 }
                 return _itemNodes;
             }
