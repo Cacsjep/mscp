@@ -12,6 +12,22 @@ namespace CommunitySDK
     {
         public static readonly System.Windows.Media.Color DefaultColor = System.Windows.Media.Color.FromRgb(33, 150, 243);
 
+        /// <summary>
+        /// A simple 16x16 fallback icon to prevent null crashes when FontAwesome and SDK icons both fail.
+        /// </summary>
+        public static Image FallbackIcon
+        {
+            get
+            {
+                var bmp = new Bitmap(16, 16);
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.Clear(System.Drawing.Color.FromArgb(33, 150, 243));
+                }
+                return bmp;
+            }
+        }
+
         public static Image Render(EFontAwesomeIcon icon, int size = 15)
         {
             return Render(icon, DefaultColor, size);

@@ -1017,17 +1017,17 @@ Solution folder GUIDs:
   "displayName": "My Plugin",
   "path": "Admin Plugins/MyPlugin",
   "category": "AdminPlugin",
-  "description": "Short description for the NSIS installer"
+  "description": "Short description for the MSI installer"
 }
 ```
 
 | Field | Description |
 |---|---|
 | `name` | Plugin name (assembly, staging dir, ZIP, registry key) |
-| `displayName` | Human-readable name in NSIS installer |
+| `displayName` | Human-readable name in MSI installer |
 | `path` | Relative path from repo root |
 | `category` | `SmartClient`, `DeviceDriver`, or `AdminPlugin` |
-| `description` | One-line description for NSIS component page |
+| `description` | One-line description for MSI installer feature selection |
 
 Optional: `project`, `platform`, `outputPath`, `extraProjects`, `extraStagingDirs`, `extraStagingFiles`.
 

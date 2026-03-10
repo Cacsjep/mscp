@@ -18,7 +18,7 @@ Display live weather conditions directly in XProtect™ Smart Client view items,
 
 ### Installer (Recommended)
 
-Download `MSCPlugins-vX.X-Setup.exe` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **Weather Plugin** in the component list.
+Download `MSCPlugins-vX.X-Setup.msi` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **Weather Plugin** in the feature list.
 
 ### Manual (ZIP)
 

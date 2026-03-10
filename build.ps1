@@ -3,7 +3,7 @@
 .SYNOPSIS
     Unified build script for MSC Community Plugins.
     Reads plugins.json for the plugin list. Builds all plugins in Release,
-    creates per-plugin ZIPs, and a combined NSIS installer.
+    creates per-plugin ZIPs and a WiX MSI installer.
 .EXAMPLE
     .\build.ps1
 #>
@@ -65,7 +65,7 @@ if ($LASTEXITCODE -ne 0) { Write-Error "NuGet restore failed"; exit 1 }
 
 # ── Determine which platforms are needed ──
 $platforms = $plugins | ForEach-Object {
-    if ($_.platform) { $_.platform } else { 'AnyCPU' }
+    if ($_ | Get-Member -Name platform -MemberType NoteProperty) { $_.platform } else { 'AnyCPU' }
 } | Sort-Object -Unique
 
 $stepNum = 2
@@ -87,8 +87,10 @@ Write-Host "`n[4/6] Staging release files..." -ForegroundColor Yellow
 $staging = Join-Path $buildDir 'staging'
 
 foreach ($p in $plugins) {
-    $platform = if ($p.platform) { $p.platform } else { 'AnyCPU' }
-    $outputPath = if ($p.outputPath) { $p.outputPath }
+    $hasPlatform = $p | Get-Member -Name platform -MemberType NoteProperty
+    $hasOutputPath = $p | Get-Member -Name outputPath -MemberType NoteProperty
+    $platform = if ($hasPlatform) { $p.platform } else { 'AnyCPU' }
+    $outputPath = if ($hasOutputPath) { $p.outputPath }
                   elseif ($platform -eq 'x64') { 'bin/x64/Release/net48' }
                   else { 'bin/Release/net48' }
 
@@ -99,7 +101,7 @@ foreach ($p in $plugins) {
     Write-Host "  Staged: $($p.name) <- $($p.path)\$outputPath"
 
     # Extra staging directories
-    if ($p.extraStagingDirs) {
+    if (($p | Get-Member -Name extraStagingDirs -MemberType NoteProperty) -and $p.extraStagingDirs) {
         foreach ($dir in $p.extraStagingDirs) {
             $extraSrc = Join-Path $root $dir
             Copy-Item -Path "$extraSrc\*" -Destination $stageDir -Recurse -Force
@@ -108,7 +110,7 @@ foreach ($p in $plugins) {
     }
 
     # Extra staging files
-    if ($p.extraStagingFiles) {
+    if (($p | Get-Member -Name extraStagingFiles -MemberType NoteProperty) -and $p.extraStagingFiles) {
         foreach ($file in $p.extraStagingFiles) {
             $extraFile = Join-Path $root $file
             Copy-Item -Path $extraFile -Destination $stageDir -Force
@@ -126,44 +128,34 @@ foreach ($p in $plugins) {
     Write-Host "  -> $zipPath"
 }
 
-# ── Generate NSIS include + Build installer ──
-Write-Host "`n[6/6] Building NSIS installer..." -ForegroundColor Yellow
+# ── Build WiX MSI installer ──
+Write-Host "`n[6/6] Building WiX MSI installer..." -ForegroundColor Yellow
 
-# Generate plugin-generated.nsi from plugins.json
-$genScript = Join-Path $root 'installer\generate-nsi.ps1'
-& $genScript -ManifestPath $manifestPath
+$wixCmd = Get-Command wix -ErrorAction SilentlyContinue
+if ($wixCmd) {
+    # Generate WiX components from staging
+    $genWixScript = Join-Path $root 'installer\generate-wix.ps1'
+    & $genWixScript -ManifestPath $manifestPath -StagingRoot $staging
 
-$makensis = $null
-$nsisLocations = @(
-    "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
-    "$env:ProgramFiles\NSIS\makensis.exe"
-)
-foreach ($loc in $nsisLocations) {
-    if (Test-Path $loc) { $makensis = $loc; break }
-}
-if (-not $makensis) {
-    $nsisCmd = Get-Command makensis -ErrorAction SilentlyContinue
-    if ($nsisCmd) { $makensis = $nsisCmd.Source }
-}
+    $wixDir = Join-Path $root 'installer\wix'
+    $productWxs = Join-Path $wixDir 'Product.wxs'
+    $componentsWxs = Join-Path $wixDir 'Components.wxs'
+    $msiPath = Join-Path $buildDir "MSCPlugins-v$version.msi"
 
-if ($makensis) {
-    $nsiScript = Join-Path $root 'installer\MSCPlugins.nsi'
+    & wix build `
+        -src $productWxs $componentsWxs `
+        -d "Version=$version" `
+        -ext WixToolset.UI.wixext `
+        -ext WixToolset.Util.wixext `
+        -b $wixDir `
+        -o $msiPath `
+        -pdbtype none `
+        -arch x64
 
-    # Build /D args for staging dirs dynamically
-    $nsisArgs = @("/DVERSION=$version")
-    foreach ($p in $plugins) {
-        $dirName = "$($p.name.ToUpper())_DIR"
-        $dirPath = (Resolve-Path (Join-Path $staging $p.name)).Path
-        $nsisArgs += "/D${dirName}=$dirPath"
-    }
-    $nsisArgs += "/DOUTDIR=$buildDir"
-    $nsisArgs += $nsiScript
-
-    & $makensis @nsisArgs
-    if ($LASTEXITCODE -ne 0) { Write-Error "NSIS build failed"; exit 1 }
+    if ($LASTEXITCODE -ne 0) { Write-Error "WiX MSI build failed"; exit 1 }
 } else {
-    Write-Warning "NSIS not found -- skipping installer build."
-    Write-Warning "Install NSIS from https://nsis.sourceforge.io/ and re-run."
+    Write-Warning "WiX Toolset not found -- skipping MSI build."
+    Write-Warning "Install with: dotnet tool install --global wix"
 }
 
 # ── Done ──
@@ -172,6 +164,6 @@ Write-Host "Output: $buildDir"
 foreach ($p in $plugins) {
     Write-Host "  ZIP: $($p.name)-v$version.zip"
 }
-if ($makensis) {
-    Write-Host "  Installer: MSCPlugins-v$version-Setup.exe"
+if ($wixCmd) {
+    Write-Host "  MSI: MSCPlugins-v$version.msi"
 }

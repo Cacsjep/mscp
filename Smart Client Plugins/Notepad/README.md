@@ -18,7 +18,7 @@ Simple text editor for operator notes directly in XProtect Smart Client view ite
 
 ### Installer (Recommended)
 
-Download `MSCPlugins-vX.X-Setup.exe` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **Notepad Plugin** in the component list.
+Download `MSCPlugins-vX.X-Setup.msi` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **Notepad Plugin** in the feature list.
 
 ### Manual (ZIP)
 

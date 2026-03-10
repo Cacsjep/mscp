@@ -10,7 +10,6 @@
   <ItemGroup>
     <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
-    <PackageReference Include="MilestoneSystems.VideoOS.Platform.SDK" Version="*-*" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />

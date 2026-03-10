@@ -49,6 +49,7 @@ namespace CertWatchdog
         private Image _pluginIcon;
         private Image _folderIcon;
         private static VideoOSIconSourceBase _pluginIconSource;
+        private static readonly PluginLog _log = new PluginLog("CertWatchdog - PluginDefinition");
 
         static CertWatchdogDefinition()
         {
@@ -70,20 +71,32 @@ namespace CertWatchdog
         public override string VersionString => "1.0.0.0";
         public override string Manufacturer => "https://github.com/Cacsjep";
 
-        public override Image Icon => _pluginIcon;
+        public override Image Icon => _pluginIcon ?? PluginIcon.FallbackIcon;
 
         public override void Init()
         {
+            _log.Info($"PluginDefinition Init - environment: {EnvironmentManager.Instance.EnvironmentType}");
+
             try
             {
                 _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Certificate);
                 _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
+                _log.Info("FontAwesome icons rendered");
             }
-            catch
+            catch (Exception ex)
             {
-                var images = VideoOS.Platform.UI.Util.ImageList.Images;
-                _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
-                _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+                _log.Error($"Failed to render FA icons: {ex.Message}");
+                try
+                {
+                    var images = VideoOS.Platform.UI.Util.ImageList.Images;
+                    _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+                    _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+                    _log.Info("Fallback to SDK icons succeeded");
+                }
+                catch (Exception ex2)
+                {
+                    _log.Error($"Fallback to SDK icons also failed: {ex2.Message}");
+                }
             }
 
             var env = EnvironmentManager.Instance.EnvironmentType;

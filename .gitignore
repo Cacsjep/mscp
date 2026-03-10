@@ -10,8 +10,8 @@ build/
 *.suo
 *.cache
 
-## Generated NSIS
-installer/plugin-generated.nsi
+## Generated WiX
+installer/wix/Components.wxs
 
 ## NuGet
 packages/

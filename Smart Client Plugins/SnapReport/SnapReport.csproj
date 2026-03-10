@@ -15,7 +15,6 @@
   <ItemGroup>
     <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
-    <PackageReference Include="MilestoneSystems.VideoOS.Platform.SDK" Version="*-*" />
     <PackageReference Include="PdfSharp" Version="6.*" />
   </ItemGroup>
 

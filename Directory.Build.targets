@@ -16,6 +16,20 @@
     to pick which executable to debug (F5).
   -->
 
+  <!-- Milestone SDK: don't copy any of its DLLs/content to output (already on target machines).
+       The SDK NuGet .targets copies ~240 MB of native deps via None+CopyToOutputDirectory.
+       We strip those items plus managed ReferenceCopyLocalPaths from Milestone packages. -->
+  <Target Name="RemoveMilestoneFromOutput" BeforeTargets="AssignTargetPaths;ResolveAssemblyReferences">
+    <ItemGroup>
+      <!-- Remove native/content files copied by MilestoneSystems.VideoOS.Platform.SDK .targets -->
+      <None Remove="@(None)"
+        Condition="$([System.String]::new('%(FullPath)').Contains('.nuget\packages\milestonesystems.'))" />
+      <!-- Remove managed DLLs from Milestone NuGet packages -->
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)"
+        Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' != '' and $([System.String]::new('%(ReferenceCopyLocalPaths.NuGetPackageId)').StartsWith('MilestoneSystems'))" />
+    </ItemGroup>
+  </Target>
+
   <!-- ═══ Pre-build: stop processes to unlock DLLs ═══ -->
   <Target Name="MIPStopProcesses" BeforeTargets="Build"
           Condition="'$(CIBuild)' != 'true'">

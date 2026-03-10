@@ -71,15 +71,15 @@ function Add-PluginFragment($plugin) {
     $fragment.AppendChild($cg) | Out-Null
 
     # Harvest files from staging directory
-    $stagingDir = Join-Path $StagingRoot $plugin.name
-    if (Test-Path $stagingDir) {
+    $stagingDir = (Resolve-Path (Join-Path $StagingRoot $plugin.name) -ErrorAction SilentlyContinue).Path
+    if ($stagingDir -and (Test-Path $stagingDir)) {
         $files = Get-ChildItem -Path $stagingDir -Recurse -File
         $fileIndex = 0
         $subdirs = @{}
 
         foreach ($file in $files) {
             $fileIndex++
-            $relPath = $file.FullName.Substring($stagingDir.Length + 1)
+            $relPath = $file.FullName.Substring($stagingDir.TrimEnd('\','/').Length + 1)
             $relDir  = [System.IO.Path]::GetDirectoryName($relPath)
             $fileId  = "$($plugin.name)_File$fileIndex"
             $compId  = "$($plugin.name)_Comp$fileIndex"
@@ -171,9 +171,9 @@ function Add-FeatureFragment($featureId, $title, $description, $categoryPlugins)
     }
 }
 
-Add-FeatureFragment 'SmartClientPlugins' 'Smart Client Plugins' 'Plugins for the XProtect™ Smart Client' $sc
-Add-FeatureFragment 'DeviceDrivers' 'Device Drivers' 'Device drivers for the XProtect™ Recording Server' $dd
-Add-FeatureFragment 'AdminPlugins' 'Admin Plugins' 'Plugins for the XProtect™ Management Client / Event Server' $ap
+Add-FeatureFragment 'SmartClientPlugins' 'Smart Client Plugins' 'Plugins for the XProtect Smart Client. Installs to C:\Program Files\Milestone\MIPPlugins\' $sc
+Add-FeatureFragment 'DeviceDrivers' 'Device Drivers' 'Device drivers for the XProtect Recording Server. Installs to C:\Program Files\Milestone\MIPDrivers\' $dd
+Add-FeatureFragment 'AdminPlugins' 'Admin Plugins' 'Plugins for the XProtect Management Client / Event Server. Installs to C:\Program Files\Milestone\MIPPlugins\' $ap
 
 # ── Write output ──
 $settings = [System.Xml.XmlWriterSettings]::new()

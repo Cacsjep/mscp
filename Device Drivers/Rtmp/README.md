@@ -17,7 +17,7 @@ A Milestone XProtect™ MIP device driver that receives direct RTMP push streams
 
 ### Installer (Recommended)
 
-Download `MSCPlugins-vX.X-Setup.exe` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **RTMP Push Driver** in the component list.
+Download `MSCPlugins-vX.X-Setup.msi` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **RTMP Push Driver** in the feature list.
 
 ### Manual (ZIP)
 
