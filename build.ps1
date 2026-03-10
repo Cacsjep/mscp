@@ -13,9 +13,13 @@ $ErrorActionPreference = 'Stop'
 
 $root = $PSScriptRoot
 # Auto-increment build number so MSI always upgrades without uninstall.
-# Format: 1.0.<minutes since 2025-01-01> — guarantees a unique, always-increasing version.
-$buildNum = [int][math]::Floor(([DateTime]::UtcNow - [DateTime]::new(2025,1,1)).TotalMinutes)
-$version = "1.0.$buildNum"
+# MSI limits: major<256, minor<256, build<65536. We use 1.<minor>.<build>
+# where minor = months since 2025-01 and build = day*1000 + time-of-day (0-1439).
+$epoch = [DateTime]::new(2025,1,1)
+$now = [DateTime]::UtcNow
+$minor = (($now.Year - $epoch.Year) * 12) + ($now.Month - $epoch.Month)
+$build = ($now.Day * 1000) + ($now.Hour * 60 + $now.Minute)
+$version = "1.$minor.$build"
 $buildDir = Join-Path $root 'build'
 $manifestPath = Join-Path $root 'plugins.json'
 
