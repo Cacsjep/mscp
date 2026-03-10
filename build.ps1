@@ -12,7 +12,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $root = $PSScriptRoot
-$version = '1.0.0'
+# Auto-increment build number so MSI always upgrades without uninstall.
+# Format: 1.0.<minutes since 2025-01-01> — guarantees a unique, always-increasing version.
+$buildNum = [int][math]::Floor(([DateTime]::UtcNow - [DateTime]::new(2025,1,1)).TotalMinutes)
+$version = "1.0.$buildNum"
 $buildDir = Join-Path $root 'build'
 $manifestPath = Join-Path $root 'plugins.json'
 
