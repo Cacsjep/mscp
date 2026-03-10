@@ -42,7 +42,7 @@ hide:
   <div class="download-card">
     <h3>Unified Installer <span class="rec">Recommended</span></h3>
     <p>Single installer with component selection.</p>
-    <a id="installer-download" href="https://github.com/Cacsjep/mscp/releases/latest" class="md-button md-button--primary" style="width:100%;text-align:center;font-weight:400">Download MSCPlugins-Setup.exe</a>
+    <a id="installer-download" href="https://github.com/Cacsjep/mscp/releases/latest" class="md-button md-button--primary" style="width:100%;text-align:center;font-weight:400">Download MSCPlugins-Setup.msi</a>
     <small>Choose exactly which plugins and drivers to install.</small>
   </div>
   <div class="download-card">
@@ -63,7 +63,7 @@ hide:
 
 ## Unified Installer
 
-1. Download `MSCPlugins-vX.X-Setup.exe` from the [Releases](https://github.com/Cacsjep/mscp/releases) page
+1. Download `MSCPlugins-vX.X-Setup.msi` from the [Releases](https://github.com/Cacsjep/mscp/releases) page
 2. Run as **Administrator**
 3. Select the plugins and drivers you want to install
 
@@ -109,7 +109,7 @@ fetch("https://api.github.com/repos/Cacsjep/mscp/releases/latest")
   .then(function(r) { return r.json(); })
   .then(function(data) {
     var asset = data.assets.find(function(a) {
-      return a.name.match(/MSCPlugins.*Setup\.exe$/i);
+      return a.name.match(/MSCPlugins.*Setup\.msi$/i);
     });
     if (asset) {
       var btn = document.getElementById("installer-download");

@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Windows.Forms;
 using VideoOS.Platform;
 using VideoOS.Platform.Admin;
@@ -20,68 +18,6 @@ namespace HttpRequests.Admin
 
         public override void Init() { }
         public override void Close() { ReleaseUserControl(); }
-
-        #region Event Registration
-
-        public override Collection<VideoOS.Platform.Data.EventGroup> GetKnownEventGroups(CultureInfo culture)
-        {
-            return new Collection<VideoOS.Platform.Data.EventGroup>
-            {
-                new VideoOS.Platform.Data.EventGroup
-                {
-                    ID = HttpRequestsDefinition.EventGroupId,
-                    Name = "HTTP Requests"
-                }
-            };
-        }
-
-        public override Collection<VideoOS.Platform.Data.EventType> GetKnownEventTypes(CultureInfo culture)
-        {
-            var sourceKinds = new List<Guid>
-            {
-                HttpRequestsDefinition.RequestKindId,
-                HttpRequestsDefinition.FolderKindId
-            };
-
-            return new Collection<VideoOS.Platform.Data.EventType>
-            {
-                new VideoOS.Platform.Data.EventType
-                {
-                    ID = HttpRequestsDefinition.EvtRequestExecutedId,
-                    Message = "HTTP Request Executed",
-                    GroupID = HttpRequestsDefinition.EventGroupId,
-                    StateGroupID = HttpRequestsDefinition.StateGroupId,
-                    State = "Success",
-                    DefaultSourceKind = HttpRequestsDefinition.FolderKindId,
-                    SourceKinds = sourceKinds
-                },
-                new VideoOS.Platform.Data.EventType
-                {
-                    ID = HttpRequestsDefinition.EvtRequestFailedId,
-                    Message = "HTTP Request Failed",
-                    GroupID = HttpRequestsDefinition.EventGroupId,
-                    StateGroupID = HttpRequestsDefinition.StateGroupId,
-                    State = "Failed",
-                    DefaultSourceKind = HttpRequestsDefinition.FolderKindId,
-                    SourceKinds = sourceKinds
-                }
-            };
-        }
-
-        public override Collection<VideoOS.Platform.Data.StateGroup> GetKnownStateGroups(CultureInfo culture)
-        {
-            return new Collection<VideoOS.Platform.Data.StateGroup>
-            {
-                new VideoOS.Platform.Data.StateGroup
-                {
-                    ID = HttpRequestsDefinition.StateGroupId,
-                    Name = "HTTP Request Status",
-                    States = new[] { "Success", "Failed" }
-                }
-            };
-        }
-
-        #endregion
 
         #region User Control
 

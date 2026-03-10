@@ -29,8 +29,8 @@ namespace Auditor
         private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
         private List<ItemNode> _itemNodes;
 
-        private Image _pluginIcon;
-        private Image _folderIcon;
+        private Image _pluginIcon = PluginIcon.FallbackIcon;
+        private Image _folderIcon = PluginIcon.FallbackIcon;
         private static readonly PluginLog _log = new PluginLog("Auditor - PluginDefinition");
 
         public override Guid Id => PluginId;
@@ -39,7 +39,7 @@ namespace Auditor
         public override string VersionString => "1.0.0.0";
         public override string Manufacturer => "https://github.com/Cacsjep";
 
-        public override Image Icon => _pluginIcon;
+        public override Image Icon => _pluginIcon ?? PluginIcon.FallbackIcon;
 
         public override void Init()
         {
@@ -49,18 +49,32 @@ namespace Auditor
             var env = EnvironmentManager.Instance.EnvironmentType;
             _log.Info($"PluginDefinition Init - environment: {env}");
 
-            try
+            if (env != EnvironmentType.Service)
             {
-                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_ShieldAlt);
-                _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
-                _log.Info("FontAwesome icons rendered");
-            }
-            catch (Exception ex)
-            {
-                _log.Error($"Failed to render FA icons, falling back to defaults: {ex.Message}");
-                var images = VideoOS.Platform.UI.Util.ImageList.Images;
-                _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
-                _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+                try
+                {
+                    _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_ShieldAlt);
+                    _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
+                    _log.Info("FontAwesome icons rendered");
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Failed to render FA icons: {ex.Message}");
+                    try
+                    {
+                        var images = VideoOS.Platform.UI.Util.ImageList.Images;
+                        _pluginIcon = images[VideoOS.Platform.UI.Util.PluginIx];
+                        _folderIcon = images[VideoOS.Platform.UI.Util.FolderIconIx];
+                        _log.Info("Fallback to SDK icons succeeded");
+                    }
+                    catch (Exception ex2)
+                    {
+                        _log.Error($"Fallback to SDK icons also failed: {ex2.Message}");
+                    }
+                }
+
+                // Reset cached ItemNodes so they pick up the real icons
+                _itemNodes = null;
             }
 
             if (env == EnvironmentType.Service)

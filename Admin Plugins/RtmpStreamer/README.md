@@ -16,7 +16,7 @@ A Milestone XProtect™ MIP plugin that streams live camera video to RTMP/RTMPS 
 
 ### Installer (Recommended)
 
-Download `MSCPlugins-vX.X-Setup.exe` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **RTMP Streamer Plugin** in the component list.
+Download `MSCPlugins-vX.X-Setup.msi` from [Releases](https://github.com/Cacsjep/mscp/releases) and run as **Administrator**. Select **RTMP Streamer Plugin** in the feature list.
 
 ### Manual (ZIP)
 

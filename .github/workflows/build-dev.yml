@@ -1,12 +1,15 @@
-name: Build & Release
+name: Dev Build
 
 on:
+  # Manual trigger from Actions tab
+  workflow_dispatch:
+  # Auto-trigger on dev tags like d1.0.0, d0.0.80_test3
   push:
     tags:
-      - 'v*'
+      - 'd*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # ── Generate build matrix from plugins.json ──
@@ -32,7 +35,6 @@ jobs:
                           elseif ($platform -eq 'x64') { 'bin/x64/Release/net48' }
                           else { 'bin/Release/net48' }
 
-            # Build project list (main + extras)
             $projects = @("$($p.path)/$project" -replace '/', '\')
             if ($p.extraProjects) {
               foreach ($ep in $p.extraProjects) {
@@ -113,17 +115,17 @@ jobs:
           }
 
       - name: Create ZIP
-        run: Compress-Archive -Path staging\${{ matrix.stage_to }} -DestinationPath ${{ matrix.name }}-${{ github.ref_name }}.zip
+        run: Compress-Archive -Path staging\${{ matrix.stage_to }} -DestinationPath ${{ matrix.name }}.zip
         shell: pwsh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
-          path: ${{ matrix.name }}-${{ github.ref_name }}.zip
+          path: ${{ matrix.name }}.zip
 
-  # ── Collect all artifacts, build unified installer, create release ──
-  release:
+  # ── Build installer and upload as artifacts (no release) ──
+  installer:
     needs: [setup, build]
     runs-on: windows-latest
 
@@ -161,7 +163,10 @@ jobs:
       - name: Build MSI installer
         shell: pwsh
         run: |
-          $version = '${{ github.ref_name }}' -replace '^v',''
+          $tag = '${{ github.ref_name }}'
+          if ($tag -match '^d(\d+\.\d+\.\d+)') { $version = $Matches[1] }
+          elseif ($tag -match '^d(\d+\.\d+)') { $version = "$($Matches[1]).0" }
+          else { $version = "0.0.${{ github.run_number }}" }
           wix build installer/wix/Product.wxs installer/wix/Components.wxs `
             -ext WixToolset.UI.wixext `
             -ext WixToolset.Util.wixext `
@@ -169,20 +174,10 @@ jobs:
             -arch x64 `
             -b installer/wix `
             -pdbtype none `
-            -o "MSCPlugins-$version-Setup.msi"
+            -o "MSCPlugins-dev-Setup.msi"
 
-      - name: Collect release files
-        shell: pwsh
-        run: |
-          $names = '${{ needs.setup.outputs.names }}' | ConvertFrom-Json
-          foreach ($name in $names) {
-            Copy-Item "artifacts\$name\*.zip" -Destination .
-          }
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload MSI installer
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            *-${{ github.ref_name }}.zip
-            MSCPlugins-*-Setup.msi
-          generate_release_notes: true
+          name: MSI-Installer
+          path: MSCPlugins-dev-Setup.msi

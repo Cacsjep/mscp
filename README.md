@@ -28,7 +28,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 
 ### Unified Installer (Recommended)
 
-1. Download `MSCPlugins-vX.X-Setup.exe` from the [Releases](../../releases) page
+1. Download `MSCPlugins-vX.X-Setup.msi` from the [Releases](../../releases) page
 2. Run as **Administrator**
 3. Select the plugins and drivers you want to install
 4. The installer handles stopping/starting the required Milestone services automatically
@@ -67,8 +67,8 @@ mscp/
 ├── Directory.Build.props          Shared MSBuild properties (paths, deploy flags)
 ├── Directory.Build.targets        Shared build targets (stop/deploy/start cycle)
 ├── installer/
-│   ├── MSCPlugins.nsi             Unified NSIS installer script
-│   └── generate-nsi.ps1           Generates NSIS sections from plugins.json
+│   ├── wix/                       WiX MSI installer (Product.wxs, License.rtf)
+│   └── generate-wix.ps1           Generates WiX components from plugins.json
 ├── .github/workflows/
 │   └── build-release.yml          CI: matrix build + create release
 ├── build.ps1                      Local build script
@@ -91,7 +91,7 @@ The solution contains all projects organized in solution folders matching the re
 .\build.ps1
 ```
 
-This builds all plugins in Release configuration, creates per-plugin ZIPs, and optionally a unified NSIS installer (requires [NSIS](https://nsis.sourceforge.io/)). All output goes to the `build/` directory.
+This builds all plugins in Release configuration, creates per-plugin ZIPs and a WiX MSI installer (requires [WiX Toolset](https://wixtoolset.org/): `dotnet tool install --global wix`). All output goes to the `build/` directory.
 
 ## Development Workflow
 
@@ -205,7 +205,7 @@ Make sure to add the project GUID to the `NestedProjects` section so it appears 
 
 #### 3. Add the plugin to `plugins.json`
 
-All build infrastructure (CI workflow, `build.ps1`, NSIS installer) is driven by the central `plugins.json` manifest. Add one entry:
+All build infrastructure (CI workflow, `build.ps1`, MSI installer) is driven by the central `plugins.json` manifest. Add one entry:
 
 ```json
 {
@@ -213,7 +213,7 @@ All build infrastructure (CI workflow, `build.ps1`, NSIS installer) is driven by
   "displayName": "Your Plugin",
   "path": "Smart Client Plugins/YourPlugin",
   "category": "SmartClient",
-  "description": "Short description for the NSIS installer"
+  "description": "Short description for the MSI installer"
 }
 ```
 
@@ -222,10 +222,10 @@ All build infrastructure (CI workflow, `build.ps1`, NSIS installer) is driven by
 | Field | Description |
 |---|---|
 | `name` | Plugin name (used for assembly, staging dir, ZIP name, registry key) |
-| `displayName` | Human-readable name shown in the NSIS installer |
+| `displayName` | Human-readable name shown in the MSI installer |
 | `path` | Relative path to the project folder from the repo root |
 | `category` | `SmartClient`, `DeviceDriver`, or `AdminPlugin` |
-| `description` | One-line description for the NSIS component selection page |
+| `description` | One-line description for the MSI installer feature selection |
 
 **Optional fields (with defaults):**
 
@@ -240,8 +240,8 @@ All build infrastructure (CI workflow, `build.ps1`, NSIS installer) is driven by
 
 This single entry automatically configures:
 - GitHub Actions build matrix and release job
-- `build.ps1` staging, zipping, and NSIS arguments
-- NSIS installer sections, descriptions, ComponentsLeave logic, and uninstall cleanup
+- `build.ps1` staging, zipping, and MSI build
+- WiX MSI installer features, components, and uninstall cleanup
 
 #### 4. Update documentation
 

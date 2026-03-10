@@ -10,8 +10,8 @@ build/
 *.suo
 *.cache
 
-## Generated NSIS
-installer/plugin-generated.nsi
+## Generated WiX
+installer/wix/Components.wxs
 
 ## NuGet
 packages/
@@ -31,3 +31,4 @@ site/
 ## DLLs (except checked-in interop libs)
 *.dll
 !Smart Client Plugins/RDP/lib/*.dll
+*.msi
