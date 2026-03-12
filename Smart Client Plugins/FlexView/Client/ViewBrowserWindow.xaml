@@ -30,10 +30,12 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button x:Name="btnSelect" Content="Select" IsEnabled="False"
                     Background="#FF238636" Foreground="White" BorderBrush="#FF2EA043"
-                    Padding="16,6" Cursor="Hand" Click="OnSelectClick" Margin="0,0,8,0"/>
+                    Padding="18,8" Cursor="Hand" Click="OnSelectClick" Margin="0,0,8,0"
+                    MinHeight="32" MinWidth="80" FontSize="12"/>
             <Button Content="Cancel"
                     Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
-                    Padding="16,6" Cursor="Hand" Click="OnCancelClick"/>
+                    Padding="18,8" Cursor="Hand" Click="OnCancelClick"
+                    MinHeight="32" MinWidth="80" FontSize="12"/>
         </StackPanel>
     </Grid>
 </Window>
