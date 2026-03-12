@@ -32,6 +32,9 @@ When enabled, the user is shown a dialog and must enter a reason. The reason is 
 - **Export Reason Prompt** - when entering the export workspace
 - **Independent Playback Reason Prompt** - when enabling independent playback on a camera
 
+!!! info "Auditor Log Category"
+    The Auditor log category is only available in 2025 R3. In earlier versions, the MIP SDK does not support setting a category.
+
 ## Event Triggers (Rule Events)
 
 When enabled, an XProtect analytics event is fired. Use these events to trigger email notifications, alarms, or any other XProtect rule action.
@@ -45,6 +48,7 @@ Source: Audit Rule item
 | Audit: Independent Playback | User enables independent playback on a camera |
 
 Reason prompts and event triggers are independent - you can enable one, both, or neither for each activity.
+
 
 ## Architecture
 
