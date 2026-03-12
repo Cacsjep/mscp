@@ -1,0 +1,990 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using FlexView.Models;
+using VideoOS.Platform;
+using VideoOS.Platform.Client;
+using SdkRectangle = System.Drawing.Rectangle;
+
+namespace FlexView.Client
+{
+    public partial class FlexViewViewItemWpfUserControl : ViewItemWpfUserControl
+    {
+        private const int GridCols = 32;
+        private const int GridRows = 18;
+        private const double CanvasWidth = 800.0;
+        private const double CanvasHeight = 450.0;
+        private const double CellWidth = CanvasWidth / GridCols;   // 25.0
+        private const double CellHeight = CanvasHeight / GridRows; // 25.0
+        private const int SdkMax = 1000;
+        private const double ResizeThreshold = 6.0;
+
+        // Brushes
+        private static readonly SolidColorBrush GridLineBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(30, 255, 255, 255));
+        private static readonly SolidColorBrush GridLineAccentBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 255, 255, 255));
+        private static readonly SolidColorBrush PaneFill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 30, 80, 130));
+        private static readonly SolidColorBrush PaneBorder = new SolidColorBrush(System.Windows.Media.Color.FromRgb(88, 166, 255));
+        private static readonly SolidColorBrush SelectedFill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 40, 110, 170));
+        private static readonly SolidColorBrush SelectedBorder = new SolidColorBrush(System.Windows.Media.Color.FromRgb(130, 200, 255));
+        private static readonly SolidColorBrush PreviewFill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 88, 166, 255));
+        private static readonly SolidColorBrush PreviewBorder = new SolidColorBrush(System.Windows.Media.Color.FromRgb(88, 166, 255));
+        private static readonly SolidColorBrush OverlapFill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 248, 81, 73));
+        private static readonly SolidColorBrush OverlapBorder = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 81, 73));
+        private static readonly SolidColorBrush CameraLabelBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(63, 185, 80));
+
+        // Pane state
+        private readonly List<GridPane> _panes = new List<GridPane>();
+        private GridPane _selectedPane;
+        private int _nextPaneId = 1;
+
+        // Drag state
+        private enum DragMode { None, Creating, Moving, Resizing }
+        private DragMode _dragMode = DragMode.None;
+        private int _dragStartCol, _dragStartRow;
+        private int _createEndCol, _createEndRow;
+
+        // Move state
+        private int _moveOrigCol, _moveOrigRow;
+
+        // Resize state
+        private enum ResizeEdge { None, Left, Right, Top, Bottom, TopLeft, TopRight, BottomLeft, BottomRight }
+        private ResizeEdge _resizeEdge;
+        private int _resizeOrigCol, _resizeOrigRow, _resizeOrigColSpan, _resizeOrigRowSpan;
+
+        // Edit mode
+        private ViewAndLayoutItem _editingView;
+        private Item _editingParent;
+        private int _originalSlotCount;
+        private bool _isEditMode;
+
+        // Save target
+        private Item _targetFolder;
+
+        public FlexViewViewItemWpfUserControl()
+        {
+            InitializeComponent();
+        }
+
+        public override void Init()
+        {
+            FlexViewDefinition.Log.Info("ViewItemWpfUserControl Init called");
+            RedrawCanvas();
+            UpdateStatus();
+            FlexViewDefinition.Log.Info("ViewItemWpfUserControl Init completed");
+        }
+
+        public override void Close() { }
+
+        public override bool Maximizable => true;
+        public override bool Selectable => true;
+        public override bool ShowToolbar => false;
+
+        #region Canvas Drawing
+
+        private void RedrawCanvas()
+        {
+            gridCanvas.Children.Clear();
+            DrawGridLines();
+            DrawDragPreview();
+            DrawPanes();
+            hintOverlay.Visibility = _panes.Count == 0 && _dragMode == DragMode.None
+                ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void DrawGridLines()
+        {
+            // Vertical lines
+            for (int i = 0; i <= GridCols; i++)
+            {
+                double x = i * CellWidth;
+                bool isMajor = i % 4 == 0;
+                gridCanvas.Children.Add(new Line
+                {
+                    X1 = x, Y1 = 0, X2 = x, Y2 = CanvasHeight,
+                    Stroke = isMajor ? GridLineAccentBrush : GridLineBrush,
+                    StrokeThickness = isMajor ? 1.0 : 0.5
+                });
+            }
+            // Horizontal lines
+            for (int i = 0; i <= GridRows; i++)
+            {
+                double y = i * CellHeight;
+                bool isMajor = i % 3 == 0;
+                gridCanvas.Children.Add(new Line
+                {
+                    X1 = 0, Y1 = y, X2 = CanvasWidth, Y2 = y,
+                    Stroke = isMajor ? GridLineAccentBrush : GridLineBrush,
+                    StrokeThickness = isMajor ? 1.0 : 0.5
+                });
+            }
+        }
+
+        private void DrawPanes()
+        {
+            foreach (var pane in _panes)
+            {
+                bool isSelected = pane == _selectedPane;
+                bool hasOverlap = _panes.Any(other => other != pane && pane.Overlaps(other));
+
+                double x = pane.Col * CellWidth;
+                double y = pane.Row * CellHeight;
+                double w = pane.ColSpan * CellWidth;
+                double h = pane.RowSpan * CellHeight;
+
+                SolidColorBrush fill, border;
+                if (hasOverlap)
+                {
+                    fill = OverlapFill;
+                    border = OverlapBorder;
+                }
+                else if (isSelected)
+                {
+                    fill = SelectedFill;
+                    border = SelectedBorder;
+                }
+                else
+                {
+                    fill = PaneFill;
+                    border = PaneBorder;
+                }
+
+                var rect = new System.Windows.Shapes.Rectangle
+                {
+                    Width = w - 2,
+                    Height = h - 2,
+                    Fill = fill,
+                    Stroke = border,
+                    StrokeThickness = isSelected ? 2.5 : 1.5,
+                    RadiusX = 4,
+                    RadiusY = 4
+                };
+                Canvas.SetLeft(rect, x + 1);
+                Canvas.SetTop(rect, y + 1);
+                gridCanvas.Children.Add(rect);
+
+                // Slot number label
+                var slotLabel = new TextBlock
+                {
+                    Text = pane.Id.ToString(),
+                    Foreground = Brushes.White,
+                    FontSize = w > 80 && h > 50 ? 18 : 12,
+                    FontWeight = FontWeights.Bold,
+                    Opacity = 0.7
+                };
+                Canvas.SetLeft(slotLabel, x + 6);
+                Canvas.SetTop(slotLabel, y + 4);
+                gridCanvas.Children.Add(slotLabel);
+
+                // Camera name (if editing existing view)
+                if (!string.IsNullOrEmpty(pane.CameraName) && w > 60 && h > 40)
+                {
+                    var camLabel = new TextBlock
+                    {
+                        Text = pane.CameraName,
+                        Foreground = CameraLabelBrush,
+                        FontSize = 10,
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxWidth = w - 12
+                    };
+                    Canvas.SetLeft(camLabel, x + 6);
+                    Canvas.SetTop(camLabel, y + h - 20);
+                    gridCanvas.Children.Add(camLabel);
+                }
+
+                // Size label (center)
+                if (w > 60 && h > 40)
+                {
+                    var sizeLabel = new TextBlock
+                    {
+                        Text = $"{pane.ColSpan}x{pane.RowSpan}",
+                        Foreground = Brushes.White,
+                        FontSize = 11,
+                        Opacity = 0.4,
+                        TextAlignment = TextAlignment.Center
+                    };
+                    sizeLabel.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                    Canvas.SetLeft(sizeLabel, x + (w - sizeLabel.DesiredSize.Width) / 2);
+                    Canvas.SetTop(sizeLabel, y + (h - sizeLabel.DesiredSize.Height) / 2);
+                    gridCanvas.Children.Add(sizeLabel);
+                }
+
+                // Resize handle indicator (bottom-right corner) for selected pane
+                if (isSelected)
+                {
+                    var handle = new System.Windows.Shapes.Rectangle
+                    {
+                        Width = 10,
+                        Height = 10,
+                        Fill = SelectedBorder,
+                        RadiusX = 2,
+                        RadiusY = 2
+                    };
+                    Canvas.SetLeft(handle, x + w - 12);
+                    Canvas.SetTop(handle, y + h - 12);
+                    gridCanvas.Children.Add(handle);
+                }
+            }
+        }
+
+        private void DrawDragPreview()
+        {
+            if (_dragMode != DragMode.Creating) return;
+
+            int startCol = Math.Min(_dragStartCol, _createEndCol);
+            int startRow = Math.Min(_dragStartRow, _createEndRow);
+            int endCol = Math.Max(_dragStartCol, _createEndCol);
+            int endRow = Math.Max(_dragStartRow, _createEndRow);
+
+            double x = startCol * CellWidth;
+            double y = startRow * CellHeight;
+            double w = (endCol - startCol + 1) * CellWidth;
+            double h = (endRow - startRow + 1) * CellHeight;
+
+            // Check if preview overlaps existing panes
+            var preview = new GridPane
+            {
+                Col = startCol, Row = startRow,
+                ColSpan = endCol - startCol + 1,
+                RowSpan = endRow - startRow + 1
+            };
+            bool overlaps = _panes.Any(p => preview.Overlaps(p));
+
+            var rect = new System.Windows.Shapes.Rectangle
+            {
+                Width = w - 2,
+                Height = h - 2,
+                Fill = overlaps ? OverlapFill : PreviewFill,
+                Stroke = overlaps ? OverlapBorder : PreviewBorder,
+                StrokeThickness = 2,
+                StrokeDashArray = new DoubleCollection { 4, 2 },
+                RadiusX = 4,
+                RadiusY = 4
+            };
+            Canvas.SetLeft(rect, x + 1);
+            Canvas.SetTop(rect, y + 1);
+            gridCanvas.Children.Add(rect);
+
+            // Size label on preview
+            var label = new TextBlock
+            {
+                Text = $"{endCol - startCol + 1}x{endRow - startRow + 1}",
+                Foreground = Brushes.White,
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold,
+                Opacity = 0.8
+            };
+            label.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            Canvas.SetLeft(label, x + (w - label.DesiredSize.Width) / 2);
+            Canvas.SetTop(label, y + (h - label.DesiredSize.Height) / 2);
+            gridCanvas.Children.Add(label);
+        }
+
+        #endregion
+
+        #region Mouse Event Handlers
+
+        private (int col, int row) GetGridPosition(System.Windows.Point canvasPos)
+        {
+            int col = (int)(canvasPos.X / CellWidth);
+            int row = (int)(canvasPos.Y / CellHeight);
+            col = Math.Max(0, Math.Min(col, GridCols - 1));
+            row = Math.Max(0, Math.Min(row, GridRows - 1));
+            return (col, row);
+        }
+
+        private GridPane GetPaneAt(int col, int row)
+        {
+            // Return topmost (last added) pane at position
+            for (int i = _panes.Count - 1; i >= 0; i--)
+            {
+                if (_panes[i].Contains(col, row))
+                    return _panes[i];
+            }
+            return null;
+        }
+
+        private ResizeEdge GetResizeEdge(GridPane pane, System.Windows.Point canvasPos)
+        {
+            double px = pane.Col * CellWidth;
+            double py = pane.Row * CellHeight;
+            double pw = pane.ColSpan * CellWidth;
+            double ph = pane.RowSpan * CellHeight;
+
+            bool nearLeft = Math.Abs(canvasPos.X - px) < ResizeThreshold;
+            bool nearRight = Math.Abs(canvasPos.X - (px + pw)) < ResizeThreshold;
+            bool nearTop = Math.Abs(canvasPos.Y - py) < ResizeThreshold;
+            bool nearBottom = Math.Abs(canvasPos.Y - (py + ph)) < ResizeThreshold;
+
+            if (nearTop && nearLeft) return ResizeEdge.TopLeft;
+            if (nearTop && nearRight) return ResizeEdge.TopRight;
+            if (nearBottom && nearLeft) return ResizeEdge.BottomLeft;
+            if (nearBottom && nearRight) return ResizeEdge.BottomRight;
+            if (nearLeft) return ResizeEdge.Left;
+            if (nearRight) return ResizeEdge.Right;
+            if (nearTop) return ResizeEdge.Top;
+            if (nearBottom) return ResizeEdge.Bottom;
+
+            return ResizeEdge.None;
+        }
+
+        private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var pos = e.GetPosition(gridCanvas);
+            var (col, row) = GetGridPosition(pos);
+
+            var pane = GetPaneAt(col, row);
+
+            if (pane != null)
+            {
+                _selectedPane = pane;
+
+                // Check for resize edge
+                var edge = GetResizeEdge(pane, pos);
+                if (edge != ResizeEdge.None)
+                {
+                    _dragMode = DragMode.Resizing;
+                    _resizeEdge = edge;
+                    _resizeOrigCol = pane.Col;
+                    _resizeOrigRow = pane.Row;
+                    _resizeOrigColSpan = pane.ColSpan;
+                    _resizeOrigRowSpan = pane.RowSpan;
+                    _dragStartCol = col;
+                    _dragStartRow = row;
+                }
+                else
+                {
+                    // Start moving
+                    _dragMode = DragMode.Moving;
+                    _moveOrigCol = pane.Col;
+                    _moveOrigRow = pane.Row;
+                    _dragStartCol = col;
+                    _dragStartRow = row;
+                }
+            }
+            else
+            {
+                // Start creating a new pane
+                _selectedPane = null;
+                _dragMode = DragMode.Creating;
+                _dragStartCol = col;
+                _dragStartRow = row;
+                _createEndCol = col;
+                _createEndRow = row;
+            }
+
+            gridCanvas.CaptureMouse();
+            RedrawCanvas();
+            e.Handled = true;
+        }
+
+        private void Canvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            var pos = e.GetPosition(gridCanvas);
+            var (col, row) = GetGridPosition(pos);
+
+            if (_dragMode == DragMode.Creating)
+            {
+                _createEndCol = col;
+                _createEndRow = row;
+                RedrawCanvas();
+            }
+            else if (_dragMode == DragMode.Moving && _selectedPane != null)
+            {
+                int deltaCol = col - _dragStartCol;
+                int deltaRow = row - _dragStartRow;
+                int newCol = _moveOrigCol + deltaCol;
+                int newRow = _moveOrigRow + deltaRow;
+
+                newCol = Math.Max(0, Math.Min(newCol, GridCols - _selectedPane.ColSpan));
+                newRow = Math.Max(0, Math.Min(newRow, GridRows - _selectedPane.RowSpan));
+
+                _selectedPane.Col = newCol;
+                _selectedPane.Row = newRow;
+                RedrawCanvas();
+            }
+            else if (_dragMode == DragMode.Resizing && _selectedPane != null)
+            {
+                ApplyResize(col, row);
+                RedrawCanvas();
+            }
+            else
+            {
+                // Update cursor based on what's under the mouse
+                var pane = GetPaneAt(col, row);
+                if (pane != null)
+                {
+                    var edge = GetResizeEdge(pane, pos);
+                    gridCanvas.Cursor = GetCursorForEdge(edge);
+                }
+                else
+                {
+                    gridCanvas.Cursor = Cursors.Cross;
+                }
+            }
+        }
+
+        private void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            gridCanvas.ReleaseMouseCapture();
+
+            if (_dragMode == DragMode.Creating)
+            {
+                FinalizeCreate();
+            }
+            else if (_dragMode == DragMode.Moving && _selectedPane != null)
+            {
+                FinalizeMove();
+            }
+            else if (_dragMode == DragMode.Resizing && _selectedPane != null)
+            {
+                FinalizeResize();
+            }
+
+            _dragMode = DragMode.None;
+            RedrawCanvas();
+            UpdateStatus();
+            FireClickEvent();
+        }
+
+        private void Canvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var pos = e.GetPosition(gridCanvas);
+            var (col, row) = GetGridPosition(pos);
+            var pane = GetPaneAt(col, row);
+
+            if (pane != null)
+            {
+                _panes.Remove(pane);
+                if (_selectedPane == pane) _selectedPane = null;
+                RenumberPanes();
+                RedrawCanvas();
+                UpdateStatus();
+            }
+
+            e.Handled = true;
+        }
+
+        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete && _selectedPane != null)
+            {
+                _panes.Remove(_selectedPane);
+                _selectedPane = null;
+                RenumberPanes();
+                RedrawCanvas();
+                UpdateStatus();
+                e.Handled = true;
+            }
+        }
+
+        #endregion
+
+        #region Drag Finalization
+
+        private void FinalizeCreate()
+        {
+            int startCol = Math.Min(_dragStartCol, _createEndCol);
+            int startRow = Math.Min(_dragStartRow, _createEndRow);
+            int endCol = Math.Max(_dragStartCol, _createEndCol);
+            int endRow = Math.Max(_dragStartRow, _createEndRow);
+
+            var newPane = new GridPane
+            {
+                Id = _nextPaneId++,
+                Col = startCol,
+                Row = startRow,
+                ColSpan = endCol - startCol + 1,
+                RowSpan = endRow - startRow + 1
+            };
+
+            if (!IsInBounds(newPane) || HasOverlap(newPane))
+                return;
+
+            _panes.Add(newPane);
+            _selectedPane = newPane;
+        }
+
+        private void FinalizeMove()
+        {
+            if (HasOverlap(_selectedPane))
+            {
+                // Revert to original position
+                _selectedPane.Col = _moveOrigCol;
+                _selectedPane.Row = _moveOrigRow;
+            }
+        }
+
+        private void FinalizeResize()
+        {
+            if (!IsInBounds(_selectedPane) || HasOverlap(_selectedPane))
+            {
+                // Revert
+                _selectedPane.Col = _resizeOrigCol;
+                _selectedPane.Row = _resizeOrigRow;
+                _selectedPane.ColSpan = _resizeOrigColSpan;
+                _selectedPane.RowSpan = _resizeOrigRowSpan;
+            }
+        }
+
+        private void ApplyResize(int currentCol, int currentRow)
+        {
+            var pane = _selectedPane;
+            int deltaCol = currentCol - _dragStartCol;
+            int deltaRow = currentRow - _dragStartRow;
+
+            switch (_resizeEdge)
+            {
+                case ResizeEdge.Right:
+                    pane.ColSpan = Math.Max(1, _resizeOrigColSpan + deltaCol);
+                    break;
+                case ResizeEdge.Bottom:
+                    pane.RowSpan = Math.Max(1, _resizeOrigRowSpan + deltaRow);
+                    break;
+                case ResizeEdge.BottomRight:
+                    pane.ColSpan = Math.Max(1, _resizeOrigColSpan + deltaCol);
+                    pane.RowSpan = Math.Max(1, _resizeOrigRowSpan + deltaRow);
+                    break;
+                case ResizeEdge.Left:
+                    {
+                        int newCol = _resizeOrigCol + deltaCol;
+                        int newSpan = _resizeOrigColSpan - deltaCol;
+                        if (newCol >= 0 && newSpan >= 1)
+                        {
+                            pane.Col = newCol;
+                            pane.ColSpan = newSpan;
+                        }
+                    }
+                    break;
+                case ResizeEdge.Top:
+                    {
+                        int newRow = _resizeOrigRow + deltaRow;
+                        int newSpan = _resizeOrigRowSpan - deltaRow;
+                        if (newRow >= 0 && newSpan >= 1)
+                        {
+                            pane.Row = newRow;
+                            pane.RowSpan = newSpan;
+                        }
+                    }
+                    break;
+                case ResizeEdge.TopLeft:
+                    {
+                        int newCol = _resizeOrigCol + deltaCol;
+                        int newColSpan = _resizeOrigColSpan - deltaCol;
+                        int newRow = _resizeOrigRow + deltaRow;
+                        int newRowSpan = _resizeOrigRowSpan - deltaRow;
+                        if (newCol >= 0 && newColSpan >= 1 && newRow >= 0 && newRowSpan >= 1)
+                        {
+                            pane.Col = newCol;
+                            pane.ColSpan = newColSpan;
+                            pane.Row = newRow;
+                            pane.RowSpan = newRowSpan;
+                        }
+                    }
+                    break;
+                case ResizeEdge.TopRight:
+                    {
+                        int newRow = _resizeOrigRow + deltaRow;
+                        int newRowSpan = _resizeOrigRowSpan - deltaRow;
+                        if (newRow >= 0 && newRowSpan >= 1)
+                        {
+                            pane.ColSpan = Math.Max(1, _resizeOrigColSpan + deltaCol);
+                            pane.Row = newRow;
+                            pane.RowSpan = newRowSpan;
+                        }
+                    }
+                    break;
+                case ResizeEdge.BottomLeft:
+                    {
+                        int newCol = _resizeOrigCol + deltaCol;
+                        int newColSpan = _resizeOrigColSpan - deltaCol;
+                        if (newCol >= 0 && newColSpan >= 1)
+                        {
+                            pane.Col = newCol;
+                            pane.ColSpan = newColSpan;
+                            pane.RowSpan = Math.Max(1, _resizeOrigRowSpan + deltaRow);
+                        }
+                    }
+                    break;
+            }
+
+            // Clamp to grid bounds
+            pane.Col = Math.Max(0, pane.Col);
+            pane.Row = Math.Max(0, pane.Row);
+            pane.ColSpan = Math.Min(pane.ColSpan, GridCols - pane.Col);
+            pane.RowSpan = Math.Min(pane.RowSpan, GridRows - pane.Row);
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private bool IsInBounds(GridPane pane)
+        {
+            return pane.Col >= 0 && pane.Row >= 0 &&
+                   pane.Col + pane.ColSpan <= GridCols &&
+                   pane.Row + pane.RowSpan <= GridRows;
+        }
+
+        private bool HasOverlap(GridPane pane)
+        {
+            return _panes.Any(other => other != pane && pane.Overlaps(other));
+        }
+
+        private void RenumberPanes()
+        {
+            for (int i = 0; i < _panes.Count; i++)
+                _panes[i].Id = i + 1;
+            _nextPaneId = _panes.Count + 1;
+        }
+
+        private Cursor GetCursorForEdge(ResizeEdge edge)
+        {
+            switch (edge)
+            {
+                case ResizeEdge.Left:
+                case ResizeEdge.Right: return Cursors.SizeWE;
+                case ResizeEdge.Top:
+                case ResizeEdge.Bottom: return Cursors.SizeNS;
+                case ResizeEdge.TopLeft:
+                case ResizeEdge.BottomRight: return Cursors.SizeNWSE;
+                case ResizeEdge.TopRight:
+                case ResizeEdge.BottomLeft: return Cursors.SizeNESW;
+                default: return Cursors.SizeAll;
+            }
+        }
+
+        private void UpdateStatus()
+        {
+            string mode = _isEditMode ? "Edit" : "New";
+            statusText.Text = $"{mode} | {_panes.Count} pane{(_panes.Count != 1 ? "s" : "")} | {GridCols}x{GridRows} grid";
+        }
+
+        #endregion
+
+        #region SDK Coordinate Conversion
+
+        private SdkRectangle[] ConvertPanesToSdkLayout()
+        {
+            // Order: existing panes by OriginalSlotIndex first, then new panes
+            var ordered = _panes
+                .Where(p => p.OriginalSlotIndex >= 0)
+                .OrderBy(p => p.OriginalSlotIndex)
+                .Concat(_panes.Where(p => p.OriginalSlotIndex < 0))
+                .ToList();
+
+            var rects = new SdkRectangle[ordered.Count];
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                var p = ordered[i];
+                rects[i] = new SdkRectangle(
+                    SdkMax * p.Col / GridCols,
+                    SdkMax * p.Row / GridRows,
+                    SdkMax * p.ColSpan / GridCols,
+                    SdkMax * p.RowSpan / GridRows);
+            }
+            return rects;
+        }
+
+        private void LoadFromSdkLayout(SdkRectangle[] layout)
+        {
+            _panes.Clear();
+            _nextPaneId = 1;
+
+            for (int i = 0; i < layout.Length; i++)
+            {
+                var rect = layout[i];
+                int col = (int)Math.Round((double)rect.X * GridCols / SdkMax);
+                int row = (int)Math.Round((double)rect.Y * GridRows / SdkMax);
+                int colSpan = Math.Max(1, (int)Math.Round((double)rect.Width * GridCols / SdkMax));
+                int rowSpan = Math.Max(1, (int)Math.Round((double)rect.Height * GridRows / SdkMax));
+
+                col = Math.Max(0, Math.Min(col, GridCols - 1));
+                row = Math.Max(0, Math.Min(row, GridRows - 1));
+                colSpan = Math.Min(colSpan, GridCols - col);
+                rowSpan = Math.Min(rowSpan, GridRows - row);
+
+                _panes.Add(new GridPane
+                {
+                    Id = _nextPaneId++,
+                    Col = col,
+                    Row = row,
+                    ColSpan = colSpan,
+                    RowSpan = rowSpan,
+                    OriginalSlotIndex = i
+                });
+            }
+        }
+
+        #endregion
+
+        #region View Save / Load
+
+        private void SaveNewView()
+        {
+            var name = viewNameBox.Text?.Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                MessageBox.Show("Please enter a view name.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (_targetFolder == null)
+            {
+                MessageBox.Show("Please select a destination folder.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (_panes.Count == 0)
+            {
+                MessageBox.Show("Please create at least one pane.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                var folder = _targetFolder as ConfigItem;
+                if (folder == null)
+                {
+                    MessageBox.Show("Selected folder is not valid.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var rects = ConvertPanesToSdkLayout();
+                var view = folder.AddChild(name, Kind.View, FolderType.No) as ViewAndLayoutItem;
+                if (view == null)
+                {
+                    MessageBox.Show("Failed to create view. Check folder permissions.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                view.Layout = rects;
+                for (int i = 0; i < rects.Length; i++)
+                {
+                    view.InsertBuiltinViewItem(i, ViewAndLayoutItem.CameraBuiltinId,
+                        new Dictionary<string, string> { { "CameraId", Guid.Empty.ToString() } });
+                }
+                view.Save();
+                folder.PropertiesModified();
+
+                MessageBox.Show($"View \"{name}\" saved with {rects.Length} slots.\n\nSwitch to a view group and back to see it.",
+                    "FlexView", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save view:\n{ex.Message}", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SaveEditedView()
+        {
+            if (_editingView == null) return;
+
+            if (_panes.Count == 0)
+            {
+                MessageBox.Show("Please create at least one pane.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                var rects = ConvertPanesToSdkLayout();
+                _editingView.Layout = rects;
+
+                // Insert empty cameras for any new slots beyond the original count
+                for (int i = _originalSlotCount; i < rects.Length; i++)
+                {
+                    _editingView.InsertBuiltinViewItem(i, ViewAndLayoutItem.CameraBuiltinId,
+                        new Dictionary<string, string> { { "CameraId", Guid.Empty.ToString() } });
+                }
+
+                _editingView.Save();
+
+                // Notify parent folder
+                if (_editingParent is ConfigItem parentConfig)
+                    parentConfig.PropertiesModified();
+
+                MessageBox.Show($"View \"{_editingView.Name}\" updated with {rects.Length} slots.",
+                    "FlexView", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to update view:\n{ex.Message}", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void LoadViewForEditing(ViewAndLayoutItem view, Item parent)
+        {
+            _isEditMode = true;
+            _editingView = view;
+            _editingParent = parent;
+            _selectedPane = null;
+
+            var layout = view.Layout;
+            if (layout == null || layout.Length == 0)
+            {
+                MessageBox.Show("Selected view has no layout data.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _originalSlotCount = layout.Length;
+            LoadFromSdkLayout(layout);
+            TryReadCameraData(view);
+
+            viewNameBox.Text = view.Name;
+            _targetFolder = parent;
+            folderLabel.Text = parent?.Name ?? "(unknown)";
+
+            RedrawCanvas();
+            UpdateStatus();
+        }
+
+        private void TryReadCameraData(ViewAndLayoutItem view)
+        {
+            try
+            {
+                var configItem = view as ConfigItem;
+                if (configItem == null) return;
+
+                var children = configItem.GetChildren();
+                if (children == null || children.Count == 0) return;
+
+                // Build a camera name lookup (lazy, one-time)
+                Dictionary<Guid, string> cameraNames = null;
+
+                for (int i = 0; i < children.Count && i < _panes.Count; i++)
+                {
+                    var child = children[i];
+                    if (child.Properties == null) continue;
+
+                    string camIdStr;
+                    if (!child.Properties.TryGetValue("CameraId", out camIdStr)) continue;
+                    if (!Guid.TryParse(camIdStr, out var camId) || camId == Guid.Empty) continue;
+
+                    _panes[i].CameraId = camId;
+
+                    // Resolve camera name
+                    if (cameraNames == null)
+                    {
+                        cameraNames = new Dictionary<Guid, string>();
+                        try
+                        {
+                            var allCams = Configuration.Instance.GetItemsByKind(Kind.Camera);
+                            if (allCams != null)
+                            {
+                                foreach (var cam in allCams)
+                                    cameraNames[cam.FQID.ObjectId] = cam.Name;
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (cameraNames.TryGetValue(camId, out var name))
+                        _panes[i].CameraName = name;
+                    else
+                        _panes[i].CameraName = camId.ToString().Substring(0, 8) + "...";
+                }
+            }
+            catch
+            {
+                // Best-effort: if we can't read camera data, panes just show slot numbers
+            }
+        }
+
+        #endregion
+
+        #region Button Handlers
+
+        private void OnNewClick(object sender, RoutedEventArgs e)
+        {
+            _panes.Clear();
+            _selectedPane = null;
+            _nextPaneId = 1;
+            _isEditMode = false;
+            _editingView = null;
+            _editingParent = null;
+            _originalSlotCount = 0;
+            _targetFolder = null;
+            viewNameBox.Text = "";
+            folderLabel.Text = "(none selected)";
+            RedrawCanvas();
+            UpdateStatus();
+        }
+
+        private void OnOpenClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var browser = new ViewBrowserWindow(BrowseMode.SelectView);
+                browser.Owner = Application.Current.MainWindow;
+                if (browser.ShowDialog() == true && browser.SelectedItem != null)
+                {
+                    var view = browser.SelectedItem as ViewAndLayoutItem;
+                    if (view == null)
+                    {
+                        // Try casting via ConfigItem
+                        MessageBox.Show("Selected item is not a view layout.", "FlexView",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    LoadViewForEditing(view, browser.SelectedParent);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open view:\n{ex.Message}", "FlexView",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnClearClick(object sender, RoutedEventArgs e)
+        {
+            if (_panes.Count == 0) return;
+
+            var result = MessageBox.Show("Clear all panes?", "FlexView",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result == MessageBoxResult.Yes)
+            {
+                _panes.Clear();
+                _selectedPane = null;
+                _nextPaneId = 1;
+                RedrawCanvas();
+                UpdateStatus();
+            }
+        }
+
+        private void OnSelectFolderClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var browser = new ViewBrowserWindow(BrowseMode.SelectFolder);
+                browser.Owner = Application.Current.MainWindow;
+                if (browser.ShowDialog() == true && browser.SelectedItem != null)
+                {
+                    _targetFolder = browser.SelectedItem;
+                    folderLabel.Text = browser.SelectedItem.Name;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to browse folders:\n{ex.Message}", "FlexView",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnSaveClick(object sender, RoutedEventArgs e)
+        {
+            if (_isEditMode)
+                SaveEditedView();
+            else
+                SaveNewView();
+        }
+
+        #endregion
+    }
+}

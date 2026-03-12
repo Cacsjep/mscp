@@ -1,0 +1,107 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="FlexView.Client.FlexViewViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="700"
+    d:DesignWidth="900"
+    Focusable="True"
+    PreviewKeyDown="OnPreviewKeyDown">
+    <Grid Background="#FF1C2326">
+        <Grid.Resources>
+            <Style x:Key="ToolButton" TargetType="Button">
+                <Setter Property="Background" Value="#FF3A3F44"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderBrush" Value="#FF555555"/>
+                <Setter Property="Padding" Value="12,6"/>
+                <Setter Property="MinHeight" Value="28"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="12"/>
+            </Style>
+            <Style x:Key="AccentButton" TargetType="Button">
+                <Setter Property="Background" Value="#FF238636"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderBrush" Value="#FF2EA043"/>
+                <Setter Property="Padding" Value="14,6"/>
+                <Setter Property="MinHeight" Value="28"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+        </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header toolbar -->
+        <Border Grid.Row="0" Background="#FF252A2E" Padding="12,8" BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="FlexView" Foreground="White" FontSize="16" FontWeight="Bold"
+                               VerticalAlignment="Center" Margin="0,0,20,0"/>
+                    <Button Content="&#x2795; New" Style="{StaticResource ToolButton}"
+                            Click="OnNewClick" Margin="0,0,4,0"/>
+                    <Button Content="&#x1F4C2; Open View" Style="{StaticResource ToolButton}"
+                            Click="OnOpenClick" Margin="0,0,4,0"/>
+                    <Button Content="&#x1F5D1; Clear" Style="{StaticResource ToolButton}"
+                            Click="OnClearClick"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                            HorizontalAlignment="Right">
+                    <TextBlock x:Name="statusText" Foreground="#FF8B949E" FontSize="12"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Grid canvas area -->
+        <Border Grid.Row="1" Margin="12" Background="#FF161B22" BorderBrush="#FF30363D"
+                BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+            <Grid>
+                <!-- Hint overlay shown when no panes -->
+                <StackPanel x:Name="hintOverlay" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="Click and drag on the grid to create panes"
+                               Foreground="#FF555555" FontSize="16" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Right-click a pane to delete it  |  Drag to move  |  Drag edges to resize"
+                               Foreground="#FF444444" FontSize="12" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                </StackPanel>
+
+                <!-- The grid canvas inside a Viewbox for uniform scaling -->
+                <Viewbox Stretch="Uniform" Margin="12">
+                    <Canvas x:Name="gridCanvas" Width="800" Height="450"
+                            Background="Transparent" ClipToBounds="True"
+                            MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                            MouseMove="Canvas_MouseMove"
+                            MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                            MouseRightButtonDown="Canvas_MouseRightButtonDown"/>
+                </Viewbox>
+            </Grid>
+        </Border>
+
+        <!-- Bottom save bar -->
+        <Border Grid.Row="2" Background="#FF252A2E" Padding="12,8" BorderBrush="#FF30363D" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Save View" Style="{StaticResource AccentButton}"
+                        Click="OnSaveClick" Margin="8,0,0,0"/>
+                <Button DockPanel.Dock="Right" Content="Select Folder" Style="{StaticResource ToolButton}"
+                        Click="OnSelectFolderClick"/>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Name:" Foreground="#FFB0B0B0" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+                    <TextBox x:Name="viewNameBox" Width="180" Background="#FF0D1117" Foreground="White"
+                             BorderBrush="#FF30363D" Padding="6,4" FontSize="12" Margin="0,0,16,0"
+                             VerticalContentAlignment="Center"/>
+                    <TextBlock Text="Folder:" Foreground="#FFB0B0B0" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+                    <TextBlock x:Name="folderLabel" Foreground="#FF58A6FF" VerticalAlignment="Center"
+                               FontSize="12" Text="(none selected)"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</external:ViewItemWpfUserControl>

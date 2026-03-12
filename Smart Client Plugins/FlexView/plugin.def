@@ -1,0 +1,4 @@
+<plugin>
+   <file name="FlexView.dll"/>
+   <load env="SmartClient"/>
+</plugin>
