@@ -189,6 +189,9 @@ namespace Auditor.Admin
             CurrentItem.Properties["TriggerExport"] = "Yes";
             CurrentItem.Properties["TriggerIndependentPlayback"] = "Yes";
             CurrentItem.Properties["Enabled"] = "Yes";
+            CurrentItem.Properties["SpecifyCameras"] = "No";
+            CurrentItem.Properties["CameraIds"] = "";
+            CurrentItem.Properties["CameraNames"] = "";
 
             if (_userControl != null)
                 _userControl.FillContent(CurrentItem);

@@ -34,6 +34,8 @@ namespace Auditor.Client
 
         // Audit rule config - cached matched rule for current user
         private Item _cachedRule;
+        private bool _cachedSpecifyCameras;
+        private HashSet<Guid> _cachedCameraIds = new HashSet<Guid>();
 
         private static readonly PluginLog _log = new PluginLog("SC Auditor");
         private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
@@ -104,8 +106,25 @@ namespace Auditor.Client
 
                 _cachedRule = matched;
 
+                _cachedCameraIds.Clear();
+                _cachedSpecifyCameras = false;
                 if (matched != null)
-                    _log.Info($"Matched audit rule '{matched.Name}' for user '{currentUser}'");
+                {
+                    _cachedSpecifyCameras = matched.Properties.ContainsKey("SpecifyCameras") && matched.Properties["SpecifyCameras"] == "Yes";
+                    if (_cachedSpecifyCameras)
+                    {
+                        var cameraIds = matched.Properties.ContainsKey("CameraIds") ? matched.Properties["CameraIds"] : "";
+                        foreach (var idStr in cameraIds.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            if (Guid.TryParse(idStr.Trim(), out var id))
+                                _cachedCameraIds.Add(id);
+                        }
+                    }
+                }
+
+                if (matched != null)
+                    _log.Info($"Matched audit rule '{matched.Name}' for user '{currentUser}'" +
+                        (_cachedSpecifyCameras ? $" (cameras: {_cachedCameraIds.Count})" : " (all cameras)"));
                 else
                     _log.Info($"No matching audit rule for user '{currentUser ?? "(unknown)"}'");
             }
@@ -180,6 +199,49 @@ namespace Auditor.Client
             return null;
         }
 
+        #region Camera Filtering
+
+        private List<Guid> GetAllCameraIdsInView()
+        {
+            var ids = new List<Guid>();
+            lock (_imageViewers)
+            {
+                foreach (var viewer in _imageViewers)
+                {
+                    try
+                    {
+                        if (viewer.CameraFQID != null && !ids.Contains(viewer.CameraFQID.ObjectId))
+                            ids.Add(viewer.CameraFQID.ObjectId);
+                    }
+                    catch { }
+                }
+            }
+            return ids;
+        }
+
+        private bool ShouldAuditForCameras()
+        {
+            if (!_cachedSpecifyCameras) return true;
+            if (_cachedCameraIds.Count == 0) return false;
+
+            var idsInView = GetAllCameraIdsInView();
+            foreach (var id in idsInView)
+            {
+                if (_cachedCameraIds.Contains(id))
+                    return true;
+            }
+            return false;
+        }
+
+        private bool ShouldAuditForCamera(FQID cameraFqid)
+        {
+            if (!_cachedSpecifyCameras) return true;
+            if (cameraFqid == null) return true;
+            return _cachedCameraIds.Contains(cameraFqid.ObjectId);
+        }
+
+        #endregion
+
         #region Mode Changed
 
         private string _pendingMode;
@@ -244,8 +306,9 @@ namespace Auditor.Client
                 _log.Info("Mode changed to Playback");
                 var rule = _cachedRule;
                 string reason = null;
-                bool promptEnabled = rule != null && (!rule.Properties.ContainsKey("PromptPlayback") || rule.Properties["PromptPlayback"] == "Yes");
-                bool triggerEnabled = rule != null && (!rule.Properties.ContainsKey("TriggerPlayback") || rule.Properties["TriggerPlayback"] == "Yes");
+                bool camerasMatch = rule != null && ShouldAuditForCameras();
+                bool promptEnabled = camerasMatch && (!rule.Properties.ContainsKey("PromptPlayback") || rule.Properties["PromptPlayback"] == "Yes");
+                bool triggerEnabled = camerasMatch && (!rule.Properties.ContainsKey("TriggerPlayback") || rule.Properties["TriggerPlayback"] == "Yes");
                 if (promptEnabled)
                 {
                     _log.Info("Showing playback reason prompt (rule matched)");
@@ -325,8 +388,9 @@ namespace Auditor.Client
                 _log.Info("Entered Export workspace");
                 var rule = _cachedRule;
                 string reason = null;
-                bool promptEnabled = rule != null && (!rule.Properties.ContainsKey("PromptExport") || rule.Properties["PromptExport"] == "Yes");
-                bool triggerEnabled = rule != null && (!rule.Properties.ContainsKey("TriggerExport") || rule.Properties["TriggerExport"] == "Yes");
+                bool camerasMatch = rule != null && ShouldAuditForCameras();
+                bool promptEnabled = camerasMatch && (!rule.Properties.ContainsKey("PromptExport") || rule.Properties["PromptExport"] == "Yes");
+                bool triggerEnabled = camerasMatch && (!rule.Properties.ContainsKey("TriggerExport") || rule.Properties["TriggerExport"] == "Yes");
                 if (promptEnabled)
                 {
                     _log.Info("Showing export reason prompt (rule matched)");
@@ -388,8 +452,9 @@ namespace Auditor.Client
                 }
                 var rule = _cachedRule;
                 string reason = null;
-                bool promptEnabled = rule != null && (!rule.Properties.ContainsKey("PromptIndependentPlayback") || rule.Properties["PromptIndependentPlayback"] == "Yes");
-                bool triggerEnabled = rule != null && (!rule.Properties.ContainsKey("TriggerIndependentPlayback") || rule.Properties["TriggerIndependentPlayback"] == "Yes");
+                bool camerasMatch = rule != null && ShouldAuditForCamera(viewer.CameraFQID);
+                bool promptEnabled = camerasMatch && (!rule.Properties.ContainsKey("PromptIndependentPlayback") || rule.Properties["PromptIndependentPlayback"] == "Yes");
+                bool triggerEnabled = camerasMatch && (!rule.Properties.ContainsKey("TriggerIndependentPlayback") || rule.Properties["TriggerIndependentPlayback"] == "Yes");
                 if (promptEnabled)
                 {
                     _log.Info("Showing independent playback reason prompt (rule matched)");
