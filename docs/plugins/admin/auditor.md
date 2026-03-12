@@ -9,12 +9,20 @@ Audit user access to recorded video in XProtect. Tracks playback mode changes, e
 1. Open the **Management Client**
 2. Navigate to the **Auditor** node in the sidebar
 3. Create a new **Audit Rule**
-4. Give the rule a name, select users to monitor, configure reason prompts and event triggers
-5. Save the rule
+4. Give the rule a name, select users to monitor
+5. Optionally enable **Specify Cameras** to restrict the rule to specific cameras
+6. Configure reason prompts and event triggers
+7. Save the rule
 
 <video controls width="100%">
   <source src="../vids/auditor.mp4" type="video/mp4">
 </video>
+
+## Camera Selection
+
+By default, audit rules apply to **all cameras**. To restrict a rule to specific cameras, enable the **Specify Cameras** checkbox and add cameras using the camera picker.
+
+When enabled, reason prompts and event triggers only fire when the user interacts with one of the listed cameras.
 
 ## Reason Prompts (Audit Log)
 
@@ -56,5 +64,6 @@ The plugin runs across three environments:
 | Reason prompt not showing | Check that the user matches a rule with the relevant reason prompt enabled |
 | Events not in alarm list | Verify the Event Server is running and the plugin is loaded |
 | Audit log entries missing | Ensure reason prompts are enabled - audit log entries are only written when a reason is provided |
+| Rule not triggering for specific cameras | If **Specify Cameras** is enabled, verify the relevant cameras are added to the rule's camera list |
 
 </div>

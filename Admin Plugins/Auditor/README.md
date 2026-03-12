@@ -5,6 +5,7 @@ Audit user access to recorded video in Milestone XProtect. Tracks playback mode 
 ## Features
 
 - Per-user audit rules configured in the Management Client
+- **Camera Selection** - optionally restrict audit rules to specific cameras
 - **Reason Prompts** - force users to provide a reason, written to the Milestone audit log
 - **Event Triggers** - fire XProtect analytics events for use in rules, alarms, and notifications
 - Reason prompts and event triggers are independently configurable per activity
@@ -27,8 +28,13 @@ Restart the Smart Client, Management Client, and Event Server.
 2. Navigate to the **Auditor** node in the sidebar
 3. Create a new **Audit Rule**
 4. Give the rule a name and select the users to monitor
-5. Configure which reason prompts and event triggers to enable
-6. Save the rule
+5. Optionally enable **Specify Cameras** to restrict the rule to specific cameras
+6. Configure which reason prompts and event triggers to enable
+7. Save the rule
+
+## Camera Selection
+
+By default, audit rules apply to all cameras. Enable **Specify Cameras** on a rule to restrict it to specific cameras. When enabled, reason prompts and event triggers only fire when the user interacts with one of the listed cameras.
 
 ## Reason Prompts (Audit Log)
 

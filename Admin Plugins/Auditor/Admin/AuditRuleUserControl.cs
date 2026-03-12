@@ -6,6 +6,7 @@ using System.Threading;
 using System.Windows.Forms;
 using VideoOS.Platform;
 using VideoOS.Platform.ConfigurationItems;
+using VideoOS.Platform.UI;
 
 namespace Auditor.Admin
 {
@@ -34,6 +35,14 @@ namespace Auditor.Admin
         private CheckBox _chkEnabled;
 
         private List<string> _allUsers = new List<string>();
+        private CheckBox _chkSpecifyCameras;
+        private Label _lblSpecifyCamerasDesc;
+        private GroupBox _grpCameras;
+        private ListBox _lstCameras;
+        private Button _btnAddCamera;
+        private Button _btnRemoveCamera;
+        private List<(Guid Id, string Name)> _selectedCameras = new List<(Guid, string)>();
+
         private bool _filling;
         private readonly PluginLog _log = new PluginLog("Admin Auditor - AuditRule UC");
 
@@ -42,6 +51,7 @@ namespace Auditor.Admin
         public AuditRuleUserControl()
         {
             InitializeComponent();
+            SetupCameraControls();
             _txtName.TextChanged += OnUserChange;
             _btnRefresh.Click += OnBtnRefreshClick;
             _lstUsers.ItemCheck += OnLstUsersItemCheck;
@@ -346,6 +356,127 @@ namespace Auditor.Admin
 
         }
 
+        private void SetupCameraControls()
+        {
+            _grpCameras = new GroupBox
+            {
+                Location = new System.Drawing.Point(15, 220),
+                Size = new System.Drawing.Size(458, 40),
+                TabIndex = 10,
+                TabStop = false,
+                Text = "Camera Selection",
+            };
+
+            _chkSpecifyCameras = new CheckBox
+            {
+                AutoSize = true,
+                Location = new System.Drawing.Point(10, 22),
+                Text = "Specify Cameras",
+                TabIndex = 0,
+            };
+
+            _lblSpecifyCamerasDesc = new Label
+            {
+                AutoSize = true,
+                ForeColor = System.Drawing.SystemColors.ControlDarkDark,
+                Location = new System.Drawing.Point(27, 42),
+                Text = "When enabled, auditing only applies to the listed cameras.",
+                TabIndex = 1,
+            };
+
+            _lstCameras = new ListBox
+            {
+                Location = new System.Drawing.Point(10, 62),
+                Size = new System.Drawing.Size(438, 90),
+                TabIndex = 2,
+            };
+
+            _btnAddCamera = new Button
+            {
+                Location = new System.Drawing.Point(10, 155),
+                Size = new System.Drawing.Size(100, 23),
+                Text = "Add Camera...",
+                TabIndex = 3,
+            };
+
+            _btnRemoveCamera = new Button
+            {
+                Location = new System.Drawing.Point(116, 155),
+                Size = new System.Drawing.Size(70, 23),
+                Text = "Remove",
+                TabIndex = 4,
+            };
+
+            _grpCameras.Controls.Add(_chkSpecifyCameras);
+            _grpCameras.Controls.Add(_lblSpecifyCamerasDesc);
+            _grpCameras.Controls.Add(_lstCameras);
+            _grpCameras.Controls.Add(_btnAddCamera);
+            _grpCameras.Controls.Add(_btnRemoveCamera);
+
+            Controls.Add(_grpCameras);
+
+            _chkSpecifyCameras.CheckedChanged += OnSpecifyCamerasChanged;
+            _btnAddCamera.Click += OnBtnAddCameraClick;
+            _btnRemoveCamera.Click += OnBtnRemoveCameraClick;
+
+            UpdateCameraGroupLayout();
+        }
+
+        private void UpdateCameraGroupLayout()
+        {
+            bool expanded = _chkSpecifyCameras.Checked;
+            _lblSpecifyCamerasDesc.Visible = expanded;
+            _lstCameras.Visible = expanded;
+            _btnAddCamera.Visible = expanded;
+            _btnRemoveCamera.Visible = expanded;
+            _grpCameras.Height = expanded ? 185 : 45;
+
+            _grpReasonPrompts.Top = _grpCameras.Bottom + 9;
+            _grpEventTriggers.Top = _grpReasonPrompts.Bottom + 9;
+            _chkEnabled.Top = _grpEventTriggers.Bottom + 11;
+            this.Height = _chkEnabled.Bottom + 15;
+        }
+
+        private void OnSpecifyCamerasChanged(object sender, EventArgs e)
+        {
+            UpdateCameraGroupLayout();
+            if (!_filling)
+                ConfigurationChangedByUser?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnBtnAddCameraClick(object sender, EventArgs e)
+        {
+            var form = new ItemPickerWpfWindow
+            {
+                Items = Configuration.Instance.GetItemsByKind(Kind.Camera),
+                KindsFilter = new List<Guid> { Kind.Camera },
+                SelectionMode = SelectionModeOptions.AutoCloseOnSelect,
+            };
+
+            if (form.ShowDialog() == true && form.SelectedItems != null && form.SelectedItems.Any())
+            {
+                var selected = form.SelectedItems.First();
+                var id = selected.FQID.ObjectId;
+                if (!_selectedCameras.Any(c => c.Id == id))
+                {
+                    _selectedCameras.Add((id, selected.Name));
+                    _lstCameras.Items.Add(selected.Name);
+                    OnUserChange(sender, e);
+                }
+            }
+        }
+
+        private void OnBtnRemoveCameraClick(object sender, EventArgs e)
+        {
+            var idx = _lstCameras.SelectedIndex;
+            if (idx >= 0)
+            {
+                _selectedCameras.RemoveAt(idx);
+                _lstCameras.Items.RemoveAt(idx);
+                OnUserChange(sender, e);
+            }
+        }
+
         private void LoadUsersAsync()
         {
             _btnRefresh.Enabled = false;
@@ -479,6 +610,32 @@ namespace Auditor.Admin
                 _chkTriggerExport.Checked = !item.Properties.ContainsKey("TriggerExport") || item.Properties["TriggerExport"] == "Yes";
                 _chkTriggerIndependentPlayback.Checked = !item.Properties.ContainsKey("TriggerIndependentPlayback") || item.Properties["TriggerIndependentPlayback"] == "Yes";
                 _chkEnabled.Checked = !item.Properties.ContainsKey("Enabled") || item.Properties["Enabled"] == "Yes";
+
+                // Camera selection
+                _chkSpecifyCameras.Checked = item.Properties.ContainsKey("SpecifyCameras") && item.Properties["SpecifyCameras"] == "Yes";
+
+                _selectedCameras.Clear();
+                _lstCameras.Items.Clear();
+                var cameraIds = item.Properties.ContainsKey("CameraIds") ? item.Properties["CameraIds"] : "";
+                var cameraNames = item.Properties.ContainsKey("CameraNames") ? item.Properties["CameraNames"] : "";
+                var ids = cameraIds.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                var names = cameraNames.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    if (Guid.TryParse(ids[i].Trim(), out var camId))
+                    {
+                        var camName = i < names.Length ? names[i].Trim() : "(unknown)";
+                        try
+                        {
+                            var camItem = Configuration.Instance.GetItem(camId, Kind.Camera);
+                            if (camItem != null) camName = camItem.Name;
+                        }
+                        catch { }
+                        _selectedCameras.Add((camId, camName));
+                        _lstCameras.Items.Add(camName);
+                    }
+                }
+                UpdateCameraGroupLayout();
             }
             finally
             {
@@ -502,6 +659,11 @@ namespace Auditor.Admin
                 _chkTriggerExport.Checked = true;
                 _chkTriggerIndependentPlayback.Checked = true;
                 _chkEnabled.Checked = true;
+
+                _chkSpecifyCameras.Checked = false;
+                _selectedCameras.Clear();
+                _lstCameras.Items.Clear();
+                UpdateCameraGroupLayout();
             }
             finally
             {
@@ -529,6 +691,19 @@ namespace Auditor.Admin
             item.Properties["TriggerExport"] = _chkTriggerExport.Checked ? "Yes" : "No";
             item.Properties["TriggerIndependentPlayback"] = _chkTriggerIndependentPlayback.Checked ? "Yes" : "No";
             item.Properties["Enabled"] = _chkEnabled.Checked ? "Yes" : "No";
+
+            // Auto-disable camera filter when list is empty
+            var specifyCameras = _chkSpecifyCameras.Checked && _selectedCameras.Count > 0;
+            if (_chkSpecifyCameras.Checked && _selectedCameras.Count == 0)
+            {
+                _filling = true;
+                _chkSpecifyCameras.Checked = false;
+                UpdateCameraGroupLayout();
+                _filling = false;
+            }
+            item.Properties["SpecifyCameras"] = specifyCameras ? "Yes" : "No";
+            item.Properties["CameraIds"] = string.Join(";", _selectedCameras.Select(c => c.Id.ToString()));
+            item.Properties["CameraNames"] = string.Join(";", _selectedCameras.Select(c => c.Name));
         }
     }
 }
