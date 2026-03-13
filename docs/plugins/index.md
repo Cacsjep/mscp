@@ -91,6 +91,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-ballot"></i></div>
     <div class="pt"><span class="pn">Smart Bar</span><span class="pd">A hotkey-opened command palette for quickly finding and launching cameras, views, commands, and programs with keyboard control, recent items, and undo history.</span></div>
   </a>
+  <a class="pr" href="smart-client/flexview/">
+    <div class="pi sc"><i class="mdi mdi-grid"></i></div>
+    <div class="pt"><span class="pn">Flex View</span><span class="pd">Freeform view layout designer.</span></div>
+  </a>
 </div>
 
 ### Device Drivers

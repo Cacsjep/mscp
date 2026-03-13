@@ -23,6 +23,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [Auditor](Admin%20Plugins/Auditor) | Admin Plugin | Audit user access to recorded video with per-user rules and reason prompts |
 | [HttpRequests](Admin%20Plugins/HttpRequests) | Admin Plugin | Configure and execute HTTP requests as rule actions with custom payloads and flexible authentication |
 | [SmartBar](Smart%20Client%20Plugins/SmartBar) | Smart Client | Command palette for quickly finding and launching cameras, views, commands, events, outputs and programs |
+| [FlexView](Smart%20Client%20Plugins/FlexView) | Smart Client | Freeform grid-based view layout designer with drag-and-drop pane creation |
 
 ## Installation
 
@@ -54,7 +55,8 @@ mscp/
 │   ├── Notepad/                   Notepad view item plugin
 │   ├── SnapReport/                Camera snapshot PDF report generator
 │   ├── MonitorRTMPStreamer/        Desktop monitor RTMP streaming
-│   └── SmartBar/                  Workspace toolbar plugin
+│   ├── SmartBar/                  Workspace toolbar plugin
+│   └── FlexView/                  Freeform grid view layout designer
 ├── Device Drivers/
 │   └── Rtmp/                      RTMP push stream driver
 ├── Admin Plugins/

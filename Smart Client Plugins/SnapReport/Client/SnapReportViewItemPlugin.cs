@@ -9,6 +9,7 @@ namespace SnapReport.Client
         public override Guid Id => SnapReportDefinition.ViewItemPluginId;
 
         public override string Name => "SnapReport";
+        public override bool HideSetupItem => true;
 
         public override VideoOSIconSourceBase IconSource
         {
