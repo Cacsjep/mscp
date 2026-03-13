@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-03-13
+
+- Add: Flex View
+
 ## [1.4.3] - 2026-03-12
 
 - Improve: Auditor - Introduce optional camera filtering for audit rules.
