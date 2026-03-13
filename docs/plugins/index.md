@@ -93,7 +93,7 @@ hide:
   </a>
   <a class="pr" href="smart-client/flexview/">
     <div class="pi sc"><i class="mdi mdi-grid"></i></div>
-    <div class="pt"><span class="pn">FlexView</span><span class="pd">Freeform 12x12 grid view layout designer with drag-and-drop pane creation, resizing, and editing of existing views</span></div>
+    <div class="pt"><span class="pn">Flex View</span><span class="pd">Freeform view layout designer.</span></div>
   </a>
 </div>
 
