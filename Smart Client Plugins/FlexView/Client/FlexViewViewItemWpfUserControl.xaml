@@ -86,6 +86,8 @@
 <Button Content="&#x1F4BE; Save" Style="{StaticResource AccentButton}"
                             Click="OnSaveClick"/>
                 </StackPanel>
+                <TextBlock x:Name="viewNameLabel" Foreground="#FF58A6FF" FontSize="12"
+                           VerticalAlignment="Center" HorizontalAlignment="Left" FontWeight="SemiBold"/>
                 <TextBlock x:Name="statusText" Foreground="#FF8B949E" FontSize="12"
                            VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </Grid>

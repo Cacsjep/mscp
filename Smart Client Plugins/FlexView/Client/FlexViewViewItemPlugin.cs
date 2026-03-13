@@ -8,6 +8,7 @@ namespace FlexView.Client
     {
         public override Guid Id => FlexViewDefinition.ViewItemPluginId;
         public override string Name => "FlexView";
+        public override bool HideSetupItem => true;
 
         public override VideoOSIconSourceBase IconSource
         {

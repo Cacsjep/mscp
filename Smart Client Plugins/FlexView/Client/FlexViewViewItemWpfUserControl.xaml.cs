@@ -15,8 +15,8 @@ namespace FlexView.Client
 {
     public partial class FlexViewViewItemWpfUserControl : ViewItemWpfUserControl
     {
-        private const int GridCols = 48;
-        private const int GridRows = 27;
+        private const int GridCols = 60;
+        private const int GridRows = 60;
         private const double CanvasWidth = 800.0;
         private const double CanvasHeight = 450.0;
         private const double CellWidth = CanvasWidth / GridCols;   // 50.0
@@ -27,19 +27,19 @@ namespace FlexView.Client
         // Brushes
         private static readonly SolidColorBrush GridLineBrush = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
         private static readonly SolidColorBrush GridLineAccentBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
-        private static readonly SolidColorBrush PaneFill = new SolidColorBrush(Color.FromArgb(50, 160, 160, 160));
-        private static readonly SolidColorBrush PaneBorder = new SolidColorBrush(Color.FromRgb(120, 120, 120));
-        private static readonly SolidColorBrush PaneHoverFill = new SolidColorBrush(Color.FromArgb(70, 180, 180, 180));
-        private static readonly SolidColorBrush PaneHoverBorder = new SolidColorBrush(Color.FromRgb(160, 160, 160));
-        private static readonly SolidColorBrush SelectedFill = new SolidColorBrush(Color.FromArgb(80, 200, 200, 200));
-        private static readonly SolidColorBrush SelectedBorder = new SolidColorBrush(Color.FromRgb(190, 190, 190));
+        private static readonly SolidColorBrush PaneFill = new SolidColorBrush(Color.FromArgb(50, 40, 40, 40));
+        private static readonly SolidColorBrush PaneBorder = new SolidColorBrush(Color.FromRgb(80, 80, 80));
+        private static readonly SolidColorBrush PaneHoverFill = new SolidColorBrush(Color.FromArgb(70, 60, 60, 60));
+        private static readonly SolidColorBrush PaneHoverBorder = new SolidColorBrush(Color.FromRgb(110, 110, 110));
+        private static readonly SolidColorBrush SelectedFill = new SolidColorBrush(Color.FromArgb(80, 80, 80, 80));
+        private static readonly SolidColorBrush SelectedBorder = new SolidColorBrush(Color.FromRgb(140, 140, 140));
         private static readonly SolidColorBrush PreviewFill = new SolidColorBrush(Color.FromArgb(60, 88, 166, 255));
         private static readonly SolidColorBrush PreviewBorder = new SolidColorBrush(Color.FromRgb(88, 166, 255));
         private static readonly SolidColorBrush OverlapFill = new SolidColorBrush(Color.FromArgb(80, 248, 81, 73));
         private static readonly SolidColorBrush OverlapBorder = new SolidColorBrush(Color.FromRgb(248, 81, 73));
-        private static readonly SolidColorBrush CameraLabelBrush = new SolidColorBrush(Color.FromRgb(63, 185, 80));
-        private static readonly SolidColorBrush ResizeHandleFill = new SolidColorBrush(Color.FromRgb(66, 133, 244));
-        private static readonly SolidColorBrush ResizeHandleBorder = new SolidColorBrush(Color.FromRgb(100, 160, 255));
+        private static readonly SolidColorBrush CameraLabelBrush = new SolidColorBrush(Color.FromRgb(88, 166, 255));
+        private static readonly SolidColorBrush ResizeHandleFill = new SolidColorBrush(Color.FromRgb(160, 160, 160));
+        private static readonly SolidColorBrush ResizeHandleBorder = new SolidColorBrush(Color.FromRgb(100, 100, 100));
 
         // Pane state
         private readonly List<GridPane> _panes = new List<GridPane>();
@@ -174,19 +174,6 @@ namespace FlexView.Client
                 Canvas.SetTop(rect, y + 1);
                 gridCanvas.Children.Add(rect);
 
-                // Slot number label
-                var slotLabel = new TextBlock
-                {
-                    Text = pane.Id.ToString(),
-                    Foreground = Brushes.White,
-                    FontSize = w > 80 && h > 60 ? 18 : 12,
-                    FontWeight = FontWeights.Bold,
-                    Opacity = 0.7
-                };
-                Canvas.SetLeft(slotLabel, x + 6);
-                Canvas.SetTop(slotLabel, y + 4);
-                gridCanvas.Children.Add(slotLabel);
-
                 // Camera name (if editing existing view)
                 if (!string.IsNullOrEmpty(pane.CameraName) && w > 60 && h > 40)
                 {
@@ -221,9 +208,9 @@ namespace FlexView.Client
                 }
 
                 // Resize handle (bottom-right corner only)
-                if (isSelected)
+                if (isSelected || isHovered)
                 {
-                    DrawResizeHandle(x + w - 14, y + h - 14);
+                    DrawResizeHandle(x + w - 7, y + h - 7);
                 }
             }
         }
@@ -234,14 +221,14 @@ namespace FlexView.Client
             {
                 Points = new PointCollection
                 {
-                    new Point(0, 12),
-                    new Point(12, 12),
-                    new Point(12, 0)
+                    new Point(0, 5),
+                    new Point(5, 5),
+                    new Point(5, 0)
                 },
                 Fill = ResizeHandleFill,
                 Stroke = ResizeHandleBorder,
-                StrokeThickness = 1,
-                Opacity = 0.8
+                StrokeThickness = 0.5,
+                Opacity = 0.7
             };
             Canvas.SetLeft(handle, x);
             Canvas.SetTop(handle, y);
@@ -658,6 +645,31 @@ namespace FlexView.Client
             return _panes.Any(other => other != pane && pane.Overlaps(other));
         }
 
+        // Find the grid column whose SDK X (SdkMax * col / GridCols) is closest to sdkX
+        private static int ClosestGridCol(int sdkX)
+        {
+            int best = 0;
+            int bestDist = int.MaxValue;
+            for (int c = 0; c <= GridCols; c++)
+            {
+                int dist = Math.Abs(SdkMax * c / GridCols - sdkX);
+                if (dist < bestDist) { bestDist = dist; best = c; }
+            }
+            return Math.Min(best, GridCols);
+        }
+
+        private static int ClosestGridRow(int sdkY)
+        {
+            int best = 0;
+            int bestDist = int.MaxValue;
+            for (int r = 0; r <= GridRows; r++)
+            {
+                int dist = Math.Abs(SdkMax * r / GridRows - sdkY);
+                if (dist < bestDist) { bestDist = dist; best = r; }
+            }
+            return Math.Min(best, GridRows);
+        }
+
         private void RenumberPanes()
         {
             for (int i = 0; i < _panes.Count; i++)
@@ -703,11 +715,11 @@ namespace FlexView.Client
             for (int i = 0; i < ordered.Count; i++)
             {
                 var p = ordered[i];
-                rects[i] = new SdkRectangle(
-                    SdkMax * p.Col / GridCols,
-                    SdkMax * p.Row / GridRows,
-                    SdkMax * p.ColSpan / GridCols,
-                    SdkMax * p.RowSpan / GridRows);
+                int x = SdkMax * p.Col / GridCols;
+                int y = SdkMax * p.Row / GridRows;
+                int x2 = SdkMax * (p.Col + p.ColSpan) / GridCols;
+                int y2 = SdkMax * (p.Row + p.RowSpan) / GridRows;
+                rects[i] = new SdkRectangle(x, y, x2 - x, y2 - y);
             }
             return rects;
         }
@@ -720,10 +732,13 @@ namespace FlexView.Client
             for (int i = 0; i < layout.Length; i++)
             {
                 var rect = layout[i];
-                int col = (int)Math.Round((double)rect.X * GridCols / SdkMax);
-                int row = (int)Math.Round((double)rect.Y * GridRows / SdkMax);
-                int colSpan = Math.Max(1, (int)Math.Round((double)rect.Width * GridCols / SdkMax));
-                int rowSpan = Math.Max(1, (int)Math.Round((double)rect.Height * GridRows / SdkMax));
+                // Find closest grid column/row whose SDK coordinate matches
+                int col = ClosestGridCol(rect.X);
+                int row = ClosestGridRow(rect.Y);
+                int colEnd = ClosestGridCol(rect.X + rect.Width);
+                int rowEnd = ClosestGridRow(rect.Y + rect.Height);
+                int colSpan = Math.Max(2, colEnd - col);
+                int rowSpan = Math.Max(2, rowEnd - row);
 
                 col = Math.Max(0, Math.Min(col, GridCols - 1));
                 row = Math.Max(0, Math.Min(row, GridRows - 1));
@@ -814,6 +829,7 @@ namespace FlexView.Client
             TryReadCameraData(view);
 
             _targetFolder = parent;
+            viewNameLabel.Text = view.Name;
 
             RedrawCanvas();
             UpdateStatus();
@@ -829,8 +845,6 @@ namespace FlexView.Client
                 var children = configItem.GetChildren();
                 if (children == null || children.Count == 0) return;
 
-                Dictionary<Guid, string> cameraNames = null;
-
                 for (int i = 0; i < children.Count && i < _panes.Count; i++)
                 {
                     var child = children[i];
@@ -842,24 +856,39 @@ namespace FlexView.Client
 
                     _panes[i].CameraId = camId;
 
-                    if (cameraNames == null)
+                    // Try to resolve camera name via FQID
+                    try
                     {
-                        cameraNames = new Dictionary<Guid, string>();
-                        try
+                        var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
+                        var fqid = new FQID(serverId, Guid.Empty, camId, FolderType.No, Kind.Camera);
+                        var camItem = Configuration.Instance.GetItem(fqid);
+                        if (camItem != null && !string.IsNullOrEmpty(camItem.Name))
                         {
-                            var allCams = Configuration.Instance.GetItemsByKind(Kind.Camera);
-                            if (allCams != null)
+                            _panes[i].CameraName = camItem.Name;
+                            continue;
+                        }
+                    }
+                    catch { }
+
+                    // Fallback: try GetItemsByKind
+                    try
+                    {
+                        var allCams = Configuration.Instance.GetItemsByKind(Kind.Camera);
+                        if (allCams != null)
+                        {
+                            foreach (var cam in allCams)
                             {
-                                foreach (var cam in allCams)
-                                    cameraNames[cam.FQID.ObjectId] = cam.Name;
+                                if (cam.FQID.ObjectId == camId)
+                                {
+                                    _panes[i].CameraName = cam.Name;
+                                    break;
+                                }
                             }
                         }
-                        catch { }
                     }
+                    catch { }
 
-                    if (cameraNames.TryGetValue(camId, out var name))
-                        _panes[i].CameraName = name;
-                    else
+                    if (string.IsNullOrEmpty(_panes[i].CameraName))
                         _panes[i].CameraName = camId.ToString().Substring(0, 8) + "...";
                 }
             }
@@ -883,6 +912,7 @@ namespace FlexView.Client
             _editingParent = null;
             _originalSlotCount = 0;
             _targetFolder = null;
+            viewNameLabel.Text = "";
             RedrawCanvas();
             UpdateStatus();
         }

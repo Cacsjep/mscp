@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Windows;
 using CommunitySDK;
 using FontAwesome5;
 using FlexView.Client;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
-using VideoOS.Platform.Security;
 using VideoOS.Platform.UI.Controls;
 
 namespace FlexView
@@ -25,10 +23,6 @@ namespace FlexView
 
         private readonly List<ViewItemPlugin> _viewItemPlugins = new List<ViewItemPlugin>();
         private readonly List<WorkSpacePlugin> _workSpacePlugins = new List<WorkSpacePlugin>();
-        private readonly List<SecurityAction> _securityActions = new List<SecurityAction>
-        {
-            new SecurityAction("GENERIC_READ", "Read"),
-        };
 
         static FlexViewDefinition()
         {
@@ -56,16 +50,9 @@ namespace FlexView
 
             if (env == EnvironmentType.SmartClient)
             {
-                if (HasReadPermission())
-                {
-                    _viewItemPlugins.Add(new FlexViewViewItemPlugin());
-                    _workSpacePlugins.Add(new FlexViewWorkspacePlugin());
-                    Log.Info("Registered ViewItemPlugin and WorkspacePlugin");
-                }
-                else
-                {
-                    Log.Info("User does not have FlexView read permission, skipping registration");
-                }
+                _viewItemPlugins.Add(new FlexViewViewItemPlugin());
+                _workSpacePlugins.Add(new FlexViewWorkspacePlugin());
+                Log.Info("Registered ViewItemPlugin and WorkspacePlugin");
             }
         }
 
@@ -77,24 +64,5 @@ namespace FlexView
 
         public override List<ViewItemPlugin> ViewItemPlugins => _viewItemPlugins;
         public override List<WorkSpacePlugin> WorkSpacePlugins => _workSpacePlugins;
-        public override List<SecurityAction> SecurityActions => _securityActions;
-
-        private static bool HasReadPermission()
-        {
-            try
-            {
-                SecurityAccess.CheckPermission(FlexViewPluginId, "GENERIC_READ");
-                return true;
-            }
-            catch (NotAuthorizedMIPException)
-            {
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Permission check failed: {ex}");
-                return false;
-            }
-        }
     }
 }
