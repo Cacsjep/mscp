@@ -15,6 +15,9 @@ Design custom view layouts beyond the standard view templates. FlexView provides
   <source src="../vids/flex_usage.mp4" type="video/mp4">
 </video>
 
+!!! info 
+    Install it only where you need it. There is no security control to let users show or hide this plugin, so install it only on Smart Clients where you want to give users the ability to do this.
+
 ## Creating Panes
 
 Click and drag on empty cells to create a new pane. A preview outline shows the pane dimensions while dragging. Release to place. The pane turns red if it would overlap an existing pane. Minimum pane size is 2x2 cells.
