@@ -35,17 +35,18 @@ nav:
   - Download: getting-started/installation.md
   - Plugins:
     - Admin Plugins:
-      - RTMP Streamer: plugins/admin/rtmp-streamer.md
-      - Certificate Watchdog: plugins/admin/cert-watchdog.md
       - Auditor: plugins/admin/auditor.md
+      - Certificate Watchdog: plugins/admin/cert-watchdog.md
       - HTTP Requests: plugins/admin/http-requests.md
+      - RTMP Streamer: plugins/admin/rtmp-streamer.md
     - Smart Client:
-      - Weather: plugins/smart-client/weather.md
-      - RDP: plugins/smart-client/rdp.md
-      - Notepad: plugins/smart-client/notepad.md
-      - Snapshot Report: plugins/smart-client/snapreport.md
+      - Flex Viewer: plugins/smart-client/flexview.md
       - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
+      - Notepad: plugins/smart-client/notepad.md
+      - RDP: plugins/smart-client/rdp.md
       - Smart Bar: plugins/smart-client/smartbar.md
+      - Snapshot Report: plugins/smart-client/snapreport.md
+      - Weather: plugins/smart-client/weather.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md
     - RTSP Driver: plugins/device-drivers/rtsp.md

@@ -67,33 +67,33 @@ hide:
 ### Smart Client Plugins
 
 <div class="plugin-list">
-  <a class="pr" href="smart-client/weather/">
-    <div class="pi sc"><i class="mdi mdi-weather-partly-cloudy"></i></div>
-    <div class="pt"><span class="pn">Weather</span><span class="pd">Live weather display powered by Open-Meteo</span></div>
-  </a>
-  <a class="pr" href="smart-client/rdp/">
-    <div class="pi sc"><i class="mdi mdi-remote-desktop"></i></div>
-    <div class="pt"><span class="pn">RDP</span><span class="pd">Embedded interactive Remote Desktop sessions</span></div>
-  </a>
-  <a class="pr" href="smart-client/notepad/">
-    <div class="pi sc"><i class="mdi mdi-note-text"></i></div>
-    <div class="pt"><span class="pn">Notepad</span><span class="pd">Simple text editor for operator notes</span></div>
-  </a>
-  <a class="pr" href="smart-client/snapreport/">
-    <div class="pi sc"><i class="mdi mdi-file-pdf-box"></i></div>
-    <div class="pt"><span class="pn">Snapshot Report</span><span class="pd">Camera snapshot PDF report generator</span></div>
+  <a class="pr" href="smart-client/flexview/">
+    <div class="pi sc"><i class="mdi mdi-grid"></i></div>
+    <div class="pt"><span class="pn">Flex View</span><span class="pd">Design custom view layouts beyond the standard view templates.</span></div>
   </a>
   <a class="pr" href="smart-client/monitor-rtmp-streamer/">
     <div class="pi sc"><i class="mdi mdi-monitor-share"></i></div>
     <div class="pt"><span class="pn">Monitor RTMP Streamer</span><span class="pd">Capture desktop monitors and stream via RTMP</span></div>
   </a>
+  <a class="pr" href="smart-client/notepad/">
+    <div class="pi sc"><i class="mdi mdi-note-text"></i></div>
+    <div class="pt"><span class="pn">Notepad</span><span class="pd">Simple text editor for operator notes</span></div>
+  </a>
+  <a class="pr" href="smart-client/rdp/">
+    <div class="pi sc"><i class="mdi mdi-remote-desktop"></i></div>
+    <div class="pt"><span class="pn">RDP</span><span class="pd">Embedded interactive Remote Desktop sessions</span></div>
+  </a>
   <a class="pr" href="smart-client/smartbar/">
     <div class="pi sc"><i class="mdi mdi-ballot"></i></div>
     <div class="pt"><span class="pn">Smart Bar</span><span class="pd">A hotkey-opened command palette for quickly finding and launching cameras, views, commands, and programs with keyboard control, recent items, and undo history.</span></div>
   </a>
-  <a class="pr" href="smart-client/flexview/">
-    <div class="pi sc"><i class="mdi mdi-grid"></i></div>
-    <div class="pt"><span class="pn">Flex View</span><span class="pd">Design custom view layouts beyond the standard view templates.</span></div>
+  <a class="pr" href="smart-client/snapreport/">
+    <div class="pi sc"><i class="mdi mdi-file-pdf-box"></i></div>
+    <div class="pt"><span class="pn">Snapshot Report</span><span class="pd">Camera snapshot PDF report generator</span></div>
+  </a>
+  <a class="pr" href="smart-client/weather/">
+    <div class="pi sc"><i class="mdi mdi-weather-partly-cloudy"></i></div>
+    <div class="pt"><span class="pn">Weather</span><span class="pd">Live weather display powered by Open-Meteo</span></div>
   </a>
 </div>
 
@@ -113,20 +113,20 @@ hide:
 ### Admin Plugins
 
 <div class="plugin-list">
-  <a class="pr" href="admin/rtmp-streamer/">
-    <div class="pi ap"><i class="mdi mdi-broadcast"></i></div>
-    <div class="pt"><span class="pn">RTMP Streamer</span><span class="pd">Stream cameras to RTMP destinations (YouTube, Twitch, Facebook)</span></div>
+  <a class="pr" href="admin/auditor/">
+    <div class="pi ap"><i class="mdi mdi-shield-check"></i></div>
+    <div class="pt"><span class="pn">Auditor</span><span class="pd">Audit user access to recorded video with per-user rules</span></div>
   </a>
   <a class="pr" href="admin/cert-watchdog/">
     <div class="pi ap"><i class="mdi mdi-certificate"></i></div>
     <div class="pt"><span class="pn">Certificate Watchdog</span><span class="pd">Monitor SSL certificate expiry for all HTTPS endpoints</span></div>
   </a>
-  <a class="pr" href="admin/auditor/">
-    <div class="pi ap"><i class="mdi mdi-shield-check"></i></div>
-    <div class="pt"><span class="pn">Auditor</span><span class="pd">Audit user access to recorded video with per-user rules</span></div>
-  </a>
   <a class="pr" href="admin/http-requests/">
     <div class="pi ap"><i class="mdi mdi-send"></i></div>
     <div class="pt"><span class="pn">HTTP Requests</span><span class="pd">HTTP requests actions that are more powerful and flexible.</span></div>
+  </a>
+  <a class="pr" href="admin/rtmp-streamer/">
+    <div class="pi ap"><i class="mdi mdi-broadcast"></i></div>
+    <div class="pt"><span class="pn">RTMP Streamer</span><span class="pd">Stream cameras to RTMP destinations (YouTube, Twitch, Facebook)</span></div>
   </a>
 </div>
