@@ -8,58 +8,52 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_Weather" Directory="Dir_Weather">
       <Component Id="Weather_Comp1" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File1" Source="G:\mscp\mscp\build\staging\Weather\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="Weather_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp2" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File2" Source="G:\mscp\mscp\build\staging\Weather\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="Weather_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp3" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File3" Source="G:\mscp\mscp\build\staging\Weather\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="Weather_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp4" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File4" Source="G:\mscp\mscp\build\staging\Weather\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="Weather_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp5" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File5" Source="G:\mscp\mscp\build\staging\Weather\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
+        <File Id="Weather_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp6" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File6" Source="G:\mscp\mscp\build\staging\Weather\MSCWeatherPlugin.dll" KeyPath="yes" />
+        <File Id="Weather_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp7" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File7" Source="G:\mscp\mscp\build\staging\Weather\MSCWeatherPlugin.pdb" KeyPath="yes" />
+        <File Id="Weather_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\System.Buffers.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp8" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File8" Source="G:\mscp\mscp\build\staging\Weather\plugin.def" KeyPath="yes" />
+        <File Id="Weather_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\System.IO.Pipelines.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp9" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File9" Source="G:\mscp\mscp\build\staging\Weather\System.Buffers.dll" KeyPath="yes" />
+        <File Id="Weather_File9" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\System.Memory.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp10" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File10" Source="G:\mscp\mscp\build\staging\Weather\System.Memory.dll" KeyPath="yes" />
+        <File Id="Weather_File10" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\System.Numerics.Vectors.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp11" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File11" Source="G:\mscp\mscp\build\staging\Weather\System.Numerics.Vectors.dll" KeyPath="yes" />
+        <File Id="Weather_File11" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp12" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File12" Source="G:\mscp\mscp\build\staging\Weather\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
+        <File Id="Weather_File12" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\System.Text.Encodings.Web.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp13" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File13" Source="G:\mscp\mscp\build\staging\Weather\System.Text.Encodings.Web.dll" KeyPath="yes" />
+        <File Id="Weather_File13" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\System.Text.Json.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp14" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File14" Source="G:\mscp\mscp\build\staging\Weather\System.Text.Json.dll" KeyPath="yes" />
+        <File Id="Weather_File14" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp15" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File15" Source="G:\mscp\mscp\build\staging\Weather\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
+        <File Id="Weather_File15" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\Weather.dll" KeyPath="yes" />
       </Component>
       <Component Id="Weather_Comp16" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File16" Source="G:\mscp\mscp\build\staging\Weather\System.ValueTuple.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="Weather_Comp17" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File17" Source="G:\mscp\mscp\build\staging\Weather\Weather.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="Weather_Comp18" Directory="Dir_Weather" Bitness="always64">
-        <File Id="Weather_File18" Source="G:\mscp\mscp\build\staging\Weather\Weather.pdb" KeyPath="yes" />
+        <File Id="Weather_File16" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Weather\Weather.pdb" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -69,37 +63,31 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_RDP" Directory="Dir_RDP">
       <Component Id="RDP_Comp1" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File1" Source="G:\mscp\mscp\build\staging\RDP\AxMSTSCLib.dll" KeyPath="yes" />
+        <File Id="RDP_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\AxMSTSCLib.dll" KeyPath="yes" />
       </Component>
       <Component Id="RDP_Comp2" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File2" Source="G:\mscp\mscp\build\staging\RDP\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="RDP_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="RDP_Comp3" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File3" Source="G:\mscp\mscp\build\staging\RDP\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="RDP_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="RDP_Comp4" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File4" Source="G:\mscp\mscp\build\staging\RDP\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="RDP_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="RDP_Comp5" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File5" Source="G:\mscp\mscp\build\staging\RDP\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="RDP_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="RDP_Comp6" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File6" Source="G:\mscp\mscp\build\staging\RDP\MSCRDPPlugin.dll" KeyPath="yes" />
+        <File Id="RDP_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\MSTSCLib.dll" KeyPath="yes" />
       </Component>
       <Component Id="RDP_Comp7" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File7" Source="G:\mscp\mscp\build\staging\RDP\MSCRDPPlugin.pdb" KeyPath="yes" />
+        <File Id="RDP_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="RDP_Comp8" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File8" Source="G:\mscp\mscp\build\staging\RDP\MSTSCLib.dll" KeyPath="yes" />
+        <File Id="RDP_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\RDP.dll" KeyPath="yes" />
       </Component>
       <Component Id="RDP_Comp9" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File9" Source="G:\mscp\mscp\build\staging\RDP\plugin.def" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp10" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File10" Source="G:\mscp\mscp\build\staging\RDP\RDP.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp11" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File11" Source="G:\mscp\mscp\build\staging\RDP\RDP.pdb" KeyPath="yes" />
+        <File Id="RDP_File9" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RDP\RDP.pdb" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -109,25 +97,25 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_Notepad" Directory="Dir_Notepad">
       <Component Id="Notepad_Comp1" Directory="Dir_Notepad" Bitness="always64">
-        <File Id="Notepad_File1" Source="G:\mscp\mscp\build\staging\Notepad\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="Notepad_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Notepad\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="Notepad_Comp2" Directory="Dir_Notepad" Bitness="always64">
-        <File Id="Notepad_File2" Source="G:\mscp\mscp\build\staging\Notepad\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="Notepad_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Notepad\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="Notepad_Comp3" Directory="Dir_Notepad" Bitness="always64">
-        <File Id="Notepad_File3" Source="G:\mscp\mscp\build\staging\Notepad\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="Notepad_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Notepad\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="Notepad_Comp4" Directory="Dir_Notepad" Bitness="always64">
-        <File Id="Notepad_File4" Source="G:\mscp\mscp\build\staging\Notepad\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="Notepad_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Notepad\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="Notepad_Comp5" Directory="Dir_Notepad" Bitness="always64">
-        <File Id="Notepad_File5" Source="G:\mscp\mscp\build\staging\Notepad\Notepad.dll" KeyPath="yes" />
+        <File Id="Notepad_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Notepad\Notepad.dll" KeyPath="yes" />
       </Component>
       <Component Id="Notepad_Comp6" Directory="Dir_Notepad" Bitness="always64">
-        <File Id="Notepad_File6" Source="G:\mscp\mscp\build\staging\Notepad\Notepad.pdb" KeyPath="yes" />
+        <File Id="Notepad_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Notepad\Notepad.pdb" KeyPath="yes" />
       </Component>
       <Component Id="Notepad_Comp7" Directory="Dir_Notepad" Bitness="always64">
-        <File Id="Notepad_File7" Source="G:\mscp\mscp\build\staging\Notepad\plugin.def" KeyPath="yes" />
+        <File Id="Notepad_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Notepad\plugin.def" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -137,79 +125,79 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_SnapReport" Directory="Dir_SnapReport">
       <Component Id="SnapReport_Comp1" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File1" Source="G:\mscp\mscp\build\staging\SnapReport\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="SnapReport_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp2" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File2" Source="G:\mscp\mscp\build\staging\SnapReport\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="SnapReport_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp3" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File3" Source="G:\mscp\mscp\build\staging\SnapReport\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="SnapReport_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp4" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File4" Source="G:\mscp\mscp\build\staging\SnapReport\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="SnapReport_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp5" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File5" Source="G:\mscp\mscp\build\staging\SnapReport\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
+        <File Id="SnapReport_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp6" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File6" Source="G:\mscp\mscp\build\staging\SnapReport\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
+        <File Id="SnapReport_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp7" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File7" Source="G:\mscp\mscp\build\staging\SnapReport\Microsoft.Extensions.Logging.Abstractions.dll" KeyPath="yes" />
+        <File Id="SnapReport_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\Microsoft.Extensions.Logging.Abstractions.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp8" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File8" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.BarCodes.dll" KeyPath="yes" />
+        <File Id="SnapReport_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.BarCodes.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp9" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File9" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.Charting.dll" KeyPath="yes" />
+        <File Id="SnapReport_File9" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.Charting.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp10" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File10" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.Cryptography.dll" KeyPath="yes" />
+        <File Id="SnapReport_File10" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.Cryptography.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp11" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File11" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.dll" KeyPath="yes" />
+        <File Id="SnapReport_File11" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp12" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File12" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.Quality.dll" KeyPath="yes" />
+        <File Id="SnapReport_File12" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.Quality.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp13" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File13" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.Shared.dll" KeyPath="yes" />
+        <File Id="SnapReport_File13" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.Shared.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp14" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File14" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.Snippets.dll" KeyPath="yes" />
+        <File Id="SnapReport_File14" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.Snippets.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp15" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File15" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.System.dll" KeyPath="yes" />
+        <File Id="SnapReport_File15" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.System.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp16" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File16" Source="G:\mscp\mscp\build\staging\SnapReport\PdfSharp.WPFonts.dll" KeyPath="yes" />
+        <File Id="SnapReport_File16" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\PdfSharp.WPFonts.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp17" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File17" Source="G:\mscp\mscp\build\staging\SnapReport\plugin.def" KeyPath="yes" />
+        <File Id="SnapReport_File17" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp18" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File18" Source="G:\mscp\mscp\build\staging\SnapReport\SnapReport.dll" KeyPath="yes" />
+        <File Id="SnapReport_File18" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\SnapReport.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp19" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File19" Source="G:\mscp\mscp\build\staging\SnapReport\SnapReport.pdb" KeyPath="yes" />
+        <File Id="SnapReport_File19" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\SnapReport.pdb" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp20" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File20" Source="G:\mscp\mscp\build\staging\SnapReport\System.Buffers.dll" KeyPath="yes" />
+        <File Id="SnapReport_File20" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\System.Buffers.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp21" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File21" Source="G:\mscp\mscp\build\staging\SnapReport\System.Memory.dll" KeyPath="yes" />
+        <File Id="SnapReport_File21" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\System.Memory.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp22" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File22" Source="G:\mscp\mscp\build\staging\SnapReport\System.Numerics.Vectors.dll" KeyPath="yes" />
+        <File Id="SnapReport_File22" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\System.Numerics.Vectors.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp23" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File23" Source="G:\mscp\mscp\build\staging\SnapReport\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
+        <File Id="SnapReport_File23" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp24" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File24" Source="G:\mscp\mscp\build\staging\SnapReport\System.Security.Cryptography.Pkcs.dll" KeyPath="yes" />
+        <File Id="SnapReport_File24" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\System.Security.Cryptography.Pkcs.dll" KeyPath="yes" />
       </Component>
       <Component Id="SnapReport_Comp25" Directory="Dir_SnapReport" Bitness="always64">
-        <File Id="SnapReport_File25" Source="G:\mscp\mscp\build\staging\SnapReport\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
+        <File Id="SnapReport_File25" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SnapReport\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -221,58 +209,58 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_MonitorRTMPStreamer" Directory="Dir_MonitorRTMPStreamer">
       <Component Id="MonitorRTMPStreamer_Comp1" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File1" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp2" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File2" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp3" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File3" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\FFmpeg.AutoGen.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\FFmpeg.AutoGen.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp4" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File4" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp5" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File5" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp6" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File6" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\MonitorRTMPStreamer.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\MonitorRTMPStreamer.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp7" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File7" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\MonitorRTMPStreamer.pdb" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\MonitorRTMPStreamer.pdb" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp8" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File8" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\plugin.def" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp9" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File9" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\SharpDX.Direct3D11.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File9" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\SharpDX.Direct3D11.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp10" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File10" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\SharpDX.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File10" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\SharpDX.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp11" Directory="Dir_MonitorRTMPStreamer" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File11" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\SharpDX.DXGI.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File11" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\SharpDX.DXGI.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp12" Directory="Dir_MonitorRTMPStreamer_x64" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File12" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\x64\avcodec-62.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File12" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\x64\avcodec-62.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp13" Directory="Dir_MonitorRTMPStreamer_x64" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File13" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\x64\avdevice-62.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File13" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\x64\avdevice-62.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp14" Directory="Dir_MonitorRTMPStreamer_x64" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File14" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\x64\avfilter-11.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File14" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\x64\avfilter-11.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp15" Directory="Dir_MonitorRTMPStreamer_x64" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File15" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\x64\avformat-62.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File15" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\x64\avformat-62.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp16" Directory="Dir_MonitorRTMPStreamer_x64" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File16" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\x64\avutil-60.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File16" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\x64\avutil-60.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp17" Directory="Dir_MonitorRTMPStreamer_x64" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File17" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\x64\swresample-6.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File17" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\x64\swresample-6.dll" KeyPath="yes" />
       </Component>
       <Component Id="MonitorRTMPStreamer_Comp18" Directory="Dir_MonitorRTMPStreamer_x64" Bitness="always64">
-        <File Id="MonitorRTMPStreamer_File18" Source="G:\mscp\mscp\build\staging\MonitorRTMPStreamer\x64\swscale-9.dll" KeyPath="yes" />
+        <File Id="MonitorRTMPStreamer_File18" Source="C:\Users\c.acs\source\repos\mscp\build\staging\MonitorRTMPStreamer\x64\swscale-9.dll" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -282,13 +270,13 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_RTMPDriver" Directory="Dir_RTMPDriver">
       <Component Id="RTMPDriver_Comp1" Directory="Dir_RTMPDriver" Bitness="always64">
-        <File Id="RTMPDriver_File1" Source="G:\mscp\mscp\build\staging\RTMPDriver\RTMPDriver.def" KeyPath="yes" />
+        <File Id="RTMPDriver_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPDriver\RTMPDriver.def" KeyPath="yes" />
       </Component>
       <Component Id="RTMPDriver_Comp2" Directory="Dir_RTMPDriver" Bitness="always64">
-        <File Id="RTMPDriver_File2" Source="G:\mscp\mscp\build\staging\RTMPDriver\RTMPDriver.dll" KeyPath="yes" />
+        <File Id="RTMPDriver_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPDriver\RTMPDriver.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPDriver_Comp3" Directory="Dir_RTMPDriver" Bitness="always64">
-        <File Id="RTMPDriver_File3" Source="G:\mscp\mscp\build\staging\RTMPDriver\RTMPDriver.pdb" KeyPath="yes" />
+        <File Id="RTMPDriver_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPDriver\RTMPDriver.pdb" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -300,220 +288,220 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_RTMPStreamer" Directory="Dir_RTMPStreamer">
       <Component Id="RTMPStreamer_Comp1" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File1" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Autofac.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Autofac.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp2" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File2" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Azure.Core.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Azure.Core.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp3" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File3" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Azure.Identity.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Azure.Identity.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp4" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File4" Source="G:\mscp\mscp\build\staging\RTMPStreamer\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp5" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File5" Source="G:\mscp\mscp\build\staging\RTMPStreamer\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="RTMPStreamer_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp6" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File6" Source="G:\mscp\mscp\build\staging\RTMPStreamer\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp7" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File7" Source="G:\mscp\mscp\build\staging\RTMPStreamer\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp8" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File8" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.ApplicationInsights.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.ApplicationInsights.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp9" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File9" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.AspNetCore.JsonPatch.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File9" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.AspNetCore.JsonPatch.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp10" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File10" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File10" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp11" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File11" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Configuration.Abstractions.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File11" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Configuration.Abstractions.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp12" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File12" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Configuration.Binder.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File12" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Configuration.Binder.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp13" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File13" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Configuration.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File13" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Configuration.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp14" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File14" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File14" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp15" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File15" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.DependencyInjection.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File15" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.DependencyInjection.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp16" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File16" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Diagnostics.Abstractions.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File16" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Diagnostics.Abstractions.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp17" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File17" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Logging.Abstractions.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File17" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Logging.Abstractions.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp18" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File18" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Logging.Configuration.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File18" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Logging.Configuration.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp19" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File19" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Logging.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File19" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Logging.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp20" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File20" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Options.ConfigurationExtensions.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File20" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Options.ConfigurationExtensions.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp21" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File21" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Options.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File21" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Options.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp22" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File22" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Primitives.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File22" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Extensions.Primitives.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp23" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File23" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Identity.Client.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File23" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Identity.Client.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp24" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File24" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Identity.Client.Extensions.Msal.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File24" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Identity.Client.Extensions.Msal.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp25" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File25" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Abstractions.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File25" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Abstractions.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp26" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File26" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.JsonWebTokens.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File26" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.JsonWebTokens.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp27" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File27" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Logging.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File27" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Logging.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp28" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File28" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Protocols.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File28" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Protocols.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp29" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File29" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File29" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp30" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File30" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Tokens.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File30" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.IdentityModel.Tokens.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp31" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File31" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Owin.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File31" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Owin.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp32" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File32" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Win32.Registry.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File32" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Win32.Registry.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp33" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File33" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Microsoft.Xaml.Behaviors.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File33" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Microsoft.Xaml.Behaviors.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp34" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File34" Source="G:\mscp\mscp\build\staging\RTMPStreamer\NAudio.Asio.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File34" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\NAudio.Asio.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp35" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File35" Source="G:\mscp\mscp\build\staging\RTMPStreamer\NAudio.Core.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File35" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\NAudio.Core.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp36" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File36" Source="G:\mscp\mscp\build\staging\RTMPStreamer\NAudio.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File36" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\NAudio.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp37" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File37" Source="G:\mscp\mscp\build\staging\RTMPStreamer\NAudio.Midi.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File37" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\NAudio.Midi.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp38" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File38" Source="G:\mscp\mscp\build\staging\RTMPStreamer\NAudio.Wasapi.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File38" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\NAudio.Wasapi.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp39" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File39" Source="G:\mscp\mscp\build\staging\RTMPStreamer\NAudio.WinForms.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File39" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\NAudio.WinForms.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp40" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File40" Source="G:\mscp\mscp\build\staging\RTMPStreamer\NAudio.WinMM.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File40" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\NAudio.WinMM.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp41" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File41" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Newtonsoft.Json.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File41" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Newtonsoft.Json.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp42" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File42" Source="G:\mscp\mscp\build\staging\RTMPStreamer\OpenTelemetry.Api.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File42" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\OpenTelemetry.Api.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp43" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File43" Source="G:\mscp\mscp\build\staging\RTMPStreamer\OpenTelemetry.Api.ProviderBuilderExtensions.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File43" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\OpenTelemetry.Api.ProviderBuilderExtensions.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp44" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File44" Source="G:\mscp\mscp\build\staging\RTMPStreamer\OpenTelemetry.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File44" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\OpenTelemetry.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp45" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File45" Source="G:\mscp\mscp\build\staging\RTMPStreamer\OpenTelemetry.Exporter.OpenTelemetryProtocol.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File45" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\OpenTelemetry.Exporter.OpenTelemetryProtocol.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp46" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File46" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Owin.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File46" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Owin.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp47" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File47" Source="G:\mscp\mscp\build\staging\RTMPStreamer\plugin.def" KeyPath="yes" />
+        <File Id="RTMPStreamer_File47" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp48" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File48" Source="G:\mscp\mscp\build\staging\RTMPStreamer\RTMPStreamer.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File48" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\RTMPStreamer.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp49" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File49" Source="G:\mscp\mscp\build\staging\RTMPStreamer\RTMPStreamer.pdb" KeyPath="yes" />
+        <File Id="RTMPStreamer_File49" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\RTMPStreamer.pdb" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp50" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File50" Source="G:\mscp\mscp\build\staging\RTMPStreamer\RTMPStreamerHelper.exe" KeyPath="yes" />
+        <File Id="RTMPStreamer_File50" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\RTMPStreamerHelper.exe" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp51" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File51" Source="G:\mscp\mscp\build\staging\RTMPStreamer\RTMPStreamerHelper.exe.config" KeyPath="yes" />
+        <File Id="RTMPStreamer_File51" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\RTMPStreamerHelper.exe.config" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp52" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File52" Source="G:\mscp\mscp\build\staging\RTMPStreamer\RTMPStreamerHelper.pdb" KeyPath="yes" />
+        <File Id="RTMPStreamer_File52" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\RTMPStreamerHelper.pdb" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp53" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File53" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Buffers.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File53" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Buffers.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp54" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File54" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Diagnostics.DiagnosticSource.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File54" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Diagnostics.DiagnosticSource.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp55" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File55" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.IdentityModel.Tokens.Jwt.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File55" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.IdentityModel.Tokens.Jwt.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp56" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File56" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.IO.FileSystem.AccessControl.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File56" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.IO.FileSystem.AccessControl.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp57" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File57" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Memory.Data.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File57" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Memory.Data.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp58" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File58" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Memory.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File58" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Memory.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp59" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File59" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Net.Http.Formatting.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File59" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Net.Http.Formatting.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp60" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File60" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Numerics.Vectors.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File60" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Numerics.Vectors.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp61" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File61" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File61" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp62" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File62" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Security.AccessControl.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File62" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Security.AccessControl.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp63" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File63" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Security.Cryptography.ProtectedData.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File63" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Security.Cryptography.ProtectedData.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp64" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File64" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Security.Cryptography.Xml.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File64" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Security.Cryptography.Xml.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp65" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File65" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Security.Principal.Windows.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File65" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Security.Principal.Windows.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp66" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File66" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Text.Encodings.Web.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File66" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Text.Encodings.Web.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp67" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File67" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Text.Json.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File67" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Text.Json.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp68" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File68" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File68" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp69" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File69" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.ValueTuple.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File69" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.ValueTuple.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp70" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File70" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Web.Http.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File70" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Web.Http.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp71" Directory="Dir_RTMPStreamer" Bitness="always64">
-        <File Id="RTMPStreamer_File71" Source="G:\mscp\mscp\build\staging\RTMPStreamer\System.Web.Http.Owin.dll" KeyPath="yes" />
+        <File Id="RTMPStreamer_File71" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\System.Web.Http.Owin.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTMPStreamer_Comp72" Directory="Dir_RTMPStreamer_Admin" Bitness="always64">
-        <File Id="RTMPStreamer_File72" Source="G:\mscp\mscp\build\staging\RTMPStreamer\Admin\HelpPage.html" KeyPath="yes" />
+        <File Id="RTMPStreamer_File72" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTMPStreamer\Admin\HelpPage.html" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -525,28 +513,28 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_CertWatchdog" Directory="Dir_CertWatchdog">
       <Component Id="CertWatchdog_Comp1" Directory="Dir_CertWatchdog" Bitness="always64">
-        <File Id="CertWatchdog_File1" Source="G:\mscp\mscp\build\staging\CertWatchdog\CertWatchdog.dll" KeyPath="yes" />
+        <File Id="CertWatchdog_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\CertWatchdog\CertWatchdog.dll" KeyPath="yes" />
       </Component>
       <Component Id="CertWatchdog_Comp2" Directory="Dir_CertWatchdog" Bitness="always64">
-        <File Id="CertWatchdog_File2" Source="G:\mscp\mscp\build\staging\CertWatchdog\CertWatchdog.pdb" KeyPath="yes" />
+        <File Id="CertWatchdog_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\CertWatchdog\CertWatchdog.pdb" KeyPath="yes" />
       </Component>
       <Component Id="CertWatchdog_Comp3" Directory="Dir_CertWatchdog" Bitness="always64">
-        <File Id="CertWatchdog_File3" Source="G:\mscp\mscp\build\staging\CertWatchdog\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="CertWatchdog_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\CertWatchdog\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="CertWatchdog_Comp4" Directory="Dir_CertWatchdog" Bitness="always64">
-        <File Id="CertWatchdog_File4" Source="G:\mscp\mscp\build\staging\CertWatchdog\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="CertWatchdog_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\CertWatchdog\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="CertWatchdog_Comp5" Directory="Dir_CertWatchdog" Bitness="always64">
-        <File Id="CertWatchdog_File5" Source="G:\mscp\mscp\build\staging\CertWatchdog\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="CertWatchdog_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\CertWatchdog\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="CertWatchdog_Comp6" Directory="Dir_CertWatchdog" Bitness="always64">
-        <File Id="CertWatchdog_File6" Source="G:\mscp\mscp\build\staging\CertWatchdog\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="CertWatchdog_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\CertWatchdog\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="CertWatchdog_Comp7" Directory="Dir_CertWatchdog" Bitness="always64">
-        <File Id="CertWatchdog_File7" Source="G:\mscp\mscp\build\staging\CertWatchdog\plugin.def" KeyPath="yes" />
+        <File Id="CertWatchdog_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\CertWatchdog\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="CertWatchdog_Comp8" Directory="Dir_CertWatchdog_Admin" Bitness="always64">
-        <File Id="CertWatchdog_File8" Source="G:\mscp\mscp\build\staging\CertWatchdog\Admin\HelpPage.html" KeyPath="yes" />
+        <File Id="CertWatchdog_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\CertWatchdog\Admin\HelpPage.html" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -558,28 +546,28 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_Auditor" Directory="Dir_Auditor">
       <Component Id="Auditor_Comp1" Directory="Dir_Auditor" Bitness="always64">
-        <File Id="Auditor_File1" Source="G:\mscp\mscp\build\staging\Auditor\Auditor.dll" KeyPath="yes" />
+        <File Id="Auditor_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Auditor\Auditor.dll" KeyPath="yes" />
       </Component>
       <Component Id="Auditor_Comp2" Directory="Dir_Auditor" Bitness="always64">
-        <File Id="Auditor_File2" Source="G:\mscp\mscp\build\staging\Auditor\Auditor.pdb" KeyPath="yes" />
+        <File Id="Auditor_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Auditor\Auditor.pdb" KeyPath="yes" />
       </Component>
       <Component Id="Auditor_Comp3" Directory="Dir_Auditor" Bitness="always64">
-        <File Id="Auditor_File3" Source="G:\mscp\mscp\build\staging\Auditor\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="Auditor_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Auditor\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="Auditor_Comp4" Directory="Dir_Auditor" Bitness="always64">
-        <File Id="Auditor_File4" Source="G:\mscp\mscp\build\staging\Auditor\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="Auditor_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Auditor\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="Auditor_Comp5" Directory="Dir_Auditor" Bitness="always64">
-        <File Id="Auditor_File5" Source="G:\mscp\mscp\build\staging\Auditor\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="Auditor_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Auditor\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="Auditor_Comp6" Directory="Dir_Auditor" Bitness="always64">
-        <File Id="Auditor_File6" Source="G:\mscp\mscp\build\staging\Auditor\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="Auditor_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Auditor\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="Auditor_Comp7" Directory="Dir_Auditor" Bitness="always64">
-        <File Id="Auditor_File7" Source="G:\mscp\mscp\build\staging\Auditor\plugin.def" KeyPath="yes" />
+        <File Id="Auditor_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Auditor\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="Auditor_Comp8" Directory="Dir_Auditor_Admin" Bitness="always64">
-        <File Id="Auditor_File8" Source="G:\mscp\mscp\build\staging\Auditor\Admin\HelpPage.html" KeyPath="yes" />
+        <File Id="Auditor_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\Auditor\Admin\HelpPage.html" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -591,31 +579,31 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_HttpRequests" Directory="Dir_HttpRequests">
       <Component Id="HttpRequests_Comp1" Directory="Dir_HttpRequests" Bitness="always64">
-        <File Id="HttpRequests_File1" Source="G:\mscp\mscp\build\staging\HttpRequests\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="HttpRequests_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="HttpRequests_Comp2" Directory="Dir_HttpRequests" Bitness="always64">
-        <File Id="HttpRequests_File2" Source="G:\mscp\mscp\build\staging\HttpRequests\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="HttpRequests_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="HttpRequests_Comp3" Directory="Dir_HttpRequests" Bitness="always64">
-        <File Id="HttpRequests_File3" Source="G:\mscp\mscp\build\staging\HttpRequests\FastColoredTextBox.dll" KeyPath="yes" />
+        <File Id="HttpRequests_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\FastColoredTextBox.dll" KeyPath="yes" />
       </Component>
       <Component Id="HttpRequests_Comp4" Directory="Dir_HttpRequests" Bitness="always64">
-        <File Id="HttpRequests_File4" Source="G:\mscp\mscp\build\staging\HttpRequests\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="HttpRequests_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="HttpRequests_Comp5" Directory="Dir_HttpRequests" Bitness="always64">
-        <File Id="HttpRequests_File5" Source="G:\mscp\mscp\build\staging\HttpRequests\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="HttpRequests_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="HttpRequests_Comp6" Directory="Dir_HttpRequests" Bitness="always64">
-        <File Id="HttpRequests_File6" Source="G:\mscp\mscp\build\staging\HttpRequests\HttpRequests.dll" KeyPath="yes" />
+        <File Id="HttpRequests_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\HttpRequests.dll" KeyPath="yes" />
       </Component>
       <Component Id="HttpRequests_Comp7" Directory="Dir_HttpRequests" Bitness="always64">
-        <File Id="HttpRequests_File7" Source="G:\mscp\mscp\build\staging\HttpRequests\HttpRequests.pdb" KeyPath="yes" />
+        <File Id="HttpRequests_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\HttpRequests.pdb" KeyPath="yes" />
       </Component>
       <Component Id="HttpRequests_Comp8" Directory="Dir_HttpRequests" Bitness="always64">
-        <File Id="HttpRequests_File8" Source="G:\mscp\mscp\build\staging\HttpRequests\plugin.def" KeyPath="yes" />
+        <File Id="HttpRequests_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="HttpRequests_Comp9" Directory="Dir_HttpRequests_Admin" Bitness="always64">
-        <File Id="HttpRequests_File9" Source="G:\mscp\mscp\build\staging\HttpRequests\Admin\HelpPage.html" KeyPath="yes" />
+        <File Id="HttpRequests_File9" Source="C:\Users\c.acs\source\repos\mscp\build\staging\HttpRequests\Admin\HelpPage.html" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -625,25 +613,53 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_SmartBar" Directory="Dir_SmartBar">
       <Component Id="SmartBar_Comp1" Directory="Dir_SmartBar" Bitness="always64">
-        <File Id="SmartBar_File1" Source="G:\mscp\mscp\build\staging\SmartBar\CommunitySDK.dll" KeyPath="yes" />
+        <File Id="SmartBar_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SmartBar\CommunitySDK.dll" KeyPath="yes" />
       </Component>
       <Component Id="SmartBar_Comp2" Directory="Dir_SmartBar" Bitness="always64">
-        <File Id="SmartBar_File2" Source="G:\mscp\mscp\build\staging\SmartBar\CommunitySDK.pdb" KeyPath="yes" />
+        <File Id="SmartBar_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SmartBar\CommunitySDK.pdb" KeyPath="yes" />
       </Component>
       <Component Id="SmartBar_Comp3" Directory="Dir_SmartBar" Bitness="always64">
-        <File Id="SmartBar_File3" Source="G:\mscp\mscp\build\staging\SmartBar\FontAwesome5.dll" KeyPath="yes" />
+        <File Id="SmartBar_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SmartBar\FontAwesome5.dll" KeyPath="yes" />
       </Component>
       <Component Id="SmartBar_Comp4" Directory="Dir_SmartBar" Bitness="always64">
-        <File Id="SmartBar_File4" Source="G:\mscp\mscp\build\staging\SmartBar\FontAwesome5.Net.dll" KeyPath="yes" />
+        <File Id="SmartBar_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SmartBar\FontAwesome5.Net.dll" KeyPath="yes" />
       </Component>
       <Component Id="SmartBar_Comp5" Directory="Dir_SmartBar" Bitness="always64">
-        <File Id="SmartBar_File5" Source="G:\mscp\mscp\build\staging\SmartBar\plugin.def" KeyPath="yes" />
+        <File Id="SmartBar_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SmartBar\plugin.def" KeyPath="yes" />
       </Component>
       <Component Id="SmartBar_Comp6" Directory="Dir_SmartBar" Bitness="always64">
-        <File Id="SmartBar_File6" Source="G:\mscp\mscp\build\staging\SmartBar\SmartBar.dll" KeyPath="yes" />
+        <File Id="SmartBar_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SmartBar\SmartBar.dll" KeyPath="yes" />
       </Component>
       <Component Id="SmartBar_Comp7" Directory="Dir_SmartBar" Bitness="always64">
-        <File Id="SmartBar_File7" Source="G:\mscp\mscp\build\staging\SmartBar\SmartBar.pdb" KeyPath="yes" />
+        <File Id="SmartBar_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\SmartBar\SmartBar.pdb" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="MIPPLUGINS">
+      <Directory Id="Dir_FlexView" Name="FlexView" />
+    </DirectoryRef>
+    <ComponentGroup Id="CG_FlexView" Directory="Dir_FlexView">
+      <Component Id="FlexView_Comp1" Directory="Dir_FlexView" Bitness="always64">
+        <File Id="FlexView_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\FlexView\CommunitySDK.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="FlexView_Comp2" Directory="Dir_FlexView" Bitness="always64">
+        <File Id="FlexView_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\FlexView\CommunitySDK.pdb" KeyPath="yes" />
+      </Component>
+      <Component Id="FlexView_Comp3" Directory="Dir_FlexView" Bitness="always64">
+        <File Id="FlexView_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\FlexView\FlexView.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="FlexView_Comp4" Directory="Dir_FlexView" Bitness="always64">
+        <File Id="FlexView_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\FlexView\FlexView.pdb" KeyPath="yes" />
+      </Component>
+      <Component Id="FlexView_Comp5" Directory="Dir_FlexView" Bitness="always64">
+        <File Id="FlexView_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\FlexView\FontAwesome5.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="FlexView_Comp6" Directory="Dir_FlexView" Bitness="always64">
+        <File Id="FlexView_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\FlexView\FontAwesome5.Net.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="FlexView_Comp7" Directory="Dir_FlexView" Bitness="always64">
+        <File Id="FlexView_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\FlexView\plugin.def" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -655,37 +671,37 @@
     </DirectoryRef>
     <ComponentGroup Id="CG_RTSPDriver" Directory="Dir_RTSPDriver">
       <Component Id="RTSPDriver_Comp1" Directory="Dir_RTSPDriver" Bitness="always64">
-        <File Id="RTSPDriver_File1" Source="G:\mscp\mscp\build\staging\RTSPDriver\FFmpeg.AutoGen.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File1" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\FFmpeg.AutoGen.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp2" Directory="Dir_RTSPDriver" Bitness="always64">
-        <File Id="RTSPDriver_File2" Source="G:\mscp\mscp\build\staging\RTSPDriver\RTSPDriver.def" KeyPath="yes" />
+        <File Id="RTSPDriver_File2" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\RTSPDriver.def" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp3" Directory="Dir_RTSPDriver" Bitness="always64">
-        <File Id="RTSPDriver_File3" Source="G:\mscp\mscp\build\staging\RTSPDriver\RTSPDriver.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File3" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\RTSPDriver.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp4" Directory="Dir_RTSPDriver" Bitness="always64">
-        <File Id="RTSPDriver_File4" Source="G:\mscp\mscp\build\staging\RTSPDriver\RTSPDriver.pdb" KeyPath="yes" />
+        <File Id="RTSPDriver_File4" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\RTSPDriver.pdb" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp5" Directory="Dir_RTSPDriver_x64" Bitness="always64">
-        <File Id="RTSPDriver_File5" Source="G:\mscp\mscp\build\staging\RTSPDriver\x64\avcodec-62.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File5" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\x64\avcodec-62.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp6" Directory="Dir_RTSPDriver_x64" Bitness="always64">
-        <File Id="RTSPDriver_File6" Source="G:\mscp\mscp\build\staging\RTSPDriver\x64\avdevice-62.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File6" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\x64\avdevice-62.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp7" Directory="Dir_RTSPDriver_x64" Bitness="always64">
-        <File Id="RTSPDriver_File7" Source="G:\mscp\mscp\build\staging\RTSPDriver\x64\avfilter-11.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File7" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\x64\avfilter-11.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp8" Directory="Dir_RTSPDriver_x64" Bitness="always64">
-        <File Id="RTSPDriver_File8" Source="G:\mscp\mscp\build\staging\RTSPDriver\x64\avformat-62.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File8" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\x64\avformat-62.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp9" Directory="Dir_RTSPDriver_x64" Bitness="always64">
-        <File Id="RTSPDriver_File9" Source="G:\mscp\mscp\build\staging\RTSPDriver\x64\avutil-60.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File9" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\x64\avutil-60.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp10" Directory="Dir_RTSPDriver_x64" Bitness="always64">
-        <File Id="RTSPDriver_File10" Source="G:\mscp\mscp\build\staging\RTSPDriver\x64\swresample-6.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File10" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\x64\swresample-6.dll" KeyPath="yes" />
       </Component>
       <Component Id="RTSPDriver_Comp11" Directory="Dir_RTSPDriver_x64" Bitness="always64">
-        <File Id="RTSPDriver_File11" Source="G:\mscp\mscp\build\staging\RTSPDriver\x64\swscale-9.dll" KeyPath="yes" />
+        <File Id="RTSPDriver_File11" Source="C:\Users\c.acs\source\repos\mscp\build\staging\RTSPDriver\x64\swscale-9.dll" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -708,6 +724,9 @@
       </Feature>
       <Feature Id="Feature_SmartBar" Title="Smart Bar" Description="Workspace toolbar button for Smart Client" Level="1" AllowAbsent="yes" AllowAdvertise="no">
         <ComponentGroupRef Id="CG_SmartBar" />
+      </Feature>
+      <Feature Id="Feature_FlexView" Title="FlexView" Description="Freeform grid-based view layout designer with drag-and-drop pane creation, resizing, and editing" Level="1" AllowAbsent="yes" AllowAdvertise="no">
+        <ComponentGroupRef Id="CG_FlexView" />
       </Feature>
     </Feature>
   </Fragment>
