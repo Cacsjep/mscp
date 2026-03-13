@@ -149,7 +149,6 @@ if ($wixCmd) {
     $componentsWxs = Join-Path $wixDir 'Components.wxs'
     $msiPath = Join-Path $buildDir "MSCPlugins-v$version.msi"
     $customActionProj = Join-Path $root 'installer\customactions\InstallerCustomActions.csproj'
-    $installScript = Join-Path $root 'installer\Install-MSCPlugins.ps1'
 
     Write-Host "Building installer custom actions..." -ForegroundColor DarkYellow
     & $msbuildPath $customActionProj `
@@ -170,7 +169,6 @@ if ($wixCmd) {
         -arch x64
 
     if ($LASTEXITCODE -ne 0) { Write-Error "WiX MSI build failed"; exit 1 }
-    Copy-Item -Path $installScript -Destination (Join-Path $buildDir 'Install-MSCPlugins.ps1') -Force
 } else {
     Write-Warning "WiX Toolset not found -- skipping MSI build."
     Write-Warning "Install with: dotnet tool install --global wix"

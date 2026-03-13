@@ -190,7 +190,6 @@ jobs:
           foreach ($name in $names) {
             Copy-Item "artifacts\$name\*.zip" -Destination .
           }
-          Copy-Item installer\Install-MSCPlugins.ps1 -Destination .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
@@ -198,5 +197,4 @@ jobs:
           files: |
             *-${{ github.ref_name }}.zip
             MSCPlugins-*-Setup.msi
-            Install-MSCPlugins.ps1
           generate_release_notes: true
