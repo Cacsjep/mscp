@@ -26,6 +26,9 @@
     <!-- Embed the cab into the MSI with max compression -->
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
+    <Binary Id="InstallerCustomActions"
+            SourceFile="..\customactions\bin\Release\net48\InstallerCustomActions.CA.dll" />
+
     <!-- License -->
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
@@ -37,10 +40,10 @@
       <ProgressText Action="CA_StopSmartClient" Message="Closing XProtect Smart Client..." />
       <ProgressText Action="CA_StopManagementClient" Message="Closing XProtect Management Client..." />
       <ProgressText Action="CA_StopDriverFramework" Message="Closing Driver Framework Process..." />
-      <ProgressText Action="CA_StopRecordingServer" Message="Stopping Milestone XProtect Recording Server..." />
-      <ProgressText Action="CA_StopEventServer" Message="Stopping Milestone Event Server..." />
-      <ProgressText Action="CA_StartRecordingServer" Message="Starting Milestone XProtect Recording Server..." />
-      <ProgressText Action="CA_StartEventServer" Message="Starting Milestone Event Server..." />
+      <ProgressText Action="CA_StopRecordingServer" Message="Stopping Milestone XProtect Recording Server and waiting up to 3 minutes..." />
+      <ProgressText Action="CA_StopEventServer" Message="Stopping Milestone Event Server and waiting up to 3 minutes..." />
+      <ProgressText Action="CA_StartRecordingServer" Message="Starting Milestone XProtect Recording Server and waiting up to 3 minutes..." />
+      <ProgressText Action="CA_StartEventServer" Message="Starting Milestone Event Server and waiting up to 3 minutes..." />
     </UI>
 
     <!-- ══════════════════════════════════════════════════════════ -->
@@ -98,49 +101,49 @@
     <SetProperty Id="CA_StopRecordingServer"
                  Before="CA_StopRecordingServer"
                  Sequence="execute"
-                 Value="&quot;[SystemFolder]cmd.exe&quot; /c net stop &quot;Milestone XProtect Recording Server&quot; /y 2&gt;nul &amp; exit /b 0" />
+                 Value="ServiceName=RecordingServerService;DisplayName=Milestone XProtect Recording Server;Operation=Stop;TimeoutSeconds=180" />
     <CustomAction Id="CA_StopRecordingServer"
-                  DllEntry="WixQuietExec64"
-                  BinaryRef="Wix4UtilCA_X86"
+                  BinaryRef="InstallerCustomActions"
+                  DllEntry="EnsureServiceState"
                   Execute="deferred"
                   Impersonate="no"
-                  Return="ignore" />
+                  Return="check" />
 
     <!-- ── Stop Event Server service ── -->
     <SetProperty Id="CA_StopEventServer"
                  Before="CA_StopEventServer"
                  Sequence="execute"
-                 Value="&quot;[SystemFolder]cmd.exe&quot; /c net stop &quot;MilestoneEventServerService&quot; /y 2&gt;nul &amp; exit /b 0" />
+                 Value="ServiceName=MilestoneEventServerService;DisplayName=Milestone Event Server;Operation=Stop;TimeoutSeconds=180" />
     <CustomAction Id="CA_StopEventServer"
-                  DllEntry="WixQuietExec64"
-                  BinaryRef="Wix4UtilCA_X86"
+                  BinaryRef="InstallerCustomActions"
+                  DllEntry="EnsureServiceState"
                   Execute="deferred"
                   Impersonate="no"
-                  Return="ignore" />
+                  Return="check" />
 
     <!-- ── Start Recording Server service ── -->
     <SetProperty Id="CA_StartRecordingServer"
                  Before="CA_StartRecordingServer"
                  Sequence="execute"
-                 Value="&quot;[SystemFolder]cmd.exe&quot; /c net start &quot;Milestone XProtect Recording Server&quot; 2&gt;nul &amp; exit /b 0" />
+                 Value="ServiceName=RecordingServerService;DisplayName=Milestone XProtect Recording Server;Operation=Start;TimeoutSeconds=180" />
     <CustomAction Id="CA_StartRecordingServer"
-                  DllEntry="WixQuietExec64"
-                  BinaryRef="Wix4UtilCA_X86"
+                  BinaryRef="InstallerCustomActions"
+                  DllEntry="EnsureServiceState"
                   Execute="deferred"
                   Impersonate="no"
-                  Return="ignore" />
+                  Return="check" />
 
     <!-- ── Start Event Server service ── -->
     <SetProperty Id="CA_StartEventServer"
                  Before="CA_StartEventServer"
                  Sequence="execute"
-                 Value="&quot;[SystemFolder]cmd.exe&quot; /c net start &quot;MilestoneEventServerService&quot; 2&gt;nul &amp; exit /b 0" />
+                 Value="ServiceName=MilestoneEventServerService;DisplayName=Milestone Event Server;Operation=Start;TimeoutSeconds=180" />
     <CustomAction Id="CA_StartEventServer"
-                  DllEntry="WixQuietExec64"
-                  BinaryRef="Wix4UtilCA_X86"
+                  BinaryRef="InstallerCustomActions"
+                  DllEntry="EnsureServiceState"
                   Execute="deferred"
                   Impersonate="no"
-                  Return="ignore" />
+                  Return="check" />
 
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- Features (generated from plugins.json)                    -->
@@ -161,8 +164,8 @@
       <Custom Action="CA_StopSmartClient"       Before="CA_StopManagementClient" Condition="NOT REMOVE=&quot;ALL&quot;" />
       <Custom Action="CA_StopManagementClient"  Before="CA_StopDriverFramework"  Condition="NOT REMOVE=&quot;ALL&quot;" />
       <Custom Action="CA_StopDriverFramework"   Before="CA_StopRecordingServer"  Condition="NOT REMOVE=&quot;ALL&quot;" />
-      <Custom Action="CA_StopRecordingServer"   Before="CA_StopEventServer"      Condition="NOT REMOVE=&quot;ALL&quot;" />
-      <Custom Action="CA_StopEventServer"       Before="InstallFiles"            Condition="NOT REMOVE=&quot;ALL&quot;" />
+      <Custom Action="CA_StopRecordingServer"   Before="CA_StopEventServer"       Condition="NOT REMOVE=&quot;ALL&quot;" />
+      <Custom Action="CA_StopEventServer"       Before="InstallFiles"             Condition="NOT REMOVE=&quot;ALL&quot;" />
 
       <!-- Post-install: restart services -->
       <Custom Action="CA_StartRecordingServer"  After="InstallFiles"             Condition="NOT REMOVE=&quot;ALL&quot;" />

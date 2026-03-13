@@ -131,6 +131,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
+
       - name: Download all artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -157,6 +160,15 @@ jobs:
         run: |
           $stagingRoot = (Resolve-Path 'staging').Path
           pwsh installer/generate-wix.ps1 -StagingRoot $stagingRoot
+
+      - name: Build installer custom actions
+        shell: pwsh
+        run: |
+          msbuild installer\customactions\InstallerCustomActions.csproj `
+            /restore `
+            /p:Configuration=Release `
+            /t:Rebuild `
+            /v:minimal
 
       - name: Build MSI installer
         shell: pwsh

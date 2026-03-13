@@ -148,6 +148,15 @@ if ($wixCmd) {
     $productWxs = Join-Path $wixDir 'Product.wxs'
     $componentsWxs = Join-Path $wixDir 'Components.wxs'
     $msiPath = Join-Path $buildDir "MSCPlugins-v$version.msi"
+    $customActionProj = Join-Path $root 'installer\customactions\InstallerCustomActions.csproj'
+
+    Write-Host "Building installer custom actions..." -ForegroundColor DarkYellow
+    & $msbuildPath $customActionProj `
+        /restore `
+        /p:Configuration=Release `
+        /t:Rebuild `
+        /v:minimal
+    if ($LASTEXITCODE -ne 0) { Write-Error "Installer custom actions build failed"; exit 1 }
 
     & wix build `
         -src $productWxs $componentsWxs `
