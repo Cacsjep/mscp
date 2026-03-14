@@ -35,6 +35,13 @@
     <!-- Custom UI sequence: Welcome → License → InstallDir → FeatureTree → Install -->
     <ui:WixUI Id="WixUI_FeatureTree" />
 
+    <!-- Suppress reboot prompts and FilesInUse dialogs — our custom actions already
+         stop all locked processes/services before InstallFiles. -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="REBOOT" Value="ReallySuppress" />
+    <Property Id="ARPNORESTARTMANAGER" Value="1" />
+    <Property Id="MSIFASTINSTALL" Value="7" />
+
     <!-- Progress text shown in the installer UI during custom actions -->
     <UI>
       <ProgressText Action="CA_StopSmartClient" Message="Closing XProtect Smart Client..." />

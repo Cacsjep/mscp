@@ -46,6 +46,13 @@
           Condition="'$(StopSmartClient)' == 'true' or '$(StopAdminClient)' == 'true' or '$(StopEventServer)' == 'true' or '$(StopRecordingServer)' == 'true'"/>
   </Target>
 
+  <!-- ═══ Post-build: merge CommunitySDK into plugin DLL ═══ -->
+  <Target Name="MergeCommunitySDK" AfterTargets="Build" BeforeTargets="MIPDeploy"
+          Condition="'$(AssemblyName)' != 'CommunitySDK' and Exists('$(TargetDir)CommunitySDK.dll')">
+    <Exec Command="&quot;$(PkgILRepack)\tools\ILRepack.exe&quot; /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)CommunitySDK.dll&quot;" />
+    <Delete Files="$(TargetDir)CommunitySDK.dll;$(TargetDir)CommunitySDK.pdb" />
+  </Target>
+
   <!-- ═══ Post-build: copy output to MIPPlugins ═══ -->
   <Target Name="MIPDeploy" AfterTargets="Build"
           Condition="'$(CIBuild)' != 'true' and '$(PluginName)' != ''">

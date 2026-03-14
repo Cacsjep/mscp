@@ -19,6 +19,15 @@
     <EventServerExe>C:\Program Files\Milestone\XProtect Event Server\VideoOS.Event.Server.exe</EventServerExe>
   </PropertyGroup>
 
+  <!-- ILRepack: merge CommunitySDK.dll into each plugin so no shared DLL ships.
+       Prevents version conflicts when users mix plugin ZIPs from different releases. -->
+  <ItemGroup>
+    <PackageReference Include="ILRepack" Version="2.0.34" GeneratePathProperty="true">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>tools</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
   <!-- Dev-deploy flags (defaults all off, overridden per project) -->
   <PropertyGroup>
     <StopSmartClient>false</StopSmartClient>

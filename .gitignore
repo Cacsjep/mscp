@@ -34,3 +34,4 @@ site/
 *.msi
 installer/wix/Components.wxs
 installer/wix/Components.wxs
+installer/wix/Components.wxs
