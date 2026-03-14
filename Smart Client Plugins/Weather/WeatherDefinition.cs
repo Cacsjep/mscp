@@ -28,7 +28,7 @@ namespace Weather
 
         public override string Manufacturer => "Sample Manufacturer";
 
-        public override string VersionString => "1.0.0.0";
+        
 
         public override System.Drawing.Image Icon
             => VideoOS.Platform.UI.Util.ImageList.Images[VideoOS.Platform.UI.Util.PluginIx];

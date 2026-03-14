@@ -33,7 +33,7 @@ namespace SmartBar
 
         public override string Manufacturer => "MSCP Community";
 
-        public override string VersionString => "1.0.0.0";
+        
 
         public override System.Drawing.Image Icon
             => VideoOS.Platform.UI.Util.ImageList.Images[VideoOS.Platform.UI.Util.PluginIx];

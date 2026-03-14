@@ -67,8 +67,6 @@ namespace CertWatchdog
 
         public override Guid Id => PluginId;
         public override string Name => "Certificate Watchdog";
-        public override string SharedNodeName => "Certificate Watchdog";
-        public override string VersionString => "1.0.0.0";
         public override string Manufacturer => "https://github.com/Cacsjep";
 
         public override Image Icon => _pluginIcon ?? PluginIcon.FallbackIcon;

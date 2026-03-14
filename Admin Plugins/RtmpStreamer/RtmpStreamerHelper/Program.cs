@@ -41,7 +41,7 @@ namespace RTMPStreamerHelper
             _log.Info($"Starting RTMP stream helper");
             _log.Info($"  Server: {serverUri}");
             _log.Info($"  Camera: {cameraId}");
-            _log.Info($"  RTMP:   {rtmpUrl}");
+            _log.Info($"  RTMP:   {MaskStreamKey(rtmpUrl)}");
             _log.Info($"  Assembly search dirs: {string.Join("; ", _assemblySearchDirs)}");
 
             StreamSession session = null;
@@ -152,6 +152,22 @@ namespace RTMPStreamerHelper
             }
 
             return dirs.ToArray();
+        }
+
+        private static string MaskStreamKey(string rtmpUrl)
+        {
+            try
+            {
+                var lastSlash = rtmpUrl.LastIndexOf('/');
+                if (lastSlash > 0 && lastSlash < rtmpUrl.Length - 1)
+                {
+                    var key = rtmpUrl.Substring(lastSlash + 1);
+                    if (key.Length > 4)
+                        return rtmpUrl.Substring(0, lastSlash + 1) + key.Substring(0, 4) + "****";
+                }
+            }
+            catch { }
+            return "rtmp://****";
         }
 
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)

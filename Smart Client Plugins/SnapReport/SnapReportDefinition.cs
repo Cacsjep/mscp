@@ -41,8 +41,7 @@ namespace SnapReport
 
         public override Guid Id => PluginId;
         public override string Name => "SnapReport";
-        public override string SharedNodeName => "SnapReport";
-        public override string VersionString => "1.0.0.0";
+        
         public override string Manufacturer => "https://github.com/Cacsjep";
 
         public override Image Icon => _pluginIcon;

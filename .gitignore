@@ -32,3 +32,5 @@ site/
 *.dll
 !Smart Client Plugins/RDP/lib/*.dll
 *.msi
+installer/wix/Components.wxs
+installer/wix/Components.wxs
