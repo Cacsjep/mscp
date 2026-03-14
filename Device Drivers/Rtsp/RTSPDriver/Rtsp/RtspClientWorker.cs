@@ -9,7 +9,7 @@ namespace RTSPDriver.Rtsp
 {
     /// <summary>
     /// Per-channel RTSP pull client using FFmpeg.
-    /// Connects to an RTSP source, demuxes video, and pushes Annex B frames to a buffer.
+    /// Connects to an RTSP source, demuxes video and audio, and pushes frames to buffers.
     /// Prepends SPS/PPS extradata to keyframes for Milestone's decoder.
     /// </summary>
     internal unsafe class RtspClientWorker
@@ -21,6 +21,7 @@ namespace RTSPDriver.Rtsp
         private readonly int _reconnectIntervalSec;
         private readonly int _rtpBufferSizeKB;
         private readonly RtspStreamBuffer _buffer;
+        private readonly RtspAudioBuffer _audioBuffer;
 
         private Thread _thread;
         private volatile bool _running;
@@ -59,7 +60,7 @@ namespace RTSPDriver.Rtsp
 
         public RtspClientWorker(int channelIndex, string rtspUrl, string transport,
             int connectionTimeoutSec, int reconnectIntervalSec, int rtpBufferSizeKB,
-            RtspStreamBuffer buffer)
+            RtspStreamBuffer buffer, RtspAudioBuffer audioBuffer = null)
         {
             _channelIndex = channelIndex;
             _rtspUrl = rtspUrl;
@@ -68,6 +69,7 @@ namespace RTSPDriver.Rtsp
             _reconnectIntervalSec = reconnectIntervalSec;
             _rtpBufferSizeKB = rtpBufferSizeKB;
             _buffer = buffer;
+            _audioBuffer = audioBuffer;
         }
 
         public void Start()
@@ -118,6 +120,7 @@ namespace RTSPDriver.Rtsp
                 }
 
                 _buffer.SetOffline();
+                _audioBuffer?.SetOffline();
                 _connectedSince = DateTime.MinValue;
 
                 if (!_running) break;
@@ -162,7 +165,6 @@ namespace RTSPDriver.Rtsp
                 ffmpeg.av_dict_set(&opts, "timeout", timeoutUs.ToString(), 0);       // General socket timeout
                 ffmpeg.av_dict_set(&opts, "buffer_size", (_rtpBufferSizeKB * 1024).ToString(), 0);
                 ffmpeg.av_dict_set(&opts, "max_delay", "500000", 0);
-                ffmpeg.av_dict_set(&opts, "allowed_media_types", "video", 0);
                 ffmpeg.av_dict_set(&opts, "fflags", "nobuffer", 0);
                 ffmpeg.av_dict_set(&opts, "analyzeduration", "2000000", 0);
                 ffmpeg.av_dict_set(&opts, "probesize", "2000000", 0);
@@ -183,16 +185,23 @@ namespace RTSPDriver.Rtsp
                     return;
                 }
 
-                // Find video stream
+                // Find video and audio streams
                 int videoStreamIndex = -1;
+                int audioStreamIndex = -1;
                 AVCodecID codecId = AVCodecID.AV_CODEC_ID_NONE;
+                AVCodecID audioCodecId = AVCodecID.AV_CODEC_ID_NONE;
                 for (int i = 0; i < (int)fmtCtx->nb_streams; i++)
                 {
-                    if (fmtCtx->streams[i]->codecpar->codec_type == AVMediaType.AVMEDIA_TYPE_VIDEO)
+                    var type = fmtCtx->streams[i]->codecpar->codec_type;
+                    if (type == AVMediaType.AVMEDIA_TYPE_VIDEO && videoStreamIndex < 0)
                     {
                         videoStreamIndex = i;
                         codecId = fmtCtx->streams[i]->codecpar->codec_id;
-                        break;
+                    }
+                    else if (type == AVMediaType.AVMEDIA_TYPE_AUDIO && audioStreamIndex < 0)
+                    {
+                        audioStreamIndex = i;
+                        audioCodecId = fmtCtx->streams[i]->codecpar->codec_id;
                     }
                 }
 
@@ -230,12 +239,36 @@ namespace RTSPDriver.Rtsp
                 }
 
                 _buffer.SetStreamInfo(detectedCodec, width, height);
+
+                // Setup audio stream if present and audio buffer is provided
+                AVRational audioTimeBase = default;
+                if (audioStreamIndex >= 0 && _audioBuffer != null)
+                {
+                    var audioParams = fmtCtx->streams[audioStreamIndex]->codecpar;
+                    int audioSampleRate = audioParams->sample_rate;
+                    int audioChannels = audioParams->ch_layout.nb_channels;
+                    if (audioChannels <= 0) audioChannels = 1;
+                    int audioBits = audioParams->bits_per_coded_sample > 0 ? audioParams->bits_per_coded_sample : 16;
+                    audioTimeBase = fmtCtx->streams[audioStreamIndex]->time_base;
+
+                    var mapping = MapAudioCodec(audioCodecId);
+                    _audioBuffer.SetStreamInfo(audioSampleRate, audioChannels, audioBits, mapping.codecType, mapping.codecSubtype);
+                    _audioBuffer.SetLive();
+
+                    Toolbox.Log.Trace("RtspClientWorker[{0}]: Audio found codec={1} rate={2} ch={3} bits={4}",
+                        _channelIndex + 1, ffmpeg.avcodec_get_name(audioCodecId), audioSampleRate, audioChannels, audioBits);
+                }
+                else if (_audioBuffer != null)
+                {
+                    Toolbox.Log.Trace("RtspClientWorker[{0}]: No audio stream in RTSP source", _channelIndex + 1);
+                }
+
                 _state = RtspWorkerState.AwaitingKeyFrame;
                 _connectedSince = DateTime.UtcNow;
                 _reconnectAttempt = 0;
 
-                Toolbox.Log.Trace("RtspClientWorker[{0}]: Connected codec={1} {2}x{3} transport={4} extradata={5}B, awaiting keyframe",
-                    _channelIndex + 1, detectedCodec, width, height, _transport, extradata?.Length ?? 0);
+                Toolbox.Log.Trace("RtspClientWorker[{0}]: Connected codec={1} {2}x{3} transport={4} extradata={5}B audio={6}, awaiting keyframe",
+                    _channelIndex + 1, detectedCodec, width, height, _transport, extradata?.Length ?? 0, audioStreamIndex >= 0 ? "yes" : "no");
 
                 var timeBase = fmtCtx->streams[videoStreamIndex]->time_base;
                 long firstPts = ffmpeg.AV_NOPTS_VALUE;
@@ -255,6 +288,24 @@ namespace RTSPDriver.Rtsp
                         else
                             _lastError = $"Read error: {FfmpegError(ret)}";
                         break;
+                    }
+
+                    // Handle audio packets
+                    if (pkt->stream_index == audioStreamIndex && _audioBuffer != null && _audioBuffer.IsLive && pkt->size > 0)
+                    {
+                        byte[] audioData = new byte[pkt->size];
+                        Marshal.Copy((IntPtr)pkt->data, audioData, 0, pkt->size);
+
+                        DateTime audioTs = DateTime.UtcNow;
+                        if (pkt->pts != ffmpeg.AV_NOPTS_VALUE && firstPts != ffmpeg.AV_NOPTS_VALUE)
+                        {
+                            double relSec = (pkt->pts - firstPts) * ffmpeg.av_q2d(audioTimeBase);
+                            audioTs = _connectedSince.AddSeconds(relSec);
+                        }
+
+                        _audioBuffer.PushFrame(audioData, audioTs);
+                        ffmpeg.av_packet_unref(pkt);
+                        continue;
                     }
 
                     if (pkt->stream_index != videoStreamIndex)
@@ -401,6 +452,32 @@ namespace RTSPDriver.Rtsp
             var x64Dir = Path.Combine(asmDir, "x64");
             if (Directory.Exists(x64Dir))
                 ffmpeg.RootPath = x64Dir;
+        }
+
+        /// <summary>
+        /// Map FFmpeg audio codec ID to Milestone AudioCodecType and subtype.
+        /// Values match VideoOS.Platform.DriverFramework.Data.AudioCodecType constants.
+        /// </summary>
+        private static (uint codecType, uint codecSubtype) MapAudioCodec(AVCodecID codecId)
+        {
+            switch (codecId)
+            {
+                case AVCodecID.AV_CODEC_ID_AAC:
+                    return (18, 0); // AACMPEG4
+                case AVCodecID.AV_CODEC_ID_PCM_MULAW:
+                    return (3, 1);  // G711, uLaw
+                case AVCodecID.AV_CODEC_ID_PCM_ALAW:
+                    return (3, 2);  // G711, ALaw
+                case AVCodecID.AV_CODEC_ID_PCM_S16LE:
+                case AVCodecID.AV_CODEC_ID_PCM_S16BE:
+                case AVCodecID.AV_CODEC_ID_PCM_U8:
+                    return (1, 0);  // PCM
+                case AVCodecID.AV_CODEC_ID_ADPCM_G726:
+                case AVCodecID.AV_CODEC_ID_ADPCM_G726LE:
+                    return (9, 3);  // G726, 32bit LE
+                default:
+                    return (1, 0);  // Fallback to PCM
+            }
         }
 
         private static string FfmpegError(int error)

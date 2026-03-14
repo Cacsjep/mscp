@@ -130,8 +130,16 @@ namespace RTSPDriver
             fields.Add(new StringSetupField()
             {
                 Key = Constants.RtspPath,
-                DisplayName = "RTSP Path",
+                DisplayName = "RTSP Path (Stream 1)",
                 ReferenceId = Constants.RtspPathRefId,
+                DefaultValue = "",
+            });
+
+            fields.Add(new StringSetupField()
+            {
+                Key = Constants.RtspPath2,
+                DisplayName = "RTSP Path (Stream 2)",
+                ReferenceId = Constants.RtspPath2RefId,
                 DefaultValue = "",
             });
 
@@ -175,11 +183,20 @@ namespace RTSPDriver
                     {
                         {Constants.RtspPort, "554"},
                         {Constants.RtspPath, ""},
+                        {Constants.RtspPath2, ""},
                         {Constants.TransportProtocol, "auto"},
                         {Constants.ChannelEnabled, "true"}
                     },
                     Streams = BuildCameraStreams(),
                     DeviceEvents = BuildCameraEvents()
+                });
+
+                devices.Add(new MicrophoneDeviceDefinition()
+                {
+                    DisplayName = $"Microphone {i + 1}",
+                    DeviceId = Constants.MicrophoneDeviceIds[i].ToString(),
+                    Settings = new Dictionary<string, string>(),
+                    Streams = BuildMicrophoneStreams(),
                 });
             }
             return devices;
@@ -208,15 +225,37 @@ namespace RTSPDriver
 
         private static ICollection<StreamDefinition> BuildCameraStreams()
         {
-            ICollection<StreamDefinition> streams = new List<StreamDefinition>();
-            streams.Add(new StreamDefinition()
+            return new List<StreamDefinition>
             {
-                DisplayName = "Video Stream",
-                ReferenceId = Constants.VideoStream1RefId.ToString(),
-                Settings = new Dictionary<string, string>(),
-                RemotePlaybackSupport = false,
-            });
-            return streams;
+                new StreamDefinition()
+                {
+                    DisplayName = "Video Stream 1",
+                    ReferenceId = Constants.VideoStream1RefId.ToString(),
+                    Settings = new Dictionary<string, string>(),
+                    RemotePlaybackSupport = false,
+                },
+                new StreamDefinition()
+                {
+                    DisplayName = "Video Stream 2",
+                    ReferenceId = Constants.VideoStream2RefId.ToString(),
+                    Settings = new Dictionary<string, string>(),
+                    RemotePlaybackSupport = false,
+                }
+            };
+        }
+
+        private static ICollection<StreamDefinition> BuildMicrophoneStreams()
+        {
+            return new List<StreamDefinition>
+            {
+                new StreamDefinition()
+                {
+                    DisplayName = "Audio Stream",
+                    ReferenceId = Constants.AudioStream1RefId.ToString(),
+                    Settings = new Dictionary<string, string>(),
+                    RemotePlaybackSupport = false,
+                }
+            };
         }
     }
 }

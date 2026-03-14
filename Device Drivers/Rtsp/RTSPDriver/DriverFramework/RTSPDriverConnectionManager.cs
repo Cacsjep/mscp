@@ -12,14 +12,21 @@ using VideoOS.Platform.DriverFramework.Utilities;
 namespace RTSPDriver
 {
     /// <summary>
-    /// Manages RTSP client connections for all 4 channels.
-    /// Each channel has its own RtspClientWorker that connects to the RTSP source.
+    /// Manages RTSP client connections for all channels.
+    /// Each channel can have up to 2 video streams (primary + secondary) plus audio from the primary stream.
+    /// Workers and buffers are keyed by WorkerKey(channelIndex, streamIndex).
     /// </summary>
     public class RTSPDriverConnectionManager : ConnectionManager
     {
         private bool _connected;
         private readonly ConcurrentDictionary<int, RtspClientWorker> _workers = new ConcurrentDictionary<int, RtspClientWorker>();
         private readonly ConcurrentDictionary<int, RtspStreamBuffer> _buffers = new ConcurrentDictionary<int, RtspStreamBuffer>();
+        private readonly ConcurrentDictionary<int, RtspAudioBuffer> _audioBuffers = new ConcurrentDictionary<int, RtspAudioBuffer>();
+
+        /// <summary>
+        /// Compute a flat key from channel index + stream index.
+        /// </summary>
+        private static int WorkerKey(int channelIndex, int streamIndex) => channelIndex * 2 + streamIndex;
 
         private string _host;
         private string _userName;
@@ -35,19 +42,28 @@ namespace RTSPDriver
         }
 
         /// <summary>
-        /// Get or create the stream buffer for a channel index.
+        /// Get or create the video stream buffer for a channel and stream index.
         /// </summary>
-        internal RtspStreamBuffer GetOrCreateBuffer(int channelIndex)
+        internal RtspStreamBuffer GetOrCreateBuffer(int channelIndex, int streamIndex = 0)
         {
-            return _buffers.GetOrAdd(channelIndex, idx => new RtspStreamBuffer($"channel{idx + 1}"));
+            int key = WorkerKey(channelIndex, streamIndex);
+            return _buffers.GetOrAdd(key, _ => new RtspStreamBuffer($"ch{channelIndex + 1}_s{streamIndex + 1}"));
         }
 
         /// <summary>
-        /// Get the worker for a channel to query its status.
+        /// Get or create the audio buffer for a channel. Audio always comes from the primary stream.
         /// </summary>
-        internal RtspClientWorker GetWorker(int channelIndex)
+        internal RtspAudioBuffer GetOrCreateAudioBuffer(int channelIndex)
         {
-            _workers.TryGetValue(channelIndex, out var worker);
+            return _audioBuffers.GetOrAdd(channelIndex, idx => new RtspAudioBuffer($"ch{idx + 1}_audio"));
+        }
+
+        /// <summary>
+        /// Get the worker for a channel and stream index to query its status.
+        /// </summary>
+        internal RtspClientWorker GetWorker(int channelIndex, int streamIndex = 0)
+        {
+            _workers.TryGetValue(WorkerKey(channelIndex, streamIndex), out var worker);
             return worker;
         }
 
@@ -80,27 +96,30 @@ namespace RTSPDriver
         }
 
         /// <summary>
-        /// Start the RTSP pull worker for a specific channel.
-        /// Called from the stream session when it initializes.
+        /// Start the RTSP pull worker for a specific channel and stream.
+        /// Audio buffer is only attached to the primary stream (streamIndex=0).
         /// </summary>
-        internal void StartChannel(int channelIndex, int port, string rtspPath, string transport, bool enabled)
+        internal void StartChannel(int channelIndex, int streamIndex, int port, string rtspPath, string transport, bool enabled)
         {
             if (!enabled)
             {
-                Toolbox.Log.Trace("RTSPDriverConnectionManager: Channel {0} disabled, skipping", channelIndex + 1);
+                Toolbox.Log.Trace("RTSPDriverConnectionManager: Channel {0} stream {1} disabled, skipping", channelIndex + 1, streamIndex + 1);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(rtspPath))
             {
-                Toolbox.Log.Trace("RTSPDriverConnectionManager: Channel {0} has no RTSP path configured, skipping", channelIndex + 1);
+                Toolbox.Log.Trace("RTSPDriverConnectionManager: Channel {0} stream {1} has no RTSP path configured, skipping", channelIndex + 1, streamIndex + 1);
                 return;
             }
 
-            StopChannel(channelIndex);
+            StopChannel(channelIndex, streamIndex);
 
-            var buffer = GetOrCreateBuffer(channelIndex);
+            var buffer = GetOrCreateBuffer(channelIndex, streamIndex);
             string rtspUrl = BuildRtspUrl(port, rtspPath);
+
+            // Audio buffer only on the primary stream
+            RtspAudioBuffer audioBuffer = streamIndex == 0 ? GetOrCreateAudioBuffer(channelIndex) : null;
 
             var worker = new RtspClientWorker(
                 channelIndex,
@@ -109,34 +128,38 @@ namespace RTSPDriver
                 _connectionTimeoutSec,
                 _reconnectIntervalSec,
                 _rtpBufferSizeKB,
-                buffer);
+                buffer,
+                audioBuffer);
 
-            if (_workers.TryAdd(channelIndex, worker))
+            int key = WorkerKey(channelIndex, streamIndex);
+            if (_workers.TryAdd(key, worker))
             {
                 worker.Start();
-                Toolbox.Log.Trace("RTSPDriverConnectionManager: Started channel {0} url={1} transport={2}", channelIndex + 1, worker.DisplayUrl, transport);
+                Toolbox.Log.Trace("RTSPDriverConnectionManager: Started channel {0} stream {1} url={2} transport={3} audio={4}",
+                    channelIndex + 1, streamIndex + 1, worker.DisplayUrl, transport, audioBuffer != null ? "yes" : "no");
             }
         }
 
         /// <summary>
-        /// Stop and dispose the worker for a specific channel.
+        /// Stop and dispose the worker for a specific channel and stream.
         /// </summary>
-        internal void StopChannel(int channelIndex)
+        internal void StopChannel(int channelIndex, int streamIndex = 0)
         {
-            if (_workers.TryRemove(channelIndex, out var worker))
+            int key = WorkerKey(channelIndex, streamIndex);
+            if (_workers.TryRemove(key, out var worker))
             {
                 worker.Stop();
-                Toolbox.Log.Trace("RTSPDriverConnectionManager: Stopped channel {0}", channelIndex + 1);
+                Toolbox.Log.Trace("RTSPDriverConnectionManager: Stopped channel {0} stream {1}", channelIndex + 1, streamIndex + 1);
             }
         }
 
         /// <summary>
-        /// Restart a channel with new settings.
+        /// Restart a channel stream with new settings.
         /// </summary>
-        internal void RestartChannel(int channelIndex, int port, string rtspPath, string transport, bool enabled)
+        internal void RestartChannel(int channelIndex, int streamIndex, int port, string rtspPath, string transport, bool enabled)
         {
-            StopChannel(channelIndex);
-            StartChannel(channelIndex, port, rtspPath, transport, enabled);
+            StopChannel(channelIndex, streamIndex);
+            StartChannel(channelIndex, streamIndex, port, rtspPath, transport, enabled);
         }
 
         /// <summary>
