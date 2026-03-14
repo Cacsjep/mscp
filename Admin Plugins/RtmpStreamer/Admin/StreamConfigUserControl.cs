@@ -122,8 +122,8 @@ namespace RTMPStreamer.Admin
             if (string.IsNullOrEmpty(rtmpUrl) || rtmpUrl == "rtmp://")
                 return "Please enter an RTMP URL.";
 
-            if (!Regex.IsMatch(rtmpUrl, @"^rtmps?://[^\s]+$", RegexOptions.IgnoreCase))
-                return "RTMP URL must start with rtmp:// or rtmps:// and contain no spaces.";
+            if (!Regex.IsMatch(rtmpUrl, @"^rtmps?://[^\s""\\]+$", RegexOptions.IgnoreCase))
+                return "RTMP URL must start with rtmp:// or rtmps:// and contain no spaces, quotes, or backslashes.";
 
             return null;
         }

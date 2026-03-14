@@ -132,7 +132,6 @@ namespace MyPlugin
         public override Guid Id => MyPluginPluginId;
         public override string Name => "MyPlugin Plugin";
         public override string Manufacturer => "MSC Community Plugins";
-        public override string VersionString => "1.0.0.0";
 
         public override System.Drawing.Image Icon
             => VideoOS.Platform.UI.Util.ImageList.Images[VideoOS.Platform.UI.Util.PluginIx];
@@ -517,8 +516,6 @@ namespace MyPlugin
 
         public override Guid Id => PluginId;
         public override string Name => "My Plugin";
-        public override string SharedNodeName => "My Plugin";
-        public override string VersionString => "1.0.0.0";
         public override string Manufacturer => "https://github.com/Cacsjep";
         public override Image Icon => _pluginIcon;
 

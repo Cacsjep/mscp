@@ -15,6 +15,22 @@ namespace RTMPStreamer.Background
 {
     public class RTMPStreamerBackgroundPlugin : BackgroundPlugin
     {
+        private static string MaskStreamKey(string rtmpUrl)
+        {
+            try
+            {
+                var lastSlash = rtmpUrl.LastIndexOf('/');
+                if (lastSlash > 0 && lastSlash < rtmpUrl.Length - 1)
+                {
+                    var key = rtmpUrl.Substring(lastSlash + 1);
+                    if (key.Length > 4)
+                        return rtmpUrl.Substring(0, lastSlash + 1) + key.Substring(0, 4) + "****";
+                }
+            }
+            catch { }
+            return "rtmp://****";
+        }
+
         private static readonly PluginLog _log = new PluginLog("RTMPStreamer");
         private readonly SystemLog _sysLog = new SystemLog(_log);
         private object _configMessageObj;
@@ -146,7 +162,7 @@ namespace RTMPStreamer.Background
 
             try
             {
-                _log.Info($"Launching helper: {cameraName} ({cameraId}) -> {rtmpUrl}");
+                _log.Info($"Launching helper: {cameraName} ({cameraId}) -> {MaskStreamKey(rtmpUrl)}");
 
                 var psi = new ProcessStartInfo
                 {
@@ -201,7 +217,7 @@ namespace RTMPStreamer.Background
                             newStatus == "Stopped")
                         {
                             if (newStatus.StartsWith("Streaming") && !prev.StartsWith("Streaming"))
-                                _sysLog.StreamConnected(cameraName, rtmpUrl);
+                                _sysLog.StreamConnected(cameraName, MaskStreamKey(rtmpUrl));
                             else if ((newStatus.StartsWith("Error") || newStatus.StartsWith("Codec")) &&
                                      !prev.StartsWith("Error") && !prev.StartsWith("Codec"))
                                 _sysLog.StreamError(cameraName, newStatus);

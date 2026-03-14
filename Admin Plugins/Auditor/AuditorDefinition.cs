@@ -35,8 +35,6 @@ namespace Auditor
 
         public override Guid Id => PluginId;
         public override string Name => "Auditor";
-        public override string SharedNodeName => "Auditor";
-        public override string VersionString => "1.0.0.0";
         public override string Manufacturer => "https://github.com/Cacsjep";
 
         public override Image Icon => _pluginIcon ?? PluginIcon.FallbackIcon;

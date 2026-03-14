@@ -25,8 +25,7 @@ namespace RTMPStreamer
 
         public override Guid Id => PluginId;
         public override string Name => "RTMP Streamer";
-        public override string SharedNodeName => "RTMP Streamer";
-        public override string VersionString => "1.0.0.0";
+        
         public override string Manufacturer => "https://github.com/Cacsjep";
 
         public override Image Icon => _pluginIcon ?? PluginIcon.FallbackIcon;
