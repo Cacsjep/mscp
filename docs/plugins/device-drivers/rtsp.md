@@ -2,13 +2,14 @@
 
 # RTSP Driver
 
-A Milestone XProtect device driver that pulls RTSP streams from IP cameras and encoders. Supports H.264 and H.265/HEVC with rich visual status frames showing connection state, errors, and diagnostics - unlike the built-in Universal Driver which shows no feedback when things go wrong.
+A Milestone XProtect device driver that pulls RTSP streams from IP cameras and encoders. Supports H.264 and H.265/HEVC video with audio (AAC, G.711, PCM, G.726), dual streams per channel for adaptive streaming, and rich visual status frames showing connection state, errors, and diagnostics - unlike the built-in Universal Driver which shows no feedback when things go wrong.
 
 ## Quick Start
 
 1. Add hardware in Management Client (see [Adding a Device](#adding-a-new-rtsp-device))
-2. Set the **RTSP Path** for each channel (e.g. `/axis-media/media.amp`)
-3. Video appears in Smart Client
+2. Set the **RTSP Path (Stream 1)** for each channel (e.g. `/axis-media/media.amp`)
+3. Optionally set **RTSP Path (Stream 2)** for a secondary stream (e.g. lower resolution for adaptive streaming)
+4. Video appears in Smart Client, audio is picked up automatically if the RTSP source contains an audio track
 
 ## Adding a New RTSP Device
 
@@ -29,10 +30,20 @@ After installing, add new hardware in the **Management Client**:
 After adding the hardware, configure each channel:
 
 1. In Management Client, expand the hardware and select a channel
-2. Set the **RTSP Path** to the camera's stream path
-3. Optionally adjust the **RTSP Port**, **Transport Protocol**, and **Channel Enabled** settings
+2. Set the **RTSP Path (Stream 1)** to the camera's primary stream path (e.g. full resolution)
+3. Optionally set **RTSP Path (Stream 2)** to a secondary stream path (e.g. lower resolution for adaptive streaming)
+4. Optionally adjust the **RTSP Port**, **Transport Protocol**, and **Channel Enabled** settings
 
 The driver will connect immediately when a path is configured. Until then, the channel shows a "Not Configured" status frame with RTSP path examples for common camera brands.
+
+### Audio
+
+Audio is automatically demuxed from the **primary stream** (Stream 1) if the RTSP source contains an audio track. Each channel has a corresponding microphone device (Microphone 1 for Channel 1, etc.) that appears under the hardware in Management Client.
+
+Supported audio codecs: **AAC**, **G.711** (u-law/A-law), **PCM**, **G.726**.
+
+!!! tip "RTSP path must include audio"
+    Some camera RTSP paths are video-only (e.g. Axis `?videocodec=h265`). Use a path that includes the audio track (e.g. `/axis-media/media.amp` without video-only parameters) for audio to work.
 
 <video controls width="100%">
   <source src="../rtsp-vids/add.mp4" type="video/mp4">
@@ -42,15 +53,15 @@ The driver will connect immediately when a path is configured. Until then, the c
 
 The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). The driver constructs the full URL using the hardware IP, credentials, and per-channel port and path settings.
 
-| Brand | Full RTSP URL | Path Setting |
+| Brand | Stream 1 (Primary) | Stream 2 (Secondary) |
 |---|---|---|
-| **Axis** | `rtsp://ip/axis-media/media.amp` | `/axis-media/media.amp` |
-| **Hikvision** | `rtsp://ip/Streaming/Channels/101` | `/Streaming/Channels/101` |
-| **Dahua** | `rtsp://ip/cam/realmonitor?channel=1&subtype=0` | `/cam/realmonitor?channel=1&subtype=0` |
-| **ONVIF** | `rtsp://ip/onvif-media/media.amp` | `/onvif-media/media.amp` |
-| **Vivotek** | `rtsp://ip/live.sdp` | `/live.sdp` |
-| **Hanwha** | `rtsp://ip/profile2/media.smp` | `/profile2/media.smp` |
-| **Bosch** | `rtsp://ip/video1` | `/video1` |
+| **Axis** | `/axis-media/media.amp` | `/axis-media/media.amp?resolution=480x270` |
+| **Hikvision** | `/Streaming/Channels/101` | `/Streaming/Channels/102` |
+| **Dahua** | `/cam/realmonitor?channel=1&subtype=0` | `/cam/realmonitor?channel=1&subtype=1` |
+| **ONVIF** | `/onvif-media/media.amp` | *(camera-specific)* |
+| **Vivotek** | `/live.sdp` | `/live2.sdp` |
+| **Hanwha** | `/profile2/media.smp` | `/profile3/media.smp` |
+| **Bosch** | `/video1` | `/video2` |
 
 !!! tip "Leading slash"
     The driver auto-adds a leading `/` if you forget it - both `axis-media/media.amp` and `/axis-media/media.amp` work.
@@ -69,9 +80,10 @@ The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). Th
 
 | Setting | Default | Description |
 |---|---|---|
-| **RTSP Port** | `554` | RTSP port on the camera. Standard is 554. |
-| **RTSP Path** | *(empty)* | Stream path on the camera (e.g. `/axis-media/media.amp`). Channel stays idle until configured. |
-| **Transport Protocol** | `Auto (prefer UDP)` | `Auto` uses UDP (standard for LAN surveillance). `TCP` forces interleaved RTP-over-TCP. `UDP` forces RTP-over-UDP. |
+| **RTSP Port** | `554` | RTSP port on the camera. Standard is 554. Shared by both streams. |
+| **RTSP Path (Stream 1)** | *(empty)* | Primary stream path (e.g. `/axis-media/media.amp`). Channel stays idle until configured. Audio is sourced from this stream. |
+| **RTSP Path (Stream 2)** | *(empty)* | Secondary stream path for adaptive streaming (e.g. lower resolution). Leave empty to disable. |
+| **Transport Protocol** | `Auto (prefer UDP)` | `Auto` uses UDP (standard for LAN surveillance). `TCP` forces interleaved RTP-over-TCP. `UDP` forces RTP-over-UDP. Applies to both streams. |
 | **Channel Enabled** | `true` | Disable to stop pulling from this channel without removing the configuration. |
 
 ### Transport Protocol
@@ -112,12 +124,14 @@ When the channel is not streaming live video, the driver shows rich JPEG status 
 
 Each driver instance supports **4 independent channels**. Each channel:
 
-- Has its own RTSP connection, port, path, and transport settings
-- Runs on a dedicated background thread
+- Supports **2 video streams** (primary + secondary) for adaptive streaming
+- Has a **microphone device** for audio from the primary stream
+- Has its own RTSP connections, port, paths, and transport settings
+- Each stream runs on a dedicated background thread
 - Maintains its own frame buffer and reconnection logic
 - Can connect to a different camera or stream
 
-To monitor more than 4 streams, add multiple driver instances with different ports in the Add Hardware wizard.
+To monitor more than 4 cameras, add multiple driver instances with different ports in the Add Hardware wizard.
 
 ## Troubleshooting
 
@@ -135,6 +149,9 @@ To monitor more than 4 streams, add multiple driver instances with different por
 | Choppy video over UDP | Increase **RTP Buffer Size** or switch to TCP transport. |
 | "Hardware not responding" | Verify Recording Server is running. Check that driver DLLs are not blocked. |
 | DLLs blocked / driver not loading | Right-click the ZIP before extracting → Properties → Unblock. |
+| No audio | Verify the RTSP path includes audio. Some paths (e.g. `?videocodec=h265`) are video-only. Check the driver log for "No audio stream in RTSP source". |
+| Microphone shows error | Audio is only sourced from Stream 1. If Stream 1 has no audio track, the microphone will show an error state. |
+| Stream 2 not working | Verify the secondary RTSP path is valid. Stream 2 is independent — Stream 1 will continue working even if Stream 2 fails. |
 
 ### Testing with VLC
 
@@ -158,7 +175,7 @@ C:\ProgramData\Milestone\XProtect Recording Server\Logs\DriverFramework_RTSPDriv
 
 ## Known Limitations
 
-- **H.264 and H.265 only**: Other codecs (MJPEG, MPEG-4, etc.) are not supported
-- **Video only**: Audio streams are ignored
+- **H.264 and H.265 only**: Other video codecs (MJPEG, MPEG-4, etc.) are not supported
+- **Audio from primary stream only**: Audio is always sourced from Stream 1. Stream 2 carries video only.
 
 </div>

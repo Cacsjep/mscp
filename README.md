@@ -16,6 +16,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [RDP](Smart%20Client%20Plugins/RDP) | Smart Client | Embedded RDP sessions in Smart Client view items |
 | [Notepad](Smart%20Client%20Plugins/Notepad) | Smart Client | Simple text editor for operator notes in Smart Client view items |
 | [Rtmp](Device%20Drivers/Rtmp) | Device Driver | Receive RTMP/RTMPS push streams (H.264) directly into XProtect™ |
+| [Rtsp](Device%20Drivers/Rtsp) | Device Driver | Pull RTSP streams (H.264/H.265 + audio) with dual streams and rich diagnostics |
 | [RTMPStreamer](Admin%20Plugins/RTMPStreamer) | Admin Plugin | Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.) |
 | [SnapReport](Smart%20Client%20Plugins/SnapReport) | Smart Client | Camera snapshot PDF report generator for site surveys and compliance |
 | [MonitorRTMPStreamer](Smart%20Client%20Plugins/MonitorRTMPStreamer) | Smart Client | Capture desktop monitors and stream via RTMP |
@@ -58,7 +59,8 @@ mscp/
 │   ├── SmartBar/                  Workspace toolbar plugin
 │   └── FlexView/                  Freeform grid view layout designer
 ├── Device Drivers/
-│   └── Rtmp/                      RTMP push stream driver
+│   ├── Rtmp/                      RTMP push stream driver
+│   └── Rtsp/                      RTSP pull stream driver (H.264/H.265 + audio)
 ├── Admin Plugins/
 │   ├── RTMPStreamer/              RTMP outbound streaming plugin
 │   ├── CertWatchdog/             SSL certificate expiry monitoring plugin

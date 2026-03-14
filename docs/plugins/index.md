@@ -106,7 +106,7 @@ hide:
   </a>
   <a class="pr" href="device-drivers/rtsp/">
     <div class="pi dd"><i class="mdi mdi-cctv"></i></div>
-    <div class="pt"><span class="pn">RTSP Driver</span><span class="pd">Pull RTSP streams (H.264/H.265) from IP cameras with rich status/logging informations.</span></div>
+    <div class="pt"><span class="pn">RTSP Driver</span><span class="pd">Pull RTSP streams (H.264/H.265 + audio) from IP cameras with dual streams, rich status frames, and diagnostics.</span></div>
   </a>
 </div>
 

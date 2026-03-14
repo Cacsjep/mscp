@@ -26,6 +26,7 @@ namespace RTSPDriver
         private string _transport;
         private bool _channelEnabled;
         private int _channelIndex;
+        private int _streamIndex; // 0 = primary, 1 = secondary
         private string _deviceName;
         private int _reconnectIntervalSec = 10;
         private int _connectionTimeoutSec = 2;
@@ -50,6 +51,9 @@ namespace RTSPDriver
                 }
             }
             Channel = _channelIndex;
+
+            // Determine stream index from stream ID
+            _streamIndex = streamId == Constants.VideoStream2RefId ? 1 : 0;
             _deviceName = $"Channel {_channelIndex + 1}";
 
             RefreshSettings();
@@ -60,9 +64,9 @@ namespace RTSPDriver
 
         public override void Close()
         {
-            Toolbox.Log.Trace("RTSPVideoStreamSession: Closing channel={0} frames={1}", _channelIndex + 1, _frameCount);
+            Toolbox.Log.Trace("RTSPVideoStreamSession: Closing channel={0} stream={1} frames={2}", _channelIndex + 1, _streamIndex + 1, _frameCount);
             _settingsManager.OnSettingsChanged -= OnSettingsChanged;
-            _connectionManager.StopChannel(_channelIndex);
+            _connectionManager.StopChannel(_channelIndex, _streamIndex);
             base.Close();
         }
 
@@ -71,13 +75,14 @@ namespace RTSPDriver
             if (e.Settings.Any(s =>
                 s.Key == Constants.RtspPort ||
                 s.Key == Constants.RtspPath ||
+                s.Key == Constants.RtspPath2 ||
                 s.Key == Constants.TransportProtocol ||
                 s.Key == Constants.ChannelEnabled ||
                 s.Key == Constants.ConnectionTimeoutSec ||
                 s.Key == Constants.ReconnectIntervalSec ||
                 s.Key == Constants.RtpBufferSizeKB))
             {
-                Toolbox.Log.Trace("RTSPVideoStreamSession: Settings changed for channel {0}", _channelIndex + 1);
+                Toolbox.Log.Trace("RTSPVideoStreamSession: Settings changed for channel {0} stream {1}", _channelIndex + 1, _streamIndex + 1);
                 RefreshSettings();
             }
         }
@@ -88,7 +93,9 @@ namespace RTSPDriver
             int.TryParse(portSetting?.Value ?? "554", out int newPort);
             if (newPort <= 0) newPort = 554;
 
-            var pathSetting = _settingsManager.GetSetting(new DeviceSetting(Constants.RtspPath, _deviceId, ""));
+            // Primary stream uses RtspPath, secondary uses RtspPath2
+            string pathKey = _streamIndex == 0 ? Constants.RtspPath : Constants.RtspPath2;
+            var pathSetting = _settingsManager.GetSetting(new DeviceSetting(pathKey, _deviceId, ""));
             string newPath = (pathSetting?.Value ?? "").Trim();
 
             // Auto-add leading slash if user forgot it
@@ -128,11 +135,11 @@ namespace RTSPDriver
             _connectionTimeoutSec = timeout;
             _rtpBufferSizeKB = bufSize;
 
-            _streamBuffer = _connectionManager.GetOrCreateBuffer(_channelIndex);
+            _streamBuffer = _connectionManager.GetOrCreateBuffer(_channelIndex, _streamIndex);
 
             if (needsRestart)
             {
-                _connectionManager.RestartChannel(_channelIndex, _rtspPort, _rtspPath, _transport, _channelEnabled);
+                _connectionManager.RestartChannel(_channelIndex, _streamIndex, _rtspPort, _rtspPath, _transport, _channelEnabled);
             }
         }
 
@@ -303,7 +310,7 @@ namespace RTSPDriver
             if (string.IsNullOrWhiteSpace(_rtspPath))
                 return StatusFrameGenerator.GenerateNotConfiguredFrame(_deviceName);
 
-            var worker = _connectionManager.GetWorker(_channelIndex);
+            var worker = _connectionManager.GetWorker(_channelIndex, _streamIndex);
             if (worker == null)
                 return StatusFrameGenerator.GenerateOfflineFrame(_deviceName, "Not started", _transport ?? "auto");
 

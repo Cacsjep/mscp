@@ -42,8 +42,14 @@ namespace RTSPDriver
             Guid dev = new Guid(deviceId);
             if (Constants.IsVideoDevice(dev))
             {
-                Toolbox.Log.Trace("StreamManager: CreateSession deviceId={0} streamId={1} sessionId={2}", deviceId, streamId, sessionId);
+                Toolbox.Log.Trace("StreamManager: CreateSession video deviceId={0} streamId={1} sessionId={2}", deviceId, streamId, sessionId);
                 return new RTSPDriverVideoStreamSession(Container.SettingsManager, Container.ConnectionManager, Container.EventManager, sessionId, deviceId, streamId);
+            }
+
+            if (Constants.IsMicrophoneDevice(dev))
+            {
+                Toolbox.Log.Trace("StreamManager: CreateSession audio deviceId={0} streamId={1} sessionId={2}", deviceId, streamId, sessionId);
+                return new RTSPDriverAudioStreamSession(Container.SettingsManager, Container.ConnectionManager, Container.EventManager, sessionId, deviceId, streamId);
             }
 
             Toolbox.Log.LogError("StreamManager", "Unsupported device ID: {0}", deviceId);
