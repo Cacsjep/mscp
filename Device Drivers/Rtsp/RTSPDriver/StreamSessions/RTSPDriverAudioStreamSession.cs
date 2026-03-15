@@ -39,8 +39,9 @@ namespace RTSPDriver
                 return false;
             }
 
-            // Wait the full timeout for audio data to appear
-            int remainingMs = (int)timeout.TotalMilliseconds;
+            // Wait for audio data to appear. Enforce minimum 5s — the Recording Server
+            // sometimes gives only 1s timeout which isn't enough for initial connection.
+            int remainingMs = Math.Max((int)timeout.TotalMilliseconds, 5000);
             while (remainingMs > 0)
             {
                 if (_audioBuffer.IsLive && _audioBuffer.TryGetFrame(out byte[] audioData, out DateTime timestamp))
@@ -84,12 +85,14 @@ namespace RTSPDriver
                 remainingMs -= waitMs;
             }
 
-            // Timed out — no audio. Log once, return false so Milestone shows error state.
+            // Timed out — no audio. Log once per state change to avoid spam.
             if (!_loggedNoAudio)
             {
                 _loggedNoAudio = true;
-                Toolbox.Log.Trace("RTSPAudioStreamSession[ch{0}]: No audio data — RTSP source may not contain an audio track. " +
-                    "Check your RTSP path includes audio.", _channelIndex + 1);
+                var worker = _connectionManager.GetWorker(_channelIndex, 0);
+                string url = worker?.DisplayUrl ?? "no worker";
+                Toolbox.Log.Trace("RTSPAudioStreamSession[ch{0}]: No audio data from {1} — isLive={2}. " +
+                    "Check your RTSP path includes audio.", _channelIndex + 1, url, _audioBuffer.IsLive);
             }
             return false;
         }

@@ -229,8 +229,9 @@ namespace RTSPDriver
                     var diagNow = DateTime.UtcNow;
                     if ((diagNow - _lastDiagLog).TotalSeconds >= 60)
                     {
-                        Toolbox.Log.Trace("Session[ch{0}]: frames={1} queued={2} codec={3} isLive={4}",
-                            _channelIndex + 1, _frameCount, _streamBuffer.QueueDepth, _streamBuffer.CodecName, _streamBuffer.IsLive);
+                        var diagWorker = _connectionManager.GetWorker(_channelIndex, _streamIndex);
+                        Toolbox.Log.Trace("Session[ch{0}_s{1}]: frames={2} queued={3} codec={4} url={5}",
+                            _channelIndex + 1, _streamIndex + 1, _frameCount, _streamBuffer.QueueDepth, _streamBuffer.CodecName, diagWorker?.DisplayUrl ?? "?");
                         _lastDiagLog = diagNow;
                     }
 

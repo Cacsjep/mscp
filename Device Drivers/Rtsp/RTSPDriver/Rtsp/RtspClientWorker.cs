@@ -242,6 +242,7 @@ namespace RTSPDriver.Rtsp
 
                 // Setup audio stream if present and audio buffer is provided
                 AVRational audioTimeBase = default;
+                byte[] aacAdtsHeader = null;
                 if (audioStreamIndex >= 0 && _audioBuffer != null)
                 {
                     var audioParams = fmtCtx->streams[audioStreamIndex]->codecpar;
@@ -253,10 +254,22 @@ namespace RTSPDriver.Rtsp
 
                     var mapping = MapAudioCodec(audioCodecId);
                     _audioBuffer.SetStreamInfo(audioSampleRate, audioChannels, audioBits, mapping.codecType, mapping.codecSubtype);
+
+                    // For AAC, prepare ADTS header template from extradata (AudioSpecificConfig).
+                    // FFmpeg's RTSP demuxer delivers raw AAC Access Units without ADTS framing.
+                    if (audioCodecId == AVCodecID.AV_CODEC_ID_AAC && audioParams->extradata != null && audioParams->extradata_size >= 2)
+                    {
+                        byte[] asc = new byte[audioParams->extradata_size];
+                        Marshal.Copy((IntPtr)audioParams->extradata, asc, 0, asc.Length);
+                        aacAdtsHeader = BuildAdtsTemplate(asc);
+                        Toolbox.Log.Trace("RtspClientWorker[{0}]: AAC ADTS header template built from {1}B AudioSpecificConfig",
+                            _channelIndex + 1, asc.Length);
+                    }
+
                     _audioBuffer.SetLive();
 
-                    Toolbox.Log.Trace("RtspClientWorker[{0}]: Audio found codec={1} rate={2} ch={3} bits={4}",
-                        _channelIndex + 1, ffmpeg.avcodec_get_name(audioCodecId), audioSampleRate, audioChannels, audioBits);
+                    Toolbox.Log.Trace("RtspClientWorker[{0}]: Audio found codec={1} rate={2} ch={3} bits={4} adts={5}",
+                        _channelIndex + 1, ffmpeg.avcodec_get_name(audioCodecId), audioSampleRate, audioChannels, audioBits, aacAdtsHeader != null ? "yes" : "no");
                 }
                 else if (_audioBuffer != null)
                 {
@@ -271,9 +284,11 @@ namespace RTSPDriver.Rtsp
                     _channelIndex + 1, detectedCodec, width, height, _transport, extradata?.Length ?? 0, audioStreamIndex >= 0 ? "yes" : "no");
 
                 var timeBase = fmtCtx->streams[videoStreamIndex]->time_base;
-                long firstPts = ffmpeg.AV_NOPTS_VALUE;
+                long firstVideoPts = ffmpeg.AV_NOPTS_VALUE;
+                long firstAudioPts = ffmpeg.AV_NOPTS_VALUE;
                 int totalFrames = 0;
                 int keyFrames = 0;
+                int audioFrames = 0;
                 bool gotFirstKeyFrame = false;
 
                 // Read loop — packets are already Annex B from RTSP demuxer
@@ -291,19 +306,46 @@ namespace RTSPDriver.Rtsp
                     }
 
                     // Handle audio packets
-                    if (pkt->stream_index == audioStreamIndex && _audioBuffer != null && _audioBuffer.IsLive && pkt->size > 0)
+                    if (pkt->stream_index == audioStreamIndex && _audioBuffer != null && pkt->size > 0)
                     {
-                        byte[] audioData = new byte[pkt->size];
-                        Marshal.Copy((IntPtr)pkt->data, audioData, 0, pkt->size);
+                        byte[] rawAudio = new byte[pkt->size];
+                        Marshal.Copy((IntPtr)pkt->data, rawAudio, 0, pkt->size);
+
+                        // Prepend ADTS header for AAC if needed
+                        byte[] audioData;
+                        if (aacAdtsHeader != null && !StartsWithAdtsSync(rawAudio))
+                        {
+                            int frameLen = 7 + rawAudio.Length;
+                            audioData = new byte[frameLen];
+                            Buffer.BlockCopy(aacAdtsHeader, 0, audioData, 0, 7);
+                            // Patch frame length into ADTS header (13 bits across bytes 3-4)
+                            audioData[3] = (byte)((audioData[3] & 0xFC) | ((frameLen >> 11) & 0x03));
+                            audioData[4] = (byte)((frameLen >> 3) & 0xFF);
+                            audioData[5] = (byte)(((frameLen & 0x07) << 5) | 0x1F);
+                            audioData[6] = 0xFC; // buffer fullness = 0x7FF (VBR), 0 raw frames
+                            Buffer.BlockCopy(rawAudio, 0, audioData, 7, rawAudio.Length);
+                        }
+                        else
+                        {
+                            audioData = rawAudio;
+                        }
 
                         DateTime audioTs = DateTime.UtcNow;
-                        if (pkt->pts != ffmpeg.AV_NOPTS_VALUE && firstPts != ffmpeg.AV_NOPTS_VALUE)
+                        if (pkt->pts != ffmpeg.AV_NOPTS_VALUE)
                         {
-                            double relSec = (pkt->pts - firstPts) * ffmpeg.av_q2d(audioTimeBase);
+                            if (firstAudioPts == ffmpeg.AV_NOPTS_VALUE)
+                                firstAudioPts = pkt->pts;
+                            double relSec = (pkt->pts - firstAudioPts) * ffmpeg.av_q2d(audioTimeBase);
                             audioTs = _connectedSince.AddSeconds(relSec);
                         }
 
                         _audioBuffer.PushFrame(audioData, audioTs);
+                        audioFrames++;
+                        if (audioFrames == 1 || audioFrames % 500 == 0)
+                        {
+                            Toolbox.Log.Trace("RtspClientWorker[{0}]: Audio frame #{1} size={2}B",
+                                _channelIndex + 1, audioFrames, pkt->size);
+                        }
                         ffmpeg.av_packet_unref(pkt);
                         continue;
                     }
@@ -333,13 +375,13 @@ namespace RTSPDriver.Rtsp
                             _channelIndex + 1, totalFrames, pkt->size);
                     }
 
-                    // Compute timestamp relative to first PTS
+                    // Compute timestamp relative to first video PTS
                     DateTime frameTs = DateTime.UtcNow;
                     if (pkt->pts != ffmpeg.AV_NOPTS_VALUE)
                     {
-                        if (firstPts == ffmpeg.AV_NOPTS_VALUE)
-                            firstPts = pkt->pts;
-                        double relativeSeconds = (pkt->pts - firstPts) * ffmpeg.av_q2d(timeBase);
+                        if (firstVideoPts == ffmpeg.AV_NOPTS_VALUE)
+                            firstVideoPts = pkt->pts;
+                        double relativeSeconds = (pkt->pts - firstVideoPts) * ffmpeg.av_q2d(timeBase);
                         frameTs = _connectedSince.AddSeconds(relativeSeconds);
                     }
 
@@ -364,8 +406,8 @@ namespace RTSPDriver.Rtsp
                     ffmpeg.av_packet_unref(pkt);
                 }
 
-                Toolbox.Log.Trace("RtspClientWorker[{0}]: Session ended totalFrames={1} keyFrames={2}",
-                    _channelIndex + 1, totalFrames, keyFrames);
+                Toolbox.Log.Trace("RtspClientWorker[{0}]: Session ended totalFrames={1} keyFrames={2} audioFrames={3}",
+                    _channelIndex + 1, totalFrames, keyFrames, audioFrames);
             }
             finally
             {
@@ -452,6 +494,40 @@ namespace RTSPDriver.Rtsp
             var x64Dir = Path.Combine(asmDir, "x64");
             if (Directory.Exists(x64Dir))
                 ffmpeg.RootPath = x64Dir;
+        }
+
+        /// <summary>
+        /// Check if audio data already starts with ADTS sync word (0xFFF).
+        /// </summary>
+        private static bool StartsWithAdtsSync(byte[] data)
+        {
+            return data != null && data.Length >= 2 && data[0] == 0xFF && (data[1] & 0xF0) == 0xF0;
+        }
+
+        /// <summary>
+        /// Build a 7-byte ADTS header template from AAC AudioSpecificConfig (extradata).
+        /// The frame length fields must be patched per-packet.
+        /// </summary>
+        private static byte[] BuildAdtsTemplate(byte[] asc)
+        {
+            // Parse AudioSpecificConfig
+            // Bits: [4:0] audioObjectType, [3:0] samplingFrequencyIndex, [3:0] channelConfiguration
+            int objectType = (asc[0] >> 3) & 0x1F;
+            int freqIndex = ((asc[0] & 0x07) << 1) | ((asc[1] >> 7) & 0x01);
+            int chanConfig = (asc[1] >> 3) & 0x0F;
+
+            // ADTS profile = objectType - 1 (ADTS uses 0-based, ASC uses 1-based)
+            int profile = objectType - 1;
+
+            var hdr = new byte[7];
+            hdr[0] = 0xFF;                                                       // Sync word high
+            hdr[1] = 0xF1;                                                       // Sync word low + MPEG-4 + Layer 0 + no CRC
+            hdr[2] = (byte)((profile << 6) | (freqIndex << 2) | ((chanConfig >> 2) & 0x01)); // Profile + freq + channel high
+            hdr[3] = (byte)((chanConfig & 0x03) << 6);                           // Channel low + frame length will be patched
+            hdr[4] = 0;                                                           // Frame length mid — patched per packet
+            hdr[5] = 0x1F;                                                        // Frame length low + buffer fullness high
+            hdr[6] = 0xFC;                                                        // Buffer fullness low + 0 raw frames
+            return hdr;
         }
 
         /// <summary>
