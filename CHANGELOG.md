@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1] - 2026-03-15
+
+- Add: RTSP Driver multi-stream and audio support (ADTS header)
+- Add: ILRepack to merge CommunitySDK into plugin DLLs
+- Fix: Mask RTMP stream keys in logs and improve RTMP URL regex
+- Improve: Installer custom action and reduced installer verbosity
+
 ## [1.5.0] - 2026-03-13
 
 - Add: Flex View - Dynamic View Builder
@@ -18,7 +25,7 @@ All notable changes to this project will be documented in this file.
 - Fix: Icon rendering skipped in Service environment (eliminates STA thread errors)
 - Fix: Duplicate event type registration in HTTP Requests plugin
 - Fix: `LogMessage.CategoryName` compatibility with older XProtect versions (pre-2025R2)
-c- Improve: Reduced plugin output size by filtering Milestone SDK DLLs from build output
+- Improve: Reduced plugin output size by filtering Milestone SDK DLLs from build output
 - Remove: Unnecessary `MilestoneSystems.VideoOS.Platform.SDK` references from CommunitySDK, SnapReport, Auditor, CertWatchdog
 
 ## [1.4.1] - 2026-03-09
