@@ -41,8 +41,11 @@
           Condition="'$(StopEventServer)' == 'true'" IgnoreExitCode="true"/>
     <Exec Command='net stop "Milestone XProtect Recording Server" 2&gt;nul'
           Condition="'$(StopRecordingServer)' == 'true'" IgnoreExitCode="true"/>
+    <!-- Kill DriverFrameworkProcess — child of Recording Server, holds driver DLLs -->
+    <Exec Command="taskkill /F /IM VideoOS.IO.Drivers.DriverFrameworkProcess.exe 2&gt;nul"
+          Condition="'$(StopRecordingServer)' == 'true'" IgnoreExitCode="true"/>
     <!-- Wait for processes to fully terminate -->
-    <Exec Command="ping -n 3 127.0.0.1 &gt;nul" IgnoreExitCode="true"
+    <Exec Command="ping -n 5 127.0.0.1 &gt;nul" IgnoreExitCode="true"
           Condition="'$(StopSmartClient)' == 'true' or '$(StopAdminClient)' == 'true' or '$(StopEventServer)' == 'true' or '$(StopRecordingServer)' == 'true'"/>
   </Target>
 

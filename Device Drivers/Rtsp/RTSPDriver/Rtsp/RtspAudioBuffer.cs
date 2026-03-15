@@ -11,7 +11,7 @@ namespace RTSPDriver.Rtsp
     /// </summary>
     internal class RtspAudioBuffer
     {
-        private const int MaxQueueSize = 100;
+        private const int MaxQueueSize = 500;
 
         private readonly string _channelName;
         private readonly object _lock = new object();
@@ -63,13 +63,11 @@ namespace RTSPDriver.Rtsp
             {
                 if (_frameQueue.Count >= MaxQueueSize)
                 {
-                    int dropped = 0;
-                    while (_frameQueue.Count > MaxQueueSize / 2)
-                    {
+                    // Drop only 10 oldest frames to avoid large audio gaps
+                    int toDrop = Math.Min(10, _frameQueue.Count);
+                    for (int i = 0; i < toDrop; i++)
                         _frameQueue.Dequeue();
-                        dropped++;
-                    }
-                    Toolbox.Log.Trace("RtspAudioBuffer[{0}]: Queue full, dropped {1} frames", _channelName, dropped);
+                    Toolbox.Log.Trace("RtspAudioBuffer[{0}]: Queue full, dropped {1} frames (queued={2})", _channelName, toDrop, _frameQueue.Count);
                 }
 
                 _frameQueue.Enqueue(new AudioFrameInfo
@@ -118,7 +116,8 @@ namespace RTSPDriver.Rtsp
                 _isLive = true;
                 _frameQueue.Clear();
             }
-            _frameAvailable.Reset();
+            // Signal waiters so they re-check IsLive and start consuming frames
+            _frameAvailable.Set();
             Toolbox.Log.Trace("RtspAudioBuffer[{0}]: Live", _channelName);
         }
 
