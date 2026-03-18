@@ -22,7 +22,7 @@
   <!-- ILRepack: merge CommunitySDK.dll into each plugin so no shared DLL ships.
        Prevents version conflicts when users mix plugin ZIPs from different releases. -->
   <ItemGroup>
-    <PackageReference Include="ILRepack" Version="2.0.34" GeneratePathProperty="true">
+    <PackageReference Include="ILRepack" Version="2.0.44" GeneratePathProperty="true">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>tools</IncludeAssets>
     </PackageReference>
