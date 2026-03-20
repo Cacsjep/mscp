@@ -38,6 +38,33 @@ namespace Weather.Client
             }
             if (unitComboBox.SelectedItem == null)
                 unitComboBox.SelectedIndex = 0;
+
+            var windUnit = _viewItemManager.WindSpeedUnit;
+            foreach (ComboBoxItem item in windUnitComboBox.Items)
+            {
+                if ((string)item.Tag == windUnit)
+                {
+                    windUnitComboBox.SelectedItem = item;
+                    break;
+                }
+            }
+            if (windUnitComboBox.SelectedItem == null)
+                windUnitComboBox.SelectedIndex = 0;
+
+            var pressureUnit = _viewItemManager.PressureUnit;
+            foreach (ComboBoxItem item in pressureUnitComboBox.Items)
+            {
+                if ((string)item.Tag == pressureUnit)
+                {
+                    pressureUnitComboBox.SelectedItem = item;
+                    break;
+                }
+            }
+            if (pressureUnitComboBox.SelectedItem == null)
+                pressureUnitComboBox.SelectedIndex = 0;
+
+            showHourlyCheckBox.IsChecked = _viewItemManager.ShowHourlyForecast == "true";
+            showDailyCheckBox.IsChecked = _viewItemManager.ShowDailyForecast == "true";
         }
 
         public override void Close()
@@ -49,6 +76,15 @@ namespace Weather.Client
 
             var selectedItem = unitComboBox.SelectedItem as ComboBoxItem;
             _viewItemManager.TemperatureUnit = selectedItem != null ? (string)selectedItem.Tag : "celsius";
+
+            var selectedWindItem = windUnitComboBox.SelectedItem as ComboBoxItem;
+            _viewItemManager.WindSpeedUnit = selectedWindItem != null ? (string)selectedWindItem.Tag : "kmh";
+
+            var selectedPressureItem = pressureUnitComboBox.SelectedItem as ComboBoxItem;
+            _viewItemManager.PressureUnit = selectedPressureItem != null ? (string)selectedPressureItem.Tag : "hpa";
+
+            _viewItemManager.ShowHourlyForecast = showHourlyCheckBox.IsChecked == true ? "true" : "false";
+            _viewItemManager.ShowDailyForecast = showDailyCheckBox.IsChecked == true ? "true" : "false";
 
             _viewItemManager.Save();
         }

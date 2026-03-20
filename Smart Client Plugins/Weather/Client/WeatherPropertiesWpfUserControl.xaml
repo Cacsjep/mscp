@@ -45,6 +45,23 @@
                     <ComboBoxItem Content="Celsius" Tag="celsius" />
                     <ComboBoxItem Content="Fahrenheit" Tag="fahrenheit" />
                 </ComboBox>
+                <Label Content="Wind Speed Unit:" Margin="0,8,0,0" />
+                <ComboBox x:Name="windUnitComboBox" Padding="4">
+                    <ComboBoxItem Content="km/h" Tag="kmh" />
+                    <ComboBoxItem Content="mph" Tag="mph" />
+                    <ComboBoxItem Content="m/s" Tag="ms" />
+                    <ComboBoxItem Content="Knots" Tag="kn" />
+                </ComboBox>
+                <Label Content="Pressure Unit:" Margin="0,8,0,0" />
+                <ComboBox x:Name="pressureUnitComboBox" Padding="4">
+                    <ComboBoxItem Content="hPa" Tag="hpa" />
+                    <ComboBoxItem Content="Inches of Mercury (inHg)" Tag="inhg" />
+                </ComboBox>
+
+                <Separator Margin="0,8,0,8" />
+
+                <CheckBox x:Name="showHourlyCheckBox" Content="Show Hourly Forecast" IsChecked="True" Margin="0,4,0,0" />
+                <CheckBox x:Name="showDailyCheckBox" Content="Show Daily Forecast" IsChecked="True" Margin="0,4,0,0" />
             </StackPanel>
         </GroupBox>
     </Grid>

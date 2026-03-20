@@ -9,6 +9,10 @@ namespace Weather.Client
         private const string LongitudePropertyKey = "Longitude";
         private const string RefreshIntervalPropertyKey = "RefreshIntervalMinutes";
         private const string TemperatureUnitPropertyKey = "TemperatureUnit";
+        private const string WindSpeedUnitPropertyKey = "WindSpeedUnit";
+        private const string PressureUnitPropertyKey = "PressureUnit";
+        private const string ShowHourlyForecastPropertyKey = "ShowHourlyForecast";
+        private const string ShowDailyForecastPropertyKey = "ShowDailyForecast";
 
         public WeatherViewItemManager()
             : base("WeatherViewItemManager")
@@ -43,6 +47,30 @@ namespace Weather.Client
         {
             get => GetProperty(TemperatureUnitPropertyKey) ?? "celsius";
             set => SetProperty(TemperatureUnitPropertyKey, value);
+        }
+
+        public string WindSpeedUnit
+        {
+            get => GetProperty(WindSpeedUnitPropertyKey) ?? "kmh";
+            set => SetProperty(WindSpeedUnitPropertyKey, value);
+        }
+
+        public string PressureUnit
+        {
+            get => GetProperty(PressureUnitPropertyKey) ?? "hpa";
+            set => SetProperty(PressureUnitPropertyKey, value);
+        }
+
+        public string ShowHourlyForecast
+        {
+            get => GetProperty(ShowHourlyForecastPropertyKey) ?? "true";
+            set => SetProperty(ShowHourlyForecastPropertyKey, value);
+        }
+
+        public string ShowDailyForecast
+        {
+            get => GetProperty(ShowDailyForecastPropertyKey) ?? "true";
+            set => SetProperty(ShowDailyForecastPropertyKey, value);
         }
 
         public void Save()
