@@ -14,7 +14,11 @@
     <Grid Background="#FF1C2326" SizeChanged="OnSizeChanged">
         <!-- Weather display (live mode, data loaded) -->
         <Grid x:Name="weatherDisplay" Visibility="Collapsed">
-            <Grid x:Name="weatherContent" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" x:Name="weatherContent" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid.LayoutTransform>
                     <ScaleTransform x:Name="weatherScale" ScaleX="1" ScaleY="1" />
                 </Grid.LayoutTransform>
@@ -115,6 +119,31 @@
                                Margin="0,4,0,0" />
                 </StackPanel>
             </Grid>
+
+            <!-- Forecast section -->
+            <StackPanel Grid.Row="1" x:Name="forecastPanel" Margin="8,0,8,8">
+                <StackPanel.LayoutTransform>
+                    <ScaleTransform x:Name="forecastScale" ScaleX="1" ScaleY="1" />
+                </StackPanel.LayoutTransform>
+
+                <!-- Hourly forecast -->
+                <Border x:Name="hourlyPanel" Visibility="Collapsed"
+                        BorderBrush="#FF333333" BorderThickness="0,1,0,0" Padding="0,6,0,6">
+                    <StackPanel>
+                        <TextBlock Text="Next 12 Hours" Foreground="#FF888888" FontSize="10" Margin="0,0,0,4"/>
+                        <StackPanel x:Name="hourlyItemsPanel" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Daily forecast -->
+                <Border x:Name="dailyPanel" Visibility="Collapsed"
+                        BorderBrush="#FF333333" BorderThickness="0,1,0,0" Padding="0,6,0,0">
+                    <StackPanel>
+                        <TextBlock Text="7-Day Forecast" Foreground="#FF888888" FontSize="10" Margin="0,0,0,4"/>
+                        <StackPanel x:Name="dailyItemsPanel" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </Grid>
 
         <!-- Loading overlay -->

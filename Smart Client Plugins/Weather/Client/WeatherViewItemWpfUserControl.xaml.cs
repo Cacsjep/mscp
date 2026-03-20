@@ -78,14 +78,8 @@ namespace Weather.Client
                 {
                     StartTimer();
                     if (!_hasData)
-                    {
                         ShowLoading();
-                        FetchWeather();
-                    }
-                    else
-                    {
-                        weatherDisplay.Visibility = Visibility.Visible;
-                    }
+                    FetchWeather();
                 }
                 else
                 {
@@ -135,9 +129,14 @@ namespace Weather.Client
             var lon = _viewItemManager.Longitude.Replace(',', '.');
             var unit = _viewItemManager.TemperatureUnit;
 
+            var windUnit = _viewItemManager.WindSpeedUnit;
+
             var url = $"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
                 + $"&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m"
-                + $"&temperature_unit={unit}&timezone=auto";
+                + $"&hourly=temperature_2m,weather_code,is_day"
+                + $"&daily=weather_code,temperature_2m_max,temperature_2m_min"
+                + $"&temperature_unit={unit}&wind_speed_unit={windUnit}"
+                + $"&forecast_days=7&timezone=auto";
 
             try
             {
@@ -191,12 +190,81 @@ namespace Weather.Client
                     humidityText.Text = $"{humidity}%";
                     windText.Text = $"{windSpeed:F0} {windUnit} {DegreesToCompass(windDir)}";
                     cloudText.Text = $"{cloudCover}%";
-                    pressureText.Text = $"{pressure:F0} hPa";
+                    if (_viewItemManager.PressureUnit == "inhg")
+                    {
+                        var pressureInHg = pressure * 0.02953;
+                        pressureText.Text = $"{pressureInHg:F2} inHg";
+                    }
+                    else
+                    {
+                        pressureText.Text = $"{pressure:F0} hPa";
+                    }
 
                     // Location and timestamp
                     var name = _viewItemManager.LocationName;
                     locationText.Text = string.IsNullOrWhiteSpace(name) ? $"{_viewItemManager.Latitude}, {_viewItemManager.Longitude}" : name;
                     updatedText.Text = $"Updated {DateTime.Now:HH:mm}";
+
+                    // Hourly forecast
+                    var showHourly = _viewItemManager.ShowHourlyForecast == "true";
+                    if (showHourly && doc.RootElement.TryGetProperty("hourly", out var hourly))
+                    {
+                        var times = hourly.GetProperty("time");
+                        var temps = hourly.GetProperty("temperature_2m");
+                        var codes = hourly.GetProperty("weather_code");
+                        var isDays = hourly.GetProperty("is_day");
+
+                        hourlyItemsPanel.Children.Clear();
+                        var now = DateTime.Now;
+                        int count = 0;
+
+                        for (int i = 0; i < times.GetArrayLength() && count < 12; i++)
+                        {
+                            var time = DateTime.Parse(times[i].GetString(), CultureInfo.InvariantCulture);
+                            if (time < now.AddMinutes(-30)) continue;
+
+                            var hourWmo = GetWmoInfo(codes[i].GetInt32(), isDays[i].GetInt32() == 1);
+                            var item = CreateHourlyItem(
+                                count == 0 ? "Now" : time.ToString("h tt"),
+                                temps[i].GetDouble(), hourWmo);
+                            hourlyItemsPanel.Children.Add(item);
+                            count++;
+                        }
+
+                        hourlyPanel.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                    }
+                    else
+                    {
+                        hourlyPanel.Visibility = Visibility.Collapsed;
+                    }
+
+                    // Daily forecast
+                    var showDaily = _viewItemManager.ShowDailyForecast == "true";
+                    if (showDaily && doc.RootElement.TryGetProperty("daily", out var daily))
+                    {
+                        var dates = daily.GetProperty("time");
+                        var maxTemps = daily.GetProperty("temperature_2m_max");
+                        var minTemps = daily.GetProperty("temperature_2m_min");
+                        var dayCodes = daily.GetProperty("weather_code");
+
+                        dailyItemsPanel.Children.Clear();
+
+                        for (int i = 0; i < dates.GetArrayLength() && i < 7; i++)
+                        {
+                            var date = DateTime.Parse(dates[i].GetString(), CultureInfo.InvariantCulture);
+                            var dayWmo = GetWmoInfo(dayCodes[i].GetInt32(), true);
+                            var item = CreateDailyItem(
+                                i == 0 ? "Today" : date.ToString("ddd"),
+                                maxTemps[i].GetDouble(), minTemps[i].GetDouble(), dayWmo);
+                            dailyItemsPanel.Children.Add(item);
+                        }
+
+                        dailyPanel.Visibility = dailyItemsPanel.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                    }
+                    else
+                    {
+                        dailyPanel.Visibility = Visibility.Collapsed;
+                    }
 
                     _hasData = true;
                     weatherDisplay.Visibility = Visibility.Visible;
@@ -354,17 +422,26 @@ namespace Weather.Client
                 ApplyWeatherLayout();
             }
 
+            // Show/hide forecast based on available space
+            bool showForecasts = height > 400 && width > 280;
+            forecastPanel.Visibility = showForecasts ? Visibility.Visible : Visibility.Collapsed;
+
+            if (showForecasts)
+            {
+                double fScale = Math.Max(0.5, Math.Min(1.5, width / 600.0));
+                forecastScale.ScaleX = forecastScale.ScaleY = fScale;
+            }
+
             // Calculate scale based on layout mode
+            double availableHeight = showForecasts ? height - 200 : height;
             double scale;
             if (_isHorizontalLayout)
             {
-                // Horizontal: content is ~420px wide, ~220px tall at scale 1
-                scale = Math.Min(width / 480.0, height / 260.0);
+                scale = Math.Min(width / 480.0, availableHeight / 260.0);
             }
             else
             {
-                // Vertical: content is ~300px wide, ~340px tall at scale 1
-                scale = Math.Min(width / 320.0, height / 360.0);
+                scale = Math.Min(width / 320.0, availableHeight / 360.0);
             }
             scale = Math.Max(0.5, Math.Min(2.0, scale * 0.9));
 
@@ -433,6 +510,82 @@ namespace Weather.Client
         #endregion
 
         #region Helpers
+
+        private static UIElement CreateHourlyItem(string label, double temp, WmoInfo wmo)
+        {
+            var panel = new StackPanel { Width = 48, HorizontalAlignment = HorizontalAlignment.Center };
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = label,
+                Foreground = new SolidColorBrush(ColorFromHex("#FFAAAAAA")),
+                FontSize = 10,
+                HorizontalAlignment = HorizontalAlignment.Center
+            });
+
+            panel.Children.Add(new ImageAwesome
+            {
+                Icon = wmo.Icon,
+                Width = 16,
+                Height = 16,
+                Foreground = new SolidColorBrush(wmo.Color),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 3, 0, 3)
+            });
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{temp:F0}\u00B0",
+                Foreground = new SolidColorBrush(Colors.White),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center
+            });
+
+            return panel;
+        }
+
+        private static UIElement CreateDailyItem(string dayLabel, double maxTemp, double minTemp, WmoInfo wmo)
+        {
+            var panel = new StackPanel { Width = 48, HorizontalAlignment = HorizontalAlignment.Center };
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = dayLabel,
+                Foreground = new SolidColorBrush(ColorFromHex("#FFAAAAAA")),
+                FontSize = 10,
+                HorizontalAlignment = HorizontalAlignment.Center
+            });
+
+            panel.Children.Add(new ImageAwesome
+            {
+                Icon = wmo.Icon,
+                Width = 16,
+                Height = 16,
+                Foreground = new SolidColorBrush(wmo.Color),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 3, 0, 3)
+            });
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{maxTemp:F0}\u00B0",
+                Foreground = new SolidColorBrush(Colors.White),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center
+            });
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{minTemp:F0}\u00B0",
+                Foreground = new SolidColorBrush(ColorFromHex("#FF888888")),
+                FontSize = 10,
+                HorizontalAlignment = HorizontalAlignment.Center
+            });
+
+            return panel;
+        }
 
         private static string DegreesToCompass(double degrees)
         {
