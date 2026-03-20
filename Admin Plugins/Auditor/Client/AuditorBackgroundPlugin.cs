@@ -37,6 +37,8 @@ namespace Auditor.Client
         private bool _cachedSpecifyCameras;
         private HashSet<Guid> _cachedCameraIds = new HashSet<Guid>();
 
+        private string _lastExportReason;
+
         private static readonly PluginLog _log = new PluginLog("SC Auditor");
         private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
 
@@ -193,6 +195,8 @@ namespace Auditor.Client
 
             if (auditData.EventType == AuditEventType.ExportStarted)
             {
+                if (string.IsNullOrEmpty(auditData.Reason) && !string.IsNullOrEmpty(_lastExportReason))
+                    auditData.Reason = _lastExportReason;
                 _log.Info($"Relaying export event '{auditData.EventType}' from ExportManager to Event Server");
                 SendToEventServer(auditData);
             }
@@ -313,7 +317,8 @@ namespace Auditor.Client
                 {
                     _log.Info("Showing playback reason prompt (rule matched)");
                     reason = PromptForReason("Entering Playback Mode",
-                        "You are switching to Playback mode.\nPlease provide a reason for accessing recorded footage.");
+                        "You are switching to Playback mode.\nPlease provide a reason for accessing recorded footage.",
+                        GetPredefinedReasons("P"));
                     _log.Info($"Playback reason provided: '{reason}'");
                 }
                 if (promptEnabled || triggerEnabled)
@@ -395,9 +400,11 @@ namespace Auditor.Client
                 {
                     _log.Info("Showing export reason prompt (rule matched)");
                     reason = PromptForReason("Entering Export",
-                        "You are entering the Export workspace.\nPlease provide a reason for exporting footage.");
+                        "You are entering the Export workspace.\nPlease provide a reason for exporting footage.",
+                        GetPredefinedReasons("E"));
                     _log.Info($"Export reason provided: '{reason}'");
                 }
+                _lastExportReason = reason;
                 if (promptEnabled || triggerEnabled)
                     SendAudit(AuditEventType.ExportWorkspaceEntered, null, null, reason: reason, fireEvent: triggerEnabled);
                 else
@@ -459,7 +466,8 @@ namespace Auditor.Client
                 {
                     _log.Info("Showing independent playback reason prompt (rule matched)");
                     reason = PromptForReason("Independent Playback Enabled",
-                        $"Independent playback has been enabled for '{cameraName ?? "unknown"}'.\nPlease provide a reason for accessing this camera's recordings.");
+                        $"Independent playback has been enabled for '{cameraName ?? "unknown"}'.\nPlease provide a reason for accessing this camera's recordings.",
+                        GetPredefinedReasons("I"));
                     _log.Info($"Independent playback reason provided: '{reason}'");
                 }
                 if (promptEnabled || triggerEnabled)
@@ -531,23 +539,44 @@ namespace Auditor.Client
 
         #region Reason Prompt
 
-        private static string PromptForReason(string title, string promptText)
+        private List<string> GetPredefinedReasons(string flag)
+        {
+            var rule = _cachedRule;
+            if (rule == null) return null;
+
+            var data = rule.Properties.ContainsKey("PredefinedReasons") ? rule.Properties["PredefinedReasons"] : "";
+            if (string.IsNullOrEmpty(data)) return null;
+
+            var result = new List<string>();
+            foreach (var entry in data.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var sep = entry.LastIndexOf('|');
+                if (sep < 0) continue;
+                if (entry.Substring(sep + 1).Contains(flag))
+                    result.Add(entry.Substring(0, sep));
+            }
+            return result.Count > 0 ? result : null;
+        }
+
+        private static string PromptForReason(string title, string promptText, List<string> predefinedReasons = null)
         {
             string reason = null;
             Application.Current.Dispatcher.Invoke(() =>
             {
-                reason = ShowReasonDialog(title, promptText);
+                reason = ShowReasonDialog(title, promptText, predefinedReasons);
             });
             return reason;
         }
 
-        private static string ShowReasonDialog(string title, string promptText)
+        private static string ShowReasonDialog(string title, string promptText, List<string> predefinedReasons = null)
         {
+            bool hasPresets = predefinedReasons != null && predefinedReasons.Count > 0;
+
             var dialog = new Window
             {
                 Title = title,
                 Width = 480,
-                Height = 310,
+                Height = hasPresets ? 380 : 310,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 ResizeMode = ResizeMode.NoResize,
                 WindowStyle = WindowStyle.None,
@@ -581,9 +610,31 @@ namespace Auditor.Client
                 Margin = new Thickness(0, 0, 0, 14),
             });
 
+            ComboBox reasonCombo = null;
+            if (hasPresets)
+            {
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "Select a reason:",
+                    Foreground = new SolidColorBrush(Color.FromRgb(0x8B, 0x94, 0x9E)),
+                    FontSize = 12,
+                    Margin = new Thickness(0, 0, 0, 4),
+                });
+
+                reasonCombo = new ComboBox
+                {
+                    FontSize = 12,
+                    Margin = new Thickness(0, 0, 0, 10),
+                    Padding = new Thickness(6, 4, 6, 4),
+                };
+                foreach (var r in predefinedReasons)
+                    reasonCombo.Items.Add(r);
+                panel.Children.Add(reasonCombo);
+            }
+
             panel.Children.Add(new TextBlock
             {
-                Text = "Reason:",
+                Text = hasPresets ? "Additional notes (optional):" : "Reason:",
                 Foreground = new SolidColorBrush(Color.FromRgb(0x8B, 0x94, 0x9E)),
                 FontSize = 12,
                 Margin = new Thickness(0, 0, 0, 4),
@@ -619,9 +670,10 @@ namespace Auditor.Client
             };
             okButton.Click += (s, e) => { canClose = true; dialog.DialogResult = true; };
 
-            textBox.TextChanged += (s, e) =>
+            Action updateOkState = () =>
             {
-                var enabled = !string.IsNullOrWhiteSpace(textBox.Text);
+                var enabled = (reasonCombo != null && reasonCombo.SelectedItem != null)
+                    || !string.IsNullOrWhiteSpace(textBox.Text);
                 okButton.IsEnabled = enabled;
                 okButton.Background = new SolidColorBrush(enabled
                     ? Color.FromRgb(0x23, 0x86, 0x36)
@@ -631,11 +683,25 @@ namespace Auditor.Client
                     : Color.FromRgb(0x55, 0x55, 0x55));
             };
 
+            textBox.TextChanged += (s, e) => updateOkState();
+            if (reasonCombo != null)
+                reasonCombo.SelectionChanged += (s, e) => updateOkState();
+
             panel.Children.Add(okButton);
             dialog.Content = panel;
 
             dialog.ShowDialog();
-            return textBox.Text?.Trim();
+
+            var selectedReason = reasonCombo?.SelectedItem?.ToString();
+            var additionalText = textBox.Text?.Trim();
+
+            if (!string.IsNullOrEmpty(selectedReason))
+            {
+                if (!string.IsNullOrEmpty(additionalText))
+                    return $"{selectedReason} - {additionalText}";
+                return selectedReason;
+            }
+            return additionalText;
         }
 
         #endregion

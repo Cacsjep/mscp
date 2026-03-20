@@ -192,6 +192,7 @@ namespace Auditor.Admin
             CurrentItem.Properties["SpecifyCameras"] = "No";
             CurrentItem.Properties["CameraIds"] = "";
             CurrentItem.Properties["CameraNames"] = "";
+            CurrentItem.Properties["PredefinedReasons"] = "";
 
             if (_userControl != null)
                 _userControl.FillContent(CurrentItem);

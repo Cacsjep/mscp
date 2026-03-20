@@ -43,6 +43,12 @@ namespace Auditor.Admin
         private Button _btnRemoveCamera;
         private List<(Guid Id, string Name)> _selectedCameras = new List<(Guid, string)>();
 
+        private GroupBox _grpPredefinedReasons;
+        private ListBox _lstReasons;
+        private Button _btnAddReason;
+        private Button _btnRemoveReason;
+        private List<(string Text, bool Playback, bool Export, bool IndependentPlayback)> _predefinedReasons = new List<(string, bool, bool, bool)>();
+
         private bool _filling;
         private readonly PluginLog _log = new PluginLog("Admin Auditor - AuditRule UC");
 
@@ -51,6 +57,7 @@ namespace Auditor.Admin
         public AuditRuleUserControl()
         {
             InitializeComponent();
+            SetupPredefinedReasonControls();
             SetupCameraControls();
             _txtName.TextChanged += OnUserChange;
             _btnRefresh.Click += OnBtnRefreshClick;
@@ -422,6 +429,141 @@ namespace Auditor.Admin
             UpdateCameraGroupLayout();
         }
 
+        private void SetupPredefinedReasonControls()
+        {
+            _grpPredefinedReasons = new GroupBox
+            {
+                Location = new System.Drawing.Point(15, 400),
+                Size = new System.Drawing.Size(458, 175),
+                TabIndex = 11,
+                TabStop = false,
+                Text = "Predefined Reasons",
+            };
+
+            var lblDesc = new Label
+            {
+                AutoSize = true,
+                ForeColor = System.Drawing.SystemColors.ControlDarkDark,
+                Location = new System.Drawing.Point(7, 18),
+                Text = "Define reasons shown as dropdown options in the Smart Client prompt.",
+            };
+
+            _lstReasons = new ListBox
+            {
+                Location = new System.Drawing.Point(10, 36),
+                Size = new System.Drawing.Size(438, 95),
+            };
+
+            _btnAddReason = new Button
+            {
+                Location = new System.Drawing.Point(10, 135),
+                Size = new System.Drawing.Size(70, 23),
+                Text = "Add...",
+            };
+
+            _btnRemoveReason = new Button
+            {
+                Location = new System.Drawing.Point(86, 135),
+                Size = new System.Drawing.Size(70, 23),
+                Text = "Remove",
+            };
+
+            _grpPredefinedReasons.Controls.Add(lblDesc);
+            _grpPredefinedReasons.Controls.Add(_lstReasons);
+            _grpPredefinedReasons.Controls.Add(_btnAddReason);
+            _grpPredefinedReasons.Controls.Add(_btnRemoveReason);
+            Controls.Add(_grpPredefinedReasons);
+
+            _btnAddReason.Click += OnBtnAddReasonClick;
+            _btnRemoveReason.Click += OnBtnRemoveReasonClick;
+        }
+
+        private void OnBtnAddReasonClick(object sender, EventArgs e)
+        {
+            using (var dlg = new Form())
+            {
+                dlg.Text = "Add Predefined Reason";
+                dlg.Size = new System.Drawing.Size(400, 240);
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+
+                var lblText = new Label { Text = "Reason:", Location = new System.Drawing.Point(12, 15), AutoSize = true };
+                var txtReason = new TextBox { Location = new System.Drawing.Point(12, 35), Size = new System.Drawing.Size(360, 20) };
+                var lblApplies = new Label { Text = "Show for:", Location = new System.Drawing.Point(12, 65), AutoSize = true };
+                var chkPlayback = new CheckBox { Text = "Playback", Location = new System.Drawing.Point(12, 85), AutoSize = true, Checked = true };
+                var chkExport = new CheckBox { Text = "Export", Location = new System.Drawing.Point(12, 108), AutoSize = true, Checked = true };
+                var chkIndependent = new CheckBox { Text = "Independent Playback", Location = new System.Drawing.Point(12, 131), AutoSize = true, Checked = true };
+
+                var btnOk = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new System.Drawing.Point(216, 165), Size = new System.Drawing.Size(75, 23) };
+                var btnCancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new System.Drawing.Point(297, 165), Size = new System.Drawing.Size(75, 23) };
+
+                dlg.AcceptButton = btnOk;
+                dlg.CancelButton = btnCancel;
+                dlg.Controls.AddRange(new Control[] { lblText, txtReason, lblApplies, chkPlayback, chkExport, chkIndependent, btnOk, btnCancel });
+
+                if (dlg.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(txtReason.Text))
+                {
+                    _predefinedReasons.Add((txtReason.Text.Trim(), chkPlayback.Checked, chkExport.Checked, chkIndependent.Checked));
+                    RefreshReasonsList();
+                    OnUserChange(sender, e);
+                }
+            }
+        }
+
+        private void OnBtnRemoveReasonClick(object sender, EventArgs e)
+        {
+            var idx = _lstReasons.SelectedIndex;
+            if (idx >= 0)
+            {
+                _predefinedReasons.RemoveAt(idx);
+                RefreshReasonsList();
+                OnUserChange(sender, e);
+            }
+        }
+
+        private void RefreshReasonsList()
+        {
+            _lstReasons.Items.Clear();
+            foreach (var r in _predefinedReasons)
+            {
+                var flags = new List<string>();
+                if (r.Playback) flags.Add("Playback");
+                if (r.Export) flags.Add("Export");
+                if (r.IndependentPlayback) flags.Add("Ind. Playback");
+                _lstReasons.Items.Add($"{r.Text}  [{string.Join(", ", flags)}]");
+            }
+        }
+
+        private string SerializePredefinedReasons()
+        {
+            var parts = new List<string>();
+            foreach (var r in _predefinedReasons)
+            {
+                var flags = new List<string>();
+                if (r.Playback) flags.Add("P");
+                if (r.Export) flags.Add("E");
+                if (r.IndependentPlayback) flags.Add("I");
+                parts.Add($"{r.Text}|{string.Join(",", flags)}");
+            }
+            return string.Join(";", parts);
+        }
+
+        private void DeserializePredefinedReasons(string data)
+        {
+            _predefinedReasons.Clear();
+            if (string.IsNullOrEmpty(data)) return;
+            foreach (var entry in data.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var sep = entry.LastIndexOf('|');
+                if (sep < 0) continue;
+                var text = entry.Substring(0, sep);
+                var flags = entry.Substring(sep + 1);
+                _predefinedReasons.Add((text, flags.Contains("P"), flags.Contains("E"), flags.Contains("I")));
+            }
+        }
+
         private void UpdateCameraGroupLayout()
         {
             bool expanded = _chkSpecifyCameras.Checked;
@@ -432,7 +574,8 @@ namespace Auditor.Admin
             _grpCameras.Height = expanded ? 185 : 45;
 
             _grpReasonPrompts.Top = _grpCameras.Bottom + 9;
-            _grpEventTriggers.Top = _grpReasonPrompts.Bottom + 9;
+            _grpPredefinedReasons.Top = _grpReasonPrompts.Bottom + 9;
+            _grpEventTriggers.Top = _grpPredefinedReasons.Bottom + 9;
             _chkEnabled.Top = _grpEventTriggers.Bottom + 11;
             this.Height = _chkEnabled.Bottom + 15;
         }
@@ -635,6 +778,10 @@ namespace Auditor.Admin
                         _lstCameras.Items.Add(camName);
                     }
                 }
+                var reasonsData = item.Properties.ContainsKey("PredefinedReasons") ? item.Properties["PredefinedReasons"] : "";
+                DeserializePredefinedReasons(reasonsData);
+                RefreshReasonsList();
+
                 UpdateCameraGroupLayout();
             }
             finally
@@ -663,6 +810,8 @@ namespace Auditor.Admin
                 _chkSpecifyCameras.Checked = false;
                 _selectedCameras.Clear();
                 _lstCameras.Items.Clear();
+                _predefinedReasons.Clear();
+                _lstReasons.Items.Clear();
                 UpdateCameraGroupLayout();
             }
             finally
@@ -704,6 +853,7 @@ namespace Auditor.Admin
             item.Properties["SpecifyCameras"] = specifyCameras ? "Yes" : "No";
             item.Properties["CameraIds"] = string.Join(";", _selectedCameras.Select(c => c.Id.ToString()));
             item.Properties["CameraNames"] = string.Join(";", _selectedCameras.Select(c => c.Name));
+            item.Properties["PredefinedReasons"] = SerializePredefinedReasons();
         }
     }
 }
