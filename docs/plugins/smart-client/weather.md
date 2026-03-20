@@ -25,8 +25,21 @@ All settings are configured in the Smart Client **Properties** panel (Setup mode
 | **Longitude** | *(empty)* | Geographic longitude |
 | **Refresh Interval** | 15 min | How often to update weather data |
 | **Temperature Unit** | Celsius | Celsius or Fahrenheit |
+| **Wind Speed Unit** | km/h | km/h, mph, m/s, or Knots |
+| **Pressure Unit** | hPa | hPa or Inches of Mercury (inHg) |
+| **Show Hourly Forecast** | Enabled | Toggle the 12-hour hourly forecast strip |
+| **Show Daily Forecast** | Enabled | Toggle the 7-day daily forecast strip |
 
 Use the **Search** button in Properties to find a city by name. The geocoding API returns up to 5 results to pick from.
+
+## Forecast
+
+When enabled, forecasts appear below the current conditions:
+
+- **Hourly** — next 12 hours, showing time, weather icon, and temperature
+- **Daily** — next 7 days, showing day name, weather icon, high and low temperature
+
+Forecast sections automatically hide when the view item is too small and reappear when there is enough space.
 
 ## Weather Data
 
