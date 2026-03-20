@@ -129,21 +129,29 @@ namespace Auditor.Background
 
             _log.Info($"Received audit event from Smart Client: type={report.EventType} user={report.UserName} camera={report.CameraName ?? "(none)"} reason={report.Reason ?? "(none)"}");
 
-            if (!string.IsNullOrEmpty(report.Reason))
+            switch (report.EventType)
             {
-                switch (report.EventType)
-                {
-                    case "GeneralPlayback":
+                case "GeneralPlayback":
+                    if (!string.IsNullOrEmpty(report.Reason))
                         _auditLog.PlaybackMessage(report.UserName, report.Reason);
-                        break;
-                    case "ExportStarted":
-                    case "ExportWorkspaceEntered":
+                    break;
+                case "ExportStarted":
+                case "ExportWorkspaceEntered":
+                    if (!string.IsNullOrEmpty(report.Reason))
                         _auditLog.ExportMessage(report.UserName, report.Reason);
-                        break;
-                    case "IndependentPlaybackEnabled":
+                    break;
+                case "IndependentPlaybackEnabled":
+                    if (!string.IsNullOrEmpty(report.Reason))
                         _auditLog.IndependentPlaybackMessage(report.UserName, report.Reason);
-                        break;
-                }
+                    break;
+                case "PlaybackAction":
+                    var action = report.Details ?? "Unknown";
+                    var recordingTime = report.PlaybackDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "(unknown)";
+                    var cameras = report.CamerasInView != null && report.CamerasInView.Length > 0
+                        ? "Cameras: " + string.Join(", ", report.CamerasInView)
+                        : report.CameraName != null ? "Camera: " + report.CameraName : "Cameras: (none)";
+                    _auditLog.PlaybackActionMessage(report.UserName, action, recordingTime, cameras);
+                    break;
             }
 
             if (report.FireEvent)
@@ -226,6 +234,7 @@ namespace Auditor.Background
                 case "ExportStarted":
                 case "ExportWorkspaceEntered": return AuditorDefinition.EvtExportId;
                 case "IndependentPlaybackEnabled": return AuditorDefinition.EvtIndepPlaybackId;
+                case "PlaybackAction": return AuditorDefinition.EvtPlaybackActionId;
                 default: return Guid.Empty;
             }
         }
@@ -238,6 +247,7 @@ namespace Auditor.Background
                 case "ExportStarted":
                 case "ExportWorkspaceEntered": return "Audit: Export Entry";
                 case "IndependentPlaybackEnabled": return "Audit: Independent Playback";
+                case "PlaybackAction": return "Audit: Playback Action";
                 default: return "Audit: Unknown";
             }
         }

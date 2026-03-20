@@ -24,6 +24,7 @@ namespace Auditor
         internal static readonly Guid EvtPlaybackId = new Guid("B2C3D4E5-F6A7-4890-AB12-6EB000000021");
         internal static readonly Guid EvtExportId = new Guid("B2C3D4E5-F6A7-4890-AB12-6EB000000022");
         internal static readonly Guid EvtIndepPlaybackId = new Guid("B2C3D4E5-F6A7-4890-AB12-6EB000000023");
+        internal static readonly Guid EvtPlaybackActionId = new Guid("B2C3D4E5-F6A7-4890-AB12-6EB000000024");
         internal static readonly Guid StateGroupId = new Guid("B2C3D4E5-F6A7-4890-AB12-6EB000000030");
 
         private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();

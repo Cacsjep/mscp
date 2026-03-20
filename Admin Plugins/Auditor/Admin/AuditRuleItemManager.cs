@@ -72,6 +72,16 @@ namespace Auditor.Admin
                     DefaultSourceKind = AuditorDefinition.AuditRuleKindId,
                     SourceKinds = sourceKinds
                 },
+                new EventType
+                {
+                    ID = AuditorDefinition.EvtPlaybackActionId,
+                    Message = "Audit: Playback Action",
+                    GroupID = AuditorDefinition.EventGroupId,
+                    StateGroupID = AuditorDefinition.StateGroupId,
+                    State = "Active",
+                    DefaultSourceKind = AuditorDefinition.AuditRuleKindId,
+                    SourceKinds = sourceKinds
+                },
             };
         }
 

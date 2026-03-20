@@ -27,6 +27,13 @@ namespace Auditor.Client
 
         private readonly List<ImageViewerAddOn> _imageViewers = new List<ImageViewerAddOn>();
         private DateTime _lastPlaybackPositionSent = DateTime.MinValue;
+        private DateTime? _lastKnownPlaybackTime;
+        private readonly Dictionary<ImageViewerAddOn, DateTime?> _lastIndependentPlaybackTime = new Dictionary<ImageViewerAddOn, DateTime?>();
+        private readonly Dictionary<ImageViewerAddOn, DateTime> _lastIndependentEventWallTime = new Dictionary<ImageViewerAddOn, DateTime>();
+        private readonly Dictionary<ImageViewerAddOn, DateTime?> _independentPlayStartTime = new Dictionary<ImageViewerAddOn, DateTime?>();
+        private readonly Dictionary<ImageViewerAddOn, bool> _independentPlaying = new Dictionary<ImageViewerAddOn, bool>();
+        private DateTime? _playStartRecordingTime;
+        private Timer _independentStopCheckTimer;
         private string _lastEmittedMode;
         private string _lastEmittedCameraSet;
         private bool _inExportWorkspace;
@@ -51,12 +58,16 @@ namespace Auditor.Client
             _msghandler.Register(OnConfigChanged, new MessageIdFilter(MessageId.Server.ConfigurationChangedIndication));
             _msghandler.Register(OnModeChanged, new MessageIdFilter(MessageId.System.ModeChangedIndication));
             _msghandler.Register(OnPlaybackTime, new MessageIdFilter(MessageId.SmartClient.PlaybackCurrentTimeIndication));
+            _msghandler.Register(OnPlaybackIndication, new MessageIdFilter(MessageId.SmartClient.PlaybackIndication));
             _msghandler.Register(OnWorkspaceChanged, new MessageIdFilter(MessageId.SmartClient.ShownWorkSpaceChangedIndication));
 
             _cmh.Start();
 
             // Track ImageViewerAddOns for independent playback
             ClientControl.Instance.NewImageViewerControlEvent += OnNewImageViewerControl;
+
+            // Check for independent playback stops every 2 seconds
+            _independentStopCheckTimer = new Timer(_ => CheckIndependentPlaybackStops(), null, 2000, 2000);
 
             // Emit current mode after a short delay to capture initial state
             _initTimer = new Timer(_ => EmitCurrentMode(), null, 2000, Timeout.Infinite);
@@ -171,6 +182,8 @@ namespace Auditor.Client
             _initTimer = null;
             _modeChangeTimer?.Dispose();
             _modeChangeTimer = null;
+            _independentStopCheckTimer?.Dispose();
+            _independentStopCheckTimer = null;
             _msghandler.UnregisterAll();
 
             ClientControl.Instance.NewImageViewerControlEvent -= OnNewImageViewerControl;
@@ -180,6 +193,10 @@ namespace Auditor.Client
                 foreach (var viewer in _imageViewers)
                     UnsubscribeFromViewer(viewer);
                 _imageViewers.Clear();
+                _lastIndependentPlaybackTime.Clear();
+                _lastIndependentEventWallTime.Clear();
+                _independentPlayStartTime.Clear();
+                _independentPlaying.Clear();
             }
 
             _cmh.Close();
@@ -354,17 +371,67 @@ namespace Auditor.Client
 
         private object OnPlaybackTime(Message message, FQID destination, FQID sender)
         {
+            if (message.Data is DateTime dt)
+                _lastKnownPlaybackTime = dt;
+
             var now = DateTime.UtcNow;
             if ((now - _lastPlaybackPositionSent).TotalSeconds < PlaybackPositionIntervalSeconds)
                 return null;
 
             _lastPlaybackPositionSent = now;
+            SendAudit(AuditEventType.PlaybackPosition, null, _lastKnownPlaybackTime);
+            return null;
+        }
 
-            DateTime? playbackDate = null;
-            if (message.Data is DateTime dt)
-                playbackDate = dt;
+        private object OnPlaybackIndication(Message message, FQID destination, FQID sender)
+        {
+            var pcd = message.Data as PlaybackCommandData;
+            if (pcd == null)
+            {
+                _log.Info($"PlaybackIndication received but data is {message.Data?.GetType().Name ?? "null"}, not PlaybackCommandData");
+                return null;
+            }
 
-            SendAudit(AuditEventType.PlaybackPosition, null, playbackDate);
+            var action = pcd.Command;
+            if (pcd.DateTime != DateTime.MinValue)
+                _lastKnownPlaybackTime = pcd.DateTime;
+
+            _log.Info($"PlaybackIndication: command={action} speed={pcd.Speed} time={pcd.DateTime}");
+
+            if (string.IsNullOrEmpty(action))
+                return null;
+
+            // Only log meaningful user actions
+            string details;
+            switch (action)
+            {
+                case PlaybackData.PlayForward:
+                case PlaybackData.PlayReverse:
+                    _playStartRecordingTime = _lastKnownPlaybackTime;
+                    details = _lastKnownPlaybackTime.HasValue
+                        ? $"{action} (from: {_lastKnownPlaybackTime.Value:yyyy-MM-dd HH:mm:ss})"
+                        : action;
+                    break;
+                case PlaybackData.PlayStop:
+                    if (_playStartRecordingTime.HasValue && _lastKnownPlaybackTime.HasValue)
+                        details = $"{action} (range: {_playStartRecordingTime.Value:yyyy-MM-dd HH:mm:ss} - {_lastKnownPlaybackTime.Value:yyyy-MM-dd HH:mm:ss})";
+                    else
+                        details = action;
+                    _playStartRecordingTime = null;
+                    break;
+                case PlaybackData.Goto:
+                case PlaybackData.NextSequence:
+                case PlaybackData.PreviousSequence:
+                    details = action;
+                    break;
+                default:
+                    return null;
+            }
+
+            _log.Info($"Playback action: {details} at recording time {_lastKnownPlaybackTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "(unknown)"}");
+
+            var cameras = GetAllCamerasInView();
+            SendAudit(AuditEventType.PlaybackAction, null, _lastKnownPlaybackTime, cameras, details: details, fireEvent: true);
             return null;
         }
 
@@ -442,6 +509,10 @@ namespace Auditor.Client
             lock (_imageViewers)
             {
                 _imageViewers.Remove(viewer);
+                _lastIndependentPlaybackTime.Remove(viewer);
+                _lastIndependentEventWallTime.Remove(viewer);
+                _independentPlayStartTime.Remove(viewer);
+                _independentPlaying.Remove(viewer);
             }
         }
 
@@ -477,37 +548,107 @@ namespace Auditor.Client
             }
             else
             {
-                _log.Info($"Independent playback disabled for '{cameraName}'");
+                DateTime? lastTime = null;
+                lock (_imageViewers)
+                {
+                    _lastIndependentPlaybackTime.TryGetValue(viewer, out lastTime);
+                    _lastIndependentPlaybackTime.Remove(viewer);
+                    _lastIndependentEventWallTime.Remove(viewer);
+                    _independentPlayStartTime.Remove(viewer);
+                    _independentPlaying.Remove(viewer);
+                }
+                _log.Info($"Independent playback disabled for '{cameraName}' (last position: {lastTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "(none)"})");
                 if (viewer.IndependentPlaybackController != null)
                 {
                     viewer.IndependentPlaybackController.PlaybackTimeChangedEvent -= OnIndependentPlaybackTimeChanged;
                 }
-                SendAudit(AuditEventType.IndependentPlaybackDisabled, cameraName, null);
+                SendAudit(AuditEventType.IndependentPlaybackDisabled, cameraName, lastTime);
             }
         }
 
         private void OnIndependentPlaybackTimeChanged(object sender, PlaybackController.TimeEventArgs e)
         {
-            var now = DateTime.UtcNow;
-            if ((now - _lastPlaybackPositionSent).TotalSeconds < PlaybackPositionIntervalSeconds)
-                return;
-
-            _lastPlaybackPositionSent = now;
-
+            ImageViewerAddOn matchedViewer = null;
             string cameraName = null;
+
             lock (_imageViewers)
             {
                 foreach (var viewer in _imageViewers)
                 {
                     if (viewer.IndependentPlaybackEnabled && viewer.IndependentPlaybackController == sender)
                     {
+                        matchedViewer = viewer;
+                        _lastIndependentPlaybackTime[viewer] = e.Time;
+                        _lastIndependentEventWallTime[viewer] = DateTime.UtcNow;
                         cameraName = GetCameraName(viewer);
+
+                        // Detect play start
+                        if (!_independentPlaying.ContainsKey(viewer) || !_independentPlaying[viewer])
+                        {
+                            _independentPlaying[viewer] = true;
+                            _independentPlayStartTime[viewer] = e.Time;
+                            _log.Info($"Independent playback playing: '{cameraName}' at recording time {e.Time:yyyy-MM-dd HH:mm:ss}");
+                            SendAudit(AuditEventType.PlaybackAction, cameraName, e.Time, details: $"PlayForward (Independent) (from: {e.Time:yyyy-MM-dd HH:mm:ss})", fireEvent: true);
+                        }
                         break;
                     }
                 }
             }
 
+            var now = DateTime.UtcNow;
+            if ((now - _lastPlaybackPositionSent).TotalSeconds < PlaybackPositionIntervalSeconds)
+                return;
+
+            _lastPlaybackPositionSent = now;
             SendAudit(AuditEventType.PlaybackPosition, cameraName, e.Time);
+        }
+
+        private void CheckIndependentPlaybackStops()
+        {
+            var now = DateTime.UtcNow;
+            List<(ImageViewerAddOn, DateTime?, DateTime?)> stopped = null;
+
+            lock (_imageViewers)
+            {
+                foreach (var kvp in _independentPlaying)
+                {
+                    if (!kvp.Value) continue;
+                    if (_lastIndependentEventWallTime.TryGetValue(kvp.Key, out var lastWall)
+                        && (now - lastWall).TotalSeconds > 2.0)
+                    {
+                        _lastIndependentPlaybackTime.TryGetValue(kvp.Key, out var lastTime);
+                        _independentPlayStartTime.TryGetValue(kvp.Key, out var startTime);
+                        if (stopped == null) stopped = new List<(ImageViewerAddOn, DateTime?, DateTime?)>();
+                        stopped.Add((kvp.Key, startTime, lastTime));
+                    }
+                }
+
+                if (stopped != null)
+                {
+                    foreach (var item in stopped)
+                    {
+                        _independentPlaying[item.Item1] = false;
+                        _independentPlayStartTime.Remove(item.Item1);
+                    }
+                }
+            }
+
+            if (stopped == null) return;
+
+            foreach (var item in stopped)
+            {
+                var viewer = item.Item1;
+                var startTime = item.Item2;
+                var lastTime = item.Item3;
+                var cameraName = GetCameraName(viewer);
+                string details;
+                if (startTime.HasValue && lastTime.HasValue)
+                    details = $"PlayStop (Independent) (range: {startTime.Value:yyyy-MM-dd HH:mm:ss} - {lastTime.Value:yyyy-MM-dd HH:mm:ss})";
+                else
+                    details = "PlayStop (Independent)";
+                _log.Info($"Independent playback stopped: '{cameraName}' {details}");
+                SendAudit(AuditEventType.PlaybackAction, cameraName, lastTime, details: details, fireEvent: true);
+            }
         }
 
         private void UnsubscribeFromViewer(ImageViewerAddOn viewer)
@@ -753,6 +894,7 @@ namespace Auditor.Client
                 case AuditEventType.ExportStarted:
                 case AuditEventType.ExportWorkspaceEntered:
                 case AuditEventType.IndependentPlaybackEnabled:
+                case AuditEventType.PlaybackAction:
                     break;
                 default:
                     return; // Don't send non-auditable events like PlaybackPosition, GeneralLive
@@ -794,6 +936,7 @@ namespace Auditor.Client
         PlaybackPosition,
         ExportWorkspaceEntered,
         ExportStarted,
+        PlaybackAction,
     }
 
     public class AuditEventData
