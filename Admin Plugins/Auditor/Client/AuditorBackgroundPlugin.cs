@@ -2,6 +2,7 @@ using Auditor.Messaging;
 using CommunitySDK;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -408,9 +409,13 @@ namespace Auditor.Client
                 case PlaybackData.PlayForward:
                 case PlaybackData.PlayReverse:
                     _playStartRecordingTime = _lastKnownPlaybackTime;
-                    details = _lastKnownPlaybackTime.HasValue
-                        ? $"{action} (from: {_lastKnownPlaybackTime.Value:yyyy-MM-dd HH:mm:ss})"
-                        : action;
+                    var timelineRange = GetTimelineSelectedInterval();
+                    if (timelineRange != null)
+                        details = $"{action} (timeline: {timelineRange})";
+                    else if (_lastKnownPlaybackTime.HasValue)
+                        details = $"{action} (from: {_lastKnownPlaybackTime.Value:yyyy-MM-dd HH:mm:ss})";
+                    else
+                        details = action;
                     break;
                 case PlaybackData.PlayStop:
                     if (_playStartRecordingTime.HasValue && _lastKnownPlaybackTime.HasValue)
@@ -587,8 +592,12 @@ namespace Auditor.Client
                         {
                             _independentPlaying[viewer] = true;
                             _independentPlayStartTime[viewer] = e.Time;
-                            _log.Info($"Independent playback playing: '{cameraName}' at recording time {e.Time:yyyy-MM-dd HH:mm:ss}");
-                            SendAudit(AuditEventType.PlaybackAction, cameraName, e.Time, details: $"PlayForward (Independent) (from: {e.Time:yyyy-MM-dd HH:mm:ss})", fireEvent: true);
+                            var timelineRange = GetTimelineSelectedInterval();
+                            var playDetails = timelineRange != null
+                                ? $"PlayForward (Independent) (timeline: {timelineRange})"
+                                : $"PlayForward (Independent) (from: {e.Time:yyyy-MM-dd HH:mm:ss})";
+                            _log.Info($"Independent playback playing: '{cameraName}' {playDetails}");
+                            SendAudit(AuditEventType.PlaybackAction, cameraName, e.Time, details: playDetails, fireEvent: true);
                         }
                         break;
                     }
@@ -659,6 +668,43 @@ namespace Auditor.Client
             {
                 viewer.IndependentPlaybackController.PlaybackTimeChangedEvent -= OnIndependentPlaybackTimeChanged;
             }
+        }
+
+        private string GetTimelineSelectedInterval()
+        {
+            try
+            {
+                var msg = new Message(MessageId.SmartClient.GetTimelineSelectedIntervalRequest);
+                var result = EnvironmentManager.Instance.SendMessage(msg);
+
+                // SendMessage returns Collection<object> with responses from all receivers
+                var responses = result as System.Collections.IEnumerable;
+                if (responses == null)
+                {
+                    _log.Info("Timeline interval: no response");
+                    return null;
+                }
+
+                foreach (var item in responses)
+                {
+                    if (item == null) continue;
+                    var type = item.GetType();
+                    var startProp = type.GetProperty("StartTime") ?? type.GetProperty("Start") ?? type.GetProperty("BeginTime");
+                    var endProp = type.GetProperty("EndTime") ?? type.GetProperty("End") ?? type.GetProperty("Stop");
+                    if (startProp != null && endProp != null)
+                    {
+                        var start = startProp.GetValue(item);
+                        var end = endProp.GetValue(item);
+                        if (start is DateTime s && end is DateTime e && s != DateTime.MinValue && e != DateTime.MinValue)
+                            return $"{s:yyyy-MM-dd HH:mm:ss} - {e:yyyy-MM-dd HH:mm:ss}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to get timeline interval: {ex.Message}");
+            }
+            return null;
         }
 
         private static string GetCameraName(ImageViewerAddOn viewer)
