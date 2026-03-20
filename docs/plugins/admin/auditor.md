@@ -24,12 +24,21 @@ By default, audit rules apply to **all cameras**. To restrict a rule to specific
 
 When enabled, reason prompts and event triggers only fire when the user interacts with one of the listed cameras.
 
+## Predefined Reasons
+
+Define a list of predefined reasons that operators can select from a dropdown in the Smart Client reason prompt. Each reason can be scoped to specific activities (Playback, Export, Independent Playback).
+
+- Use **Add...** to create a new predefined reason with a text and activity scope
+- Use **Remove** to delete the selected reason
+- Operators can still add free-text notes alongside the selected reason
+- If no predefined reasons are configured, the prompt shows a free-text field only (original behavior)
+
 ## Reason Prompts (Audit Log)
 
-When enabled, the user is shown a dialog and must enter a reason. The reason is written to the Milestone system audit log.
+When enabled, the user is shown a dialog and must provide a reason. If predefined reasons are configured, a dropdown is shown. The reason is written to the Milestone system audit log.
 
 - **Playback Reason Prompt** - when entering playback mode
-- **Export Reason Prompt** - when entering the export workspace
+- **Export Reason Prompt** - when entering the export workspace (reason is also attached to the actual export event)
 - **Independent Playback Reason Prompt** - when enabling independent playback on a camera
 
 !!! info "Auditor Log Category"
@@ -46,8 +55,26 @@ Source: Audit Rule item
 | Audit: Playback Entry | User switches from live to playback mode |
 | Audit: Export Entry | User enters the export workspace |
 | Audit: Independent Playback | User enables independent playback on a camera |
+| Audit: Playback Action | Play/stop action with recording time range (always enabled) |
 
 Reason prompts and event triggers are independent - you can enable one, both, or neither for each activity.
+
+## Playback Time Range Tracking
+
+The plugin automatically tracks playback actions (play, stop, seek) and logs the recording time range to the Milestone audit log.
+
+**General Playback** - detected via PlaybackIndication messages. On play, the recording start position is captured. On stop, the full range is logged.
+
+**Independent Playback** - detected by monitoring the playback time stream per camera. Play start and stop are detected automatically, including the recording time range and camera name.
+
+Audit log entry examples:
+
+```
+User 'admin' playback action 'PlayForward (from: 2026-03-20 07:03:49)' at recording time ... | Cameras: Camera 1
+User 'admin' playback action 'PlayStop (range: 2026-03-20 07:03:49 - 2026-03-20 07:05:50)' at recording time ... | Cameras: Camera 1
+User 'admin' playback action 'PlayForward (Independent) (from: 2026-03-20 08:14:07)' at recording time ... | Camera: RTSP Source
+User 'admin' playback action 'PlayStop (Independent) (range: 2026-03-20 08:14:07 - 2026-03-20 08:14:16)' at recording time ... | Camera: RTSP Source
+```
 
 
 ## Architecture

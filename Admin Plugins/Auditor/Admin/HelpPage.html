@@ -182,11 +182,26 @@
     </div>
 
     <div class="card">
+        <h2>Predefined Reasons</h2>
+        <p>
+            Define a list of predefined reasons that operators can select from a dropdown
+            in the Smart Client reason prompt. Each reason can be scoped to specific activities
+            using the checkboxes (Playback, Export, Independent Playback).
+        </p>
+        <ul>
+            <li>Use <strong>Add...</strong> to create a new predefined reason with a text and activity scope</li>
+            <li>Use <strong>Remove</strong> to delete the selected reason</li>
+            <li>Operators can still add free-text notes alongside the selected reason</li>
+            <li>If no predefined reasons are configured, the prompt shows a free-text field only (original behavior)</li>
+        </ul>
+    </div>
+
+    <div class="card">
         <h2>Reason Prompts (Audit Log)</h2>
-        <p>When enabled, the user is shown a dialog and must enter a reason. The reason is written to the Milestone system audit log.</p>
+        <p>When enabled, the user is shown a dialog and must provide a reason. If predefined reasons are configured, a dropdown is shown. The reason is written to the Milestone system audit log.</p>
         <ul>
             <li><strong>Playback Reason Prompt</strong> - When entering playback mode</li>
-            <li><strong>Export Reason Prompt</strong> - When entering the export workspace</li>
+            <li><strong>Export Reason Prompt</strong> - When entering the export workspace (reason is also attached to the actual export event)</li>
             <li><strong>Independent Playback Reason Prompt</strong> - When enabling independent playback on a camera</li>
         </ul>
     </div>
@@ -198,7 +213,33 @@
             <li><strong>Playback Trigger Event</strong> - User switches to playback mode</li>
             <li><strong>Export Trigger Event</strong> - User enters the export workspace</li>
             <li><strong>Independent Playback Trigger Event</strong> - User enables independent playback on a camera</li>
+            <li><strong>Playback Action Event</strong> - Automatically logged on play/stop for both global and independent playback (always enabled)</li>
         </ul>
+    </div>
+
+    <div class="card">
+        <h2>Playback Time Range Tracking</h2>
+        <p>
+            The plugin automatically tracks playback actions (play, stop, seek) and logs the
+            recording time range to the Milestone audit log. This provides a complete record of
+            which recordings were viewed and for how long.
+        </p>
+        <h3>General Playback</h3>
+        <p>
+            Detected via <strong>PlaybackIndication</strong> messages. On play, the recording start
+            position is captured. On stop, the full range is logged
+            (e.g. <em>PlayStop (range: 2026-03-20 07:03:49 - 2026-03-20 07:05:50)</em>).
+        </p>
+        <h3>Independent Playback</h3>
+        <p>
+            Detected by monitoring the playback time stream per camera. Play start and stop are
+            detected automatically, including the recording time range and camera name
+            (e.g. <em>PlayStop (Independent) (range: 2026-03-20 08:14:07 - 2026-03-20 08:14:16)</em>).
+        </p>
+        <h3>Audit Log Entries</h3>
+        <p>Each playback action is written to the audit log with the format:</p>
+        <div class="diagram">User 'admin' playback action 'PlayForward (from: 2026-03-20 07:03:49)' at recording time ... | Cameras: Camera 1
+User 'admin' playback action 'PlayStop (range: 2026-03-20 07:03:49 - 2026-03-20 07:05:50)' at recording time ... | Cameras: Camera 1</div>
     </div>
 
     <div class="card">
