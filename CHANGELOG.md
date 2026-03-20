@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2] - 2026-03-15
+
+- Improve: Weather Smart Client Plugin now have unit selectors and forcast options.
+
 ## [1.5.1] - 2026-03-15
 
 - Add: RTSP Driver multi-stream and audio support (ADTS header)
