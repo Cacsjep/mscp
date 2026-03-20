@@ -72,6 +72,16 @@ namespace Auditor.Admin
                     DefaultSourceKind = AuditorDefinition.AuditRuleKindId,
                     SourceKinds = sourceKinds
                 },
+                new EventType
+                {
+                    ID = AuditorDefinition.EvtPlaybackActionId,
+                    Message = "Audit: Playback Action",
+                    GroupID = AuditorDefinition.EventGroupId,
+                    StateGroupID = AuditorDefinition.StateGroupId,
+                    State = "Active",
+                    DefaultSourceKind = AuditorDefinition.AuditRuleKindId,
+                    SourceKinds = sourceKinds
+                },
             };
         }
 
@@ -192,6 +202,7 @@ namespace Auditor.Admin
             CurrentItem.Properties["SpecifyCameras"] = "No";
             CurrentItem.Properties["CameraIds"] = "";
             CurrentItem.Properties["CameraNames"] = "";
+            CurrentItem.Properties["PredefinedReasons"] = "";
 
             if (_userControl != null)
                 _userControl.FillContent(CurrentItem);

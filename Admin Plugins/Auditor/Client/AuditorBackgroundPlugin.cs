@@ -2,6 +2,7 @@ using Auditor.Messaging;
 using CommunitySDK;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,6 +28,13 @@ namespace Auditor.Client
 
         private readonly List<ImageViewerAddOn> _imageViewers = new List<ImageViewerAddOn>();
         private DateTime _lastPlaybackPositionSent = DateTime.MinValue;
+        private DateTime? _lastKnownPlaybackTime;
+        private readonly Dictionary<ImageViewerAddOn, DateTime?> _lastIndependentPlaybackTime = new Dictionary<ImageViewerAddOn, DateTime?>();
+        private readonly Dictionary<ImageViewerAddOn, DateTime> _lastIndependentEventWallTime = new Dictionary<ImageViewerAddOn, DateTime>();
+        private readonly Dictionary<ImageViewerAddOn, DateTime?> _independentPlayStartTime = new Dictionary<ImageViewerAddOn, DateTime?>();
+        private readonly Dictionary<ImageViewerAddOn, bool> _independentPlaying = new Dictionary<ImageViewerAddOn, bool>();
+        private DateTime? _playStartRecordingTime;
+        private Timer _independentStopCheckTimer;
         private string _lastEmittedMode;
         private string _lastEmittedCameraSet;
         private bool _inExportWorkspace;
@@ -36,6 +44,8 @@ namespace Auditor.Client
         private Item _cachedRule;
         private bool _cachedSpecifyCameras;
         private HashSet<Guid> _cachedCameraIds = new HashSet<Guid>();
+
+        private string _lastExportReason;
 
         private static readonly PluginLog _log = new PluginLog("SC Auditor");
         private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
@@ -49,12 +59,16 @@ namespace Auditor.Client
             _msghandler.Register(OnConfigChanged, new MessageIdFilter(MessageId.Server.ConfigurationChangedIndication));
             _msghandler.Register(OnModeChanged, new MessageIdFilter(MessageId.System.ModeChangedIndication));
             _msghandler.Register(OnPlaybackTime, new MessageIdFilter(MessageId.SmartClient.PlaybackCurrentTimeIndication));
+            _msghandler.Register(OnPlaybackIndication, new MessageIdFilter(MessageId.SmartClient.PlaybackIndication));
             _msghandler.Register(OnWorkspaceChanged, new MessageIdFilter(MessageId.SmartClient.ShownWorkSpaceChangedIndication));
 
             _cmh.Start();
 
             // Track ImageViewerAddOns for independent playback
             ClientControl.Instance.NewImageViewerControlEvent += OnNewImageViewerControl;
+
+            // Check for independent playback stops every 2 seconds
+            _independentStopCheckTimer = new Timer(_ => CheckIndependentPlaybackStops(), null, 2000, 2000);
 
             // Emit current mode after a short delay to capture initial state
             _initTimer = new Timer(_ => EmitCurrentMode(), null, 2000, Timeout.Infinite);
@@ -169,6 +183,8 @@ namespace Auditor.Client
             _initTimer = null;
             _modeChangeTimer?.Dispose();
             _modeChangeTimer = null;
+            _independentStopCheckTimer?.Dispose();
+            _independentStopCheckTimer = null;
             _msghandler.UnregisterAll();
 
             ClientControl.Instance.NewImageViewerControlEvent -= OnNewImageViewerControl;
@@ -178,6 +194,10 @@ namespace Auditor.Client
                 foreach (var viewer in _imageViewers)
                     UnsubscribeFromViewer(viewer);
                 _imageViewers.Clear();
+                _lastIndependentPlaybackTime.Clear();
+                _lastIndependentEventWallTime.Clear();
+                _independentPlayStartTime.Clear();
+                _independentPlaying.Clear();
             }
 
             _cmh.Close();
@@ -193,6 +213,8 @@ namespace Auditor.Client
 
             if (auditData.EventType == AuditEventType.ExportStarted)
             {
+                if (string.IsNullOrEmpty(auditData.Reason) && !string.IsNullOrEmpty(_lastExportReason))
+                    auditData.Reason = _lastExportReason;
                 _log.Info($"Relaying export event '{auditData.EventType}' from ExportManager to Event Server");
                 SendToEventServer(auditData);
             }
@@ -313,7 +335,8 @@ namespace Auditor.Client
                 {
                     _log.Info("Showing playback reason prompt (rule matched)");
                     reason = PromptForReason("Entering Playback Mode",
-                        "You are switching to Playback mode.\nPlease provide a reason for accessing recorded footage.");
+                        "You are switching to Playback mode.\nPlease provide a reason for accessing recorded footage.",
+                        GetPredefinedReasons("P"));
                     _log.Info($"Playback reason provided: '{reason}'");
                 }
                 if (promptEnabled || triggerEnabled)
@@ -349,17 +372,71 @@ namespace Auditor.Client
 
         private object OnPlaybackTime(Message message, FQID destination, FQID sender)
         {
+            if (message.Data is DateTime dt)
+                _lastKnownPlaybackTime = dt;
+
             var now = DateTime.UtcNow;
             if ((now - _lastPlaybackPositionSent).TotalSeconds < PlaybackPositionIntervalSeconds)
                 return null;
 
             _lastPlaybackPositionSent = now;
+            SendAudit(AuditEventType.PlaybackPosition, null, _lastKnownPlaybackTime);
+            return null;
+        }
 
-            DateTime? playbackDate = null;
-            if (message.Data is DateTime dt)
-                playbackDate = dt;
+        private object OnPlaybackIndication(Message message, FQID destination, FQID sender)
+        {
+            var pcd = message.Data as PlaybackCommandData;
+            if (pcd == null)
+            {
+                _log.Info($"PlaybackIndication received but data is {message.Data?.GetType().Name ?? "null"}, not PlaybackCommandData");
+                return null;
+            }
 
-            SendAudit(AuditEventType.PlaybackPosition, null, playbackDate);
+            var action = pcd.Command;
+            if (pcd.DateTime != DateTime.MinValue)
+                _lastKnownPlaybackTime = pcd.DateTime;
+
+            _log.Info($"PlaybackIndication: command={action} speed={pcd.Speed} time={pcd.DateTime}");
+
+            if (string.IsNullOrEmpty(action))
+                return null;
+
+            // Only log meaningful user actions
+            string details;
+            switch (action)
+            {
+                case PlaybackData.PlayForward:
+                case PlaybackData.PlayReverse:
+                    _playStartRecordingTime = _lastKnownPlaybackTime;
+                    var timelineRange = GetTimelineSelectedInterval();
+                    if (timelineRange != null)
+                        details = $"{action} (timeline: {timelineRange})";
+                    else if (_lastKnownPlaybackTime.HasValue)
+                        details = $"{action} (from: {_lastKnownPlaybackTime.Value:yyyy-MM-dd HH:mm:ss})";
+                    else
+                        details = action;
+                    break;
+                case PlaybackData.PlayStop:
+                    if (_playStartRecordingTime.HasValue && _lastKnownPlaybackTime.HasValue)
+                        details = $"{action} (range: {_playStartRecordingTime.Value:yyyy-MM-dd HH:mm:ss} - {_lastKnownPlaybackTime.Value:yyyy-MM-dd HH:mm:ss})";
+                    else
+                        details = action;
+                    _playStartRecordingTime = null;
+                    break;
+                case PlaybackData.Goto:
+                case PlaybackData.NextSequence:
+                case PlaybackData.PreviousSequence:
+                    details = action;
+                    break;
+                default:
+                    return null;
+            }
+
+            _log.Info($"Playback action: {details} at recording time {_lastKnownPlaybackTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "(unknown)"}");
+
+            var cameras = GetAllCamerasInView();
+            SendAudit(AuditEventType.PlaybackAction, null, _lastKnownPlaybackTime, cameras, details: details, fireEvent: true);
             return null;
         }
 
@@ -395,9 +472,11 @@ namespace Auditor.Client
                 {
                     _log.Info("Showing export reason prompt (rule matched)");
                     reason = PromptForReason("Entering Export",
-                        "You are entering the Export workspace.\nPlease provide a reason for exporting footage.");
+                        "You are entering the Export workspace.\nPlease provide a reason for exporting footage.",
+                        GetPredefinedReasons("E"));
                     _log.Info($"Export reason provided: '{reason}'");
                 }
+                _lastExportReason = reason;
                 if (promptEnabled || triggerEnabled)
                     SendAudit(AuditEventType.ExportWorkspaceEntered, null, null, reason: reason, fireEvent: triggerEnabled);
                 else
@@ -435,6 +514,10 @@ namespace Auditor.Client
             lock (_imageViewers)
             {
                 _imageViewers.Remove(viewer);
+                _lastIndependentPlaybackTime.Remove(viewer);
+                _lastIndependentEventWallTime.Remove(viewer);
+                _independentPlayStartTime.Remove(viewer);
+                _independentPlaying.Remove(viewer);
             }
         }
 
@@ -459,7 +542,8 @@ namespace Auditor.Client
                 {
                     _log.Info("Showing independent playback reason prompt (rule matched)");
                     reason = PromptForReason("Independent Playback Enabled",
-                        $"Independent playback has been enabled for '{cameraName ?? "unknown"}'.\nPlease provide a reason for accessing this camera's recordings.");
+                        $"Independent playback has been enabled for '{cameraName ?? "unknown"}'.\nPlease provide a reason for accessing this camera's recordings.",
+                        GetPredefinedReasons("I"));
                     _log.Info($"Independent playback reason provided: '{reason}'");
                 }
                 if (promptEnabled || triggerEnabled)
@@ -469,37 +553,111 @@ namespace Auditor.Client
             }
             else
             {
-                _log.Info($"Independent playback disabled for '{cameraName}'");
+                DateTime? lastTime = null;
+                lock (_imageViewers)
+                {
+                    _lastIndependentPlaybackTime.TryGetValue(viewer, out lastTime);
+                    _lastIndependentPlaybackTime.Remove(viewer);
+                    _lastIndependentEventWallTime.Remove(viewer);
+                    _independentPlayStartTime.Remove(viewer);
+                    _independentPlaying.Remove(viewer);
+                }
+                _log.Info($"Independent playback disabled for '{cameraName}' (last position: {lastTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "(none)"})");
                 if (viewer.IndependentPlaybackController != null)
                 {
                     viewer.IndependentPlaybackController.PlaybackTimeChangedEvent -= OnIndependentPlaybackTimeChanged;
                 }
-                SendAudit(AuditEventType.IndependentPlaybackDisabled, cameraName, null);
+                SendAudit(AuditEventType.IndependentPlaybackDisabled, cameraName, lastTime);
             }
         }
 
         private void OnIndependentPlaybackTimeChanged(object sender, PlaybackController.TimeEventArgs e)
         {
-            var now = DateTime.UtcNow;
-            if ((now - _lastPlaybackPositionSent).TotalSeconds < PlaybackPositionIntervalSeconds)
-                return;
-
-            _lastPlaybackPositionSent = now;
-
+            ImageViewerAddOn matchedViewer = null;
             string cameraName = null;
+
             lock (_imageViewers)
             {
                 foreach (var viewer in _imageViewers)
                 {
                     if (viewer.IndependentPlaybackEnabled && viewer.IndependentPlaybackController == sender)
                     {
+                        matchedViewer = viewer;
+                        _lastIndependentPlaybackTime[viewer] = e.Time;
+                        _lastIndependentEventWallTime[viewer] = DateTime.UtcNow;
                         cameraName = GetCameraName(viewer);
+
+                        // Detect play start
+                        if (!_independentPlaying.ContainsKey(viewer) || !_independentPlaying[viewer])
+                        {
+                            _independentPlaying[viewer] = true;
+                            _independentPlayStartTime[viewer] = e.Time;
+                            var timelineRange = GetTimelineSelectedInterval();
+                            var playDetails = timelineRange != null
+                                ? $"PlayForward (Independent) (timeline: {timelineRange})"
+                                : $"PlayForward (Independent) (from: {e.Time:yyyy-MM-dd HH:mm:ss})";
+                            _log.Info($"Independent playback playing: '{cameraName}' {playDetails}");
+                            SendAudit(AuditEventType.PlaybackAction, cameraName, e.Time, details: playDetails, fireEvent: true);
+                        }
                         break;
                     }
                 }
             }
 
+            var now = DateTime.UtcNow;
+            if ((now - _lastPlaybackPositionSent).TotalSeconds < PlaybackPositionIntervalSeconds)
+                return;
+
+            _lastPlaybackPositionSent = now;
             SendAudit(AuditEventType.PlaybackPosition, cameraName, e.Time);
+        }
+
+        private void CheckIndependentPlaybackStops()
+        {
+            var now = DateTime.UtcNow;
+            List<(ImageViewerAddOn, DateTime?, DateTime?)> stopped = null;
+
+            lock (_imageViewers)
+            {
+                foreach (var kvp in _independentPlaying)
+                {
+                    if (!kvp.Value) continue;
+                    if (_lastIndependentEventWallTime.TryGetValue(kvp.Key, out var lastWall)
+                        && (now - lastWall).TotalSeconds > 2.0)
+                    {
+                        _lastIndependentPlaybackTime.TryGetValue(kvp.Key, out var lastTime);
+                        _independentPlayStartTime.TryGetValue(kvp.Key, out var startTime);
+                        if (stopped == null) stopped = new List<(ImageViewerAddOn, DateTime?, DateTime?)>();
+                        stopped.Add((kvp.Key, startTime, lastTime));
+                    }
+                }
+
+                if (stopped != null)
+                {
+                    foreach (var item in stopped)
+                    {
+                        _independentPlaying[item.Item1] = false;
+                        _independentPlayStartTime.Remove(item.Item1);
+                    }
+                }
+            }
+
+            if (stopped == null) return;
+
+            foreach (var item in stopped)
+            {
+                var viewer = item.Item1;
+                var startTime = item.Item2;
+                var lastTime = item.Item3;
+                var cameraName = GetCameraName(viewer);
+                string details;
+                if (startTime.HasValue && lastTime.HasValue)
+                    details = $"PlayStop (Independent) (range: {startTime.Value:yyyy-MM-dd HH:mm:ss} - {lastTime.Value:yyyy-MM-dd HH:mm:ss})";
+                else
+                    details = "PlayStop (Independent)";
+                _log.Info($"Independent playback stopped: '{cameraName}' {details}");
+                SendAudit(AuditEventType.PlaybackAction, cameraName, lastTime, details: details, fireEvent: true);
+            }
         }
 
         private void UnsubscribeFromViewer(ImageViewerAddOn viewer)
@@ -510,6 +668,43 @@ namespace Auditor.Client
             {
                 viewer.IndependentPlaybackController.PlaybackTimeChangedEvent -= OnIndependentPlaybackTimeChanged;
             }
+        }
+
+        private string GetTimelineSelectedInterval()
+        {
+            try
+            {
+                var msg = new Message(MessageId.SmartClient.GetTimelineSelectedIntervalRequest);
+                var result = EnvironmentManager.Instance.SendMessage(msg);
+
+                // SendMessage returns Collection<object> with responses from all receivers
+                var responses = result as System.Collections.IEnumerable;
+                if (responses == null)
+                {
+                    _log.Info("Timeline interval: no response");
+                    return null;
+                }
+
+                foreach (var item in responses)
+                {
+                    if (item == null) continue;
+                    var type = item.GetType();
+                    var startProp = type.GetProperty("StartTime") ?? type.GetProperty("Start") ?? type.GetProperty("BeginTime");
+                    var endProp = type.GetProperty("EndTime") ?? type.GetProperty("End") ?? type.GetProperty("Stop");
+                    if (startProp != null && endProp != null)
+                    {
+                        var start = startProp.GetValue(item);
+                        var end = endProp.GetValue(item);
+                        if (start is DateTime s && end is DateTime e && s != DateTime.MinValue && e != DateTime.MinValue)
+                            return $"{s:yyyy-MM-dd HH:mm:ss} - {e:yyyy-MM-dd HH:mm:ss}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to get timeline interval: {ex.Message}");
+            }
+            return null;
         }
 
         private static string GetCameraName(ImageViewerAddOn viewer)
@@ -531,23 +726,44 @@ namespace Auditor.Client
 
         #region Reason Prompt
 
-        private static string PromptForReason(string title, string promptText)
+        private List<string> GetPredefinedReasons(string flag)
+        {
+            var rule = _cachedRule;
+            if (rule == null) return null;
+
+            var data = rule.Properties.ContainsKey("PredefinedReasons") ? rule.Properties["PredefinedReasons"] : "";
+            if (string.IsNullOrEmpty(data)) return null;
+
+            var result = new List<string>();
+            foreach (var entry in data.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var sep = entry.LastIndexOf('|');
+                if (sep < 0) continue;
+                if (entry.Substring(sep + 1).Contains(flag))
+                    result.Add(entry.Substring(0, sep));
+            }
+            return result.Count > 0 ? result : null;
+        }
+
+        private static string PromptForReason(string title, string promptText, List<string> predefinedReasons = null)
         {
             string reason = null;
             Application.Current.Dispatcher.Invoke(() =>
             {
-                reason = ShowReasonDialog(title, promptText);
+                reason = ShowReasonDialog(title, promptText, predefinedReasons);
             });
             return reason;
         }
 
-        private static string ShowReasonDialog(string title, string promptText)
+        private static string ShowReasonDialog(string title, string promptText, List<string> predefinedReasons = null)
         {
+            bool hasPresets = predefinedReasons != null && predefinedReasons.Count > 0;
+
             var dialog = new Window
             {
                 Title = title,
                 Width = 480,
-                Height = 310,
+                Height = hasPresets ? 380 : 310,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 ResizeMode = ResizeMode.NoResize,
                 WindowStyle = WindowStyle.None,
@@ -581,9 +797,31 @@ namespace Auditor.Client
                 Margin = new Thickness(0, 0, 0, 14),
             });
 
+            ComboBox reasonCombo = null;
+            if (hasPresets)
+            {
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "Select a reason:",
+                    Foreground = new SolidColorBrush(Color.FromRgb(0x8B, 0x94, 0x9E)),
+                    FontSize = 12,
+                    Margin = new Thickness(0, 0, 0, 4),
+                });
+
+                reasonCombo = new ComboBox
+                {
+                    FontSize = 12,
+                    Margin = new Thickness(0, 0, 0, 10),
+                    Padding = new Thickness(6, 4, 6, 4),
+                };
+                foreach (var r in predefinedReasons)
+                    reasonCombo.Items.Add(r);
+                panel.Children.Add(reasonCombo);
+            }
+
             panel.Children.Add(new TextBlock
             {
-                Text = "Reason:",
+                Text = hasPresets ? "Additional notes (optional):" : "Reason:",
                 Foreground = new SolidColorBrush(Color.FromRgb(0x8B, 0x94, 0x9E)),
                 FontSize = 12,
                 Margin = new Thickness(0, 0, 0, 4),
@@ -619,9 +857,10 @@ namespace Auditor.Client
             };
             okButton.Click += (s, e) => { canClose = true; dialog.DialogResult = true; };
 
-            textBox.TextChanged += (s, e) =>
+            Action updateOkState = () =>
             {
-                var enabled = !string.IsNullOrWhiteSpace(textBox.Text);
+                var enabled = (reasonCombo != null && reasonCombo.SelectedItem != null)
+                    || !string.IsNullOrWhiteSpace(textBox.Text);
                 okButton.IsEnabled = enabled;
                 okButton.Background = new SolidColorBrush(enabled
                     ? Color.FromRgb(0x23, 0x86, 0x36)
@@ -631,11 +870,25 @@ namespace Auditor.Client
                     : Color.FromRgb(0x55, 0x55, 0x55));
             };
 
+            textBox.TextChanged += (s, e) => updateOkState();
+            if (reasonCombo != null)
+                reasonCombo.SelectionChanged += (s, e) => updateOkState();
+
             panel.Children.Add(okButton);
             dialog.Content = panel;
 
             dialog.ShowDialog();
-            return textBox.Text?.Trim();
+
+            var selectedReason = reasonCombo?.SelectedItem?.ToString();
+            var additionalText = textBox.Text?.Trim();
+
+            if (!string.IsNullOrEmpty(selectedReason))
+            {
+                if (!string.IsNullOrEmpty(additionalText))
+                    return $"{selectedReason} - {additionalText}";
+                return selectedReason;
+            }
+            return additionalText;
         }
 
         #endregion
@@ -687,6 +940,7 @@ namespace Auditor.Client
                 case AuditEventType.ExportStarted:
                 case AuditEventType.ExportWorkspaceEntered:
                 case AuditEventType.IndependentPlaybackEnabled:
+                case AuditEventType.PlaybackAction:
                     break;
                 default:
                     return; // Don't send non-auditable events like PlaybackPosition, GeneralLive
@@ -728,6 +982,7 @@ namespace Auditor.Client
         PlaybackPosition,
         ExportWorkspaceEntered,
         ExportStarted,
+        PlaybackAction,
     }
 
     public class AuditEventData

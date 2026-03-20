@@ -35,11 +35,13 @@ namespace Auditor.Background
             ["ExportMessage"] = CreateMessage("ExportMessage", "User '{p1}' enter export because: {p2}"),
             ["PlaybackMessage"] = CreateMessage("PlaybackMessage", "User '{p1}' enter playback because: {p2}"),
             ["IndependentPlaybackMessage"] = CreateMessage("IndependentPlaybackMessage", "User '{p1}' enabled independent playback because {p2}"),
+            ["PlaybackActionMessage"] = CreateMessage("PlaybackActionMessage", "User '{p1}' playback action '{p2}' at recording time {p3} | {p4}"),
         };
 
         public void ExportMessage(string user, string reason) => WriteAuditEntry("ExportMessage", new Dictionary<string, string> { ["p1"] = user, ["p2"] = reason });
         public void PlaybackMessage(string user, string reason) => WriteAuditEntry("PlaybackMessage", new Dictionary<string, string> { ["p1"] = user, ["p2"] = reason });
         public void IndependentPlaybackMessage(string user, string reason) => WriteAuditEntry("IndependentPlaybackMessage", new Dictionary<string, string> { ["p1"] = user, ["p2"] = reason });
+        public void PlaybackActionMessage(string user, string action, string recordingTime, string cameras) => WriteAuditEntry("PlaybackActionMessage", new Dictionary<string, string> { ["p1"] = user, ["p2"] = action, ["p3"] = recordingTime, ["p4"] = cameras });
     }
 }
 

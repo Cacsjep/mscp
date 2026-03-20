@@ -2,9 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.2] - 2026-03-15
+## [1.5.3] - 2026-03-15
 
 - Improve: Weather Smart Client Plugin now have unit selectors and forcast options.
+- Improve: Auditor Plugin now have reasons, and more time logging for playback ops.
 
 ## [1.5.1] - 2026-03-15
 
