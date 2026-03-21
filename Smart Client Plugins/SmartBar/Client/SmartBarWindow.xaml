@@ -14,15 +14,14 @@
     <Grid Background="#CC000000">
 
         <!-- Command palette -->
-        <Border Background="#FF121212"
+        <Border x:Name="paletteBorder"
+                Background="#FF121212"
                 BorderBrush="#FF333333"
                 BorderThickness="1"
                 CornerRadius="10"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
-                Margin="0,120,0,0"
-                Width="720"
-                MaxHeight="480">
+                Margin="0,120,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -92,14 +91,7 @@
                 </Border>
 
                 <!-- Results -->
-                <ScrollViewer Grid.Row="2"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              Focusable="False"
-                              MaxHeight="370">
-                    <StackPanel x:Name="resultPanel"
-                                Margin="6,2,6,4" />
-                </ScrollViewer>
+                <Grid x:Name="resultsArea" Grid.Row="2" />
 
                 <!-- Footer -->
                 <Border Grid.Row="3"
@@ -120,6 +112,16 @@
                             </Border>
                             <TextBlock Text="Navigate" Foreground="#FF909090" FontSize="12"
                                        VerticalAlignment="Center" Margin="0,0,14,0" />
+                            <StackPanel x:Name="columnHint" Orientation="Horizontal" Visibility="Collapsed">
+                                <Border Background="#FF1E1E1E" CornerRadius="3" Padding="5,2" Margin="0,0,2,0">
+                                    <TextBlock Text="&#x2190;" Foreground="White" FontSize="12" />
+                                </Border>
+                                <Border Background="#FF1E1E1E" CornerRadius="3" Padding="5,2" Margin="0,0,6,0">
+                                    <TextBlock Text="&#x2192;" Foreground="White" FontSize="12" />
+                                </Border>
+                                <TextBlock Text="Column" Foreground="#FF909090" FontSize="12"
+                                           VerticalAlignment="Center" Margin="0,0,14,0" />
+                            </StackPanel>
                             <Border Background="#FF1E1E1E" CornerRadius="3" Padding="5,2" Margin="0,0,6,0">
                                 <TextBlock Text="&#x23CE;" Foreground="White" FontSize="12" />
                             </Border>

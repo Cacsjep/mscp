@@ -2,7 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.3] - 2026-03-15
+## [1.5.4] - 2026-03-21
+
+- Add: Smart Bar Col Layout 
+- Add: Smart Bar settings added "Restore defaults" button to reset all settings
+- Add: Smart Bar item tooltips show full name on hover for truncated entries
+- Improve: Smart Bar dimensions now can configured
+- Improve: Smart Bar category ordering available in both standard and column layout modes
+- Improve: Smart Bar settings removed redundant Save button (framework handles save)
+- Fix: Smart Bar workspace commands did not work. Now uses ChangeWorkSpaceStateCommand for Normal/Setup and dynamically enumerates all workspaces via GetWorkSpaceItems()
+- Fix: Smart Bar column layout mode no longer overrides configured dimensions with hardcoded screen percentages
+
+## [1.5.3] - 2026-03-20
 
 - Improve: Weather Smart Client Plugin now have unit selectors and forcast options.
 - Improve: Auditor Plugin now have reasons, and more time logging for playback ops.

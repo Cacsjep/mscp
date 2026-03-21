@@ -47,41 +47,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="SaveButton" TargetType="Button">
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="Background" Value="#FF3399FF" />
-            <Setter Property="BorderBrush" Value="#FF2277CC" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="20,8" />
-            <Setter Property="MinHeight" Value="32" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="3" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#FF2288DD" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#FF1166AA" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="bd" Property="Background" Value="#FF2A2A2A" />
-                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF444444" />
-                                <Setter Property="Foreground" Value="#FF666666" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
         <Style x:Key="DarkTextBox" TargetType="TextBox">
             <Setter Property="Background" Value="#FF2A2A2A" />
             <Setter Property="Foreground" Value="#FFD0D0D0" />
@@ -150,26 +115,102 @@
             <TextBlock Text="Number of recently used cameras and views shown at the top."
                        Foreground="#FF666666" FontSize="11" Margin="4,0,0,0" />
 
-            <!-- Categories -->
-            <TextBlock Text="Categories" Style="{StaticResource SectionHeader}" />
+            <!-- Layout -->
+            <TextBlock Text="Layout" Style="{StaticResource SectionHeader}" />
             <Border Background="#FF252525" CornerRadius="6" Padding="14,10" Margin="0,0,0,4">
-                <StackPanel>
-                    <CheckBox x:Name="showOutputsCheck" Foreground="#FFD0D0D0" FontSize="13" Margin="0,0,0,6">
-                        <TextBlock Text="Show hardware outputs (activate / deactivate)" Foreground="#FFD0D0D0" />
-                    </CheckBox>
-                    <CheckBox x:Name="showEventsCheck" Foreground="#FFD0D0D0" FontSize="13" Margin="0,0,0,6">
-                        <TextBlock Text="Show user-defined events (trigger)" Foreground="#FFD0D0D0" />
-                    </CheckBox>
-                    <CheckBox x:Name="showCommandsCheck" Foreground="#FFD0D0D0" FontSize="13" Margin="0,0,0,6">
-                        <TextBlock Text="Show application commands" Foreground="#FFD0D0D0" />
-                    </CheckBox>
-                    <CheckBox x:Name="showRecentCheck" Foreground="#FFD0D0D0" FontSize="13">
-                        <TextBlock Text="Show recent items" Foreground="#FFD0D0D0" />
-                    </CheckBox>
-                </StackPanel>
+                <CheckBox x:Name="columnLayoutCheck" Foreground="#FFD0D0D0" FontSize="13"
+                          Checked="OnColumnLayoutChanged" Unchecked="OnColumnLayoutChanged">
+                    <TextBlock Text="Column layout (categories in separate columns)" Foreground="#FFD0D0D0" />
+                </CheckBox>
             </Border>
-            <TextBlock Text="Toggle which device categories appear in the Smart Bar launcher."
-                       Foreground="#FF666666" FontSize="11" Margin="4,0,0,0" />
+            <TextBlock Text="When enabled, categories are arranged in columns."
+                       Foreground="#FF666666" FontSize="11" Margin="4,0,0,4" TextWrapping="Wrap" />
+
+            <StackPanel x:Name="dimensionsPanel">
+                <Border Background="#FF252525" CornerRadius="6" Padding="14,10" Margin="0,4,0,4">
+                    <DockPanel>
+                        <TextBlock Text="Smart Bar width (%):" Style="{StaticResource LabelText}" />
+                        <TextBox x:Name="paletteWidthBox" Style="{StaticResource DarkTextBox}"
+                                 DockPanel.Dock="Right" HorizontalAlignment="Right" Width="80" />
+                    </DockPanel>
+                </Border>
+                <Border Background="#FF252525" CornerRadius="6" Padding="14,10" Margin="0,0,0,4">
+                    <DockPanel>
+                        <TextBlock Text="Smart Bar max height (%):" Style="{StaticResource LabelText}" />
+                        <TextBox x:Name="paletteHeightBox" Style="{StaticResource DarkTextBox}"
+                                 DockPanel.Dock="Right" HorizontalAlignment="Right" Width="80" />
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Categories -->
+            <TextBlock x:Name="categoriesHeader" Text="Categories" Style="{StaticResource SectionHeader}" />
+            <TextBlock x:Name="categoriesHelpText" Text="Reorder and toggle categories. Column assignment applies in column layout mode."
+                       Foreground="#FF666666" FontSize="11" Margin="4,0,0,4" TextWrapping="Wrap" />
+
+            <Grid x:Name="columnHeaderGrid" Margin="10,8,10,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="50" />
+                    <ColumnDefinition Width="55" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="1" Text="Category" Foreground="#FF888888" FontSize="11" />
+                <TextBlock x:Name="colHeaderText" Grid.Column="2" Text="Col" Foreground="#FF888888" FontSize="11" HorizontalAlignment="Center" />
+            </Grid>
+
+            <ItemsControl x:Name="categoryList">
+                <ItemsControl.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name, StringFormat='Column {0}'}"
+                                           Foreground="#FF2196F3" FontSize="12" FontWeight="SemiBold"
+                                           Margin="0,10,0,4" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ItemsControl.GroupStyle>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#FF252525" CornerRadius="6" Padding="10,6" Margin="0,0,0,3">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="50" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}"
+                                          VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding DisplayName}"
+                                           Foreground="#FFD0D0D0" FontSize="13"
+                                           VerticalAlignment="Center" />
+                                <TextBox Grid.Column="2"
+                                         Text="{Binding Column, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource DarkTextBox}"
+                                         Width="35" HorizontalAlignment="Center"
+                                         TextAlignment="Center" FontSize="12" Padding="4,3"
+                                         Visibility="{Binding IsChecked, ElementName=columnLayoutCheck, Converter={StaticResource BoolToVis}}" />
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="6,0,0,0"
+                                            VerticalAlignment="Center">
+                                    <Button Width="22" Height="22" Style="{StaticResource SmallButton}"
+                                            Padding="0" Click="OnMoveCategoryUp" ToolTip="Move up">
+                                        <fa5:ImageAwesome Icon="Solid_ChevronUp" Foreground="#FF909090"
+                                                          Width="8" Height="8" />
+                                    </Button>
+                                    <Button Width="22" Height="22" Style="{StaticResource SmallButton}"
+                                            Padding="0" Click="OnMoveCategoryDown" Margin="2,0,0,0"
+                                            ToolTip="Move down">
+                                        <fa5:ImageAwesome Icon="Solid_ChevronDown" Foreground="#FF909090"
+                                                          Width="8" Height="8" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
             <!-- Programs -->
             <TextBlock Text="Programs" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
@@ -279,20 +320,22 @@
                 </StackPanel>
             </Button>
 
-            <!-- Save -->
-            <StackPanel Margin="0,24,0,0">
-                <Button x:Name="saveButton"
-                        Content="Save"
-                        Click="OnSave"
-                        Style="{StaticResource SaveButton}"
-                        HorizontalAlignment="Left" />
-                <TextBlock x:Name="validationHint"
-                           Foreground="#FFE05050" FontSize="11" Margin="2,6,0,0"
-                           Visibility="Collapsed" />
-                <TextBlock x:Name="savedHint"
-                           Text="Settings saved" Foreground="#FF4CAF50" FontSize="11"
-                           Margin="2,6,0,0" Visibility="Collapsed" />
-            </StackPanel>
+            <!-- Validation -->
+            <TextBlock x:Name="validationHint"
+                       Foreground="#FFE05050" FontSize="11" Margin="2,24,0,0"
+                       Visibility="Collapsed" />
+
+            <!-- Restore Defaults -->
+            <Button Click="OnRestoreDefaults"
+                    Style="{StaticResource SmallButton}"
+                    HorizontalAlignment="Left"
+                    Margin="0,24,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <fa5:ImageAwesome Icon="Solid_Undo" Foreground="#FF909090" Width="10" Height="10"
+                                      VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Text="Restore defaults" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
 
         </StackPanel>
     </ScrollViewer>

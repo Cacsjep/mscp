@@ -441,7 +441,7 @@ namespace SmartBar.Client
 
         private static void AddRecent(RecentType type, FQID fqid, string name)
         {
-            if (fqid == null || !SmartBarConfig.ShowRecent) return;
+            if (fqid == null || !SmartBarConfig.IsEnabled(ItemCategory.Recent)) return;
             var id = fqid.ObjectId;
             _recentItems.RemoveAll(r => r.ObjectId == id);
             _recentItems.Insert(0, new RecentItem { Type = type, ObjectId = id, Name = name });

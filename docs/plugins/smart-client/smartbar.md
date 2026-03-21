@@ -25,12 +25,12 @@ multi-window targeting, recent items, and full undo history.
 - **Views** - Browse all views organized by folder hierarchy. Select one to navigate to that view.
 - **Outputs** - Activate or deactivate hardware outputs (gates, sirens, door locks, etc.) directly from Smart Bar. Each output appears twice: `Output: Name Activate` and `Output: Name Deactivate`. Requires Corporate/Expert edition. Can be disabled in Settings.
 - **Events** - Trigger user-defined events configured in XProtect Management Client. Each event appears as `Event: Name`. Can be disabled in Settings.
-- **Commands** - Built-in application controls including fullscreen toggle, mode switching (Live/Playback/Setup), side panel, window management, configuration reload, and undo.
+- **Commands** - Built-in application controls including fullscreen toggle, workspace state switching (Normal/Setup), workspace switching (Live, Playback, custom workspaces), side panel, window management, configuration reload, and undo.
 - **Programs** - Launch external applications directly from Smart Bar. Configured in Settings.
 
 ### Search & Filter
 
-Type in the search box to filter across all categories. Matches against both item names and folder/group paths.
+Type in the search box to filter across all categories. Matches against both item names and folder/group paths. Hover over any item to see its full name in a tooltip - useful for long camera or output names that get truncated.
 
 ### Multi-Camera Selection
 
@@ -74,7 +74,7 @@ The number of recent items shown is configurable (5–20) in Settings.
 
 ## Settings
 
-Open Smart Client **Settings** and select **Smart Bar** to configure:
+Open Smart Client **Settings** and select **Smart Bar** to configure. Changes are saved automatically by the Smart Client when you click the global Save button in the Settings dialog.
 
 ### General
 
@@ -87,14 +87,25 @@ Reserved keys that cannot be used as the invoke key (without a modifier): letter
 - **Max undo history entries** (5–30) - Number of view and camera changes to remember for undo.
 - **Max recent items** (5–20) - Number of recently used cameras and views shown at the top of Smart Bar.
 
+### Layout
+
+- **Column layout** - When enabled, categories are arranged in separate columns. The categories section becomes visible with column assignment and ordering controls.
+- **Smart Bar width (%)** - Width of the Smart Bar popup as a percentage of the active monitor's width (10–100%). Default: 50%.
+- **Smart Bar max height (%)** - Maximum height of the Smart Bar popup as a percentage of the active monitor's height (10–100%). Default: 60%.
+
 ### Categories
 
-Toggle which item categories appear in the Smart Bar launcher:
+Categories are always visible in the settings panel. Each category can be:
 
-- **Show hardware outputs** - List all hardware outputs with activate/deactivate commands. Enabled by default.
-- **Show user-defined events** - List all user-defined events with trigger commands. Enabled by default.
-- **Show application commands** - List built-in application commands (fullscreen, mode switching, window management, etc.). Enabled by default.
-- **Show recent items** - Show recently used cameras and views at the top of Smart Bar. When disabled, recent items are also not collected. Enabled by default.
+- **Enabled/disabled** via checkbox
+- **Reordered** using the up/down arrow buttons
+
+When **Column layout** is enabled, additional controls appear:
+
+- **Column assignment** (1-based) - type a column number to move the category to that column; the list regroups immediately
+- Categories are grouped visually by column with "Column N" headers
+
+Available categories: Recent, Camera, View, Command, Output, Event, Program, Undo.
 
 ### Programs
 
@@ -102,12 +113,16 @@ Manage external programs that appear in the Smart Bar launcher:
 
 - Click **Add program** to create a new entry
 - Enter a display **Name** and the **executable path**, or use the folder icon to browse
-- Click the red **×** to remove an entry
+- Click the terminal icon to add command line **arguments**
+- Click the red **x** to remove an entry
 - Paths are validated - must be a valid file path (e.g. `C:\Program Files\app.exe`) or a bare executable name (e.g. `notepad.exe`)
-- The **Save** button is disabled until all entries are valid, with a hint shown below explaining the issue
 - Default: Notepad
 
 Programs appear in Smart Bar prefixed with "Program:" and can be searched like any other item.
+
+### Restore Defaults
+
+Click **Restore defaults** at the bottom of the settings panel to reset all settings to their defaults (invoke key, history limits, layout, categories, and programs).
 
 ## Configuration File
 
@@ -123,10 +138,10 @@ C:\ProgramData\Milestone\SmartBar\config.xml
 | `MaxRecent` | int | 10 | Maximum recent items shown |
 | `InvokeKey` | Key enum | Space | Keyboard key to open Smart Bar |
 | `InvokeModifiers` | ModifierKeys enum | None | Modifier keys (Ctrl, Alt, Shift) for invoke |
-| `ShowOutputs` | bool | true | Show hardware output commands |
-| `ShowEvents` | bool | true | Show user-defined event commands |
-| `ShowCommands` | bool | true | Show application commands |
-| `ShowRecent` | bool | true | Show and collect recent items |
+| `ColumnLayout` | bool | false | Arrange categories in columns |
+| `SmartBarWidth` | int | 50 | Smart Bar width as % of screen width |
+| `SmartBarHeight` | int | 60 | Smart Bar max height as % of screen height |
+| `Categories` | list | 8 defaults | Category configs with Name, Enabled, Column (1-based), Order (1-based) |
 | `Programs` | list | Notepad | External programs to show in launcher |
 
 </div>

@@ -14,6 +14,12 @@ using VideoOS.Platform.Messaging;
 
 namespace SmartBar.Client
 {
+    struct CellIndex
+    {
+        public int Column;
+        public int Row;
+    }
+
     public partial class SmartBarWindow : Window
     {
         private static readonly PluginLog Log = SmartBarDefinition.Log;
@@ -25,9 +31,12 @@ namespace SmartBar.Client
         private static readonly SolidColorBrush TextCategory = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF));
 
         private List<CommandItem> _allItems;
-        private List<CommandItem> _filteredItems;
+        private List<List<CommandItem>> _columnItems;
+        private readonly List<StackPanel> _columnPanels = new List<StackPanel>();
+        private List<int> _layoutColumnIndices;
         private readonly HashSet<CommandItem> _selectedCameras = new HashSet<CommandItem>();
-        private int _selectedIndex;
+        private int _selectedColumn;
+        private int _selectedRow;
 
         private bool _closing;
         private bool _suppressMouseSelect;
@@ -57,26 +66,105 @@ namespace SmartBar.Client
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             PositionOnActiveMonitor();
+            SetPaletteDimensions();
+            BuildResultsLayout();
             searchBox.Focus();
             LoadWindows();
             LoadItems();
             ApplyFilter();
+            if (SmartBarConfig.ColumnLayout)
+                columnHint.Visibility = Visibility.Visible;
+        }
+
+        private System.Windows.Forms.Screen GetActiveScreen()
+        {
+            var source = Application.Current.MainWindow;
+            if (source == null) return System.Windows.Forms.Screen.PrimaryScreen;
+            return System.Windows.Forms.Screen.FromHandle(
+                new System.Windows.Interop.WindowInteropHelper(source).Handle);
         }
 
         private void PositionOnActiveMonitor()
         {
-            // Cover the same monitor as the Smart Client main window
-            var source = Application.Current.MainWindow;
-            if (source == null) return;
-
-            var screen = System.Windows.Forms.Screen.FromHandle(
-                new System.Windows.Interop.WindowInteropHelper(source).Handle);
-
-            var area = screen.WorkingArea;
+            var area = GetActiveScreen().WorkingArea;
             Left = area.Left;
             Top = area.Top;
             Width = area.Width;
             Height = area.Height;
+        }
+
+        private void SetPaletteDimensions()
+        {
+            var area = GetActiveScreen().WorkingArea;
+            paletteBorder.Width = area.Width * SmartBarConfig.PaletteWidth / 100.0;
+            paletteBorder.MaxHeight = area.Height * SmartBarConfig.PaletteHeight / 100.0;
+        }
+
+        private void BuildResultsLayout()
+        {
+            resultsArea.Children.Clear();
+            resultsArea.ColumnDefinitions.Clear();
+            _columnPanels.Clear();
+
+            if (SmartBarConfig.ColumnLayout)
+            {
+                _layoutColumnIndices = SmartBarConfig.Categories
+                    .Where(c => c.Enabled)
+                    .Select(c => c.Column)
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToList();
+
+                if (_layoutColumnIndices.Count == 0)
+                    _layoutColumnIndices.Add(1);
+
+                for (int i = 0; i < _layoutColumnIndices.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        resultsArea.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
+                        var divider = new Border
+                        {
+                            Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x28, 0x28, 0x28)),
+                            Width = 1
+                        };
+                        Grid.SetColumn(divider, resultsArea.ColumnDefinitions.Count - 1);
+                        resultsArea.Children.Add(divider);
+                    }
+
+                    resultsArea.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                    var panel = new StackPanel { Margin = new Thickness(6, 2, 6, 4) };
+                    var sv = new ScrollViewer
+                    {
+                        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                        Focusable = false,
+                        Content = panel
+                    };
+                    Grid.SetColumn(sv, resultsArea.ColumnDefinitions.Count - 1);
+                    resultsArea.Children.Add(sv);
+                    _columnPanels.Add(panel);
+                }
+            }
+            else
+            {
+                _layoutColumnIndices = null;
+
+                resultsArea.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                var panel = new StackPanel { Margin = new Thickness(6, 2, 6, 4) };
+                var sv = new ScrollViewer
+                {
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                    Focusable = false,
+                    Content = panel
+                };
+                Grid.SetColumn(sv, 0);
+                resultsArea.Children.Add(sv);
+                _columnPanels.Add(panel);
+            }
         }
 
         private void LoadItems()
@@ -88,29 +176,41 @@ namespace SmartBar.Client
                 var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
                 var mgmt = new ManagementServer(EnvironmentManager.Instance.MasterSite);
 
-                foreach (var group in mgmt.CameraGroupFolder.CameraGroups)
-                    CollectCameras(group, serverId);
-
-                var viewGroups = ClientControl.Instance.GetViewGroupItems();
-                if (viewGroups != null)
+                if (SmartBarConfig.IsEnabled(ItemCategory.Camera))
                 {
-                    foreach (var vg in viewGroups)
-                        CollectViews(vg);
+                    foreach (var group in mgmt.CameraGroupFolder.CameraGroups)
+                        CollectCameras(group, serverId);
                 }
 
-                LoadRecentItems();
-                LoadCommands();
-                LoadPrograms();
-                LoadOutputs();
-                LoadEvents();
-                LoadUndoHistory();
+                if (SmartBarConfig.IsEnabled(ItemCategory.View))
+                {
+                    var viewGroups = ClientControl.Instance.GetViewGroupItems();
+                    if (viewGroups != null)
+                    {
+                        foreach (var vg in viewGroups)
+                            CollectViews(vg);
+                    }
+                }
+
+                if (SmartBarConfig.IsEnabled(ItemCategory.Recent))
+                    LoadRecentItems();
+                if (SmartBarConfig.IsEnabled(ItemCategory.Command))
+                    LoadCommands();
+                if (SmartBarConfig.IsEnabled(ItemCategory.Program))
+                    LoadPrograms();
+                if (SmartBarConfig.IsEnabled(ItemCategory.Output))
+                    LoadOutputs();
+                if (SmartBarConfig.IsEnabled(ItemCategory.Event))
+                    LoadEvents();
+                if (SmartBarConfig.IsEnabled(ItemCategory.Undo))
+                    LoadUndoHistory();
             }
             catch (Exception ex) { Log.Error("LoadItems failed", ex); }
         }
 
         private void CollectCameras(CameraGroup group, ServerId serverId, string parentPath = null)
         {
-            var path = parentPath == null ? group.Name : parentPath + " › " + group.Name;
+            var path = parentPath == null ? group.Name : parentPath + " \u203A " + group.Name;
 
             foreach (var cam in group.CameraFolder.Cameras)
             {
@@ -134,7 +234,7 @@ namespace SmartBar.Client
 
         private void CollectViews(Item viewGroup, string parentPath = null)
         {
-            var path = parentPath == null ? viewGroup.Name : parentPath + " › " + viewGroup.Name;
+            var path = parentPath == null ? viewGroup.Name : parentPath + " \u203A " + viewGroup.Name;
 
             foreach (var child in viewGroup.GetChildren())
             {
@@ -159,8 +259,6 @@ namespace SmartBar.Client
 
         private void LoadCommands()
         {
-            if (!SmartBarConfig.ShowCommands) return;
-
             void AddCmd(string group, string name, Action action)
             {
                 _allItems.Add(new CommandItem
@@ -193,16 +291,22 @@ namespace SmartBar.Client
                 EnvironmentManager.Instance.SendMessage(
                     new Message(MessageId.SmartClient.ReloadConfigurationCommand)));
 
-            // Mode Switching
-            AddCmd("Mode", "Switch to Live", () =>
+            // Workspace state
+            AddCmd("Mode", "Switch to Normal", () =>
                 EnvironmentManager.Instance.SendMessage(
-                    new Message(MessageId.SmartClient.ChangeModeCommand, "ClientLive")));
-            AddCmd("Mode", "Switch to Playback", () =>
-                EnvironmentManager.Instance.SendMessage(
-                    new Message(MessageId.SmartClient.ChangeModeCommand, "ClientPlayback")));
+                    new Message(MessageId.SmartClient.ChangeWorkSpaceStateCommand, null, WorkSpaceState.Normal)));
             AddCmd("Mode", "Switch to Setup", () =>
                 EnvironmentManager.Instance.SendMessage(
-                    new Message(MessageId.SmartClient.ChangeModeCommand, "ClientSetup")));
+                    new Message(MessageId.SmartClient.ChangeWorkSpaceStateCommand, null, WorkSpaceState.Setup)));
+
+            // Workspace switching (Live, Playback, custom workspaces)
+            foreach (var ws in ClientControl.Instance.GetWorkSpaceItems())
+            {
+                var wsItem = ws;
+                AddCmd("Workspace", wsItem.Name, () =>
+                    EnvironmentManager.Instance.SendMessage(
+                        new Message(MessageId.SmartClient.ShowWorkSpaceCommand, wsItem.FQID)));
+            }
 
             // Window
             AddCmd("Window", "Close Target Window", () =>
@@ -257,8 +361,6 @@ namespace SmartBar.Client
 
         private void LoadOutputs()
         {
-            if (!SmartBarConfig.ShowOutputs) return;
-
             try
             {
                 var outputs = Configuration.Instance.GetItemsByKind(Kind.Output);
@@ -315,8 +417,6 @@ namespace SmartBar.Client
 
         private void LoadEvents()
         {
-            if (!SmartBarConfig.ShowEvents) return;
-
             try
             {
                 var events = Configuration.Instance.GetItemsByKind(Kind.TriggerEvent);
@@ -357,8 +457,6 @@ namespace SmartBar.Client
 
         private void LoadRecentItems()
         {
-            if (!SmartBarConfig.ShowRecent) return;
-
             var recents = SmartBarHistory.GetRecentItems();
             if (recents.Count == 0) return;
 
@@ -379,7 +477,6 @@ namespace SmartBar.Client
                 }
                 else
                 {
-                    // Find the view item by ObjectId
                     var viewItem = FindViewByObjectId(r.ObjectId);
                     if (viewItem == null) continue;
                     _allItems.Add(new CommandItem
@@ -445,118 +542,179 @@ namespace SmartBar.Client
         {
             var query = searchBox.Text?.Trim() ?? string.Empty;
 
-            var matched = string.IsNullOrEmpty(query)
+            IEnumerable<CommandItem> matched = string.IsNullOrEmpty(query)
                 ? _allItems
                 : _allItems.Where(i => i.Name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
                                     || i.Group.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
 
-            _filteredItems = matched
-                .OrderBy(i => i.Category)
-                .ThenBy(i => i.Group, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            if (SmartBarConfig.ColumnLayout && _layoutColumnIndices != null)
+            {
+                _columnItems = new List<List<CommandItem>>();
+                foreach (int colIdx in _layoutColumnIndices)
+                {
+                    var cats = SmartBarConfig.Categories
+                        .Where(cc => cc.Column == colIdx && cc.Enabled)
+                        .OrderBy(cc => cc.Order)
+                        .Select(cc => cc.Category)
+                        .ToList();
 
-            _selectedIndex = _filteredItems.Count > 0 ? 0 : -1;
-            RebuildList();
+                    var items = matched
+                        .Where(i => cats.Contains(i.Category))
+                        .OrderBy(i => cats.IndexOf(i.Category))
+                        .ThenBy(i => i.Group, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    _columnItems.Add(items);
+                }
+            }
+            else
+            {
+                var enabled = SmartBarConfig.Categories
+                    .Where(c => c.Enabled)
+                    .OrderBy(c => c.Order)
+                    .Select(c => c.Category)
+                    .ToList();
+
+                var items = matched
+                    .Where(i => enabled.Contains(i.Category))
+                    .OrderBy(i => enabled.IndexOf(i.Category))
+                    .ThenBy(i => i.Group, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                _columnItems = new List<List<CommandItem>> { items };
+            }
+
+            // Set initial selection to first non-empty column
+            _selectedColumn = -1;
+            _selectedRow = -1;
+            for (int i = 0; i < _columnItems.Count; i++)
+            {
+                if (_columnItems[i].Count > 0)
+                {
+                    _selectedColumn = i;
+                    _selectedRow = 0;
+                    break;
+                }
+            }
+
+            RebuildResults();
         }
 
         private const int MaxVisibleItems = 50;
 
-        private void RebuildList()
+        private void RebuildResults()
         {
-            resultPanel.Children.Clear();
-
-            ItemCategory? lastCategory = null;
-            string lastGroup = null;
-            bool isFirst = true;
-            int rendered = 0;
-
-            for (int i = 0; i < _filteredItems.Count; i++)
+            for (int col = 0; col < _columnPanels.Count; col++)
             {
-                if (rendered >= MaxVisibleItems) break;
+                var panel = _columnPanels[col];
+                panel.Children.Clear();
 
-                var item = _filteredItems[i];
+                if (col >= _columnItems.Count) continue;
 
-                if (lastCategory != item.Category)
+                var items = _columnItems[col];
+                ItemCategory? lastCategory = null;
+                string lastGroup = null;
+                bool isFirst = true;
+                int rendered = 0;
+
+                for (int i = 0; i < items.Count; i++)
                 {
-                    lastCategory = item.Category;
-                    lastGroup = null;
-                    var categoryLabel = item.Category == ItemCategory.Recent ? "Recent"
-                        : item.Category == ItemCategory.Undo ? "Undo History"
-                        : item.Category == ItemCategory.Camera ? "Cameras"
-                        : item.Category == ItemCategory.View ? "Views"
-                        : item.Category == ItemCategory.Output ? "Outputs"
-                        : item.Category == ItemCategory.Event ? "Events"
-                        : item.Category == ItemCategory.Program ? "Programs" : "Commands";
-                    resultPanel.Children.Add(new TextBlock
-                    {
-                        Text = categoryLabel,
-                        Foreground = TextCategory,
-                        FontSize = 10.5,
-                        FontWeight = FontWeights.SemiBold,
-                        Margin = new Thickness(10, isFirst ? 6 : 14, 0, 2)
-                    });
-                    resultPanel.Children.Add(new Border
-                    {
-                        BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x28, 0x28, 0x28)),
-                        BorderThickness = new Thickness(0, 1, 0, 0),
-                        Margin = new Thickness(10, 0, 10, 4)
-                    });
-                    isFirst = false;
-                }
+                    if (rendered >= MaxVisibleItems) break;
 
-                if (item.Group != lastGroup)
-                {
-                    lastGroup = item.Group;
-                    var groupBlock = new TextBlock
+                    var item = items[i];
+
+                    if (lastCategory != item.Category)
                     {
-                        FontSize = 11,
-                        Margin = new Thickness(10, 8, 0, 3)
-                    };
-                    var parts = item.Group.Split(new[] { " › " }, StringSplitOptions.None);
-                    for (int p = 0; p < parts.Length; p++)
-                    {
-                        if (p > 0)
-                            groupBlock.Inlines.Add(new System.Windows.Documents.Run(" › ") { Foreground = TextGroup });
-                        groupBlock.Inlines.Add(new System.Windows.Documents.Run(parts[p])
+                        lastCategory = item.Category;
+                        lastGroup = null;
+                        panel.Children.Add(new TextBlock
                         {
-                            Foreground = p == parts.Length - 1 ? TextSelected : TextGroup
+                            Text = GetCategoryLabel(item.Category),
+                            Foreground = TextCategory,
+                            FontSize = 10.5,
+                            FontWeight = FontWeights.SemiBold,
+                            Margin = new Thickness(10, isFirst ? 6 : 14, 0, 2)
                         });
+                        panel.Children.Add(new Border
+                        {
+                            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x28, 0x28, 0x28)),
+                            BorderThickness = new Thickness(0, 1, 0, 0),
+                            Margin = new Thickness(10, 0, 10, 4)
+                        });
+                        isFirst = false;
                     }
-                    resultPanel.Children.Add(groupBlock);
+
+                    if (item.Group != lastGroup)
+                    {
+                        lastGroup = item.Group;
+                        var groupBlock = new TextBlock
+                        {
+                            FontSize = 11,
+                            Margin = new Thickness(10, 8, 0, 3)
+                        };
+                        var parts = item.Group.Split(new[] { " \u203A " }, StringSplitOptions.None);
+                        for (int p = 0; p < parts.Length; p++)
+                        {
+                            if (p > 0)
+                                groupBlock.Inlines.Add(new System.Windows.Documents.Run(" \u203A ") { Foreground = TextGroup });
+                            groupBlock.Inlines.Add(new System.Windows.Documents.Run(parts[p])
+                            {
+                                Foreground = p == parts.Length - 1 ? TextSelected : TextGroup
+                            });
+                        }
+                        panel.Children.Add(groupBlock);
+                    }
+
+                    panel.Children.Add(CreateRow(item, col, i));
+                    rendered++;
                 }
 
-                resultPanel.Children.Add(CreateRow(item, i));
-                rendered++;
-            }
-
-            if (_filteredItems.Count > MaxVisibleItems)
-            {
-                int remaining = _filteredItems.Count - MaxVisibleItems;
-                resultPanel.Children.Add(new TextBlock
+                if (items.Count > MaxVisibleItems)
                 {
-                    Text = $"{remaining} more results, keep typing to filter...",
-                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xB3, 0x00)),
-                    FontSize = 11,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 10, 0, 6)
-                });
-            }
+                    int remaining = items.Count - MaxVisibleItems;
+                    panel.Children.Add(new TextBlock
+                    {
+                        Text = $"{remaining} more, keep typing...",
+                        Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xB3, 0x00)),
+                        FontSize = 11,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(0, 10, 0, 6)
+                    });
+                }
 
-            if (_filteredItems.Count == 0)
-            {
-                resultPanel.Children.Add(new TextBlock
+                if (items.Count == 0)
                 {
-                    Text = "No results found",
-                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xB3, 0x00)),
-                    FontSize = 12,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 24, 0, 24)
-                });
+                    panel.Children.Add(new TextBlock
+                    {
+                        Text = "No results found",
+                        Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xB3, 0x00)),
+                        FontSize = 12,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(0, 24, 0, 24)
+                    });
+                }
             }
         }
 
-        private Border CreateRow(CommandItem item, int index)
+        private static string GetCategoryLabel(ItemCategory cat)
+        {
+            switch (cat)
+            {
+                case ItemCategory.Recent: return "Recent";
+                case ItemCategory.Undo: return "Undo History";
+                case ItemCategory.Camera: return "Cameras";
+                case ItemCategory.View: return "Views";
+                case ItemCategory.Output: return "Outputs";
+                case ItemCategory.Event: return "Events";
+                case ItemCategory.Program: return "Programs";
+                case ItemCategory.Command: return "Commands";
+                default: return cat.ToString();
+            }
+        }
+
+        private Border CreateRow(CommandItem item, int column, int row)
         {
             bool isMultiSelected = _selectedCameras.Contains(item);
 
@@ -564,7 +722,8 @@ namespace SmartBar.Client
             {
                 FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
-                TextTrimming = TextTrimming.CharacterEllipsis
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                ToolTip = item.Name
             };
 
             if (isMultiSelected)
@@ -605,34 +764,40 @@ namespace SmartBar.Client
                 nameBlock.Inlines.Add(new System.Windows.Documents.Run(item.Name) { Foreground = TextPrimary });
             }
 
-            var row = new Border
+            var rowBorder = new Border
             {
-                Background = index == _selectedIndex ? SelectedBg : TransparentBg,
+                Background = (column == _selectedColumn && row == _selectedRow) ? SelectedBg : TransparentBg,
                 CornerRadius = new CornerRadius(5),
                 Padding = new Thickness(22, 5, 10, 5),
                 Cursor = Cursors.Hand,
                 Child = nameBlock,
-                Tag = index
+                Tag = new CellIndex { Column = column, Row = row }
             };
 
-            row.MouseEnter += (s, _) =>
+            rowBorder.MouseEnter += (s, _) =>
             {
                 if (_suppressMouseSelect) return;
-                _selectedIndex = (int)((Border)s).Tag;
+                var cell = (CellIndex)((Border)s).Tag;
+                _selectedColumn = cell.Column;
+                _selectedRow = cell.Row;
                 UpdateSelection();
             };
-            row.MouseMove += (s, _) => _suppressMouseSelect = false;
-            row.MouseLeftButtonUp += (s, _) => ExecuteSelected();
+            rowBorder.MouseMove += (s, _) => _suppressMouseSelect = false;
+            rowBorder.MouseLeftButtonUp += (s, _) => ExecuteSelected();
 
-            return row;
+            return rowBorder;
         }
 
         private void UpdateSelection()
         {
-            foreach (var child in resultPanel.Children)
+            foreach (var panel in _columnPanels)
             {
-                if (child is Border border && border.Tag is int idx)
-                    border.Background = idx == _selectedIndex ? SelectedBg : TransparentBg;
+                foreach (var child in panel.Children)
+                {
+                    if (child is Border border && border.Tag is CellIndex ci)
+                        border.Background = (ci.Column == _selectedColumn && ci.Row == _selectedRow)
+                            ? SelectedBg : TransparentBg;
+                }
             }
         }
 
@@ -651,11 +816,8 @@ namespace SmartBar.Client
 
         private void ToggleMultiSelect()
         {
-            if (_selectedIndex < 0 || _selectedIndex >= _filteredItems.Count)
-                return;
-
-            var item = _filteredItems[_selectedIndex];
-            if (item.Category != ItemCategory.Camera)
+            var item = GetSelectedItem();
+            if (item == null || item.Category != ItemCategory.Camera)
                 return;
 
             if (!_selectedCameras.Remove(item))
@@ -663,7 +825,7 @@ namespace SmartBar.Client
 
             _suppressMouseSelect = true;
             UpdateSelectionBar();
-            RebuildList();
+            RebuildResults();
             ScrollToSelected();
             searchBox.Focus();
         }
@@ -686,7 +848,7 @@ namespace SmartBar.Client
                     {
                         _selectedCameras.Clear();
                         UpdateSelectionBar();
-                        RebuildList();
+                        RebuildResults();
                     }
                     else
                     {
@@ -696,25 +858,51 @@ namespace SmartBar.Client
 
                 case Key.Down:
                     e.Handled = true;
-                    if (_filteredItems.Count > 0)
+                    if (_selectedColumn >= 0 && _selectedColumn < _columnItems.Count)
                     {
                         _suppressMouseSelect = true;
-                        int maxIdx = Math.Min(_filteredItems.Count, MaxVisibleItems) - 1;
-                        _selectedIndex = _selectedIndex >= maxIdx ? 0 : _selectedIndex + 1;
-                        UpdateSelection();
-                        ScrollToSelected();
+                        var col = _columnItems[_selectedColumn];
+                        int maxIdx = Math.Min(col.Count, MaxVisibleItems) - 1;
+                        if (maxIdx >= 0)
+                        {
+                            _selectedRow = _selectedRow >= maxIdx ? 0 : _selectedRow + 1;
+                            UpdateSelection();
+                            ScrollToSelected();
+                        }
                     }
                     break;
 
                 case Key.Up:
                     e.Handled = true;
-                    if (_filteredItems.Count > 0)
+                    if (_selectedColumn >= 0 && _selectedColumn < _columnItems.Count)
                     {
                         _suppressMouseSelect = true;
-                        int maxIdx = Math.Min(_filteredItems.Count, MaxVisibleItems) - 1;
-                        _selectedIndex = _selectedIndex <= 0 ? maxIdx : _selectedIndex - 1;
-                        UpdateSelection();
-                        ScrollToSelected();
+                        var col = _columnItems[_selectedColumn];
+                        int maxIdx = Math.Min(col.Count, MaxVisibleItems) - 1;
+                        if (maxIdx >= 0)
+                        {
+                            _selectedRow = _selectedRow <= 0 ? maxIdx : _selectedRow - 1;
+                            UpdateSelection();
+                            ScrollToSelected();
+                        }
+                    }
+                    break;
+
+                case Key.Left:
+                    if (SmartBarConfig.ColumnLayout)
+                    {
+                        e.Handled = true;
+                        _suppressMouseSelect = true;
+                        MoveColumn(-1);
+                    }
+                    break;
+
+                case Key.Right:
+                    if (SmartBarConfig.ColumnLayout)
+                    {
+                        e.Handled = true;
+                        _suppressMouseSelect = true;
+                        MoveColumn(1);
                     }
                     break;
 
@@ -744,6 +932,40 @@ namespace SmartBar.Client
             }
         }
 
+        private void MoveColumn(int direction)
+        {
+            if (_columnItems.Count <= 1) return;
+
+            int newCol = _selectedColumn;
+            int attempts = 0;
+            do
+            {
+                newCol += direction;
+                if (newCol < 0) newCol = _columnItems.Count - 1;
+                else if (newCol >= _columnItems.Count) newCol = 0;
+                attempts++;
+            }
+            while (_columnItems[newCol].Count == 0 && attempts < _columnItems.Count);
+
+            if (_columnItems[newCol].Count == 0) return;
+
+            _selectedColumn = newCol;
+            int maxRow = Math.Min(_columnItems[_selectedColumn].Count, MaxVisibleItems) - 1;
+            if (_selectedRow > maxRow) _selectedRow = maxRow;
+            if (_selectedRow < 0) _selectedRow = 0;
+
+            UpdateSelection();
+            ScrollToSelected();
+        }
+
+        private CommandItem GetSelectedItem()
+        {
+            if (_selectedColumn < 0 || _selectedColumn >= _columnItems.Count) return null;
+            var col = _columnItems[_selectedColumn];
+            if (_selectedRow < 0 || _selectedRow >= col.Count) return null;
+            return col[_selectedRow];
+        }
+
         private void OnBackdropMouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.OriginalSource is System.Windows.Controls.Grid)
@@ -752,9 +974,12 @@ namespace SmartBar.Client
 
         private void ScrollToSelected()
         {
-            foreach (var child in resultPanel.Children)
+            if (_selectedColumn < 0 || _selectedColumn >= _columnPanels.Count) return;
+            var panel = _columnPanels[_selectedColumn];
+            foreach (var child in panel.Children)
             {
-                if (child is Border border && border.Tag is int idx && idx == _selectedIndex)
+                if (child is Border border && border.Tag is CellIndex ci
+                    && ci.Column == _selectedColumn && ci.Row == _selectedRow)
                 {
                     border.BringIntoView();
                     break;
@@ -831,10 +1056,8 @@ namespace SmartBar.Client
 
         private void ExecuteSelected()
         {
-            if (_selectedIndex < 0 || _selectedIndex >= _filteredItems.Count)
-                return;
-
-            var item = _filteredItems[_selectedIndex];
+            var item = GetSelectedItem();
+            if (item == null) return;
 
             if (item.Category == ItemCategory.Camera)
             {
@@ -850,7 +1073,6 @@ namespace SmartBar.Client
             }
             else if (item.Category == ItemCategory.Recent)
             {
-                // Recent items can be cameras or views — check the Kind
                 if (item.PlatformItem?.FQID?.Kind == Kind.Camera)
                     ShowCamerasInView(new List<CommandItem> { item });
                 else
@@ -890,9 +1112,6 @@ namespace SmartBar.Client
         {
             var groups = ClientControl.Instance.GetViewGroupItems();
             if (groups == null || groups.Count == 0) return null;
-
-            // GetViewGroupItems returns top-level groups: typically Private, Shared
-            // Use the first one (Private views)
             return groups[0];
         }
 
@@ -995,18 +1214,6 @@ namespace SmartBar.Client
                         Window = dest
                     }), dest);
         }
-    }
-
-    enum ItemCategory
-    {
-        Recent,
-        Camera,
-        View,
-        Output,
-        Event,
-        Command,
-        Program,
-        Undo
     }
 
     class CommandItem

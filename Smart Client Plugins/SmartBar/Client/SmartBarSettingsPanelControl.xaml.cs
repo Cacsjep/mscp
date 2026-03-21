@@ -1,12 +1,12 @@
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace SmartBar.Client
@@ -14,9 +14,9 @@ namespace SmartBar.Client
     public partial class SmartBarSettingsPanelControl : UserControl
     {
         private readonly ObservableCollection<ProgramEntry> _programs = new ObservableCollection<ProgramEntry>();
+        private readonly ObservableCollection<CategoryConfig> _categories = new ObservableCollection<CategoryConfig>();
         private static readonly Regex ExePathRegex = new Regex(
             @"^(?:[a-zA-Z]:\\|\\\\)(?:[^<>:""/\\|?*\x00-\x1F]+\\)*[^<>:""/\\|?*\x00-\x1F]+\.\w+$|^[^<>:""/\\|?*\x00-\x1F]+\.\w+$");
-        private DispatcherTimer _savedTimer;
         private Key _invokeKey;
         private ModifierKeys _invokeModifiers;
         private bool _recordingKey;
@@ -38,11 +38,35 @@ namespace SmartBar.Client
             _invokeModifiers = SmartBarConfig.InvokeModifiers;
             keyRecorderText.Text = FormatKeyCombo(_invokeModifiers, _invokeKey);
 
-            showOutputsCheck.IsChecked = SmartBarConfig.ShowOutputs;
-            showEventsCheck.IsChecked = SmartBarConfig.ShowEvents;
-            showCommandsCheck.IsChecked = SmartBarConfig.ShowCommands;
-            showRecentCheck.IsChecked = SmartBarConfig.ShowRecent;
+            // Layout
+            columnLayoutCheck.IsChecked = SmartBarConfig.ColumnLayout;
+            paletteWidthBox.Text = SmartBarConfig.PaletteWidth.ToString();
+            paletteHeightBox.Text = SmartBarConfig.PaletteHeight.ToString();
+            paletteWidthBox.TextChanged += (s, ev) => ValidateSave();
+            paletteHeightBox.TextChanged += (s, ev) => ValidateSave();
+            UpdateColumnSettingsVisibility();
 
+            // Categories
+            foreach (var cat in SmartBarConfig.Categories.OrderBy(c => c.Column).ThenBy(c => c.Order))
+            {
+                var cc = new CategoryConfig
+                {
+                    Category = cat.Category,
+                    Enabled = cat.Enabled,
+                    Column = cat.Column,
+                    Order = cat.Order
+                };
+                cc.PropertyChanged += OnCategoryPropertyChanged;
+                _categories.Add(cc);
+            }
+            var view = CollectionViewSource.GetDefaultView(_categories);
+            if (SmartBarConfig.ColumnLayout)
+                view.GroupDescriptions.Add(new PropertyGroupDescription("Column"));
+            view.SortDescriptions.Add(new SortDescription("Column", ListSortDirection.Ascending));
+            view.SortDescriptions.Add(new SortDescription("Order", ListSortDirection.Ascending));
+            categoryList.ItemsSource = view;
+
+            // Programs
             foreach (var p in SmartBarConfig.Programs)
             {
                 var args = p.Args ?? string.Empty;
@@ -64,21 +88,29 @@ namespace SmartBar.Client
         private void ValidateSave()
         {
             string hint = null;
-            foreach (var p in _programs)
+
+            if (!int.TryParse(paletteWidthBox.Text, out var pw) || pw < 10 || pw > 100)
+                hint = "Smart Bar width must be 10\u2013100%";
+            else if (!int.TryParse(paletteHeightBox.Text, out var ph) || ph < 10 || ph > 100)
+                hint = "Smart Bar max height must be 10\u2013100%";
+
+            if (hint == null)
             {
-                if (string.IsNullOrWhiteSpace(p.Name) || string.IsNullOrWhiteSpace(p.Path))
+                foreach (var p in _programs)
                 {
-                    hint = "Fill or remove empty entries";
-                    break;
-                }
-                if (!ExePathRegex.IsMatch(p.Path))
-                {
-                    hint = "Invalid file path: " + p.Path;
-                    break;
+                    if (string.IsNullOrWhiteSpace(p.Name) || string.IsNullOrWhiteSpace(p.Path))
+                    {
+                        hint = "Fill or remove empty entries";
+                        break;
+                    }
+                    if (!ExePathRegex.IsMatch(p.Path))
+                    {
+                        hint = "Invalid file path: " + p.Path;
+                        break;
+                    }
                 }
             }
 
-            saveButton.IsEnabled = hint == null;
             if (hint != null)
             {
                 validationHint.Text = hint;
@@ -88,6 +120,101 @@ namespace SmartBar.Client
             {
                 validationHint.Visibility = Visibility.Collapsed;
             }
+        }
+
+        private void OnColumnLayoutChanged(object sender, RoutedEventArgs e)
+        {
+            UpdateColumnSettingsVisibility();
+            ValidateSave();
+        }
+
+        private void UpdateColumnSettingsVisibility()
+        {
+            var colChecked = columnLayoutCheck.IsChecked == true;
+
+            if (colHeaderText != null)
+                colHeaderText.Visibility = colChecked ? Visibility.Visible : Visibility.Collapsed;
+
+            // Toggle grouping
+            var view = CollectionViewSource.GetDefaultView(_categories);
+            if (view != null)
+            {
+                if (colChecked && view.GroupDescriptions.Count == 0)
+                    view.GroupDescriptions.Add(new PropertyGroupDescription("Column"));
+                else if (!colChecked && view.GroupDescriptions.Count > 0)
+                    view.GroupDescriptions.Clear();
+                view.Refresh();
+            }
+        }
+
+
+        private void OnCategoryPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "Column")
+                CollectionViewSource.GetDefaultView(_categories).Refresh();
+        }
+
+        private void OnMoveCategoryUp(object sender, RoutedEventArgs e)
+        {
+            var entry = ((Button)sender).DataContext as CategoryConfig;
+            if (entry == null) return;
+            var sibling = _categories
+                .Where(c => c.Column == entry.Column && c.Order < entry.Order)
+                .OrderByDescending(c => c.Order)
+                .FirstOrDefault();
+            if (sibling == null) return;
+            var tmp = entry.Order;
+            entry.Order = sibling.Order;
+            sibling.Order = tmp;
+            CollectionViewSource.GetDefaultView(_categories).Refresh();
+        }
+
+        private void OnMoveCategoryDown(object sender, RoutedEventArgs e)
+        {
+            var entry = ((Button)sender).DataContext as CategoryConfig;
+            if (entry == null) return;
+            var sibling = _categories
+                .Where(c => c.Column == entry.Column && c.Order > entry.Order)
+                .OrderBy(c => c.Order)
+                .FirstOrDefault();
+            if (sibling == null) return;
+            var tmp = entry.Order;
+            entry.Order = sibling.Order;
+            sibling.Order = tmp;
+            CollectionViewSource.GetDefaultView(_categories).Refresh();
+        }
+
+        private void OnRestoreDefaults(object sender, RoutedEventArgs e)
+        {
+            // General
+            _invokeKey = Key.Space;
+            _invokeModifiers = ModifierKeys.None;
+            keyRecorderText.Text = FormatKeyCombo(_invokeModifiers, _invokeKey);
+
+            // History
+            maxHistoryCombo.SelectedItem = 20;
+            maxRecentCombo.SelectedItem = 10;
+
+            // Layout
+            columnLayoutCheck.IsChecked = false;
+            paletteWidthBox.Text = "50";
+            paletteHeightBox.Text = "60";
+
+            // Categories
+            _categories.Clear();
+            foreach (var cat in SmartBarConfig.GetDefaultCategories())
+            {
+                cat.PropertyChanged += OnCategoryPropertyChanged;
+                _categories.Add(cat);
+            }
+            CollectionViewSource.GetDefaultView(_categories).Refresh();
+            UpdateColumnSettingsVisibility();
+
+            // Programs
+            _programs.Clear();
+            AddTrackedProgram(new ProgramEntry { Name = "Notepad", Path = "notepad.exe" });
+
+            ValidateSave();
         }
 
         private void OnAddProgram(object sender, RoutedEventArgs e)
@@ -153,7 +280,6 @@ namespace SmartBar.Client
 
         private static bool IsReservedBareKey(Key key)
         {
-            // Only reserved when pressed WITHOUT Ctrl/Alt modifier
             if (key >= Key.A && key <= Key.Z) return true;
             if (key >= Key.D0 && key <= Key.D9) return true;
             if (key >= Key.NumPad0 && key <= Key.NumPad9) return true;
@@ -180,21 +306,18 @@ namespace SmartBar.Client
 
             var key = e.Key == Key.System ? e.SystemKey : e.Key;
 
-            // Ignore modifier-only presses — wait for the actual key
             if (IsModifierOnly(key)) return;
 
-            // Strip Win key from modifiers (we don't support it)
             var mods = Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift);
 
             if (key == Key.Escape && mods == ModifierKeys.None)
             {
-                // Cancel — restore previous
                 keyRecorderText.Text = FormatKeyCombo(_invokeModifiers, _invokeKey);
             }
             else if (mods == ModifierKeys.None && IsReservedBareKey(key))
             {
                 keyRecorderText.Text = key + " (reserved)";
-                return; // stay in recording mode
+                return;
             }
             else
             {
@@ -215,30 +338,28 @@ namespace SmartBar.Client
             keyRecorderBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x44));
         }
 
-        private void OnSave(object sender, RoutedEventArgs e)
-        {
-            Save();
-            savedHint.Visibility = Visibility.Visible;
-            if (_savedTimer != null) _savedTimer.Stop();
-            _savedTimer = new DispatcherTimer { Interval = System.TimeSpan.FromSeconds(3) };
-            _savedTimer.Tick += (s2, e2) =>
-            {
-                _savedTimer.Stop();
-                savedHint.Visibility = Visibility.Collapsed;
-            };
-            _savedTimer.Start();
-        }
-
         public void Save()
         {
             SmartBarConfig.MaxHistory = maxHistoryCombo.SelectedItem is int val ? val : 20;
             SmartBarConfig.MaxRecent = maxRecentCombo.SelectedItem is int mr ? mr : 10;
             SmartBarConfig.InvokeKey = _invokeKey;
             SmartBarConfig.InvokeModifiers = _invokeModifiers;
-            SmartBarConfig.ShowOutputs = showOutputsCheck.IsChecked == true;
-            SmartBarConfig.ShowEvents = showEventsCheck.IsChecked == true;
-            SmartBarConfig.ShowCommands = showCommandsCheck.IsChecked == true;
-            SmartBarConfig.ShowRecent = showRecentCheck.IsChecked == true;
+
+            SmartBarConfig.ColumnLayout = columnLayoutCheck.IsChecked == true;
+            SmartBarConfig.PaletteWidth = int.TryParse(paletteWidthBox.Text, out var pw) ? pw : 50;
+            SmartBarConfig.PaletteHeight = int.TryParse(paletteHeightBox.Text, out var ph) ? ph : 60;
+
+            SmartBarConfig.Categories.Clear();
+            for (int i = 0; i < _categories.Count; i++)
+            {
+                SmartBarConfig.Categories.Add(new CategoryConfig
+                {
+                    Category = _categories[i].Category,
+                    Enabled = _categories[i].Enabled,
+                    Column = _categories[i].Column,
+                    Order = i + 1
+                });
+            }
 
             SmartBarConfig.Programs.Clear();
             foreach (var p in _programs)
