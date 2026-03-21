@@ -131,17 +131,4 @@ Settings are stored in XML at:
 ```
 C:\ProgramData\Milestone\SmartBar\config.xml
 ```
-
-| Element | Type | Default | Description |
-|---|---|---|---|
-| `MaxHistory` | int | 20 | Maximum undo history entries |
-| `MaxRecent` | int | 10 | Maximum recent items shown |
-| `InvokeKey` | Key enum | Space | Keyboard key to open Smart Bar |
-| `InvokeModifiers` | ModifierKeys enum | None | Modifier keys (Ctrl, Alt, Shift) for invoke |
-| `ColumnLayout` | bool | false | Arrange categories in columns |
-| `SmartBarWidth` | int | 50 | Smart Bar width as % of screen width |
-| `SmartBarHeight` | int | 60 | Smart Bar max height as % of screen height |
-| `Categories` | list | 8 defaults | Category configs with Name, Enabled, Column (1-based), Order (1-based) |
-| `Programs` | list | Notepad | External programs to show in launcher |
-
 </div>
