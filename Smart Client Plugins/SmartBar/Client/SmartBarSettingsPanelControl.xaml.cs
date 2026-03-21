@@ -59,12 +59,7 @@ namespace SmartBar.Client
                 cc.PropertyChanged += OnCategoryPropertyChanged;
                 _categories.Add(cc);
             }
-            var view = CollectionViewSource.GetDefaultView(_categories);
-            if (SmartBarConfig.ColumnLayout)
-                view.GroupDescriptions.Add(new PropertyGroupDescription("Column"));
-            view.SortDescriptions.Add(new SortDescription("Column", ListSortDirection.Ascending));
-            view.SortDescriptions.Add(new SortDescription("Order", ListSortDirection.Ascending));
-            categoryList.ItemsSource = view;
+            categoryList.ItemsSource = CollectionViewSource.GetDefaultView(_categories);
 
             // Programs
             foreach (var p in SmartBarConfig.Programs)
@@ -135,14 +130,18 @@ namespace SmartBar.Client
             if (colHeaderText != null)
                 colHeaderText.Visibility = colChecked ? Visibility.Visible : Visibility.Collapsed;
 
-            // Toggle grouping
+            // Toggle grouping and sorting
             var view = CollectionViewSource.GetDefaultView(_categories);
             if (view != null)
             {
-                if (colChecked && view.GroupDescriptions.Count == 0)
+                view.GroupDescriptions.Clear();
+                view.SortDescriptions.Clear();
+                if (colChecked)
+                {
                     view.GroupDescriptions.Add(new PropertyGroupDescription("Column"));
-                else if (!colChecked && view.GroupDescriptions.Count > 0)
-                    view.GroupDescriptions.Clear();
+                    view.SortDescriptions.Add(new SortDescription("Column", ListSortDirection.Ascending));
+                }
+                view.SortDescriptions.Add(new SortDescription("Order", ListSortDirection.Ascending));
                 view.Refresh();
             }
         }
@@ -158,10 +157,11 @@ namespace SmartBar.Client
         {
             var entry = ((Button)sender).DataContext as CategoryConfig;
             if (entry == null) return;
-            var sibling = _categories
-                .Where(c => c.Column == entry.Column && c.Order < entry.Order)
-                .OrderByDescending(c => c.Order)
-                .FirstOrDefault();
+            bool colMode = columnLayoutCheck.IsChecked == true;
+            var candidates = colMode
+                ? _categories.Where(c => c.Column == entry.Column && c.Order < entry.Order)
+                : _categories.Where(c => c.Order < entry.Order);
+            var sibling = candidates.OrderByDescending(c => c.Order).FirstOrDefault();
             if (sibling == null) return;
             var tmp = entry.Order;
             entry.Order = sibling.Order;
@@ -173,10 +173,11 @@ namespace SmartBar.Client
         {
             var entry = ((Button)sender).DataContext as CategoryConfig;
             if (entry == null) return;
-            var sibling = _categories
-                .Where(c => c.Column == entry.Column && c.Order > entry.Order)
-                .OrderBy(c => c.Order)
-                .FirstOrDefault();
+            bool colMode = columnLayoutCheck.IsChecked == true;
+            var candidates = colMode
+                ? _categories.Where(c => c.Column == entry.Column && c.Order > entry.Order)
+                : _categories.Where(c => c.Order > entry.Order);
+            var sibling = candidates.OrderBy(c => c.Order).FirstOrDefault();
             if (sibling == null) return;
             var tmp = entry.Order;
             entry.Order = sibling.Order;
@@ -195,19 +196,27 @@ namespace SmartBar.Client
             maxHistoryCombo.SelectedItem = 20;
             maxRecentCombo.SelectedItem = 10;
 
-            // Layout
+            // Layout - unhook event to avoid premature refresh
+            columnLayoutCheck.Checked -= OnColumnLayoutChanged;
+            columnLayoutCheck.Unchecked -= OnColumnLayoutChanged;
             columnLayoutCheck.IsChecked = false;
             paletteWidthBox.Text = "50";
             paletteHeightBox.Text = "60";
 
-            // Categories
+            // Categories - assign sequential Order for flat display
             _categories.Clear();
-            foreach (var cat in SmartBarConfig.GetDefaultCategories())
+            var defaults = SmartBarConfig.GetDefaultCategories()
+                .OrderBy(c => c.Column).ThenBy(c => c.Order).ToList();
+            for (int i = 0; i < defaults.Count; i++)
             {
-                cat.PropertyChanged += OnCategoryPropertyChanged;
-                _categories.Add(cat);
+                defaults[i].Order = i + 1;
+                defaults[i].PropertyChanged += OnCategoryPropertyChanged;
+                _categories.Add(defaults[i]);
             }
-            CollectionViewSource.GetDefaultView(_categories).Refresh();
+
+            // Re-hook and refresh
+            columnLayoutCheck.Checked += OnColumnLayoutChanged;
+            columnLayoutCheck.Unchecked += OnColumnLayoutChanged;
             UpdateColumnSettingsVisibility();
 
             // Programs
@@ -350,14 +359,14 @@ namespace SmartBar.Client
             SmartBarConfig.PaletteHeight = int.TryParse(paletteHeightBox.Text, out var ph) ? ph : 60;
 
             SmartBarConfig.Categories.Clear();
-            for (int i = 0; i < _categories.Count; i++)
+            foreach (var cat in _categories)
             {
                 SmartBarConfig.Categories.Add(new CategoryConfig
                 {
-                    Category = _categories[i].Category,
-                    Enabled = _categories[i].Enabled,
-                    Column = _categories[i].Column,
-                    Order = i + 1
+                    Category = cat.Category,
+                    Enabled = cat.Enabled,
+                    Column = cat.Column,
+                    Order = cat.Order
                 });
             }
 

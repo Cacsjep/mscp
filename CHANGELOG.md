@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.4] - 2026-03-21
+## [1.5.5] - 2026-03-21
 
 - Add: Smart Bar Col Layout 
 - Add: Smart Bar settings added "Restore defaults" button to reset all settings
