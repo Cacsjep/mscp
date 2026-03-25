@@ -1,0 +1,19 @@
+<external:PropertiesWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="ViewCarousel.Client.ViewCarouselPropertiesWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Margin="10">
+        <GroupBox Header="View Carousel" Foreground="White">
+            <StackPanel Margin="8">
+                <TextBlock x:Name="lblSummary" Text="Not configured" Foreground="#FFB0B0B0"
+                           FontSize="12" Margin="0,0,0,8"/>
+                <Button x:Name="btnCarouselSetup" Content="Carousel Setup"
+                        Click="OnCarouselSetupClick"
+                        Background="#FF238636" Foreground="White" BorderBrush="#FF2EA043"
+                        Padding="14,6" Cursor="Hand" FontSize="12" MinHeight="28"
+                        HorizontalAlignment="Left"/>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</external:PropertiesWpfUserControl>

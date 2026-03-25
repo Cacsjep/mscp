@@ -46,6 +46,7 @@ nav:
       - RDP: plugins/smart-client/rdp.md
       - Smart Bar: plugins/smart-client/smartbar.md
       - Snapshot Report: plugins/smart-client/snapreport.md
+      - View Carousel: plugins/smart-client/view-carousel.md
       - Weather: plugins/smart-client/weather.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md

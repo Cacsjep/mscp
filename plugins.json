@@ -94,6 +94,13 @@
     "description": "Freeform grid-based view layout designer with drag-and-drop pane creation, resizing, and editing"
   },
   {
+    "name": "ViewCarousel",
+    "displayName": "View Carousel",
+    "path": "Smart Client Plugins/ViewCarousel",
+    "category": "SmartClient",
+    "description": "Cycle through XProtect Smart Client views inside a single view item slot"
+  },
+  {
     "name": "RTSPDriver",
     "displayName": "RTSP Pull Driver",
     "path": "Device Drivers/Rtsp/RTSPDriver",

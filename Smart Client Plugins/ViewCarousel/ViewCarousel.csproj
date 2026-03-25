@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>ViewCarousel</RootNamespace>
+    <AssemblyName>ViewCarousel</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <PluginName>ViewCarousel</PluginName>
+    <StopSmartClient>true</StopSmartClient>
+    <LaunchSmartClient>false</LaunchSmartClient>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+    <PackageReference Include="System.Text.Json" Version="10.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

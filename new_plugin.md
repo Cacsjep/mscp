@@ -97,6 +97,18 @@ Key points:
 - `plugin.def` must be `CopyToOutputDirectory=Always`
 - Plugin icon is `<Resource>` (not `Content`)
 - `PluginName` + deploy flags are used by `Directory.Build.props`/`Directory.Build.targets`
+- Launch profile name should be `"Smart Client"` (not the plugin name) in `launchSettings.json`
+
+## Common Gotchas
+
+### FontAwesome5 is NOT available as a XAML StaticResource
+
+`FontAwesome5FreeSolid` is **not** a WPF resource you can use in XAML like `FontFamily="{StaticResource FontAwesome5FreeSolid}"`. It will throw:
+```
+Cannot find resource named 'FontAwesome5FreeSolid'. Resource names are case sensitive.
+```
+
+FontAwesome icons are only available **via code** through the CommunitySDK `PluginIcon.RenderIconSource()` / `PluginIcon.Render()` methods (used in `PluginDefinition` for the plugin icon). For XAML UI, use Unicode characters (e.g. `&#x21BB;` for a rotation arrow) or WPF Path/Geometry instead.
 
 ## PluginDefinition
 
