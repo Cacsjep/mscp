@@ -91,6 +91,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-file-pdf-box"></i></div>
     <div class="pt"><span class="pn">Snapshot Report</span><span class="pd">Camera snapshot PDF report generator</span></div>
   </a>
+  <a class="pr" href="smart-client/view-carousel/">
+    <div class="pi sc"><i class="mdi mdi-view-carousel"></i></div>
+    <div class="pt"><span class="pn">View Carousel</span><span class="pd">Cycle through Smart Client views inside a single view item slot</span></div>
+  </a>
   <a class="pr" href="smart-client/weather/">
     <div class="pi sc"><i class="mdi mdi-weather-partly-cloudy"></i></div>
     <div class="pt"><span class="pn">Weather</span><span class="pd">Live weather display powered by Open-Meteo</span></div>

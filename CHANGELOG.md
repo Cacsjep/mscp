@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2026-03-25
+- Add: View Carousel Smart Client Plugin
+
 ## [1.5.5] - 2026-03-21
 
 - Add: Smart Bar Col Layout 

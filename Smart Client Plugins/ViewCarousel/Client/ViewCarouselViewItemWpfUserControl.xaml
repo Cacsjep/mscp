@@ -1,0 +1,81 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="ViewCarousel.Client.ViewCarouselViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    MouseEnter="OnMouseEnter" MouseLeave="OnMouseLeave"
+    PreviewMouseLeftButtonUp="OnMouseLeftUp"
+    PreviewMouseDoubleClick="OnMouseDoubleClick">
+    <Grid Background="#FF1C2326">
+        <!-- Camera grid canvas (live mode) -->
+        <Canvas x:Name="cameraCanvas" ClipToBounds="True"
+                SizeChanged="CameraCanvas_SizeChanged"/>
+
+        <!-- Info overlay -->
+        <TextBlock x:Name="infoText" Text="" Foreground="#FFB0B0B0" FontSize="14"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   TextWrapping="Wrap" TextAlignment="Center" Margin="20"/>
+
+        <!-- Setup overlay -->
+        <StackPanel x:Name="setupOverlay" Visibility="Collapsed"
+                    VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="&#x21BB;" FontSize="36" Foreground="#FF58A6FF"
+                       HorizontalAlignment="Center" Margin="0,0,0,10"/>
+            <TextBlock Text="View Carousel" Foreground="White" FontSize="16"
+                       FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+            <TextBlock x:Name="setupSummary" Text="Not configured" Foreground="#FFB0B0B0"
+                       FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+            <Button x:Name="btnSetup" Content="Carousel Setup" Click="OnSetupClick"
+                    Background="#FF238636" Foreground="White" BorderBrush="#FF2EA043"
+                    Padding="16,6" Cursor="Hand" FontSize="12" MinHeight="28"
+                    HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Player controls (hover in live mode) -->
+        <StackPanel x:Name="playerControls" Orientation="Horizontal"
+                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                    Margin="0,2,0,0" Visibility="Hidden">
+            <StackPanel.Resources>
+                <Style TargetType="Button">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="#FFB0B0B0"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Padding" Value="10,4"/>
+                    <Setter Property="Cursor" Value="Hand"/>
+                    <Setter Property="FontSize" Value="13"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bd" Background="Transparent"
+                                        CornerRadius="3" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter x:Name="cp" HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      TextBlock.Foreground="#FFB0B0B0"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#40FFFFFF"/>
+                                        <Setter TargetName="cp" Property="TextBlock.Foreground" Value="White"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#60FFFFFF"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </StackPanel.Resources>
+            <Border Background="#DD000000" CornerRadius="3" Padding="2,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="btnPrev" Content="&#x25C0;" Click="OnPrevClick"/>
+                    <Button x:Name="btnPause" Content="&#x23F8;" Click="OnPauseClick"/>
+                    <Button x:Name="btnNext" Content="&#x25B6;" Click="OnNextClick"/>
+                    <TextBlock x:Name="lblViewInfo" Text="" Foreground="#FF8899AA" FontSize="11"
+                               VerticalAlignment="Center" Margin="6,0,6,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</external:ViewItemWpfUserControl>
