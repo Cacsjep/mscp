@@ -9,7 +9,7 @@ using VideoOS.Platform.Messaging;
 
 namespace SCRemoteControl.Server
 {
-    /// <summary>SC Remote Control API</summary>
+    /// <summary>Remote Control API</summary>
     [RoutePrefix("api")]
     public class RemoteApiController : ApiController
     {
@@ -77,6 +77,9 @@ namespace SCRemoteControl.Server
             if (request?.CameraIds == null || request.CameraIds.Count == 0)
                 return BadRequest("cameraIds array is required and must not be empty");
 
+            if (request.CameraIds.Count > 20)
+                return BadRequest("Maximum 20 cameras per request");
+
             var cameraFqids = new List<FQID>();
             foreach (var id in request.CameraIds)
             {
@@ -119,21 +122,7 @@ namespace SCRemoteControl.Server
             return Ok(new { success = true, request.WorkspaceId });
         }
 
-        /// <summary>Change Smart Client mode (Normal or Setup)</summary>
-        [HttpPost, Route("mode/change")]
-        public IHttpActionResult ChangeMode(ChangeModeRequest request)
-        {
-            if (request == null || string.IsNullOrEmpty(request.Mode))
-                return BadRequest("mode is required (Normal or Setup)");
-
-            if (!Enum.TryParse<WorkSpaceState>(request.Mode, true, out var state))
-                return BadRequest("Invalid mode. Use 'Normal' or 'Setup'");
-
-            SmartClientHelper.ChangeMode(state);
-            return Ok(new { success = true, mode = state.ToString() });
-        }
-
-        /// <summary>Send application control command</summary>
+        /// <summary>Send application control command. Available: ToggleFullscreen, EnterFullscreen, ExitFullscreen, ShowSidePanel, HideSidePanel, Maximize, Minimize, Restore</summary>
         [HttpPost, Route("application/control")]
         public IHttpActionResult ApplicationControl(AppControlRequest request)
         {
@@ -178,7 +167,7 @@ namespace SCRemoteControl.Server
         public IHttpActionResult ClearView(ClearRequest request)
         {
             var windowIndex = request?.WindowIndex ?? 0;
-            var delaySeconds = request?.DelaySeconds ?? 0;
+            var delaySeconds = Math.Max(0, Math.Min(request?.DelaySeconds ?? 0, 300));
 
             var windowFqid = SmartClientHelper.GetWindowFqid(windowIndex);
             if (windowFqid == null) return NotFound();
@@ -230,15 +219,16 @@ namespace SCRemoteControl.Server
         public string WorkspaceId { get; set; }
     }
 
-    public class ChangeModeRequest
-    {
-        /// <summary>Normal or Setup</summary>
-        public string Mode { get; set; }
-    }
-
+    /// <summary>Send an application control command to the Smart Client</summary>
     public class AppControlRequest
     {
-        /// <summary>ToggleFullscreen, EnterFullscreen, ExitFullscreen, ShowSidePanel, HideSidePanel, Maximize, Minimize, Restore</summary>
+        /// <summary>
+        /// Command to execute. Values:
+        /// ToggleFullscreen, EnterFullscreen, ExitFullscreen,
+        /// ShowSidePanel, HideSidePanel,
+        /// Maximize, Minimize, Restore
+        /// </summary>
+        /// <example>ToggleFullscreen</example>
         public string Command { get; set; }
     }
 

@@ -83,13 +83,55 @@ namespace SCRemoteControl.Server
 <html lang=""en"">
 <head>
     <meta charset=""UTF-8"">
-    <title>SC Remote Control API</title>
+    <title>Remote Control API</title>
     <link rel=""stylesheet"" href=""/swagger/swagger-ui.css"">
     <style>
         html { box-sizing: border-box; overflow-y: scroll; }
         *, *:before, *:after { box-sizing: inherit; }
-        body { margin: 0; background: #fafafa; }
+        body { margin: 0; background: #1a1a2e; color: #e0e0e0; }
         .topbar { display: none; }
+        /* Dark theme overrides */
+        .swagger-ui { color: #e0e0e0; }
+        .swagger-ui .info .title, .swagger-ui .info .title small { color: #e0e0e0; }
+        .swagger-ui .info p, .swagger-ui .info li { color: #b0b0b0; }
+        .swagger-ui .scheme-container { background: #16213e; box-shadow: none; }
+        .swagger-ui .opblock-tag { color: #e0e0e0 !important; border-bottom-color: #2a2a4a !important; }
+        .swagger-ui .opblock-tag:hover { background: #16213e; }
+        .swagger-ui .opblock { background: #16213e; border-color: #2a2a4a; }
+        .swagger-ui .opblock .opblock-summary { border-color: #2a2a4a; }
+        .swagger-ui .opblock .opblock-summary-description { color: #b0b0b0; }
+        .swagger-ui .opblock .opblock-section-header { background: #0f1a33; }
+        .swagger-ui .opblock .opblock-section-header h4 { color: #e0e0e0; }
+        .swagger-ui .opblock-body pre { background: #0a0f1e; color: #e0e0e0; }
+        .swagger-ui .opblock-body pre span { color: #e0e0e0 !important; }
+        .swagger-ui .opblock.opblock-get { background: rgba(61,174,233,.1); border-color: #3daee9; }
+        .swagger-ui .opblock.opblock-get .opblock-summary { border-color: #3daee9; }
+        .swagger-ui .opblock.opblock-post { background: rgba(73,204,144,.1); border-color: #49cc91; }
+        .swagger-ui .opblock.opblock-post .opblock-summary { border-color: #49cc91; }
+        .swagger-ui table thead tr th, .swagger-ui table thead tr td { color: #e0e0e0; border-bottom-color: #2a2a4a; }
+        .swagger-ui table tbody tr td { color: #b0b0b0; border-bottom-color: #2a2a4a; }
+        .swagger-ui .parameter__name { color: #e0e0e0; }
+        .swagger-ui .parameter__type { color: #8899aa; }
+        .swagger-ui input[type=text], .swagger-ui textarea, .swagger-ui select { background: #0a0f1e; color: #e0e0e0; border-color: #2a2a4a; }
+        .swagger-ui .model-box { background: #0a0f1e; }
+        .swagger-ui .model { color: #e0e0e0; }
+        .swagger-ui .model-title { color: #e0e0e0; }
+        .swagger-ui .prop-type { color: #3daee9; }
+        .swagger-ui .response-col_status { color: #e0e0e0; }
+        .swagger-ui .response-col_description { color: #b0b0b0; }
+        .swagger-ui .responses-inner h4, .swagger-ui .responses-inner h5 { color: #e0e0e0; }
+        .swagger-ui .btn { background: #16213e; color: #e0e0e0; border-color: #2a2a4a; }
+        .swagger-ui .btn:hover { background: #1a2745; }
+        .swagger-ui .btn.authorize { background: #49cc91; color: #1a1a2e; border-color: #49cc91; }
+        .swagger-ui .btn.authorize svg { fill: #1a1a2e; }
+        .swagger-ui .authorization__btn svg { fill: #e0e0e0; }
+        .swagger-ui .dialog-ux .modal-ux { background: #16213e; border-color: #2a2a4a; }
+        .swagger-ui .dialog-ux .modal-ux-header h3 { color: #e0e0e0; }
+        .swagger-ui .dialog-ux .modal-ux-content p { color: #b0b0b0; }
+        .swagger-ui .auth-wrapper input { background: #0a0f1e; color: #e0e0e0; border-color: #2a2a4a; }
+        .swagger-ui .loading-container .loading:after { color: #e0e0e0; }
+        .swagger-ui .markdown p, .swagger-ui .markdown li { color: #b0b0b0; }
+        .swagger-ui .model-box-control, .swagger-ui .models-control { color: #e0e0e0 !important; }
     </style>
 </head>
 <body>
@@ -103,7 +145,7 @@ namespace SCRemoteControl.Server
                 type: 'apiKey',
                 name: 'Authorization',
                 in: 'header',
-                description: 'Enter: Bearer {your-token}'
+                description: 'Paste your API token (Bearer prefix is added automatically)'
             };
             spec.security = [{ Bearer: [] }];
 

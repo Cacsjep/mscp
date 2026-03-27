@@ -44,6 +44,7 @@ nav:
       - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
       - Notepad: plugins/smart-client/notepad.md
       - RDP: plugins/smart-client/rdp.md
+      - Remote Control: plugins/smart-client/sc-remote-control.md
       - Smart Bar: plugins/smart-client/smartbar.md
       - Snapshot Report: plugins/smart-client/snapreport.md
       - View Carousel: plugins/smart-client/view-carousel.md

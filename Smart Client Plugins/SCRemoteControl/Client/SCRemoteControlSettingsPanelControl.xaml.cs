@@ -1,12 +1,15 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 using SCRemoteControl.Server;
 
@@ -14,8 +17,13 @@ namespace SCRemoteControl.Client
 {
     public partial class SCRemoteControlSettingsPanelControl : UserControl
     {
+        private static readonly SolidColorBrush BrushGreen = Freeze(new SolidColorBrush(Color.FromRgb(0, 255, 0)));
+        private static readonly SolidColorBrush BrushGray = Freeze(new SolidColorBrush(Color.FromRgb(128, 128, 128)));
+        private static readonly SolidColorBrush BrushRed = Freeze(new SolidColorBrush(Color.FromRgb(255, 68, 68)));
+
         private readonly ObservableCollection<TokenEntry> _tokens = new ObservableCollection<TokenEntry>();
         private DispatcherTimer _statusTimer;
+        private bool _showingValidationError;
 
         public SCRemoteControlSettingsPanelControl()
         {
@@ -23,29 +31,27 @@ namespace SCRemoteControl.Client
 
             SCRemoteControlConfig.Load();
 
-            // Populate interface dropdown
             PopulateInterfaces();
 
-            // Port
             PortBox.Text = SCRemoteControlConfig.Port.ToString();
+            PortBox.PreviewTextInput += (s, e) => e.Handled = !char.IsDigit(e.Text, 0);
 
-            // TLS
             UseTlsCheck.IsChecked = SCRemoteControlConfig.UseTls;
             PfxPathBox.Text = SCRemoteControlConfig.PfxPath;
             PfxPasswordBox.Password = SCRemoteControlConfig.PfxPassword;
             TlsPanel.Visibility = SCRemoteControlConfig.UseTls ? Visibility.Visible : Visibility.Collapsed;
 
-            // Tokens
             foreach (var t in SCRemoteControlConfig.ApiTokens)
                 _tokens.Add(new TokenEntry { Name = t.Name, Value = t.Value });
             TokenList.ItemsSource = _tokens;
 
-            // Status timer
             _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-            _statusTimer.Tick += (s, e) => RefreshStatus();
+            _statusTimer.Tick += StatusTimer_Tick;
             _statusTimer.Start();
             RefreshStatus();
         }
+
+        private void StatusTimer_Tick(object sender, EventArgs e) => RefreshStatus();
 
         private void PopulateInterfaces()
         {
@@ -70,11 +76,9 @@ namespace SCRemoteControl.Client
             }
             catch { }
 
-            // Add loopback if not already present
             if (InterfaceCombo.Items.Cast<InterfaceItem>().All(i => i.Address != "127.0.0.1"))
                 InterfaceCombo.Items.Add(new InterfaceItem { Display = "127.0.0.1 (Loopback only)", Address = "127.0.0.1" });
 
-            // Select current
             var currentAddr = SCRemoteControlConfig.ListenAddress;
             for (int i = 0; i < InterfaceCombo.Items.Count; i++)
             {
@@ -90,14 +94,15 @@ namespace SCRemoteControl.Client
 
         private void RefreshStatus()
         {
+            if (_showingValidationError) return;
+
             var server = RemoteControlServer.Instance;
 
             if (server.IsListening)
             {
                 ServerStatus.Text = "Listening";
-                ServerStatus.Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0, 255, 0)); // LimeGreen
-                ServerUrl.Text = server.ListenUrl;
+                ServerStatus.Foreground = BrushGreen;
+                ServerUrl.Text = GetBrowsableUrl() ?? server.ListenUrl;
                 ErrorStatus.Text = string.Empty;
                 ErrorStatus.Visibility = Visibility.Collapsed;
                 OpenSwaggerButton.IsEnabled = true;
@@ -105,8 +110,7 @@ namespace SCRemoteControl.Client
             else
             {
                 ServerStatus.Text = "Stopped";
-                ServerStatus.Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(128, 128, 128)); // Gray
+                ServerStatus.Foreground = BrushGray;
                 ServerUrl.Text = "-";
                 OpenSwaggerButton.IsEnabled = false;
 
@@ -115,8 +119,7 @@ namespace SCRemoteControl.Client
                     ErrorStatus.Text = $"Error: {server.ErrorMessage}";
                     ErrorStatus.Visibility = Visibility.Visible;
                     ServerStatus.Text = "Error";
-                    ServerStatus.Foreground = new System.Windows.Media.SolidColorBrush(
-                        System.Windows.Media.Color.FromRgb(255, 68, 68)); // #FF4444
+                    ServerStatus.Foreground = BrushRed;
                 }
                 else
                 {
@@ -127,11 +130,24 @@ namespace SCRemoteControl.Client
 
         private void Restart_Click(object sender, RoutedEventArgs e)
         {
+            _showingValidationError = false;
+
+            var error = Validate();
+            if (error != null)
+            {
+                _showingValidationError = true;
+                ErrorStatus.Text = error;
+                ErrorStatus.Visibility = Visibility.Visible;
+                ServerStatus.Text = "Validation Error";
+                ServerStatus.Foreground = BrushRed;
+                return;
+            }
+
             Save();
             RestartButton.IsEnabled = false;
             RestartSpinner.Visibility = Visibility.Visible;
 
-            Dispatcher.BeginInvoke(new Action(() =>
+            Task.Run(() =>
             {
                 try
                 {
@@ -143,27 +159,54 @@ namespace SCRemoteControl.Client
                 }
                 finally
                 {
-                    RestartButton.IsEnabled = true;
-                    RestartSpinner.Visibility = Visibility.Collapsed;
-                    RefreshStatus();
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        _showingValidationError = false;
+                        RestartButton.IsEnabled = true;
+                        RestartSpinner.Visibility = Visibility.Collapsed;
+                        RefreshStatus();
+                    }));
                 }
-            }), DispatcherPriority.Background);
+            });
+        }
+
+        private string Validate()
+        {
+            if (!int.TryParse(PortBox.Text, out var port) || port < 1024 || port > 65535)
+                return "Port must be a number between 1024 and 65535.";
+
+            if (UseTlsCheck.IsChecked == true)
+            {
+                var pfxPath = PfxPathBox.Text?.Trim();
+                if (string.IsNullOrEmpty(pfxPath))
+                    return "HTTPS is enabled but no PFX certificate file is selected.";
+                if (!File.Exists(pfxPath))
+                    return $"PFX certificate file not found: {pfxPath}";
+            }
+
+            var validTokens = _tokens.Count(t => !string.IsNullOrWhiteSpace(t.Name) && !string.IsNullOrWhiteSpace(t.Value));
+            if (validTokens == 0)
+                return "At least one API token is required.";
+
+            return null;
         }
 
         private void OpenSwagger_Click(object sender, RoutedEventArgs e)
         {
-            var url = RemoteControlServer.Instance.ListenUrl;
-            if (!string.IsNullOrEmpty(url))
+            var url = GetBrowsableUrl();
+            if (url != null)
             {
-                try
-                {
-                    System.Diagnostics.Process.Start(url + "/swagger");
-                }
-                catch (Exception ex)
-                {
-                    SCRemoteControlDefinition.Log.Error("Failed to open Swagger UI", ex);
-                }
+                try { System.Diagnostics.Process.Start(url + "/swagger"); }
+                catch (Exception ex) { SCRemoteControlDefinition.Log.Error("Failed to open Swagger UI", ex); }
             }
+        }
+
+        private static string GetBrowsableUrl()
+        {
+            var url = RemoteControlServer.Instance.ListenUrl;
+            if (string.IsNullOrEmpty(url)) return null;
+            // 0.0.0.0 is not browsable - use localhost instead
+            return url.Replace("://0.0.0.0:", "://localhost:");
         }
 
         private void UseTls_Changed(object sender, RoutedEventArgs e)
@@ -195,6 +238,7 @@ namespace SCRemoteControl.Client
 
         private void RemoveToken_Click(object sender, RoutedEventArgs e)
         {
+            if (_tokens.Count <= 1) return;
             if (sender is Button btn && btn.Tag is TokenEntry token)
                 _tokens.Remove(token);
         }
@@ -232,9 +276,15 @@ namespace SCRemoteControl.Client
 
         public void Cleanup()
         {
-            _statusTimer?.Stop();
-            _statusTimer = null;
+            if (_statusTimer != null)
+            {
+                _statusTimer.Tick -= StatusTimer_Tick;
+                _statusTimer.Stop();
+                _statusTimer = null;
+            }
         }
+
+        private static SolidColorBrush Freeze(SolidColorBrush brush) { brush.Freeze(); return brush; }
     }
 
     class InterfaceItem

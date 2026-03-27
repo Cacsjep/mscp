@@ -19,6 +19,8 @@ namespace SCRemoteControl
         internal static Guid SCRemoteControlPluginId = new Guid("794F7983-3036-499E-BDFD-13C71DCBB246");
         internal static Guid SCRemoteControlBackgroundPluginId = new Guid("184E7E63-038F-4063-BA54-56B5BD62A925");
 
+        private readonly List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
+
         static SCRemoteControlDefinition()
         {
             _pluginIcon = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_Satellite);
@@ -27,7 +29,7 @@ namespace SCRemoteControl
         internal static VideoOSIconSourceBase PluginIconSource => _pluginIcon;
 
         public override Guid Id => SCRemoteControlPluginId;
-        public override string Name => "SC Remote Control";
+        public override string Name => "Remote Control";
         public override string Manufacturer => "MSCP Community";
 
         public override System.Drawing.Image Icon
@@ -38,16 +40,17 @@ namespace SCRemoteControl
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.SmartClient)
             {
                 SCRemoteControlConfig.Load();
+                _backgroundPlugins.Add(new SCRemoteControlBackgroundPlugin());
                 Log.Info("Plugin initialized");
             }
         }
 
         public override void Close()
         {
+            _backgroundPlugins.Clear();
         }
 
-        public override List<BackgroundPlugin> BackgroundPlugins
-            => new List<BackgroundPlugin> { new SCRemoteControlBackgroundPlugin() };
+        public override List<BackgroundPlugin> BackgroundPlugins => _backgroundPlugins;
 
         public override Collection<SettingsPanelPlugin> SettingsPanelPlugins
             => new Collection<SettingsPanelPlugin> { new Client.SCRemoteControlSettingsPanel() };

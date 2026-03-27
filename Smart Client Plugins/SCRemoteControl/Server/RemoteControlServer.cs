@@ -1,9 +1,11 @@
 using System;
+using System.Net;
 using System.Net.Http.Formatting;
 using System.Web.Http;
-using Microsoft.Owin.Hosting;
+using Microsoft.Owin.Builder;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Nowin;
 using Owin;
 using Swashbuckle.Application;
 
@@ -14,7 +16,7 @@ namespace SCRemoteControl.Server
         private static readonly Lazy<RemoteControlServer> _instance = new Lazy<RemoteControlServer>(() => new RemoteControlServer());
         public static RemoteControlServer Instance => _instance.Value;
 
-        private IDisposable _host;
+        private INowinServer _server;
         private readonly object _lock = new object();
 
         public bool IsListening { get; private set; }
@@ -32,17 +34,26 @@ namespace SCRemoteControl.Server
                     var scheme = SCRemoteControlConfig.UseTls ? "https" : "http";
                     var address = SCRemoteControlConfig.ListenAddress;
                     var port = SCRemoteControlConfig.Port;
+                    var ip = address == "0.0.0.0" ? IPAddress.Any : IPAddress.Parse(address);
 
-                    var listenAddress = address == "0.0.0.0" ? "+" : address;
-                    var url = $"{scheme}://{listenAddress}:{port}";
-                    ListenUrl = $"{scheme}://{(address == "0.0.0.0" ? "localhost" : address)}:{port}";
+                    ListenUrl = $"{scheme}://{address}:{port}";
 
-                    _host = WebApp.Start(url, Configure);
+                    var owinApp = new AppBuilder();
+                    Configure(owinApp);
+                    var appFunc = owinApp.Build();
+
+                    var builder = ServerBuilder.New()
+                        .SetAddress(ip)
+                        .SetPort(port)
+                        .SetOwinApp(appFunc);
+
+                    _server = builder.Build();
+                    _server.Start();
 
                     IsListening = true;
                     ErrorMessage = null;
 
-                    SCRemoteControlDefinition.Log.Info($"Server started at {url}");
+                    SCRemoteControlDefinition.Log.Info($"Server started at {ListenUrl}");
                 }
                 catch (Exception ex)
                 {
@@ -57,10 +68,10 @@ namespace SCRemoteControl.Server
         {
             lock (_lock)
             {
-                if (_host != null)
+                if (_server != null)
                 {
-                    try { _host.Dispose(); } catch { }
-                    _host = null;
+                    try { _server.Dispose(); } catch { }
+                    _server = null;
                 }
                 IsListening = false;
                 ListenUrl = null;
@@ -88,24 +99,25 @@ namespace SCRemoteControl.Server
                 }
             });
 
-            // Attribute routing
             config.MapHttpAttributeRoutes();
-
-            // CORS
             config.MessageHandlers.Add(new CorsHandler());
-
-            // Auth
             config.MessageHandlers.Add(new TokenAuthHandler());
 
-            // Swagger spec auto-generation (Swashbuckle) at /swagger/docs/v1
+            // Swagger spec auto-generation at /swagger/docs/v1
             config.EnableSwagger(c =>
             {
-                c.SingleApiVersion("v1", "SC Remote Control API")
+                c.SingleApiVersion("v1", "Remote Control API")
                     .Description("REST API for controlling Milestone XProtect Smart Client remotely. Use the Authorize button to set your Bearer token.");
                 c.ApiKey("Bearer")
-                    .Description("API token from SC Remote Control settings. Format: Bearer &lt;token&gt;")
+                    .Description("Paste your API token from Remote Control settings (Bearer prefix is added automatically)")
                     .Name("Authorization")
                     .In("header");
+
+                var xmlPath = System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(typeof(RemoteControlServer).Assembly.Location),
+                    "SCRemoteControl.xml");
+                if (System.IO.File.Exists(xmlPath))
+                    c.IncludeXmlComments(xmlPath);
             });
 
             // Modern Swagger UI 5.x (served from embedded resources)

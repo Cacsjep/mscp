@@ -7,6 +7,7 @@ using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.ConfigurationItems;
 using VideoOS.Platform.Messaging;
+using ServerIdType = VideoOS.Platform.ServerId;
 
 namespace SCRemoteControl.Api
 {
@@ -16,7 +17,7 @@ namespace SCRemoteControl.Api
     /// </summary>
     static class SmartClientHelper
     {
-        private const string ViewGroupName = "SC Remote Control";
+        private const string ViewGroupName = "Remote Control";
 
         private static readonly (int rows, int cols)[] GridLayouts =
         {
@@ -54,23 +55,25 @@ namespace SCRemoteControl.Api
 
         private static void CollectViews(Item item, string parentPath, List<Dictionary<string, object>> results)
         {
-            var path = string.IsNullOrEmpty(parentPath) ? item.Name : parentPath + " / " + item.Name;
-            var children = item.GetChildren();
+            var path = string.IsNullOrEmpty(parentPath) ? item.Name : parentPath + " \u203A " + item.Name;
 
-            if (children == null || children.Count == 0)
+            foreach (var child in item.GetChildren())
             {
-                // Leaf node = view
-                results.Add(new Dictionary<string, object>
+                if (child.FQID.FolderType == FolderType.No)
                 {
-                    ["id"] = item.FQID.ObjectId.ToString(),
-                    ["name"] = item.Name,
-                    ["path"] = path
-                });
-            }
-            else
-            {
-                foreach (var child in children)
+                    // Leaf = actual view (not a folder)
+                    results.Add(new Dictionary<string, object>
+                    {
+                        ["id"] = child.FQID.ObjectId.ToString(),
+                        ["name"] = child.Name,
+                        ["path"] = path
+                    });
+                }
+                else
+                {
+                    // Folder = recurse
                     CollectViews(child, path, results);
+                }
             }
         }
 
@@ -79,22 +82,39 @@ namespace SCRemoteControl.Api
             var results = new List<Dictionary<string, object>>();
             try
             {
-                var items = Configuration.Instance.GetItemsByKind(Kind.Camera);
-                foreach (var item in items)
-                {
-                    results.Add(new Dictionary<string, object>
-                    {
-                        ["id"] = item.FQID.ObjectId.ToString(),
-                        ["name"] = item.Name,
-                        ["path"] = item.Name
-                    });
-                }
+                var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
+                var mgmt = new ManagementServer(EnvironmentManager.Instance.MasterSite);
+                foreach (var group in mgmt.CameraGroupFolder.CameraGroups)
+                    CollectCameras(group, serverId, null, results);
             }
             catch (Exception ex)
             {
                 SCRemoteControlDefinition.Log.Error("GetCameras failed", ex);
             }
             return results;
+        }
+
+        private static void CollectCameras(CameraGroup group, ServerId serverId, string parentPath, List<Dictionary<string, object>> results)
+        {
+            var path = parentPath == null ? group.Name : parentPath + " \u203A " + group.Name;
+
+            foreach (var cam in group.CameraFolder.Cameras)
+            {
+                if (!cam.Enabled) continue;
+                var cameraId = new Guid(cam.Id);
+                var item = Configuration.Instance.GetItem(serverId, cameraId, Kind.Camera);
+                if (item == null) continue;
+
+                results.Add(new Dictionary<string, object>
+                {
+                    ["id"] = item.FQID.ObjectId.ToString(),
+                    ["name"] = cam.Name,
+                    ["path"] = path
+                });
+            }
+
+            foreach (var sub in group.CameraGroupFolder.CameraGroups)
+                CollectCameras(sub, serverId, path, results);
         }
 
         public static List<Dictionary<string, object>> GetWorkspaces()
@@ -177,8 +197,8 @@ namespace SCRemoteControl.Api
         public static FQID FindItemFqid(string objectId, Guid kind)
         {
             if (!Guid.TryParse(objectId, out var guid)) return null;
-            var items = Configuration.Instance.GetItemsByKind(kind);
-            var item = items.FirstOrDefault(i => i.FQID.ObjectId == guid);
+            var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
+            var item = Configuration.Instance.GetItem(serverId, guid, kind);
             return item?.FQID;
         }
 
@@ -311,13 +331,13 @@ namespace SCRemoteControl.Api
 
         public static void ShowCameras(List<FQID> cameraFqids, FQID windowFqid)
         {
-            EnsureRemoteControlViews();
-
-            var gridViewFqid = FindGridViewFqid(cameraFqids.Count);
-            if (gridViewFqid == null) return;
-
             RunOnUiThread(() =>
             {
+                EnsureRemoteControlViews();
+
+                var gridViewFqid = FindGridViewFqid(cameraFqids.Count);
+                if (gridViewFqid == null) return;
+
                 // Switch to grid view first
                 EnvironmentManager.Instance.SendMessage(
                     new Message(MessageId.SmartClient.MultiWindowCommand,
@@ -398,11 +418,22 @@ namespace SCRemoteControl.Api
 
         public static void ClearView(FQID windowFqid)
         {
-            // Switch to empty 1x1 grid view (no cameras assigned)
-            EnsureRemoteControlViews();
-            var emptyViewFqid = FindGridViewFqid(1);
-            if (emptyViewFqid != null)
-                SwitchView(emptyViewFqid, windowFqid);
+            RunOnUiThread(() =>
+            {
+                // Switch to empty 1x1 grid view (no cameras assigned)
+                EnsureRemoteControlViews();
+                var emptyViewFqid = FindGridViewFqid(1);
+                if (emptyViewFqid == null) return;
+
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.SmartClient.MultiWindowCommand,
+                        new MultiWindowCommandData
+                        {
+                            MultiWindowCommand = MultiWindowCommand.SetViewInWindow,
+                            View = emptyViewFqid,
+                            Window = windowFqid
+                        }), windowFqid);
+            });
         }
     }
 }

@@ -10,7 +10,7 @@ namespace SCRemoteControl.Client
 
         public override Guid Id => new Guid("B205587D-3940-4B1C-AD56-292F6B1C3B5A");
 
-        public override string Title => "SC Remote Control";
+        public override string Title => "Remote Control";
 
         public override UserControl GenerateUserControl()
         {

@@ -109,7 +109,7 @@
   },
   {
     "name": "SCRemoteControl",
-    "displayName": "SC Remote Control",
+    "displayName": "Remote Control",
     "path": "Smart Client Plugins/SCRemoteControl",
     "category": "SmartClient",
     "description": "Control Smart Client remotely via REST API with Swagger UI (views, cameras, workspaces, modes)"

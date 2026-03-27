@@ -27,7 +27,7 @@ function Test($method, $path, $body = $null) {
 }
 
 Write-Host "========================================" -ForegroundColor Yellow
-Write-Host " SC Remote Control API Test" -ForegroundColor Yellow
+Write-Host " Remote Control API Test" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 
 # --- Auth test ---

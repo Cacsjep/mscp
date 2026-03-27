@@ -83,6 +83,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-remote-desktop"></i></div>
     <div class="pt"><span class="pn">RDP</span><span class="pd">Embedded interactive Remote Desktop sessions</span></div>
   </a>
+  <a class="pr" href="smart-client/sc-remote-control/">
+    <div class="pi sc"><i class="mdi mdi-remote"></i></div>
+    <div class="pt"><span class="pn">Remote Control</span><span class="pd">Control Smart Client remotely via REST API with Swagger UI</span></div>
+  </a>
   <a class="pr" href="smart-client/smartbar/">
     <div class="pi sc"><i class="mdi mdi-ballot"></i></div>
     <div class="pt"><span class="pn">Smart Bar</span><span class="pd">A hotkey-opened command palette for quickly finding and launching cameras, views, commands, and programs with keyboard control, recent items, and undo history.</span></div>

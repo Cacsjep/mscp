@@ -9,7 +9,7 @@ namespace SCRemoteControl.Background
     public class SCRemoteControlBackgroundPlugin : BackgroundPlugin
     {
         public override Guid Id => SCRemoteControlDefinition.SCRemoteControlBackgroundPluginId;
-        public override string Name => "SC Remote Control Background";
+        public override string Name => "Remote Control Background";
 
         public override List<EnvironmentType> TargetEnvironments
             => new List<EnvironmentType> { EnvironmentType.SmartClient };
