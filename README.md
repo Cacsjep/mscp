@@ -26,6 +26,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [SmartBar](Smart%20Client%20Plugins/SmartBar) | Smart Client | Command palette for quickly finding and launching cameras, views, commands, events, outputs and programs |
 | [FlexView](Smart%20Client%20Plugins/FlexView) | Smart Client | Freeform grid-based view layout designer with drag-and-drop pane creation |
 | [ViewCarousel](Smart%20Client%20Plugins/ViewCarousel) | Smart Client | Cycle through Smart Client views inside a single view item slot |
+| [Remote Control](Smart%20Client%20Plugins/SCRemoteControl) | Smart Client | Control Smart Client remotely via REST API with Swagger UI |
 
 ## Installation
 

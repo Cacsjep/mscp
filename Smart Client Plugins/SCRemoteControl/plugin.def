@@ -1,0 +1,4 @@
+<plugin>
+   <file name="SCRemoteControl.dll"/>
+   <load env="SmartClient"/>
+</plugin>

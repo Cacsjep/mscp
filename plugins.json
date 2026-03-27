@@ -106,5 +106,12 @@
     "path": "Device Drivers/Rtsp/RTSPDriver",
     "category": "DeviceDriver",
     "description": "4-channel RTSP pull driver with rich diagnostics (H.264/H.265)"
+  },
+  {
+    "name": "SCRemoteControl",
+    "displayName": "Remote Control",
+    "path": "Smart Client Plugins/SCRemoteControl",
+    "category": "SmartClient",
+    "description": "Control Smart Client remotely via REST API with Swagger UI (views, cameras, workspaces, modes)"
   }
 ]
