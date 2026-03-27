@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>SCRemoteControl</RootNamespace>
+    <AssemblyName>SCRemoteControl</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <PluginName>SCRemoteControl</PluginName>
+    <StopSmartClient>true</StopSmartClient>
+    <LaunchSmartClient>false</LaunchSmartClient>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.OwinSelfHost" Version="5.3.0" />
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+    <PackageReference Include="Swashbuckle.Core" Version="5.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="OpenApi\swagger-ui\swagger-ui-bundle.js" />
+    <EmbeddedResource Include="OpenApi\swagger-ui\swagger-ui.css" />
+  </ItemGroup>
+
+</Project>

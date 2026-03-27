@@ -1,0 +1,181 @@
+<UserControl x:Class="SCRemoteControl.Client.SCRemoteControlSettingsPanelControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:fa5="http://schemas.fontawesome.com/icons/"
+             mc:Ignorable="d"
+             d:DesignHeight="700"
+             d:DesignWidth="600">
+    <UserControl.Resources>
+        <Style x:Key="SmallButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF2A2A2A" />
+            <Setter Property="Foreground" Value="#FFD0D0D0" />
+            <Setter Property="BorderBrush" Value="#FF444444" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,4" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF363636" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF555555" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF404040" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
+
+            <!-- STATUS -->
+            <TextBlock Text="Server Status" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+            <Border BorderBrush="#555" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Status:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ServerStatus" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="URL:" FontWeight="SemiBold" Margin="0,0,15,4" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ServerUrl" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ErrorStatus"
+                               Foreground="#FF4444" TextWrapping="Wrap" Margin="0,6,0,0" />
+                </Grid>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                <Button x:Name="RestartButton" Style="{StaticResource SmallButton}" Click="Restart_Click">
+                    <TextBlock Text="Restart Server" VerticalAlignment="Center" />
+                </Button>
+                <TextBlock x:Name="RestartSpinner" Text="Restarting..." Margin="12,0,0,0"
+                           VerticalAlignment="Center" FontStyle="Italic" Opacity="0.7" Visibility="Collapsed" />
+                <Button x:Name="OpenSwaggerButton" Style="{StaticResource SmallButton}" Click="OpenSwagger_Click" Margin="8,0,0,0">
+                    <TextBlock Text="Open Swagger UI" VerticalAlignment="Center" />
+                </Button>
+            </StackPanel>
+
+            <!-- NETWORK CONFIGURATION -->
+            <TextBlock Text="Network Configuration" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+            <Border BorderBrush="#555" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,20">
+                <StackPanel>
+                    <Grid Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="90" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Listen Interface" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="Port" Margin="8,0,0,4" />
+                        <ComboBox Grid.Row="1" Grid.Column="0" x:Name="InterfaceCombo" />
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="PortBox" Margin="8,0,0,0" ToolTip="Port (1024-65535)" />
+                    </Grid>
+                    <TextBlock Text="Default: 0.0.0.0 : 9500" Opacity="0.55" FontSize="11" Margin="0,0,0,10" />
+
+                    <CheckBox x:Name="UseTlsCheck" Content="Use HTTPS" Margin="0,0,0,10"
+                              Checked="UseTls_Changed" Unchecked="UseTls_Changed" />
+
+                    <StackPanel x:Name="TlsPanel" Visibility="Collapsed">
+                        <TextBlock Text="PFX Certificate" Margin="0,0,0,4" />
+                        <DockPanel Margin="0,0,0,5">
+                            <PasswordBox x:Name="PfxPasswordBox" DockPanel.Dock="Right" Width="140" Margin="8,0,0,0" ToolTip="PFX password (leave empty if none)" />
+                            <TextBlock DockPanel.Dock="Right" Text="Password" VerticalAlignment="Center" Margin="8,0,0,0" Opacity="0.7" FontSize="11" />
+                            <Button DockPanel.Dock="Right" Style="{StaticResource SmallButton}" Margin="8,0,0,0" Click="BrowsePfx_Click">
+                                <TextBlock Text="Browse..." VerticalAlignment="Center" />
+                            </Button>
+                            <TextBox x:Name="PfxPathBox" IsReadOnly="True" ToolTip="Path to .pfx certificate file" />
+                        </DockPanel>
+                        <TextBlock Text="PFX file contains both certificate and private key."
+                                   TextWrapping="Wrap" Opacity="0.55" FontSize="11" Margin="0,0,0,10" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- API TOKENS -->
+            <TextBlock Text="API Tokens" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+            <TextBlock Text="All API requests require a Bearer token. Use the Swagger UI 'Authorize' button to set it."
+                       TextWrapping="Wrap" Margin="0,0,0,10" Opacity="0.7" />
+            <Border BorderBrush="#555" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,10">
+                <StackPanel>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Name" FontWeight="SemiBold" Opacity="0.7" FontSize="11" />
+                        <TextBlock Grid.Column="1" Text="Token" FontWeight="SemiBold" Opacity="0.7" FontSize="11" />
+                    </Grid>
+                    <ItemsControl x:Name="TokenList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#FF252525" CornerRadius="6" Padding="10,8" Margin="0,0,0,4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,6,0" ToolTip="Token name" />
+                                        <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsReadOnly="True" FontFamily="Consolas" FontSize="11" ToolTip="Token value" />
+                                        <Button Grid.Column="2" Width="24" Height="24"
+                                                Style="{StaticResource SmallButton}" Padding="0"
+                                                Click="CopyToken_Click" Tag="{Binding Value}"
+                                                ToolTip="Copy token to clipboard" Margin="6,0,4,0">
+                                            <fa5:ImageAwesome Icon="Solid_Copy" Foreground="#FF2196F3"
+                                                              Width="10" Height="10" />
+                                        </Button>
+                                        <Button Grid.Column="3" Width="24" Height="24"
+                                                Style="{StaticResource SmallButton}" Padding="0"
+                                                Click="RemoveToken_Click" Tag="{Binding}"
+                                                ToolTip="Remove token">
+                                            <fa5:ImageAwesome Icon="Solid_Times" Foreground="#FFE05050"
+                                                              Width="9" Height="9" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Button Style="{StaticResource SmallButton}" Click="AddToken_Click"
+                    HorizontalAlignment="Left" Margin="0,0,0,20">
+                <TextBlock Text="Add Token" VerticalAlignment="Center" />
+            </Button>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

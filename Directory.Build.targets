@@ -52,7 +52,7 @@
   <!-- ═══ Post-build: merge CommunitySDK into plugin DLL ═══ -->
   <Target Name="MergeCommunitySDK" AfterTargets="Build" BeforeTargets="MIPDeploy"
           Condition="'$(AssemblyName)' != 'CommunitySDK' and Exists('$(TargetDir)CommunitySDK.dll')">
-    <Exec Command="&quot;$(PkgILRepack)\tools\ILRepack.exe&quot; /internalize /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)CommunitySDK.dll&quot;" />
+    <Exec Command="&quot;$(PkgILRepack)\tools\ILRepack.exe&quot; /internalize /lib:&quot;$(TargetDir).&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)CommunitySDK.dll&quot;" />
     <Delete Files="$(TargetDir)CommunitySDK.dll;$(TargetDir)CommunitySDK.pdb" />
   </Target>
 
