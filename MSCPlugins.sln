@@ -42,6 +42,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViewCarousel", "Smart Clien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCRemoteControl", "Smart Client Plugins\SCRemoteControl\SCRemoteControl.csproj", "{DC51DD58-A07B-48AB-8D59-09D568354A6F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Timelapse", "Smart Client Plugins\Timelapse\Timelapse.csproj", "{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InstallerCustomActions", "installer\customactions\InstallerCustomActions.csproj", "{97D26033-9FB5-4D75-85B9-F11D5495A7C7}"
 EndProject
 Global
@@ -196,6 +198,14 @@ Global
 		{97D26033-9FB5-4D75-85B9-F11D5495A7C7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{97D26033-9FB5-4D75-85B9-F11D5495A7C7}.Release|x64.ActiveCfg = Release|Any CPU
 		{97D26033-9FB5-4D75-85B9-F11D5495A7C7}.Release|x64.Build.0 = Release|Any CPU
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}.Debug|x64.Build.0 = Debug|Any CPU
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}.Release|x64.ActiveCfg = Release|Any CPU
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -217,6 +227,7 @@ Global
 		{B1C2D3E4-F5A6-4B7C-8D9E-0F1A2B3C4D5E} = {A0000001-0000-0000-0000-000000000001}
 		{FCCA8E30-6783-4A83-8D2A-C2D1787DD848} = {A0000001-0000-0000-0000-000000000001}
 		{DC51DD58-A07B-48AB-8D59-09D568354A6F} = {A0000001-0000-0000-0000-000000000001}
+		{71A3E5C0-B2D4-4F6E-90AB-5EA900100005} = {A0000001-0000-0000-0000-000000000001}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D1E2F3A4-B5C6-7890-ABCD-EF1234567890}
