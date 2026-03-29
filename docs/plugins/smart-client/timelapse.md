@@ -2,7 +2,7 @@
 
 # Timelapse
 
-A Smart Client workspace plugin that generates timelapse videos from recorded camera footage. Select one or more cameras, pick a time range, and the plugin encodes them into an MP4 video, 
+A Smart Client workspace plugin that generates timelapse videos from recorded camera footage. Select one or more cameras, pick a time range, and the plugin encodes them into an MP4 video,
 and plays the result directly inside the Smart Client. Supports stitching up to 9 cameras into a single grid layout.
 
 ## Quick Start
@@ -12,10 +12,11 @@ and plays the result directly inside the Smart Client. Supports stitching up to 
 3. Click **+ Add Camera** to select cameras (up to 9)
 4. Choose a time range using a preset (e.g. "Last 24 Hours") or set custom start/end dates and times
 5. Adjust frame interval, output FPS, and resolution as needed
-6. Click **Generate Timelapse**
-7. Watch the progress as frames are fetched and encoded
-8. The video plays back automatically when complete
-9. Click **Save As...** to export the MP4 to disk
+6. Review the estimate displayed in the center panel
+7. Click **Generate Timelapse**
+8. Watch the progress as frames are fetched and encoded
+9. The video plays back automatically when complete
+10. Click **Save As...** to export the MP4 to disk
 
 ## Camera Selection
 
@@ -46,7 +47,7 @@ Selecting a preset automatically fills in the start/end date and time fields.
 
 ### Custom Range
 
-Set the start and end date/time manually using the date pickers and hour/minute dropdowns. The end time must be after the start time.
+Set the start and end date/time manually using the date pickers and hour/minute dropdowns. Start and end are shown side by side for easy comparison.
 
 ## Settings
 
@@ -71,21 +72,45 @@ The playback speed of the generated video (5, 10, 15, 24, or 30 FPS). Higher FPS
 
 ## Estimate
 
-The info panel below the settings shows an estimate of the total frame count, approximate video duration, and the stitch layout before you generate.
+Before generating, a live estimate is shown in the center panel with a label/value grid:
+
+- **Cameras** - number of selected cameras
+- **Layout** - stitch grid (e.g. 2x2)
+- **Resolution** - selected resolution option
+- **Time Span** - total duration and frame interval
+- **Frames** - estimated total frame count
+- **Video** - estimated output video duration and FPS
+
+The estimate updates automatically when any setting changes.
 
 ## Recording Check
 
 Before generation starts, the plugin verifies that each selected camera has recorded data available. If a camera has no recordings, you'll be notified before any frames are fetched.
 
+## Timestamp Overlay
+
+Expand the **Timestamp Overlay** section to burn a date/time stamp into each frame of the video. Disabled by default.
+
+| Setting | Options | Default |
+|---|---|---|
+| Show Timestamp | On / Off | Off |
+| Position | Top-Left, Top-Right, Bottom-Left, Bottom-Right | Bottom-Left |
+| Format | Date + Time, Time only, Date only | Date + Time |
+| Color | White, Black, Yellow, Red | White |
+| Background | Dark shadow, Light shadow, None | Dark shadow |
+| Font Size | Small, Medium, Large, Extra Large | Medium |
+
+The semi-transparent background ensures readability regardless of scene content.
+
 ## Playback
 
-After generation completes, the video plays automatically in the right panel with transport controls:
+After generation completes, the video plays automatically in the center panel with transport controls:
 
 | Control | Action |
 |---|---|
-| Play/Pause | Toggle playback |
+| Play / Pause | Toggle playback |
 | Stop | Stop and reset to beginning |
-| Seek slider | Drag to scrub to any position (pauses during drag, resumes after) |
+| Seek slider | Drag to scrub; pauses during drag and resumes playback from new position |
 | Time display | Shows current position and total duration |
 
 Click **Save As...** to export the MP4 file to any location. You can optionally open it in your default video player.
@@ -109,9 +134,11 @@ Number of frames fetched per batch before encoding (10-200). Larger batches impr
 
 | Problem | Fix |
 |---|---|
+| Timelapse tab not visible | Check role permissions in Management Client. Unblock ZIP if manual install. |
 | "No recordings found" error | Ensure the camera has recorded data in the selected time range. |
 | Sample frame fetch fails | Verify the camera is accessible and has recordings at the start time. |
 | Video is a still image | Ensure the time range spans a period with changing footage or footage at all. Check frame interval isn't larger than the range. |
 | Generation is slow | Increase Max Workers in Advanced settings. Use a shorter time range or larger frame interval. Reduce resolution. |
 | High memory usage | Reduce Batch Size in Advanced settings. Use Half or Quarter resolution. |
+| Playback not working | The generated MP4 requires a compatible codec. Windows 10+ includes H.264 support by default. |
 </div>
