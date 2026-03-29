@@ -47,6 +47,7 @@ nav:
       - Remote Control: plugins/smart-client/sc-remote-control.md
       - Smart Bar: plugins/smart-client/smartbar.md
       - Snapshot Report: plugins/smart-client/snapreport.md
+      - Timelapse: plugins/smart-client/timelapse.md
       - View Carousel: plugins/smart-client/view-carousel.md
       - Weather: plugins/smart-client/weather.md
   - Device Drivers:

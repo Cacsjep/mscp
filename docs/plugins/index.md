@@ -95,6 +95,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-file-pdf-box"></i></div>
     <div class="pt"><span class="pn">Snapshot Report</span><span class="pd">Camera snapshot PDF report generator</span></div>
   </a>
+  <a class="pr" href="smart-client/timelapse/">
+    <div class="pi sc"><i class="mdi mdi-timelapse"></i></div>
+    <div class="pt"><span class="pn">Timelapse</span><span class="pd">Generate timelapse videos from recorded cameras with multi-camera stitch support</span></div>
+  </a>
   <a class="pr" href="smart-client/view-carousel/">
     <div class="pi sc"><i class="mdi mdi-view-carousel"></i></div>
     <div class="pt"><span class="pn">View Carousel</span><span class="pd">Cycle through Smart Client views inside a single view item slot</span></div>

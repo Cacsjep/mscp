@@ -227,13 +227,7 @@
     </external:ViewItemWpfUserControl.Resources>
 
     <Grid Background="#FF1C2326">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <!-- Main content (no header bar) -->
-        <Grid Grid.Row="0">
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="380"/>
                 <ColumnDefinition Width="1"/>
@@ -346,14 +340,50 @@
                             <ComboBox x:Name="resolutionCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}"/>
                         </Grid>
 
-                        <!-- Estimated info -->
-                        <Border Background="#FF2D333B" CornerRadius="4" Padding="10" Margin="0,4,0,0"
-                                BorderBrush="#FF444C56" BorderThickness="1">
-                            <TextBlock x:Name="estimateText" Text="Select cameras and time range"
-                                       Foreground="#FF8B949E" FontSize="11" TextWrapping="Wrap"/>
-                        </Border>
-
                         <Separator Background="#FF30363D" Margin="0,12"/>
+
+                        <!-- Timestamp Overlay -->
+                        <Expander Header="Timestamp Overlay" Foreground="#FF8B949E" FontSize="12" IsExpanded="False" Margin="0,0,0,8">
+                            <StackPanel Margin="0,8,0,0">
+                                <CheckBox x:Name="showTimestampCheck" Content="Show Timestamp"
+                                          Foreground="#FFD0D0D0" FontSize="12" Margin="0,0,0,8"
+                                          IsChecked="False"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Position" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsPositionCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Format" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsFormatCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Color" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsColorCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Background" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsBgCombo" Grid.Row="3" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Font Size" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsFontSizeCombo" Grid.Row="5" Grid.Column="0" Style="{StaticResource DarkComboBox}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Expander>
+
+                        <Separator Background="#FF30363D" Margin="0,4"/>
 
                         <!-- Advanced Section (collapsible) -->
                         <Expander Header="Advanced" Foreground="#FF8B949E" FontSize="12" IsExpanded="False" Margin="0,0,0,8">
@@ -444,30 +474,58 @@
                                      Background="#FF30363D" Foreground="#FF238636" Minimum="0"/>
                     </StackPanel>
 
-                    <!-- Idle placeholder -->
-                    <StackPanel x:Name="idlePlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                    <!-- Idle placeholder with estimate -->
+                    <StackPanel x:Name="idlePlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40">
                         <TextBlock Text="&#9202;" FontSize="48" HorizontalAlignment="Center"
-                                   Margin="0,0,0,16" Foreground="#FF58A6FF"/>
-                        <TextBlock Text="Configure cameras and time range, then click Generate"
-                                   Foreground="#FF8B949E" FontSize="13" HorizontalAlignment="Center"
+                                   Margin="0,0,0,20" Foreground="#FF58A6FF"/>
+
+                        <!-- Default hint (shown when no cameras/range selected) -->
+                        <TextBlock x:Name="idleHintText"
+                                   Text="Select cameras and time range, then click Generate"
+                                   Foreground="#FF8B949E" FontSize="14" HorizontalAlignment="Center"
                                    TextAlignment="Center" TextWrapping="Wrap"/>
+
+                        <!-- Estimate grid (shown when cameras + range are valid) -->
+                        <Grid x:Name="estimateGrid" Visibility="Collapsed" HorizontalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Cameras" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" x:Name="estCameras" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Layout" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" x:Name="estLayout" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Resolution" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" x:Name="estResolution" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Time Span" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" x:Name="estTimeSpan" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+
+                            <Separator Grid.Row="4" Grid.ColumnSpan="3" Background="#FF30363D" Margin="0,8"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Frames" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="5" Grid.Column="2" x:Name="estFrames" Foreground="#FF58A6FF" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Video" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2" x:Name="estVideo" Foreground="#FF58A6FF" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                        </Grid>
                     </StackPanel>
                 </Grid>
             </DockPanel>
         </Grid>
-
-        <!-- Status bar -->
-        <Border Grid.Row="1" Background="#FF252A2E" Padding="12,6" BorderBrush="#FF30363D" BorderThickness="0,1,0,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="statusText" Grid.Column="0" Foreground="#FF8B949E" FontSize="11"
-                           VerticalAlignment="Center" Text="Ready"/>
-                <TextBlock Grid.Column="1" Foreground="#FF666666" FontSize="11"
-                           VerticalAlignment="Center" Text="v1.0.0"/>
-            </Grid>
-        </Border>
     </Grid>
+
 </external:ViewItemWpfUserControl>

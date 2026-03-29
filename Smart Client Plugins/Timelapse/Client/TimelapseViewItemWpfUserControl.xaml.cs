@@ -36,6 +36,9 @@ namespace Timelapse.Client
             InitializeControls();
         }
 
+        public override bool ShowToolbar => false;
+        public override bool Selectable => false;
+
         public override void Init() { }
         public override void Close()
         {
@@ -118,6 +121,35 @@ namespace Timelapse.Client
             foreach (var w in new[] { 1, 2, 3, 5, 8, 10 })
                 workersCombo.Items.Add(new WorkersOption(w));
             workersCombo.SelectedIndex = 3; // 5 workers
+
+            // Timestamp overlay settings
+            tsPositionCombo.Items.Add("Bottom-Left");
+            tsPositionCombo.Items.Add("Bottom-Right");
+            tsPositionCombo.Items.Add("Top-Left");
+            tsPositionCombo.Items.Add("Top-Right");
+            tsPositionCombo.SelectedIndex = 0;
+
+            tsFormatCombo.Items.Add(new TsFormatOption("Date + Time", "yyyy-MM-dd HH:mm:ss"));
+            tsFormatCombo.Items.Add(new TsFormatOption("Time only", "HH:mm:ss"));
+            tsFormatCombo.Items.Add(new TsFormatOption("Date only", "yyyy-MM-dd"));
+            tsFormatCombo.SelectedIndex = 0;
+
+            tsColorCombo.Items.Add(new TsColorOption("White", Color.White));
+            tsColorCombo.Items.Add(new TsColorOption("Black", Color.Black));
+            tsColorCombo.Items.Add(new TsColorOption("Yellow", Color.Yellow));
+            tsColorCombo.Items.Add(new TsColorOption("Red", Color.FromArgb(255, 80, 80)));
+            tsColorCombo.SelectedIndex = 0;
+
+            tsBgCombo.Items.Add(new TsBgOption("Dark shadow", Color.FromArgb(160, 0, 0, 0)));
+            tsBgCombo.Items.Add(new TsBgOption("Light shadow", Color.FromArgb(160, 255, 255, 255)));
+            tsBgCombo.Items.Add(new TsBgOption("None", Color.Empty));
+            tsBgCombo.SelectedIndex = 0;
+
+            tsFontSizeCombo.Items.Add(new TsFontSizeOption("Small", 14f));
+            tsFontSizeCombo.Items.Add(new TsFontSizeOption("Medium", 22f));
+            tsFontSizeCombo.Items.Add(new TsFontSizeOption("Large", 34f));
+            tsFontSizeCombo.Items.Add(new TsFontSizeOption("Extra Large", 48f));
+            tsFontSizeCombo.SelectedIndex = 1;
 
             // Playback timer for seek slider
             _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
@@ -222,7 +254,8 @@ namespace Timelapse.Client
             }
             catch (Exception ex)
             {
-                statusText.Text = $"Camera picker error: {ex.Message}";
+                idleHintText.Text = $"Camera picker error: {ex.Message}";
+                idleHintText.Visibility = Visibility.Visible;
             }
         }
 
@@ -257,7 +290,8 @@ namespace Timelapse.Client
             var range = GetTimeRange();
             if (range == null || _cameras.Count == 0)
             {
-                estimateText.Text = "Select cameras and time range";
+                idleHintText.Visibility = Visibility.Visible;
+                estimateGrid.Visibility = Visibility.Collapsed;
                 return;
             }
 
@@ -267,9 +301,18 @@ namespace Timelapse.Client
             var timestamps = FrameGrabberService.GenerateTimestamps(start, end, interval);
             int frameCount = timestamps.Count;
             double durationSec = (double)frameCount / fps;
+            var totalSpan = end - start;
+            var resLabel = (resolutionCombo.SelectedItem as ResolutionOption)?.Label ?? "Original";
 
-            estimateText.Text = $"~{frameCount} frames, {FormatDuration(durationSec)} video\n" +
-                                $"Layout: {GetLayoutDescription(_cameras.Count)}";
+            idleHintText.Visibility = Visibility.Collapsed;
+            estimateGrid.Visibility = Visibility.Visible;
+
+            estCameras.Text = $"{_cameras.Count}";
+            estLayout.Text = GetLayoutDescription(_cameras.Count);
+            estResolution.Text = resLabel;
+            estTimeSpan.Text = $"{FormatDuration(totalSpan.TotalSeconds)}  ({(intervalCombo.SelectedItem as IntervalOption)?.Label})";
+            estFrames.Text = $"~{frameCount}";
+            estVideo.Text = $"{FormatDuration(durationSec)} @ {fps} FPS";
         }
 
         #endregion
@@ -299,6 +342,7 @@ namespace Timelapse.Client
             var scale = GetSelectedResolution();
             var maxWorkers = GetSelectedWorkers();
             var batchSize = GetSelectedBatchSize();
+            var tsConfig = GetTimestampConfig();
             var timestamps = FrameGrabberService.GenerateTimestamps(start, end, interval);
 
             if (timestamps.Count == 0)
@@ -336,7 +380,7 @@ namespace Timelapse.Client
             try
             {
                 // Check recordings exist
-                statusText.Text = "Checking recordings...";
+                progressDetailText.Text = "Checking recordings...";
                 progressStepText.Text = "Checking recordings...";
                 progressDetailText.Text = "Verifying cameras have recorded data";
 
@@ -361,7 +405,7 @@ namespace Timelapse.Client
                 }
 
                 // Get sample frame for resolution
-                statusText.Text = "Fetching sample frame...";
+                progressDetailText.Text = "Fetching sample frame...";
                 progressStepText.Text = "Initializing...";
                 progressDetailText.Text = "Fetching sample frame to determine resolution";
 
@@ -384,11 +428,11 @@ namespace Timelapse.Client
                 int totalWidth = singleWidth * gridCols;
                 int totalHeight = singleHeight * gridRows;
 
-                statusText.Text = $"Encoding {totalWidth}x{totalHeight} @ {fps} FPS...";
-                progressStepText.Text = $"Generating timelapse ({cameras.Count} camera(s), {GetLayoutDescription(cameras.Count)})";
-
                 int workerCount = maxWorkers;
                 int totalFrames = timestamps.Count;
+
+                progressStepText.Text = $"Generating timelapse ({cameras.Count} camera(s), {GetLayoutDescription(cameras.Count)})";
+                progressDetailText.Text = $"{totalWidth}x{totalHeight} @ {fps} FPS | {workerCount} workers, batch {batchSize}";
 
                 await Task.Run(() =>
                 {
@@ -441,6 +485,9 @@ namespace Timelapse.Client
                                                 }
                                             }
                                         }
+
+                                        // Draw timestamp overlay
+                                        DrawTimestamp(g, totalWidth, totalHeight, ts, tsConfig);
                                     }
                                     batchFrames[j] = canvas;
 
@@ -452,8 +499,8 @@ namespace Timelapse.Client
                                         progressBar.Value = frameNum;
                                         detailProgressBar.Maximum = totalFrames;
                                         detailProgressBar.Value = frameNum;
-                                        progressDetailText.Text = $"Fetching {frameNum} / {totalFrames} - {ts:yyyy-MM-dd HH:mm:ss}";
-                                        statusText.Text = $"Fetching frame {frameNum}/{totalFrames} ({workerCount} workers)...";
+                                        progressStepText.Text = $"Fetching frame {frameNum} / {totalFrames}";
+                                        progressDetailText.Text = $"{ts:yyyy-MM-dd HH:mm:ss} | {workerCount} workers, batch {batchSize}";
                                     }));
 
                                     return localSources;
@@ -479,7 +526,7 @@ namespace Timelapse.Client
                             int batchEndFrame = batchStart + batchLen;
                             Dispatcher.BeginInvoke(new Action(() =>
                             {
-                                statusText.Text = $"Encoded {batchEndFrame}/{totalFrames} ({workerCount} workers, batch {batchSize})...";
+                                progressStepText.Text = $"Encoded {batchEndFrame} / {totalFrames}";
                             }));
                         }
 
@@ -501,18 +548,18 @@ namespace Timelapse.Client
                 _playbackTimer.Start();
                 playPauseButton.Content = "\u23F8"; // pause symbol
 
-                statusText.Text = $"Done! {timestamps.Count} frames encoded.";
+                // Done message will show in playback time area
             }
             catch (OperationCanceledException)
             {
-                statusText.Text = "Generation cancelled.";
+                progressDetailText.Text = "Generation cancelled.";
                 progressPanel.Visibility = Visibility.Collapsed;
                 idlePlaceholder.Visibility = Visibility.Visible;
                 try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
             }
             catch (Exception ex)
             {
-                statusText.Text = "Generation failed.";
+                progressDetailText.Text = "Generation failed.";
                 progressPanel.Visibility = Visibility.Collapsed;
                 idlePlaceholder.Visibility = Visibility.Visible;
                 MessageBox.Show($"Timelapse generation failed:\n\n{ex.Message}", "Timelapse",
@@ -564,7 +611,7 @@ namespace Timelapse.Client
                 _playbackTimer.Stop();
 
                 File.Copy(_currentVideoPath, dlg.FileName, true);
-                statusText.Text = $"Saved: {dlg.FileName}";
+                // Saved confirmation shown via MessageBox already
 
                 var result = MessageBox.Show("Video saved! Open in default player?", "Timelapse",
                     MessageBoxButton.YesNo, MessageBoxImage.Information);
@@ -631,10 +678,14 @@ namespace Timelapse.Client
 
         private void OnMediaEnded(object sender, RoutedEventArgs e)
         {
+            // Stop then Pause to prevent auto-replay
+            mediaPlayer.Stop();
+            mediaPlayer.Position = TimeSpan.Zero;
             _playbackTimer.Stop();
             playPauseButton.Content = "\u25B6";
-            mediaPlayer.Position = TimeSpan.Zero;
             seekSlider.Value = 0;
+            if (mediaPlayer.NaturalDuration.HasTimeSpan)
+                playbackTimeText.Text = $"00:00 / {FormatTimeSpan(mediaPlayer.NaturalDuration.TimeSpan)}";
         }
 
         private void OnPlaybackTimerTick(object sender, EventArgs e)
@@ -699,6 +750,73 @@ namespace Timelapse.Client
         private int GetSelectedBatchSize()
         {
             return (batchSizeCombo.SelectedItem as BatchSizeOption)?.Size ?? 50;
+        }
+
+        private TimestampConfig GetTimestampConfig()
+        {
+            return new TimestampConfig
+            {
+                Enabled = showTimestampCheck.IsChecked == true,
+                Position = (string)tsPositionCombo.SelectedItem ?? "Bottom-Left",
+                Format = (tsFormatCombo.SelectedItem as TsFormatOption)?.Format ?? "yyyy-MM-dd HH:mm:ss",
+                TextColor = (tsColorCombo.SelectedItem as TsColorOption)?.Color ?? Color.White,
+                BgColor = (tsBgCombo.SelectedItem as TsBgOption)?.Color ?? Color.FromArgb(160, 0, 0, 0),
+                FontSize = (tsFontSizeCombo.SelectedItem as TsFontSizeOption)?.Size ?? 22f,
+            };
+        }
+
+        /// <summary>
+        /// Draws timestamp overlay on a composed frame canvas.
+        /// </summary>
+        internal static void DrawTimestamp(Graphics g, int canvasWidth, int canvasHeight,
+            DateTime timestamp, TimestampConfig cfg)
+        {
+            if (!cfg.Enabled) return;
+
+            var text = timestamp.ToString(cfg.Format);
+            using (var font = new Font("Segoe UI", cfg.FontSize, System.Drawing.FontStyle.Bold, GraphicsUnit.Pixel))
+            {
+                var textSize = g.MeasureString(text, font);
+                int pad = (int)(cfg.FontSize * 0.4f);
+                float x, y;
+
+                switch (cfg.Position)
+                {
+                    case "Top-Left":
+                        x = pad;
+                        y = pad;
+                        break;
+                    case "Top-Right":
+                        x = canvasWidth - textSize.Width - pad;
+                        y = pad;
+                        break;
+                    case "Bottom-Right":
+                        x = canvasWidth - textSize.Width - pad;
+                        y = canvasHeight - textSize.Height - pad;
+                        break;
+                    default: // Bottom-Left
+                        x = pad;
+                        y = canvasHeight - textSize.Height - pad;
+                        break;
+                }
+
+                // Draw background rectangle
+                if (cfg.BgColor != Color.Empty)
+                {
+                    using (var bgBrush = new SolidBrush(cfg.BgColor))
+                    {
+                        g.FillRectangle(bgBrush, x - pad / 2f, y - pad / 2f,
+                            textSize.Width + pad, textSize.Height + pad);
+                    }
+                }
+
+                // Draw text
+                using (var brush = new SolidBrush(cfg.TextColor))
+                {
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+                    g.DrawString(text, font, brush, x, y);
+                }
+            }
         }
 
         /// <summary>
@@ -821,6 +939,48 @@ namespace Timelapse.Client
         public TimeSpan Duration { get; }
         public TimePresetOption(string label, TimeSpan duration) { Label = label; Duration = duration; }
         public override string ToString() => Label;
+    }
+
+    internal class TsFormatOption
+    {
+        public string Label { get; }
+        public string Format { get; }
+        public TsFormatOption(string label, string format) { Label = label; Format = format; }
+        public override string ToString() => Label;
+    }
+
+    internal class TsColorOption
+    {
+        public string Label { get; }
+        public Color Color { get; }
+        public TsColorOption(string label, Color color) { Label = label; Color = color; }
+        public override string ToString() => Label;
+    }
+
+    internal class TsBgOption
+    {
+        public string Label { get; }
+        public Color Color { get; }
+        public TsBgOption(string label, Color color) { Label = label; Color = color; }
+        public override string ToString() => Label;
+    }
+
+    internal class TsFontSizeOption
+    {
+        public string Label { get; }
+        public float Size { get; }
+        public TsFontSizeOption(string label, float size) { Label = label; Size = size; }
+        public override string ToString() => Label;
+    }
+
+    internal struct TimestampConfig
+    {
+        public bool Enabled;
+        public string Position;
+        public string Format;
+        public Color TextColor;
+        public Color BgColor;
+        public float FontSize;
     }
 
     #endregion
