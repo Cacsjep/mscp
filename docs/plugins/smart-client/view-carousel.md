@@ -1,3 +1,8 @@
+---
+title: "View Carousel Plugin for Milestone XProtect"
+description: "View Carousel plugin for Milestone XProtect Smart Client — automatically cycle through entire view layouts on a timer."
+---
+
 <div class="show-title" markdown>
 
 # View Carousel

@@ -1,3 +1,8 @@
+---
+title: "Remote Control REST API Plugin for Milestone XProtect"
+description: "Remote Control plugin for Milestone XProtect Smart Client — control Smart Client remotely via REST API with Swagger UI for automation."
+---
+
 <div class="show-title" markdown>
 
 # Remote Control

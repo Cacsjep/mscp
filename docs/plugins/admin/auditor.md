@@ -1,3 +1,8 @@
+---
+title: "Auditor Plugin for Milestone XProtect"
+description: "Auditor plugin for Milestone XProtect — audit user access to recorded video with configurable per-user rules, playback tracking, and export monitoring."
+---
+
 <div class="show-title" markdown>
 
 # Auditor

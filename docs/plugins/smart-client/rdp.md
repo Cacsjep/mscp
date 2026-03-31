@@ -1,3 +1,8 @@
+---
+title: "RDP Remote Desktop Plugin for Milestone XProtect"
+description: "RDP plugin for Milestone XProtect Smart Client — embed interactive Remote Desktop sessions directly into Smart Client views."
+---
+
 <div class="show-title" markdown>
 
 # RDP

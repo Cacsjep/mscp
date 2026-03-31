@@ -1,3 +1,8 @@
+---
+title: "Timelapse Video Plugin for Milestone XProtect"
+description: "Timelapse plugin for Milestone XProtect Smart Client — generate timelapse videos from recorded cameras with multi-camera stitch support."
+---
+
 <div class="show-title" markdown>
 
 # Timelapse

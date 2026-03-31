@@ -1,3 +1,8 @@
+---
+title: "HTTP Requests Plugin for Milestone XProtect"
+description: "HTTP Requests plugin for Milestone XProtect — send flexible HTTP requests as event-driven actions for automation and integration."
+---
+
 <div class="show-title" markdown>
 
 # HTTP Requests

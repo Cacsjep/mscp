@@ -1,3 +1,8 @@
+---
+title: "RTMP Streamer Plugin for Milestone XProtect"
+description: "RTMP Streamer plugin for Milestone XProtect — stream live cameras to YouTube, Twitch, or any RTMP destination with H.264 passthrough."
+---
+
 <div class="show-title" markdown>
 
 # RTMP Streamer

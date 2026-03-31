@@ -1,4 +1,6 @@
 ---
+title: "Free Open-Source Plugins for Milestone XProtect"
+description: "Community-built open-source plugins, Smart Client extensions, and device drivers for Milestone XProtect VMS. Free download with installer."
 hide:
   - navigation
   - toc
@@ -87,6 +89,10 @@ hide:
 
 <p class="disclaimer">This is an independent open source project and is not affiliated with, endorsed by, or supported by Milestone Systems. XProtect™ is a trademark of Milestone Systems A/S.</p>
 
+</div>
+
+<div class="seo-only">
+MS Community Plugins (MSCP) is a free, open-source collection of plugins and device drivers for Milestone XProtect video management software. Extend your XProtect VMS with Smart Client plugins like FlexView for custom camera layouts, Smart Bar command palette, View Carousel for automatic view cycling, Snapshot Report PDF generation, RDP remote desktop integration, Notepad for operator notes, Weather display, and Monitor RTMP Streamer. Admin plugins include Auditor for video access auditing, Certificate Watchdog for SSL monitoring, RTMP Streamer for live streaming to YouTube and Twitch, and HTTP Requests for event-driven automation. Device drivers include an RTMP Push Driver for receiving streams from OBS and drones, and an RTSP Driver with H.264/H.265 and audio support. All plugins are free to download and install on Milestone XProtect Professional, Expert, Corporate, and Essential+.
 </div>
 
 <script>

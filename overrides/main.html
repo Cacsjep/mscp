@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ page.meta.title or page.title }} - {{ config.site_name }}">
+  <meta property="og:description" content="{{ page.meta.description or config.site_description }}">
+  <meta property="og:url" content="{{ page.canonical_url }}">
+  <meta property="og:site_name" content="{{ config.site_name }}">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{ page.meta.title or page.title }} - {{ config.site_name }}">
+  <meta name="twitter:description" content="{{ page.meta.description or config.site_description }}">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "{{ config.site_name }}",
+    "description": "{{ config.site_description }}",
+    "url": "{{ config.site_url }}",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "{{ config.site_url }}?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "MS Community Plugins",
+    "description": "{{ config.site_description }}",
+    "url": "{{ config.site_url }}",
+    "applicationCategory": "SecurityApplication",
+    "operatingSystem": "Windows",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "sourceOrganization": {
+      "@type": "Organization",
+      "name": "MS Community Plugins",
+      "url": "https://github.com/Cacsjep/mscp"
+    }
+  }
+  </script>
+{% endblock %}

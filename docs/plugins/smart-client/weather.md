@@ -1,3 +1,8 @@
+---
+title: "Weather Display Plugin for Milestone XProtect"
+description: "Weather plugin for Milestone XProtect Smart Client — display live weather conditions powered by the free Open-Meteo API."
+---
+
 <div class="show-title" markdown>
 
 # Weather
