@@ -49,7 +49,7 @@ nav:
       - Snapshot Report: plugins/smart-client/snapreport.md
       - Timelapse: plugins/smart-client/timelapse.md
       - View Carousel: plugins/smart-client/view-carousel.md
-      - WebView: plugins/smart-client/webview.md
+      - Web View: plugins/smart-client/webview.md
       - Weather: plugins/smart-client/weather.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md

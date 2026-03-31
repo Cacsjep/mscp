@@ -1,6 +1,6 @@
 ---
 title: "WebView Plugin for Milestone XProtect"
-description: "WebView plugin for Milestone XProtect Smart Client — browse hardware device web interfaces and custom websites with tabbed WebView2 browser, credential display, and DPAPI-encrypted password storage."
+description: "WebView plugin for Milestone XProtect Smart Client -browse hardware device web interfaces and custom websites with tabbed WebView2 browser, credential display, and DPAPI-encrypted password storage."
 ---
 
 <div class="show-title" markdown>
@@ -17,13 +17,16 @@ A Smart Client workspace plugin that provides a built-in tabbed web browser for 
 4. Click any device to open its web interface in a new tab
 5. Use the credential bar at the top to copy username/password
 
+<video controls width="100%">
+  <source src="../vids/wv_usage.mp4" type="video/mp4">
+</video>
+
 ## Device Tree
 
 The left panel shows all enabled hardware devices organized by Recording Server. Each device shows its name with the IP address on hover (tooltip).
 
-- **Natural sort** — devices are sorted logically ("Camera 2" before "Camera 10")
-- **Search** — filter by device name or IP address using the search field
-- **Refresh** — click the refresh icon to reload the device tree from the management server
+- **Search** -filter by device name or IP address using the search field
+- **Refresh** -click the refresh icon to reload the device tree from the management server
 - Localhost and loopback devices (`127.0.0.1`, `::1`) are automatically filtered out
 
 ## Tabbed Browser
@@ -48,9 +51,9 @@ The plugin automatically determines the correct protocol:
 
 When a device tab is active, the credential bar appears at the top showing:
 
-- **Device name** — highlighted in blue
-- **Username** — with a Copy button
-- **Password** — masked by default with Show/Hide toggle and Copy button
+- **Device name** -highlighted in blue
+- **Username** -with a Copy button
+- **Password** -masked by default with Show/Hide toggle and Copy button
 
 Passwords are read on-demand from the management server using `ReadPasswordHardware()` when you first select a device.
 
@@ -94,5 +97,4 @@ Toggle the **Accept untrusted SSL** checkbox at the bottom of the left panel to 
 | Web page won't load | Check if the device is reachable on the network. Try the URL directly in a regular browser. |
 | SSL error despite auto-accept | Ensure "Accept untrusted SSL" is checked at the bottom of the left panel. Close and re-open the tab. |
 | WebView2 fails to initialize | The plugin bundles WebView2, but if issues persist, install the [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) manually. |
-
 </div>

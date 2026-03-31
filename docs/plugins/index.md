@@ -107,7 +107,7 @@ hide:
   </a>
   <a class="pr" href="smart-client/webview/">
     <div class="pi sc"><i class="mdi mdi-web"></i></div>
-    <div class="pt"><span class="pn">WebView</span><span class="pd">Tabbed web browser for device web interfaces and custom websites with credential display</span></div>
+    <div class="pt"><span class="pn">Web View</span><span class="pd">Tabbed web browser for device web interfaces and custom websites with credential display</span></div>
   </a>
   <a class="pr" href="smart-client/weather/">
     <div class="pi sc"><i class="mdi mdi-weather-partly-cloudy"></i></div>
