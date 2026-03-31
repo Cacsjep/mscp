@@ -1,4 +1,6 @@
 ---
+title: "Download and Install Milestone XProtect Plugins"
+description: "Download and install free community plugins for Milestone XProtect. System requirements, setup instructions, and MSI installer."
 hide:
   - navigation
 ---

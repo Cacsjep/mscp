@@ -1,3 +1,8 @@
+---
+title: "FlexView Plugin for Milestone XProtect"
+description: "FlexView plugin for Milestone XProtect Smart Client — design custom view layouts beyond standard templates with a free-form canvas."
+---
+
 <div class="show-title" markdown>
 
 # FlexView

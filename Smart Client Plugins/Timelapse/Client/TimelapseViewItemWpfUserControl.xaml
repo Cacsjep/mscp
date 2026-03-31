@@ -1,0 +1,531 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="Timelapse.Client.TimelapseViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:fa5="http://schemas.fontawesome.com/icons/"
+    mc:Ignorable="d"
+    d:DesignHeight="650"
+    d:DesignWidth="1000">
+    <external:ViewItemWpfUserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Dark Button Style (from SCRemoteControl) -->
+        <Style x:Key="DarkButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF363636"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF555555"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF404040"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Green Action Button -->
+        <Style x:Key="GreenButton" TargetType="Button" BasedOn="{StaticResource DarkButton}">
+            <Setter Property="Background" Value="#FF238636"/>
+            <Setter Property="BorderBrush" Value="#FF2EA043"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF2EA043"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF1A7F37"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LabelText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FF8B949E"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <!-- Dark ComboBox Styles (from SCRemoteControl) -->
+        <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bd" Background="#FF2A2A2A"
+                                Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF3399FF"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True"/>
+                                    <Condition Property="IsHighlighted" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bd" Property="Background" Value="#FF333333"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <ControlTemplate x:Key="DarkComboBoxToggle" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="20"/>
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Border" Grid.ColumnSpan="2" Background="#FF2A2A2A"
+                        BorderBrush="#FF444444" BorderThickness="1" CornerRadius="0"/>
+                <Border Grid.Column="0" Background="#FF2A2A2A" Margin="1"/>
+                <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#FFD0D0D0"
+                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </ControlTemplate>
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItem}"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Template="{StaticResource DarkComboBoxToggle}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Focusable="False" ClickMode="Press"/>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="6,4,24,4" VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                                   Focusable="False" AllowsTransparency="True" PopupAnimation="Slide">
+                                <Grid MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                      SnapsToDevicePixels="True">
+                                    <Border Background="#FF2A2A2A" BorderBrush="#FF444444" BorderThickness="1">
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Dark Slider Style -->
+        <Style x:Key="DarkSlider" TargetType="Slider">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto" MinHeight="{TemplateBinding MinHeight}"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Border x:Name="TrackBackground" Grid.Row="1" Height="4" CornerRadius="2"
+                                    Background="#FF333333" Margin="5,0"/>
+                            <Track x:Name="PART_Track" Grid.Row="1">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Style="{x:Null}">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" CornerRadius="2" Background="#FF3399FF"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Style="{x:Null}">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse x:Name="thumbEllipse" Width="14" Height="14"
+                                                         Fill="#FFD0D0D0" Stroke="#FF555555" StrokeThickness="1"/>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="thumbEllipse" Property="Fill" Value="White"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="thumbEllipse" Property="Fill" Value="#FF3399FF"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </external:ViewItemWpfUserControl.Resources>
+
+    <Grid Background="#FF1C2326">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="380"/>
+                <ColumnDefinition Width="1"/>
+                <ColumnDefinition Width="*" MinWidth="300"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left panel: Configuration (fixed width, not resizable) -->
+            <Border Grid.Column="0" Background="#FF1C2326">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="12,8">
+                        <!-- Camera Selection -->
+                        <TextBlock Text="CAMERAS" Style="{StaticResource LabelText}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <Button x:Name="addCameraButton" Content="+ Add Camera" Style="{StaticResource DarkButton}"
+                                Click="OnAddCameraClick" HorizontalAlignment="Stretch" Margin="0,0,0,6"/>
+                        <ListBox x:Name="cameraListBox" Background="#FF2D333B" BorderBrush="#FF444C56"
+                                 Foreground="White" MinHeight="60" MaxHeight="200" FontSize="12">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" Foreground="White" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" FontSize="12" Margin="2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="cameraCountText" Text="0 camera(s) selected (max 9)"
+                                       Foreground="#FF666666" FontSize="10" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="Clear" Style="{StaticResource DarkButton}"
+                                    Click="OnClearCamerasClick" FontSize="10" Padding="8,2"/>
+                        </Grid>
+
+                        <Separator Background="#FF30363D" Margin="0,12"/>
+
+                        <!-- Time Range -->
+                        <TextBlock Text="TIME RANGE" Style="{StaticResource LabelText}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Preset" Style="{StaticResource LabelText}"/>
+                        <ComboBox x:Name="timePresetCombo" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                        <!-- Two-column layout for start/end -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Start column -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Start Date" Style="{StaticResource LabelText}"/>
+                                <DatePicker x:Name="startDatePicker" Background="#FF2D333B" BorderBrush="#FF444C56"
+                                            FontSize="11" Margin="0,0,0,6"/>
+                                <TextBlock Text="Start Time" Style="{StaticResource LabelText}"/>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="4"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="startHourCombo" Style="{StaticResource DarkComboBox}"/>
+                                    <ComboBox x:Name="startMinuteCombo" Grid.Column="2" Style="{StaticResource DarkComboBox}"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- End column -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="End Date" Style="{StaticResource LabelText}"/>
+                                <DatePicker x:Name="endDatePicker" Background="#FF2D333B" BorderBrush="#FF444C56"
+                                            FontSize="11" Margin="0,0,0,6"/>
+                                <TextBlock Text="End Time" Style="{StaticResource LabelText}"/>
+                                <Grid Margin="0,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="4"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="endHourCombo" Style="{StaticResource DarkComboBox}"/>
+                                    <ComboBox x:Name="endMinuteCombo" Grid.Column="2" Style="{StaticResource DarkComboBox}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+
+                        <Separator Background="#FF30363D" Margin="0,12"/>
+
+                        <!-- Settings - two column -->
+                        <TextBlock Text="SETTINGS" Style="{StaticResource LabelText}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Frame Interval" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="intervalCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="Output FPS" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="fpsCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Resolution" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="resolutionCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}"/>
+                        </Grid>
+
+                        <Separator Background="#FF30363D" Margin="0,12"/>
+
+                        <!-- Timestamp Overlay -->
+                        <Expander Header="Timestamp Overlay" Foreground="#FF8B949E" FontSize="12" IsExpanded="False" Margin="0,0,0,8">
+                            <StackPanel Margin="0,8,0,0">
+                                <CheckBox x:Name="showTimestampCheck" Content="Show Timestamp"
+                                          Foreground="#FFD0D0D0" FontSize="12" Margin="0,0,0,8"
+                                          IsChecked="False"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Position" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsPositionCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Format" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsFormatCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Color" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsColorCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Background" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsBgCombo" Grid.Row="3" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Font Size" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="tsFontSizeCombo" Grid.Row="5" Grid.Column="0" Style="{StaticResource DarkComboBox}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Expander>
+
+                        <Separator Background="#FF30363D" Margin="0,4"/>
+
+                        <!-- Advanced Section (collapsible) -->
+                        <Expander Header="Advanced" Foreground="#FF8B949E" FontSize="12" IsExpanded="False" Margin="0,0,0,8">
+                            <StackPanel Margin="0,8,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Max Workers" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="workersCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}"/>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Batch Size" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="batchSizeCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Expander>
+
+                        <Separator Background="#FF30363D" Margin="0,4"/>
+
+                        <!-- Action Buttons -->
+                        <Button x:Name="generateButton" Content="&#9654; Generate Timelapse" Style="{StaticResource GreenButton}"
+                                Click="OnGenerateClick" HorizontalAlignment="Stretch" Padding="12,10" Margin="0,8,0,6"/>
+                        <Button x:Name="cancelButton" Content="Cancel" Style="{StaticResource DarkButton}"
+                                Click="OnCancelClick" HorizontalAlignment="Stretch" Visibility="Collapsed" Margin="0,0,0,6"/>
+                        <Button x:Name="saveButton" Content="&#128190; Save As..." Style="{StaticResource DarkButton}"
+                                Click="OnSaveClick" HorizontalAlignment="Stretch" Visibility="Collapsed"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Divider line (not resizable) -->
+            <Border Grid.Column="1" Background="#FF30363D"/>
+
+            <!-- Right panel: Preview / Playback -->
+            <DockPanel Grid.Column="2">
+                <!-- Progress bar -->
+                <ProgressBar x:Name="progressBar" DockPanel.Dock="Bottom" Height="4"
+                             Background="#FF30363D" Foreground="#FF238636"
+                             Visibility="Collapsed" Minimum="0"/>
+
+                <!-- Playback controls bar -->
+                <Border x:Name="playbackControls" DockPanel.Dock="Bottom" Background="#FF252A2E"
+                        Padding="12,6" Visibility="Collapsed" BorderBrush="#FF30363D" BorderThickness="0,1,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="playPauseButton" Content="&#9654;" Style="{StaticResource DarkButton}"
+                                    Click="OnPlayPauseClick" FontSize="14" Padding="8,4" Margin="0,0,4,0"/>
+                            <Button x:Name="stopButton" Content="&#9632;" Style="{StaticResource DarkButton}"
+                                    Click="OnStopClick" FontSize="14" Padding="8,4"/>
+                        </StackPanel>
+                        <Slider x:Name="seekSlider" Grid.Column="1" VerticalAlignment="Center" Margin="12,0"
+                                Minimum="0" Maximum="100" ValueChanged="OnSeekChanged" IsEnabled="False"
+                                Style="{StaticResource DarkSlider}"/>
+                        <TextBlock x:Name="playbackTimeText" Grid.Column="2" Foreground="#FF8B949E"
+                                   FontSize="11" VerticalAlignment="Center" Text="00:00 / 00:00"/>
+                    </Grid>
+                </Border>
+
+                <!-- Video player / placeholder -->
+                <Grid Background="#FF0D1117">
+                    <!-- MediaElement for playback -->
+                    <MediaElement x:Name="mediaPlayer" LoadedBehavior="Manual" UnloadedBehavior="Close"
+                                  ScrubbingEnabled="True" Stretch="Uniform"
+                                  MediaOpened="OnMediaOpened" MediaEnded="OnMediaEnded"
+                                  Visibility="Collapsed"/>
+
+                    <!-- Generation progress placeholder -->
+                    <StackPanel x:Name="progressPanel" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                Visibility="Collapsed">
+                        <TextBlock x:Name="progressStepText" Text="Preparing..."
+                                   Foreground="White" FontSize="14" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="progressDetailText" Text=""
+                                   Foreground="#FF8B949E" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,12"
+                                   TextWrapping="Wrap" TextAlignment="Center" MaxWidth="400"/>
+                        <ProgressBar x:Name="detailProgressBar" Width="300" Height="8"
+                                     Background="#FF30363D" Foreground="#FF238636" Minimum="0"/>
+                    </StackPanel>
+
+                    <!-- Idle placeholder with estimate -->
+                    <StackPanel x:Name="idlePlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40">
+                        <TextBlock Text="&#9202;" FontSize="48" HorizontalAlignment="Center"
+                                   Margin="0,0,0,20" Foreground="#FF58A6FF"/>
+
+                        <!-- Default hint (shown when no cameras/range selected) -->
+                        <TextBlock x:Name="idleHintText"
+                                   Text="Select cameras and time range, then click Generate"
+                                   Foreground="#FF8B949E" FontSize="14" HorizontalAlignment="Center"
+                                   TextAlignment="Center" TextWrapping="Wrap"/>
+
+                        <!-- Estimate grid (shown when cameras + range are valid) -->
+                        <Grid x:Name="estimateGrid" Visibility="Collapsed" HorizontalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Cameras" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" x:Name="estCameras" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Layout" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" x:Name="estLayout" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Resolution" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" x:Name="estResolution" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Time Span" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" x:Name="estTimeSpan" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+
+                            <Separator Grid.Row="4" Grid.ColumnSpan="3" Background="#FF30363D" Margin="0,8"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Frames" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="5" Grid.Column="2" x:Name="estFrames" Foreground="#FF58A6FF" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Video" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2" x:Name="estVideo" Foreground="#FF58A6FF" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </DockPanel>
+        </Grid>
+    </Grid>
+
+</external:ViewItemWpfUserControl>

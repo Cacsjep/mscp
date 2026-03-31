@@ -1,3 +1,8 @@
+---
+title: "Smart Bar Command Palette for Milestone XProtect"
+description: "Smart Bar plugin for Milestone XProtect — hotkey command palette to quickly find and launch cameras, views, and commands."
+---
+
 <div class="show-title" markdown>
 
 # Smart Bar

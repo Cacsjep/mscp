@@ -1,4 +1,6 @@
 ---
+title: "All Milestone XProtect Plugins and Drivers"
+description: "Browse all free Milestone XProtect plugins — Smart Client extensions, admin tools, and device drivers for video surveillance."
 hide:
   - navigation
   - toc
@@ -94,6 +96,10 @@ hide:
   <a class="pr" href="smart-client/snapreport/">
     <div class="pi sc"><i class="mdi mdi-file-pdf-box"></i></div>
     <div class="pt"><span class="pn">Snapshot Report</span><span class="pd">Camera snapshot PDF report generator</span></div>
+  </a>
+  <a class="pr" href="smart-client/timelapse/">
+    <div class="pi sc"><i class="mdi mdi-timelapse"></i></div>
+    <div class="pt"><span class="pn">Timelapse</span><span class="pd">Generate timelapse videos from recorded cameras with multi-camera stitch support</span></div>
   </a>
   <a class="pr" href="smart-client/view-carousel/">
     <div class="pi sc"><i class="mdi mdi-view-carousel"></i></div>

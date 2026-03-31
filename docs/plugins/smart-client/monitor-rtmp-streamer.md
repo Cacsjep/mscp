@@ -1,3 +1,8 @@
+---
+title: "Monitor RTMP Streamer Plugin for Milestone XProtect"
+description: "Monitor RTMP Streamer plugin for Milestone XProtect — capture desktop monitors and stream via RTMP to record operator activity."
+---
+
 <div class="show-title" markdown>
 
 # Monitor RTMP Streamer

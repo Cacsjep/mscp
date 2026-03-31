@@ -1,3 +1,8 @@
+---
+title: "RTSP Driver for Milestone XProtect"
+description: "RTSP Driver for Milestone XProtect — pull RTSP streams with H.264/H.265, audio support, dual streams, and visual diagnostics."
+---
+
 <div class="show-title" markdown>
 
 # RTSP Driver

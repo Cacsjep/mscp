@@ -1,3 +1,8 @@
+---
+title: "Notepad Plugin for Milestone XProtect"
+description: "Notepad plugin for Milestone XProtect Smart Client — simple text editor for operator notes that persists across restarts."
+---
+
 <div class="show-title" markdown>
 
 # Notepad

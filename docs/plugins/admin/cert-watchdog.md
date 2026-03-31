@@ -1,3 +1,8 @@
+---
+title: "Certificate Watchdog Plugin for Milestone XProtect"
+description: "Certificate Watchdog plugin for Milestone XProtect — monitor SSL/TLS certificate expiry on HTTPS endpoints with event triggers and dashboard."
+---
+
 <div class="show-title" markdown>
 
 # Certificate Watchdog

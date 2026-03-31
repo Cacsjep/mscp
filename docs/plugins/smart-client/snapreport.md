@@ -1,3 +1,8 @@
+---
+title: "Snapshot Report PDF Plugin for Milestone XProtect"
+description: "Snapshot Report plugin for Milestone XProtect Smart Client — generate PDF reports with live camera snapshots, one camera per page."
+---
+
 <div class="show-title" markdown>
 
 # Snapshot Report

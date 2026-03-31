@@ -1,5 +1,5 @@
 site_name: MS Community Plugins
-site_description: Open-source plugins and drivers for Milestone XProtect
+site_description: Free open-source Milestone XProtect plugins, Smart Client extensions, device drivers, and VMS tools — community-built add-ons for video surveillance and security management
 site_url: https://cacsjep.github.io/mscp/
 repo_url: https://github.com/Cacsjep/mscp
 repo_name: Cacsjep/mscp
@@ -47,6 +47,7 @@ nav:
       - Remote Control: plugins/smart-client/sc-remote-control.md
       - Smart Bar: plugins/smart-client/smartbar.md
       - Snapshot Report: plugins/smart-client/snapreport.md
+      - Timelapse: plugins/smart-client/timelapse.md
       - View Carousel: plugins/smart-client/view-carousel.md
       - Weather: plugins/smart-client/weather.md
   - Device Drivers:

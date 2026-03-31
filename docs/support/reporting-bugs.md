@@ -1,4 +1,6 @@
 ---
+title: "Report Bugs - MS Community Plugins"
+description: "Report bugs and issues for MS Community Plugins via GitHub Issues. Join the Discord community for support."
 hide:
   - navigation
   - toc

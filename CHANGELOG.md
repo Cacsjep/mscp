@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2026-03-31
+- Add: Timelapse Smart Client Plugin
+
 ## [1.7.0] - 2026-03-27
 - Add: Remote Control Smart Client Plugin
 
