@@ -105,6 +105,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-view-carousel"></i></div>
     <div class="pt"><span class="pn">View Carousel</span><span class="pd">Cycle through Smart Client views inside a single view item slot</span></div>
   </a>
+  <a class="pr" href="smart-client/webview/">
+    <div class="pi sc"><i class="mdi mdi-web"></i></div>
+    <div class="pt"><span class="pn">Web View</span><span class="pd">Tabbed web browser for device web interfaces and custom websites with credential display</span></div>
+  </a>
   <a class="pr" href="smart-client/weather/">
     <div class="pi sc"><i class="mdi mdi-weather-partly-cloudy"></i></div>
     <div class="pt"><span class="pn">Weather</span><span class="pd">Live weather display powered by Open-Meteo</span></div>
