@@ -1,6 +1,6 @@
 using System;
 
-namespace WebView.Models
+namespace RemoteManager.Models
 {
     public class HardwareDeviceInfo
     {

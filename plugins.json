@@ -7,13 +7,6 @@
     "description": "Display live weather in Smart Client view items (Open-Meteo)"
   },
   {
-    "name": "RDP",
-    "displayName": "RDP Plugin",
-    "path": "Smart Client Plugins/RDP",
-    "category": "SmartClient",
-    "description": "Embed interactive RDP sessions in Smart Client view items"
-  },
-  {
     "name": "Notepad",
     "displayName": "Notepad Plugin",
     "path": "Smart Client Plugins/Notepad",
@@ -122,10 +115,10 @@
     "description": "Generate timelapse videos from recorded cameras with multi-camera stitch support"
   },
   {
-    "name": "WebView",
-    "displayName": "WebView",
-    "path": "Smart Client Plugins/WebView",
+    "name": "RemoteManager",
+    "displayName": "Remote Manager",
+    "path": "Smart Client Plugins/RemoteManager",
     "category": "SmartClient",
-    "description": "Browse hardware device web interfaces with credential display and tabbed WebView2 browser"
+    "description": "Unified workspace for hardware web interfaces, custom websites, and RDP connections with tag-based filtering"
   }
 ]
