@@ -17,7 +17,7 @@
   <ItemGroup>
     <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Owin" Version="5.3.0" />
-    <PackageReference Include="Microsoft.Owin" Version="4.2.2" />
+    <PackageReference Include="Microsoft.Owin" Version="4.2.3" />
     <PackageReference Include="Nowin" Version="0.26.0" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
     <PackageReference Include="Swashbuckle.Core" Version="5.6.0" />
