@@ -4,15 +4,15 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Threading.Tasks;
 using CommunitySDK;
-using WebView.Client;
+using RemoteManager.Client;
 using FontAwesome5;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.UI.Controls;
 
-namespace WebView
+namespace RemoteManager
 {
-    public class WebViewDefinition : PluginDefinition
+    public class RemoteManagerDefinition : PluginDefinition
     {
         internal static readonly Guid PluginId = new Guid("50839541-C3AD-4B90-B361-C881189E9BB3");
         internal static readonly Guid ViewItemKind = new Guid("F2ADB66A-1210-43C0-AC6C-551161B0A931");
@@ -25,11 +25,11 @@ namespace WebView
         private Image _pluginIcon;
         private static VideoOSIconSourceBase _pluginIconSource;
 
-        static WebViewDefinition()
+        static RemoteManagerDefinition()
         {
             try
             {
-                _pluginIconSource = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_Globe);
+                _pluginIconSource = PluginIcon.RenderIconSource(EFontAwesomeIcon.Solid_NetworkWired);
             }
             catch { }
         }
@@ -37,7 +37,7 @@ namespace WebView
         internal static VideoOSIconSourceBase PluginIconSource => _pluginIconSource;
 
         public override Guid Id => PluginId;
-        public override string Name => "WebView";
+        public override string Name => "Remote Manager";
         public override string Manufacturer => "MSC Community Plugins";
         public override Image Icon => _pluginIcon;
 
@@ -48,7 +48,7 @@ namespace WebView
 
             try
             {
-                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Globe);
+                _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_NetworkWired);
             }
             catch
             {
@@ -57,20 +57,20 @@ namespace WebView
 
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.SmartClient)
             {
-                _viewItemPlugins.Add(new WebViewViewItemPlugin());
-                _workSpacePlugins.Add(new WebViewWorkspacePlugin());
+                _viewItemPlugins.Add(new RemoteManagerViewItemPlugin());
+                _workSpacePlugins.Add(new RemoteManagerWorkspacePlugin());
             }
         }
 
         private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            try { Debug.WriteLine($"[WebView] Unhandled exception: {e.ExceptionObject}"); } catch { }
+            try { Debug.WriteLine($"[RemoteManager] Unhandled exception: {e.ExceptionObject}"); } catch { }
         }
 
         private static void OnUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
         {
             e.SetObserved();
-            try { Debug.WriteLine($"[WebView] Unobserved task exception: {e.Exception}"); } catch { }
+            try { Debug.WriteLine($"[RemoteManager] Unobserved task exception: {e.Exception}"); } catch { }
         }
 
         public override void Close()

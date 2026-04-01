@@ -1,25 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
     <OutputType>Library</OutputType>
-    <RootNamespace>RDP</RootNamespace>
-    <AssemblyName>RDP</AssemblyName>
+    <RootNamespace>RemoteManager</RootNamespace>
+    <AssemblyName>RemoteManager</AssemblyName>
     <LangVersion>latest</LangVersion>
-    <PluginName>RDP</PluginName>
+    <PluginName>RemoteManager</PluginName>
     <StopSmartClient>true</StopSmartClient>
-    <LaunchSmartClient>false</LaunchSmartClient>
+    <LaunchSmartClient>true</LaunchSmartClient>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="FontAwesome5" Version="2.1.11" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+    <PackageReference Include="System.Text.Json" Version="10.*" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Security" />
     <Reference Include="WindowsFormsIntegration" />
     <Reference Include="AxMSTSCLib">
       <HintPath>lib\AxMSTSCLib.dll</HintPath>
@@ -38,5 +40,4 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
 </Project>

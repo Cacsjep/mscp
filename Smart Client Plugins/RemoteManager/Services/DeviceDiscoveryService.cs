@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using WebView.Models;
+using RemoteManager.Models;
 using VideoOS.Platform;
 using VideoOS.Platform.ConfigurationItems;
 
-namespace WebView.Services
+namespace RemoteManager.Services
 {
     internal static class DeviceDiscoveryService
     {
@@ -26,23 +26,18 @@ namespace WebView.Services
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[WebView] Error on recording server '{rs.Name}': {ex.Message}");
+                        Debug.WriteLine($"[RemoteManager] Error on recording server '{rs.Name}': {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[WebView] Error discovering devices: {ex.Message}");
+                Debug.WriteLine($"[RemoteManager] Error discovering devices: {ex.Message}");
             }
 
             return devices;
         }
 
-        /// <summary>
-        /// Reads the hardware password via ReadPasswordHardware().
-        /// The password is returned on the ServerTask via GetProperty("Password").
-        /// See: https://forum.milestonesys.com/t/how-get-password-with-readpasswordhardware/13146
-        /// </summary>
         public static string ReadPassword(string hardwarePath)
         {
             try
@@ -54,12 +49,12 @@ namespace WebView.Services
                 var serverTask = hw.ReadPasswordHardware();
                 var password = serverTask.GetProperty("Password");
 
-                Debug.WriteLine($"[WebView] Password read for '{hw.Name}': {(string.IsNullOrEmpty(password) ? "(empty)" : "(ok)")}");
+                Debug.WriteLine($"[RemoteManager] Password read for '{hw.Name}': {(string.IsNullOrEmpty(password) ? "(empty)" : "(ok)")}");
                 return password;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[WebView] Error reading password for path '{hardwarePath}': {ex.Message}");
+                Debug.WriteLine($"[RemoteManager] Error reading password for path '{hardwarePath}': {ex.Message}");
             }
             return null;
         }
@@ -70,7 +65,6 @@ namespace WebView.Services
             {
                 if (!hw.Enabled) continue;
 
-                // Filter out localhost/loopback devices
                 try
                 {
                     var addr = hw.Address;
@@ -98,7 +92,6 @@ namespace WebView.Services
                         HardwarePath = hw.Path,
                     };
 
-                    // Read HTTPS settings from HardwareDriverSettings
                     try
                     {
                         foreach (var settings in hw.HardwareDriverSettingsFolder.HardwareDriverSettings)
@@ -118,14 +111,14 @@ namespace WebView.Services
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[WebView] Error reading driver settings for '{hw.Name}': {ex.Message}");
+                        Debug.WriteLine($"[RemoteManager] Error reading driver settings for '{hw.Name}': {ex.Message}");
                     }
 
                     devices.Add(device);
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[WebView] Error processing hardware '{hw.Name}': {ex.Message}");
+                    Debug.WriteLine($"[RemoteManager] Error processing hardware '{hw.Name}': {ex.Message}");
                 }
             }
         }

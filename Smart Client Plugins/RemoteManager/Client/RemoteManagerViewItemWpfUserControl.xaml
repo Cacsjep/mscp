@@ -1,35 +1,13 @@
 <external:ViewItemWpfUserControl
     xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
-    x:Class="WebView.Client.WebViewViewItemWpfUserControl"
+    x:Class="RemoteManager.Client.RemoteManagerViewItemWpfUserControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
-    xmlns:fa5="http://schemas.fontawesome.com/icons/">
+    xmlns:fa5="http://schemas.fontawesome.com/icons/"
+    xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration">
 
     <external:ViewItemWpfUserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-
-        <!-- TreeView style -->
-        <Style x:Key="DeviceTreeStyle" TargetType="TreeView">
-            <Setter Property="Background" Value="#FF1C2326"/>
-            <Setter Property="Foreground" Value="#FFE6EDF3"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <!-- TreeViewItem style -->
-        <Style TargetType="TreeViewItem">
-            <Setter Property="Foreground" Value="#FFE6EDF3"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="2"/>
-            <Setter Property="IsExpanded" Value="True"/>
-            <Style.Resources>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF2A4A6B"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FF2A4A6B"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFE6EDF3"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#FFE6EDF3"/>
-            </Style.Resources>
-        </Style>
-
         <!-- Dark button template -->
         <Style x:Key="DarkButton" TargetType="Button">
             <Setter Property="Background" Value="#FF3A3F44"/>
@@ -138,6 +116,67 @@
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="CaretBrush" Value="#FFE6EDF3"/>
         </Style>
+
+        <!-- ListBox style for device list -->
+        <Style x:Key="DeviceListStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="#FF1C2326"/>
+            <Setter Property="Foreground" Value="#FFE6EDF3"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+
+        <!-- ListBoxItem style -->
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="#FFE6EDF3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="0,0,0,1"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FF252A2E"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FF2A4A6B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Dark tooltip style -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFE6EDF3"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </external:ViewItemWpfUserControl.Resources>
 
     <Grid Background="#FF1C2326">
@@ -147,9 +186,10 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- LEFT PANEL: Search + Device Tree + Settings -->
+        <!-- LEFT PANEL: Search + Filter + Device List + Settings -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -171,7 +211,7 @@
                              TextChanged="OnSearchTextChanged"
                              ToolTip="Search by name or IP address"/>
                     <TextBlock x:Name="searchPlaceholder"
-                               Text="Search devices..."
+                               Text="Search..."
                                Foreground="#FF555555"
                                FontSize="12"
                                Padding="8,6"
@@ -179,11 +219,11 @@
                                VerticalAlignment="Center"
                                Visibility="Visible"/>
                 </Grid>
-                <!-- Add button (green 500) -->
-                <Button Grid.Column="1" Width="28" Height="28"
+                <!-- Add button with dropdown -->
+                <Button x:Name="addButton" Grid.Column="1" Width="28" Height="28"
                         VerticalAlignment="Center"
                         Style="{StaticResource IconButton}"
-                        Click="OnAddUserEntry" ToolTip="Add custom website">
+                        Click="OnAddButtonClicked" ToolTip="Add entry">
                     <fa5:ImageAwesome Icon="Solid_Plus" Width="11" Height="11"
                                       Foreground="#FF2196F3"/>
                 </Button>
@@ -191,12 +231,12 @@
                 <Button Grid.Column="2" Width="28" Height="28"
                         VerticalAlignment="Center"
                         Style="{StaticResource IconButton}"
-                        Click="OnRefreshClicked" ToolTip="Refresh device tree"
+                        Click="OnRefreshClicked" ToolTip="Refresh devices"
                         Margin="2,0,0,0">
                     <fa5:ImageAwesome Icon="Solid_SyncAlt" Width="12" Height="12"
                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                 </Button>
-                <!-- Close all tabs button (red 500) -->
+                <!-- Close all tabs button -->
                 <Button Grid.Column="3" Width="28" Height="28"
                         VerticalAlignment="Center"
                         Style="{StaticResource IconButton}"
@@ -207,15 +247,21 @@
                 </Button>
             </Grid>
 
-            <!-- Device Tree -->
-            <TreeView x:Name="deviceTree"
-                      Grid.Row="1"
-                      Style="{StaticResource DeviceTreeStyle}"
-                      SelectedItemChanged="OnDeviceTreeSelectedItemChanged"/>
+            <!-- Tag Filter Bar -->
+            <Border Grid.Row="1" Background="#FF1E2428" Padding="6,4" BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
+                <WrapPanel x:Name="tagFilterPanel" Orientation="Horizontal"/>
+            </Border>
+
+
+            <!-- Device List -->
+            <ListBox x:Name="deviceList"
+                     Grid.Row="2"
+                     Style="{StaticResource DeviceListStyle}"
+                     Padding="0,4,0,4"/>
 
             <!-- Loading overlay -->
             <Border x:Name="loadingOverlay"
-                    Grid.Row="1"
+                    Grid.Row="2"
                     Background="#CC1C2326"
                     Visibility="Visible">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -227,7 +273,7 @@
             </Border>
 
             <!-- Settings bar -->
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     Background="#FF252A2E"
                     BorderBrush="#FF30363D"
                     BorderThickness="0,1,0,0"
@@ -360,20 +406,18 @@
 
             <!-- Browser Content Area -->
             <Grid x:Name="browserHost" Grid.Row="2" Background="#FF1C2326">
-                <!-- WebView2 instances are added/shown/hidden here programmatically -->
-
                 <!-- Welcome / empty state -->
                 <StackPanel x:Name="welcomePanel"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"
                             Visibility="Visible">
-                    <TextBlock Text="Web View"
+                    <TextBlock Text="Remote Manager"
                                Foreground="#FFE6EDF3"
                                FontSize="22"
                                FontWeight="Bold"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,8"/>
-                    <TextBlock Text="Select a device from the tree to open its web interface"
+                    <TextBlock Text="Select a device from the list or add a new connection"
                                Foreground="#FF8B949E"
                                FontSize="13"
                                HorizontalAlignment="Center"/>

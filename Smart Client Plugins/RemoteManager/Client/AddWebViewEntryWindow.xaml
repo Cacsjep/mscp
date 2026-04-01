@@ -1,0 +1,150 @@
+<Window x:Class="RemoteManager.Client.AddWebViewEntryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fa5="http://schemas.fontawesome.com/icons/"
+        Title="Web View"
+        Width="420" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#FF1C2326">
+
+    <Window.Resources>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="FieldInput" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFE6EDF3"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CaretBrush" Value="#FFE6EDF3"/>
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="DialogButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF363636"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF555555"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF404040"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="16,14">
+        <!-- Name -->
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="75"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}">
+                <Run Text="Name"/><Run Text=" *" Foreground="#FFFF6B6B"/>
+            </TextBlock>
+            <TextBox x:Name="nameBox" Grid.Column="1" Style="{StaticResource FieldInput}"/>
+        </Grid>
+
+        <!-- URL -->
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="75"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}">
+                <Run Text="URL"/><Run Text=" *" Foreground="#FFFF6B6B"/>
+            </TextBlock>
+            <TextBox x:Name="urlBox" Grid.Column="1" Style="{StaticResource FieldInput}" Text="https://"/>
+        </Grid>
+
+        <!-- Username -->
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="75"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="User" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="userBox" Grid.Column="1" Style="{StaticResource FieldInput}"/>
+        </Grid>
+
+        <!-- Password -->
+        <Grid Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="75"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Password" Style="{StaticResource FieldLabel}"/>
+            <PasswordBox x:Name="passBox" Grid.Column="1"
+                         Background="#FF2A2A2A" Foreground="#FFE6EDF3"
+                         BorderBrush="#FF444444" BorderThickness="1"
+                         Padding="6,5" FontSize="12"
+                         Height="28"
+                         VerticalContentAlignment="Center"/>
+        </Grid>
+
+        <!-- Tags -->
+        <Separator Background="#FF444444" Margin="0,4,0,8"/>
+        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,4">Tags</TextBlock>
+        <WrapPanel x:Name="tagPanel" Margin="0,0,0,4"/>
+        <Grid Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="newTagBox" Grid.Column="0" Style="{StaticResource FieldInput}"
+                     KeyDown="OnTagKeyDown"/>
+            <Button Grid.Column="1" Click="OnAddTag" Margin="4,0,0,0"
+                    Style="{StaticResource DialogButton}" Content="Add"/>
+        </Grid>
+
+        <!-- Error message -->
+        <TextBlock x:Name="errorText"
+                   Foreground="#FFFF6B6B" FontSize="11" Margin="75,2,0,0"
+                   TextWrapping="Wrap" Visibility="Collapsed"/>
+
+        <!-- Buttons -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Click="OnCancel" Margin="0,0,8,0"
+                    Style="{StaticResource DialogButton}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Cancel" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="okButton" Click="OnOk"
+                    Style="{StaticResource DialogButton}">
+                <StackPanel Orientation="Horizontal">
+                    <fa5:ImageAwesome Icon="Solid_Plus" Foreground="#FF2196F3" Width="10" Height="10"
+                                      VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="Add" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </StackPanel>
+</Window>

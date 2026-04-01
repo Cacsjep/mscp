@@ -1,12 +1,12 @@
 using VideoOS.Platform.Client;
 
-namespace WebView.Client
+namespace RemoteManager.Client
 {
-    public partial class WebViewPropertiesWpfUserControl : PropertiesWpfUserControl
+    public partial class RemoteManagerPropertiesWpfUserControl : PropertiesWpfUserControl
     {
-        private readonly WebViewViewItemManager _viewItemManager;
+        private readonly RemoteManagerViewItemManager _viewItemManager;
 
-        public WebViewPropertiesWpfUserControl(WebViewViewItemManager viewItemManager)
+        public RemoteManagerPropertiesWpfUserControl(RemoteManagerViewItemManager viewItemManager)
         {
             _viewItemManager = viewItemManager;
             InitializeComponent();

@@ -1,4 +1,4 @@
 <plugin>
-   <file name="WebView.dll"/>
+   <file name="RemoteManager.dll"/>
    <load env="SmartClient"/>
 </plugin>
