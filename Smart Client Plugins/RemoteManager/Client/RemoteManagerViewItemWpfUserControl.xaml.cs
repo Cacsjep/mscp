@@ -137,6 +137,7 @@ namespace RemoteManager.Client
         {
             _initialized = true;
             autoAcceptCertsCheckBox.IsChecked = _viewItemManager.AutoAcceptCerts;
+            autoLoginCheckBox.IsChecked = _viewItemManager.AutoLogin;
             _userEntries = _viewItemManager.GetUserEntries();
             _rdpEntries = _viewItemManager.GetRdpEntries();
             LoadDevicesAsync();
@@ -1069,6 +1070,7 @@ namespace RemoteManager.Client
                 Name = device.Name,
                 TabType = TabType.WebView,
                 WebView = webView,
+                WebInfo = device,
                 TabButton = CreateTabButton(device.HardwareId, device.Name, TabType.WebView)
             };
 
@@ -1201,6 +1203,11 @@ namespace RemoteManager.Client
                     tab.WebView.CoreWebView2.ServerCertificateErrorDetected += OnCertificateError;
                 }
 
+                tab.WebView.CoreWebView2.BasicAuthenticationRequested += (s, e) =>
+                {
+                    OnBasicAuthRequested(tab, e);
+                };
+
                 tab.WebView.CoreWebView2.Navigate(url);
             }
             catch (Exception ex)
@@ -1212,6 +1219,24 @@ namespace RemoteManager.Client
         private void OnCertificateError(object sender, CoreWebView2ServerCertificateErrorDetectedEventArgs e)
         {
             e.Action = CoreWebView2ServerCertificateErrorAction.AlwaysAllow;
+        }
+
+        private void OnBasicAuthRequested(TabEntry tab, CoreWebView2BasicAuthenticationRequestedEventArgs e)
+        {
+            if (!_viewItemManager.AutoLogin) return;
+            if (tab.AuthAttempted) return; // Only auto-fill once to avoid infinite retry loop
+
+            var device = tab.WebInfo;
+            if (device == null) return;
+
+            var username = device.Username;
+            var password = device.Password;
+
+            if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password)) return;
+
+            tab.AuthAttempted = true;
+            e.Response.UserName = username ?? "";
+            e.Response.Password = password ?? "";
         }
 
         private void ActivateTab(Guid tabId)
@@ -1233,6 +1258,9 @@ namespace RemoteManager.Client
                 UpdateTabButtonStyle(active.TabButton, true);
                 _activeTabId = tabId;
                 welcomePanel.Visibility = Visibility.Collapsed;
+
+                // Sync tree selection to match active tab
+                SelectTreeNodeById(tabId);
             }
         }
 
@@ -1260,6 +1288,7 @@ namespace RemoteManager.Client
                 {
                     welcomePanel.Visibility = Visibility.Visible;
                     credentialBar.Visibility = Visibility.Collapsed;
+                    ClearTreeSelection();
                 }
             }
         }
@@ -1533,6 +1562,12 @@ namespace RemoteManager.Client
             _viewItemManager.Save();
         }
 
+        private void OnAutoLoginChanged(object sender, RoutedEventArgs e)
+        {
+            _viewItemManager.AutoLogin = autoLoginCheckBox.IsChecked == true;
+            _viewItemManager.Save();
+        }
+
         #endregion
 
         #region UI Helpers
@@ -1618,6 +1653,38 @@ namespace RemoteManager.Client
 
             if (win.ShowDialog() == true)
                 return result;
+            return null;
+        }
+
+        private void SelectTreeNodeById(Guid id)
+        {
+            var node = FindNodeById(_rootNode, id);
+            if (node == null) return;
+
+            var tvi = GetTreeViewItem(node);
+            if (tvi != null)
+                tvi.IsSelected = true;
+        }
+
+        private void ClearTreeSelection()
+        {
+            var selected = deviceTree.SelectedItem as RemoteTreeNode;
+            if (selected != null)
+            {
+                var tvi = GetTreeViewItem(selected);
+                if (tvi != null)
+                    tvi.IsSelected = false;
+            }
+        }
+
+        private RemoteTreeNode FindNodeById(RemoteTreeNode parent, Guid id)
+        {
+            if (parent.Id == id) return parent;
+            foreach (var child in parent.Children)
+            {
+                var found = FindNodeById(child, id);
+                if (found != null) return found;
+            }
             return null;
         }
 
@@ -1814,6 +1881,8 @@ namespace RemoteManager.Client
             public Border RdpOverlay { get; set; }
             public AxMsRdpClient8NotSafeForScripting RdpClient { get; set; }
             public RdpConnectionInfo RdpInfo { get; set; }
+            public HardwareDeviceInfo WebInfo { get; set; }
+            public bool AuthAttempted { get; set; }
             public Border TabButton { get; set; }
         }
 

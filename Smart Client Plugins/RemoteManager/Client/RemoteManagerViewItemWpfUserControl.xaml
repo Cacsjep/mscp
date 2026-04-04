@@ -403,13 +403,25 @@
                     BorderBrush="#FF30363D"
                     BorderThickness="0,1,0,0"
                     Padding="8,5">
-                <CheckBox x:Name="autoAcceptCertsCheckBox"
-                          Content="Accept untrusted SSL"
-                          Foreground="#FF8B949E"
-                          FontSize="11"
-                          IsChecked="True"
-                          Checked="OnAutoAcceptCertsChanged"
-                          Unchecked="OnAutoAcceptCertsChanged"/>
+                <StackPanel>
+                    <CheckBox x:Name="autoAcceptCertsCheckBox"
+                              Content="Accept untrusted SSL"
+                              Foreground="#FF8B949E"
+                              FontSize="11"
+                              IsChecked="True"
+                              ToolTip="Automatically accept self-signed or untrusted SSL certificates when opening web pages"
+                              Checked="OnAutoAcceptCertsChanged"
+                              Unchecked="OnAutoAcceptCertsChanged"/>
+                    <CheckBox x:Name="autoLoginCheckBox"
+                              Content="Use Autologin"
+                              Foreground="#FF8B949E"
+                              FontSize="11"
+                              IsChecked="False"
+                              Margin="0,3,0,0"
+                              ToolTip="Automatically fill in username and password when a web page requests HTTP authentication (Basic/Digest)"
+                              Checked="OnAutoLoginChanged"
+                              Unchecked="OnAutoLoginChanged"/>
+                </StackPanel>
             </Border>
         </Grid>
 

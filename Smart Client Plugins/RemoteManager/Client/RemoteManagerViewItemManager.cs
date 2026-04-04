@@ -13,6 +13,7 @@ namespace RemoteManager.Client
     public class RemoteManagerViewItemManager : ViewItemManager
     {
         private const string AutoAcceptCertsKey = "AutoAcceptCerts";
+        private const string AutoLoginKey = "AutoLogin";
         private const string UserEntriesKey = "UserEntries";
         private const string RdpEntriesKey = "RdpEntries";
         private const string TreeStructureKey = "TreeStructure";
@@ -27,6 +28,16 @@ namespace RemoteManager.Client
                 return string.IsNullOrEmpty(val) || val == "True";
             }
             set => SetProperty(AutoAcceptCertsKey, value.ToString());
+        }
+
+        public bool AutoLogin
+        {
+            get
+            {
+                var val = GetProperty(AutoLoginKey);
+                return val == "True";
+            }
+            set => SetProperty(AutoLoginKey, value.ToString());
         }
 
         #region Web View User Entries
