@@ -5,9 +5,25 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
     xmlns:fa5="http://schemas.fontawesome.com/icons/"
-    xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration">
+    xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+    xmlns:local="clr-namespace:RemoteManager.Client">
 
     <external:ViewItemWpfUserControl.Resources>
+        <!-- Converters -->
+        <local:NodeTypeToIconConverter x:Key="NodeIconConverter"/>
+        <local:NodeTypeToColorConverter x:Key="NodeColorConverter"/>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+
+        <!-- WinUI 3 Dark Theme Brushes -->
+        <SolidColorBrush x:Key="SubtleFillSecondary" Color="#0FFFFFFF"/>
+        <SolidColorBrush x:Key="SelectedBrush" Color="#0FFFFFFF"/>
+        <SolidColorBrush x:Key="SelectedHoverBrush" Color="#15FFFFFF"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#60CDFF"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C5FFFFFF"/>
+        <SolidColorBrush x:Key="TextTertiaryBrush" Color="#87FFFFFF"/>
+        <SolidColorBrush x:Key="StrokeBrush" Color="#12FFFFFF"/>
+
         <!-- Dark button template -->
         <Style x:Key="DarkButton" TargetType="Button">
             <Setter Property="Background" Value="#FF3A3F44"/>
@@ -117,38 +133,41 @@
             <Setter Property="CaretBrush" Value="#FFE6EDF3"/>
         </Style>
 
-        <!-- ListBox style for device list -->
-        <Style x:Key="DeviceListStyle" TargetType="ListBox">
-            <Setter Property="Background" Value="#FF1C2326"/>
-            <Setter Property="Foreground" Value="#FFE6EDF3"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
-        </Style>
-
-        <!-- ListBoxItem style -->
-        <Style TargetType="ListBoxItem">
-            <Setter Property="Foreground" Value="#FFE6EDF3"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="6,5"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <!-- WinUI 3 Chevron toggle -->
+        <Style x:Key="ChevronToggle" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Bd"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="0,0,0,1"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="Center"/>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Width="20" Height="32">
+                            <Path x:Name="Arrow"
+                                  Stroke="{StaticResource TextTertiaryBrush}"
+                                  StrokeThickness="1.2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Fill="Transparent"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Data="M 3 1 L 7 5 L 3 9"
+                                  RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform>
+                                    <RotateTransform Angle="0"/>
+                                </Path.RenderTransform>
+                            </Path>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FF252A2E"/>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Arrow" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="90"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource TextSecondaryBrush}"/>
                             </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FF2A4A6B"/>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -181,15 +200,14 @@
 
     <Grid Background="#FF1C2326">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" MinWidth="200"/>
+            <ColumnDefinition Width="320" MinWidth="220"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- LEFT PANEL: Search + Filter + Device List + Settings -->
+        <!-- LEFT PANEL: Search + Tree + Settings -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -219,16 +237,8 @@
                                VerticalAlignment="Center"
                                Visibility="Visible"/>
                 </Grid>
-                <!-- Add button with dropdown -->
-                <Button x:Name="addButton" Grid.Column="1" Width="28" Height="28"
-                        VerticalAlignment="Center"
-                        Style="{StaticResource IconButton}"
-                        Click="OnAddButtonClicked" ToolTip="Add entry">
-                    <fa5:ImageAwesome Icon="Solid_Plus" Width="11" Height="11"
-                                      Foreground="#FF2196F3"/>
-                </Button>
                 <!-- Refresh button -->
-                <Button Grid.Column="2" Width="28" Height="28"
+                <Button Grid.Column="1" Width="28" Height="28"
                         VerticalAlignment="Center"
                         Style="{StaticResource IconButton}"
                         Click="OnRefreshClicked" ToolTip="Refresh devices"
@@ -237,7 +247,7 @@
                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                 </Button>
                 <!-- Close all tabs button -->
-                <Button Grid.Column="3" Width="28" Height="28"
+                <Button Grid.Column="2" Width="28" Height="28"
                         VerticalAlignment="Center"
                         Style="{StaticResource IconButton}"
                         Click="OnCloseAllTabs" ToolTip="Close all tabs"
@@ -247,21 +257,136 @@
                 </Button>
             </Grid>
 
-            <!-- Tag Filter Bar -->
-            <Border Grid.Row="1" Background="#FF1E2428" Padding="6,4" BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
-                <WrapPanel x:Name="tagFilterPanel" Orientation="Horizontal"/>
-            </Border>
+            <!-- Tree View -->
+            <TreeView x:Name="deviceTree"
+                      Grid.Row="1"
+                      Background="#FF1C2326"
+                      BorderThickness="0"
+                      Padding="0,4,0,4"
+                      AllowDrop="True"
+                      FontFamily="Segoe UI"
+                      FontSize="12"
+                      Foreground="{StaticResource TextPrimaryBrush}"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,8,0">
+                            <fa5:ImageAwesome Icon="{Binding NodeType, Converter={StaticResource NodeIconConverter}}"
+                                              Foreground="{Binding NodeType, Converter={StaticResource NodeColorConverter}}"
+                                              Width="12" Height="12"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Name}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
 
-            <!-- Device List -->
-            <ListBox x:Name="deviceList"
-                     Grid.Row="2"
-                     Style="{StaticResource DeviceListStyle}"
-                     Padding="0,4,0,4"/>
+                <TreeView.Resources>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                        <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BoolToVisConverter}}"/>
+                        <Setter Property="AllowDrop" Value="True"/>
+                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                        <EventSetter Event="PreviewMouseLeftButtonDown" Handler="TreeViewItem_PreviewMouseDown"/>
+                        <EventSetter Event="PreviewMouseLeftButtonUp" Handler="TreeViewItem_PreviewMouseUp"/>
+                        <EventSetter Event="MouseMove" Handler="TreeViewItem_MouseMove"/>
+                        <EventSetter Event="DragOver" Handler="TreeViewItem_DragOver"/>
+                        <EventSetter Event="Drop" Handler="TreeViewItem_Drop"/>
+                        <EventSetter Event="DragLeave" Handler="TreeViewItem_DragLeave"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TreeViewItem">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Drop indicator line -->
+                                        <Border x:Name="DropIndicator"
+                                                Grid.Row="0"
+                                                Height="2"
+                                                Background="{StaticResource AccentBrush}"
+                                                CornerRadius="1"
+                                                Margin="24,0,4,0"
+                                                Visibility="Collapsed"/>
+
+                                        <!-- Row -->
+                                        <Border x:Name="RowBorder"
+                                                Grid.Row="1"
+                                                Background="Transparent"
+                                                BorderBrush="Transparent"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                Margin="3,1,3,1"
+                                                Padding="0,0,8,0"
+                                                MinHeight="32">
+                                            <Grid VerticalAlignment="Center">
+                                                <!-- Selection indicator bar -->
+                                                <Border x:Name="SelectionBar"
+                                                        HorizontalAlignment="Left"
+                                                        VerticalAlignment="Center"
+                                                        Width="3"
+                                                        Height="16"
+                                                        CornerRadius="1.5"
+                                                        Background="Transparent"/>
+                                                <DockPanel Margin="7,0,0,0" VerticalAlignment="Center">
+                                                    <ToggleButton x:Name="Expander"
+                                                                  DockPanel.Dock="Left"
+                                                                  Style="{StaticResource ChevronToggle}"
+                                                                  IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
+                                                                  ClickMode="Press"/>
+                                                    <ContentPresenter x:Name="PART_Header"
+                                                                      ContentSource="Header"
+                                                                      VerticalAlignment="Center"
+                                                                      HorizontalAlignment="Stretch"/>
+                                                </DockPanel>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Children -->
+                                        <ItemsPresenter x:Name="ItemsHost" Grid.Row="2" Margin="8,0,0,0"/>
+                                    </Grid>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsExpanded" Value="False">
+                                            <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                                        </Trigger>
+                                        <Trigger Property="HasItems" Value="False">
+                                            <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
+                                        </Trigger>
+                                        <!-- Hover -->
+                                        <Trigger SourceName="RowBorder" Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="RowBorder" Property="Background" Value="{StaticResource SubtleFillSecondary}"/>
+                                        </Trigger>
+                                        <!-- Selected -->
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="RowBorder" Property="Background" Value="{StaticResource SelectedBrush}"/>
+                                            <Setter TargetName="RowBorder" Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
+                                            <Setter TargetName="SelectionBar" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        </Trigger>
+                                        <!-- Selected + Hover -->
+                                        <MultiTrigger>
+                                            <MultiTrigger.Conditions>
+                                                <Condition Property="IsSelected" Value="True"/>
+                                                <Condition SourceName="RowBorder" Property="IsMouseOver" Value="True"/>
+                                            </MultiTrigger.Conditions>
+                                            <Setter TargetName="RowBorder" Property="Background" Value="{StaticResource SelectedHoverBrush}"/>
+                                        </MultiTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TreeView.Resources>
+            </TreeView>
 
             <!-- Loading overlay -->
             <Border x:Name="loadingOverlay"
-                    Grid.Row="2"
+                    Grid.Row="1"
                     Background="#CC1C2326"
                     Visibility="Visible">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -273,18 +398,30 @@
             </Border>
 
             <!-- Settings bar -->
-            <Border Grid.Row="3"
+            <Border Grid.Row="2"
                     Background="#FF252A2E"
                     BorderBrush="#FF30363D"
                     BorderThickness="0,1,0,0"
                     Padding="8,5">
-                <CheckBox x:Name="autoAcceptCertsCheckBox"
-                          Content="Accept untrusted SSL"
-                          Foreground="#FF8B949E"
-                          FontSize="11"
-                          IsChecked="True"
-                          Checked="OnAutoAcceptCertsChanged"
-                          Unchecked="OnAutoAcceptCertsChanged"/>
+                <StackPanel>
+                    <CheckBox x:Name="autoAcceptCertsCheckBox"
+                              Content="Accept untrusted SSL"
+                              Foreground="#FF8B949E"
+                              FontSize="11"
+                              IsChecked="True"
+                              ToolTip="Automatically accept self-signed or untrusted SSL certificates when opening web pages"
+                              Checked="OnAutoAcceptCertsChanged"
+                              Unchecked="OnAutoAcceptCertsChanged"/>
+                    <CheckBox x:Name="autoLoginCheckBox"
+                              Content="Use Autologin"
+                              Foreground="#FF8B949E"
+                              FontSize="11"
+                              IsChecked="False"
+                              Margin="0,3,0,0"
+                              ToolTip="Automatically fill in username and password when a web page requests HTTP authentication (Basic/Digest)"
+                              Checked="OnAutoLoginChanged"
+                              Unchecked="OnAutoLoginChanged"/>
+                </StackPanel>
             </Border>
         </Grid>
 
@@ -417,7 +554,7 @@
                                FontWeight="Bold"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,8"/>
-                    <TextBlock Text="Select a device from the list or add a new connection"
+                    <TextBlock Text="Select a device from the tree or add a new connection"
                                Foreground="#FF8B949E"
                                FontSize="13"
                                HorizontalAlignment="Center"/>

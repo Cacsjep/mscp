@@ -109,21 +109,6 @@
                          VerticalContentAlignment="Center"/>
         </Grid>
 
-        <!-- Tags -->
-        <Separator Background="#FF444444" Margin="0,4,0,8"/>
-        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,4">Tags</TextBlock>
-        <WrapPanel x:Name="tagPanel" Margin="0,0,0,4"/>
-        <Grid Margin="0,0,0,4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="newTagBox" Grid.Column="0" Style="{StaticResource FieldInput}"
-                     KeyDown="OnTagKeyDown"/>
-            <Button Grid.Column="1" Click="OnAddTag" Margin="4,0,0,0"
-                    Style="{StaticResource DialogButton}" Content="Add"/>
-        </Grid>
-
         <!-- Error message -->
         <TextBlock x:Name="errorText"
                    Foreground="#FFFF6B6B" FontSize="11" Margin="75,2,0,0"

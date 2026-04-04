@@ -1,9 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using RemoteManager.Models;
 
@@ -15,21 +12,13 @@ namespace RemoteManager.Client
         public string EntryUrl { get; private set; }
         public string EntryUsername { get; private set; }
         public string EntryPassword { get; private set; }
-        public List<string> EntryTags { get; private set; } = new List<string>();
 
         private readonly HardwareDeviceInfo _editEntry;
-        private readonly HashSet<string> _tags = new HashSet<string>();
 
-        public AddWebViewEntryWindow(HardwareDeviceInfo editEntry = null, List<string> existingTags = null)
+        public AddWebViewEntryWindow(HardwareDeviceInfo editEntry = null)
         {
             _editEntry = editEntry;
             InitializeComponent();
-
-            if (existingTags != null)
-            {
-                foreach (var t in existingTags)
-                    _tags.Add(t);
-            }
 
             if (_editEntry != null)
             {
@@ -42,7 +31,6 @@ namespace RemoteManager.Client
                     passBox.Password = _editEntry.Password;
             }
 
-            RebuildTagPanel();
             nameBox.Focus();
         }
 
@@ -79,7 +67,6 @@ namespace RemoteManager.Client
             EntryUrl = url;
             EntryUsername = string.IsNullOrWhiteSpace(userBox.Text) ? null : userBox.Text.Trim();
             EntryPassword = passBox.Password?.Length > 0 ? passBox.Password : null;
-            EntryTags = _tags.ToList();
             DialogResult = true;
         }
 
@@ -113,83 +100,5 @@ namespace RemoteManager.Client
             });
             okButton.Content = panel;
         }
-
-        #region Tag Management
-
-        private void OnAddTag(object sender, RoutedEventArgs e)
-        {
-            AddTagFromInput();
-        }
-
-        private void OnTagKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-                AddTagFromInput();
-        }
-
-        private void AddTagFromInput()
-        {
-            var tag = newTagBox.Text?.Trim();
-            if (!string.IsNullOrEmpty(tag) && _tags.Add(tag))
-            {
-                newTagBox.Text = "";
-                RebuildTagPanel();
-            }
-        }
-
-        private void RebuildTagPanel()
-        {
-            tagPanel.Children.Clear();
-            foreach (var tag in _tags.OrderBy(t => t))
-            {
-                var chip = CreateRemovableTagChip(tag);
-                tagPanel.Children.Add(chip);
-            }
-        }
-
-        private Border CreateRemovableTagChip(string tag)
-        {
-            var panel = new StackPanel { Orientation = Orientation.Horizontal };
-
-            panel.Children.Add(new FontAwesome5.ImageAwesome
-            {
-                Icon = FontAwesome5.EFontAwesomeIcon.Solid_Check,
-                Width = 8,
-                Height = 8,
-                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF1C2326")),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 5, 0),
-            });
-
-            panel.Children.Add(new TextBlock
-            {
-                Text = tag,
-                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF1C2326")),
-                FontSize = 11,
-                VerticalAlignment = VerticalAlignment.Center,
-            });
-
-            var border = new Border
-            {
-                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFFFC107")),
-                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFFFC107")),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(10, 5, 10, 5),
-                Margin = new Thickness(0, 0, 6, 6),
-                Cursor = Cursors.Hand,
-                Child = panel,
-            };
-
-            border.MouseLeftButtonDown += (s, e) =>
-            {
-                _tags.Remove(tag);
-                RebuildTagPanel();
-            };
-
-            return border;
-        }
-
-        #endregion
     }
 }
