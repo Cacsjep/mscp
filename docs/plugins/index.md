@@ -81,9 +81,9 @@ hide:
     <div class="pi sc"><i class="mdi mdi-note-text"></i></div>
     <div class="pt"><span class="pn">Notepad</span><span class="pd">Simple text editor for operator notes</span></div>
   </a>
-  <a class="pr" href="smart-client/rdp/">
+  <a class="pr" href="smart-client/remote-manager/">
     <div class="pi sc"><i class="mdi mdi-remote-desktop"></i></div>
-    <div class="pt"><span class="pn">RDP</span><span class="pd">Embedded interactive Remote Desktop sessions</span></div>
+    <div class="pt"><span class="pn">Remote Manager</span><span class="pd">Unified tree-based manager for hardware web interfaces, custom websites, and RDP connections with drag-and-drop organization</span></div>
   </a>
   <a class="pr" href="smart-client/sc-remote-control/">
     <div class="pi sc"><i class="mdi mdi-remote"></i></div>
@@ -104,10 +104,6 @@ hide:
   <a class="pr" href="smart-client/view-carousel/">
     <div class="pi sc"><i class="mdi mdi-view-carousel"></i></div>
     <div class="pt"><span class="pn">View Carousel</span><span class="pd">Cycle through Smart Client views inside a single view item slot</span></div>
-  </a>
-  <a class="pr" href="smart-client/webview/">
-    <div class="pi sc"><i class="mdi mdi-web"></i></div>
-    <div class="pt"><span class="pn">Web View</span><span class="pd">Tabbed web browser for device web interfaces and custom websites with credential display</span></div>
   </a>
   <a class="pr" href="smart-client/weather/">
     <div class="pi sc"><i class="mdi mdi-weather-partly-cloudy"></i></div>

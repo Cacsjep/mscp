@@ -1,71 +1,73 @@
 ---
 title: "Remote Manager Plugin for Milestone XProtect"
-description: "Remote Manager plugin for Milestone XProtect Smart Client - unified workspace for hardware web interfaces, custom websites, and RDP connections with tag-based filtering and credential management."
+description: "Remote Manager plugin for Milestone XProtect Smart Client - unified workspace for hardware web interfaces, custom websites, and RDP connections with tree-based organization and credential management."
 ---
 
 <div class="show-title" markdown>
 
 # Remote Manager
 
-A Smart Client workspace plugin that provides a unified manager for hardware device web interfaces, custom websites, and RDP connections. All connections are displayed in a flat, searchable list with a tag-based filtering system for fast access.
+A Smart Client workspace plugin that provides a unified manager for hardware device web interfaces, custom websites, and RDP connections. All connections are organized in a tree view with drag-and-drop support, search filtering, and optional HTTP autologin.
+
+!!! warning "Administrator Use Only"
+    This plugin exposes hardware device credentials (usernames and passwords) from the management server. It should **only** be deployed to Smart Client installations used by administrators. Do not install it on operator workstations where users should not have access to device credentials.
 
 ## Quick Start
 
 1. Open XProtect Smart Client
 2. Navigate to the **Remote Manager** workspace tab
-3. Hardware devices load automatically from your recording servers
+3. Hardware devices load automatically from your recording servers under the "Remote Manager" root node
 4. Click any entry to open its web interface or RDP session in a new tab
-5. Use the **+** button to add custom websites or RDP connections
-6. Filter entries using the tag chips at the top
+5. Right-click the root node or any folder to add websites, RDP connections, or new folders
+6. Drag and drop items between folders to organize them
 
-## Connection List
+## Connection Tree
 
-The left panel shows all connections in a flat list sorted by name. Each entry shows an icon indicating its type:
+The left panel shows all connections in a tree view. The root node "Remote Manager" is always present and cannot be deleted.
 
-- **Globe icon** - Hardware web interface or custom website
-- **Desktop icon** - RDP connection
+### Node Types
 
-Hover over any entry to see its address and tags in the tooltip.
+| Icon | Type | System-Defined | Editable | Deletable | Draggable |
+|---|---|---|---|---|---|
+| Server | Root node | Yes | No | No | No |
+| Microchip | Hardware web interface | Yes | No | No | Yes |
+| Globe | User website | No | Yes | Yes | Yes |
+| Desktop | RDP connection | No | Yes | Yes | Yes |
+| Folder | Folder | No | Yes (rename) | Yes | Yes |
 
 ### Search
 
-Use the search field to filter by name or IP address. The search is case-insensitive and updates in real-time as you type.
+Use the search field to filter by name or IP address. The search is case-insensitive and updates in real-time. Matching items and their parent folders remain visible to preserve tree structure.
 
-## Tag System
+### Drag and Drop
 
-Every connection has tags that describe its type and origin. Tags are displayed in the filter bar above the list.
+Drag items between folders to organize them:
 
-### Factory Tags
+- Drop on a **folder** to move the item into it
+- Drop on a **leaf item** to move into that item's parent folder
+- **Root node** cannot be dragged
+- Circular nesting is prevented (cannot drop a folder into its own descendant)
+- Visual feedback: cyan highlight for valid drop targets, red for invalid
 
-Factory tags are assigned automatically and cannot be removed:
+### Context Menu
 
-| Tag | Applied To |
+Right-click for actions based on node type:
+
+| Node Type | Actions |
 |---|---|
-| **Hardware Web Interface** | Devices discovered from recording servers |
-| **Website** | User-defined web entries |
-| **RDP** | RDP connections |
-| *Server name* (e.g. "RecServer1") | Hardware devices from that recording server |
+| Root node | New Folder, Add Website, Add RDP Connection |
+| Folder | New Folder, Add Website, Add RDP Connection, Rename, Delete |
+| User website | Edit, Delete |
+| RDP connection | Edit, Delete |
+| Hardware device | *(no actions)* |
 
-### Custom Tags
+### Deleting Folders
 
-You can create and assign custom tags (e.g. "Floor 2", "Entrance", "Critical") to organize your connections:
-
-- **Add tags** via the Edit dialog (right-click > Edit) for websites and RDP entries
-- **Add tags** via right-click > Edit Tags for hardware devices
-- **Multiple tags** per item are supported
-
-### Filtering
-
-Click tag chips in the filter bar to filter the list:
-
-- **Unselected** chips show a **+** icon
-- **Selected** chips show a **checkmark** with amber highlight
-- Click a selected chip again to deselect it
-- Multiple selected tags use **AND** logic - only entries matching all selected tags are shown
+When deleting a folder that contains hardware devices (system-defined items), those items are automatically moved back to the root node. User-defined items inside the folder are deleted along with it.
 
 ## Tabbed Browser
 
-Clicking an entry opens its web interface or RDP session in a new tab on the right panel.
+Clicking a leaf item opens its web interface or RDP session in a new tab on the right panel.
 
 | Feature | Behavior |
 |---|---|
@@ -73,6 +75,8 @@ Clicking an entry opens its web interface or RDP session in a new tab on the rig
 | Focus existing | Click an entry that's already open |
 | Close tab | Click the X on the tab |
 | Close all | Click the close-all icon in the toolbar |
+
+The tree selection stays in sync with the active tab - switching tabs updates the highlighted tree node.
 
 ### WebView2 Browser
 
@@ -110,7 +114,7 @@ Passwords are read on-demand from the management server when you first select a 
 
 ## Adding Connections
 
-Click the **+** button in the toolbar to add:
+Right-click the root node or any folder and select the entry type:
 
 ### Web View
 
@@ -120,7 +124,6 @@ Click the **+** button in the toolbar to add:
 | URL | Yes | Full URL (`http://` or `https://`) |
 | User | No | Optional username |
 | Password | No | Encrypted with Windows DPAPI |
-| Tags | No | Custom tags for filtering |
 
 ### RDP Connection
 
@@ -133,32 +136,35 @@ Click the **+** button in the toolbar to add:
 | Password | No | Encrypted with Windows DPAPI |
 | NLA | No | Network Level Authentication |
 | Clipboard | No | Clipboard redirection (default: on) |
-| Tags | No | Custom tags for filtering |
 
-## Context Menu
+## Settings
 
-Right-click entries for additional options:
+Two checkboxes at the bottom of the left panel control global behavior:
 
-| Entry Type | Options |
+| Setting | Description |
 |---|---|
-| Hardware device | Edit Tags |
-| Custom website | Edit, Remove |
-| RDP connection | Edit, Remove |
+| **Accept untrusted SSL** | Automatically accept self-signed or untrusted SSL certificates when opening web pages. Common for IP cameras with self-signed certs. Default: on. |
+| **Use Autologin** | Automatically fill in username and password when a web page requests HTTP authentication (Basic/Digest). Credentials are sent only once per tab to avoid infinite retry on wrong credentials. Default: off. |
 
-## SSL Certificate Handling
+Both settings are persisted per workspace.
 
-Many IP cameras use self-signed SSL certificates. Toggle the **Accept untrusted SSL** checkbox at the bottom of the left panel. The setting is persisted per workspace.
+## Tree Persistence
+
+The folder structure and item positions are saved automatically. When the plugin reloads:
+
+- Previously organized items stay in their folders
+- Newly discovered hardware devices appear under the root node
+- Hardware devices that no longer exist are removed from the tree
 
 ## Toolbar Icons
 
 | Icon | Color | Action |
 |---|---|---|
-| **+** | Blue | Add a website or RDP connection |
 | **Refresh** | Gray | Reload devices from recording servers |
 | **Close all** | Red | Close all open tabs |
 
 !!! info "Password Security"
-    All stored passwords (websites and RDP) are encrypted using Windows Data Protection API (DPAPI) with CurrentUser scope. Only the same Windows user account can decrypt them.
+    All stored passwords (websites and RDP) are encrypted using Windows Data Protection API (DPAPI) with CurrentUser scope. Only the same Windows user account can decrypt them. Hardware device passwords are read from the management server on demand and require appropriate user permissions.
 
 ## Troubleshooting
 
@@ -168,6 +174,7 @@ Many IP cameras use self-signed SSL certificates. Toggle the **Accept untrusted 
 | Device list is empty | Verify you have recording servers with enabled hardware. Check network connectivity. |
 | Password shows empty | The logged-in user may lack permissions to read hardware passwords. |
 | Web page won't load | Check if the device is reachable. Try the URL in a regular browser. |
+| Autologin not working | Ensure "Use Autologin" is checked and the device has credentials stored. Only works for HTTP Basic/Digest auth, not HTML form logins. |
 | RDP connection timed out | Check port 3389, firewall, and that Remote Desktop is enabled on the target. |
 | NLA required (code 2825) | Enable NLA in the RDP connection settings. |
 | WebView2 fails | The plugin bundles WebView2. If issues persist, install the [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) manually. |
