@@ -25,16 +25,6 @@ A Smart Client workspace plugin that provides a unified manager for hardware dev
 
 The left panel shows all connections in a tree view. The root node "Remote Manager" is always present and cannot be deleted.
 
-### Node Types
-
-| Icon | Type | System-Defined | Editable | Deletable | Draggable |
-|---|---|---|---|---|---|
-| Server | Root node | Yes | No | No | No |
-| Microchip | Hardware web interface | Yes | No | No | Yes |
-| Globe | User website | No | Yes | Yes | Yes |
-| Desktop | RDP connection | No | Yes | Yes | Yes |
-| Folder | Folder | No | Yes (rename) | Yes | Yes |
-
 ### Search
 
 Use the search field to filter by name or IP address. The search is case-insensitive and updates in real-time. Matching items and their parent folders remain visible to preserve tree structure.
