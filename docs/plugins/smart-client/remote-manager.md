@@ -7,7 +7,7 @@ description: "Remote Manager plugin for Milestone XProtect Smart Client - unifie
 
 # Remote Manager
 
-A Smart Client workspace plugin that provides a unified manager for hardware device web interfaces, custom websites, and RDP connections. All connections are organized in a tree view with drag-and-drop support, search filtering, and optional HTTP autologin.
+A Smart Client workspace plugin that gives administrators instant access to every hardware device web interface in one place. The plugin automatically discovers all cameras, encoders, and other hardware from your recording servers and lists them in a tree view. On top of that, you can add your own websites and RDP connections, organize everything into folders with drag-and-drop, and use optional HTTP autologin to skip repetitive authentication prompts.
 
 !!! warning "Administrator Use Only"
     This plugin exposes hardware device credentials (usernames and passwords) from the management server. It should **only** be deployed to Smart Client installations used by administrators. Do not install it on operator workstations where users should not have access to device credentials.
@@ -20,6 +20,24 @@ A Smart Client workspace plugin that provides a unified manager for hardware dev
 4. Click any entry to open its web interface or RDP session in a new tab
 5. Right-click the root node or any folder to add websites, RDP connections, or new folders
 6. Drag and drop items between folders to organize them
+
+<video controls width="100%">
+  <source src="../vids/rm_usage.mp4" type="video/mp4">
+</video>
+
+## Hardware Web Interfaces
+
+The plugin queries all recording servers and automatically adds every hardware device that has a web interface. These entries appear as system-defined nodes in the tree and are kept in sync each time the plugin loads or is refreshed.
+
+**Key characteristics:**
+
+- **Automatically discovered** - no manual configuration needed. Every camera, encoder, or I/O module with an HTTP/HTTPS address shows up.
+- **Cannot be deleted** - hardware entries are system-defined. They will always reappear as long as the device exists on a recording server.
+- **Can be organized** - you can drag hardware entries into folders to group them (e.g. by floor, building, or purpose). Their position is remembered across restarts.
+- **Credentials on demand** - selecting a hardware entry shows its username in the credential bar. The password is read from the management server only when needed and displayed on request.
+- **Protocol detection** - the plugin automatically uses HTTPS if enabled in the device driver settings, HTTP otherwise.
+
+When a hardware device is removed from the recording server, its entry disappears from the tree on the next refresh.
 
 ## Connection Tree
 
