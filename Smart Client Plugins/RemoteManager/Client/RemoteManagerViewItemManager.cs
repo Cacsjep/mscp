@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CommunitySDK;
 using RemoteManager.Models;
 using VideoOS.Platform.Client;
 
@@ -12,6 +12,7 @@ namespace RemoteManager.Client
 {
     public class RemoteManagerViewItemManager : ViewItemManager
     {
+        private static readonly PluginLog _log = new PluginLog("RemoteManager");
         private const string AutoAcceptCertsKey = "AutoAcceptCerts";
         private const string AutoLoginKey = "AutoLogin";
         private const string UserEntriesKey = "UserEntries";
@@ -188,7 +189,7 @@ namespace RemoteManager.Client
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] Failed to deserialize tree structure: {ex.Message}");
+                _log.Error("Failed to deserialize tree structure", ex);
                 return new TreeStructure();
             }
         }
@@ -202,7 +203,7 @@ namespace RemoteManager.Client
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] Failed to serialize tree structure: {ex.Message}");
+                _log.Error("Failed to serialize tree structure", ex);
             }
         }
 
@@ -229,7 +230,7 @@ namespace RemoteManager.Client
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] DPAPI encrypt failed: {ex.Message}");
+                _log.Error("DPAPI encrypt failed", ex);
                 return "";
             }
         }
@@ -244,7 +245,7 @@ namespace RemoteManager.Client
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] DPAPI decrypt failed: {ex.Message}");
+                _log.Error("DPAPI decrypt failed", ex);
                 return null;
             }
         }

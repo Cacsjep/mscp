@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using CommunitySDK;
 using RemoteManager.Models;
 using RemoteManager.Services;
 using AxMSTSCLib;
@@ -89,6 +89,7 @@ namespace RemoteManager.Client
 
     public partial class RemoteManagerViewItemWpfUserControl : ViewItemWpfUserControl
     {
+        private static readonly PluginLog _log = new PluginLog("RemoteManager");
         private readonly RemoteManagerViewItemManager _viewItemManager;
         private List<HardwareDeviceInfo> _allDevices = new List<HardwareDeviceInfo>();
         private List<HardwareDeviceInfo> _userEntries = new List<HardwareDeviceInfo>();
@@ -169,7 +170,7 @@ namespace RemoteManager.Client
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] Failed to load devices: {ex.Message}");
+                _log.Error("Failed to load devices", ex);
             }
             finally
             {
@@ -529,7 +530,7 @@ namespace RemoteManager.Client
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[RemoteManager] Password read failed: {ex.Message}");
+                    _log.Error("Password read failed", ex);
                     device.Password = "";
                 }
             }
@@ -1203,16 +1204,16 @@ namespace RemoteManager.Client
                     tab.WebView.CoreWebView2.ServerCertificateErrorDetected += OnCertificateError;
                 }
 
-                tab.WebView.CoreWebView2.BasicAuthenticationRequested += (s, e) =>
-                {
-                    OnBasicAuthRequested(tab, e);
-                };
+                EventHandler<CoreWebView2BasicAuthenticationRequestedEventArgs> authHandler =
+                    (s, e) => OnBasicAuthRequested(tab, e);
+                tab.AuthHandler = authHandler;
+                tab.WebView.CoreWebView2.BasicAuthenticationRequested += authHandler;
 
                 tab.WebView.CoreWebView2.Navigate(url);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] WebView2 init error: {ex.Message}");
+                _log.Error("WebView2 init error", ex);
             }
         }
 
@@ -1298,7 +1299,11 @@ namespace RemoteManager.Client
             if (tab.WebView != null)
             {
                 if (tab.WebView.CoreWebView2 != null)
+                {
                     tab.WebView.CoreWebView2.ServerCertificateErrorDetected -= OnCertificateError;
+                    if (tab.AuthHandler != null)
+                        tab.WebView.CoreWebView2.BasicAuthenticationRequested -= tab.AuthHandler;
+                }
                 try { tab.WebView.Dispose(); } catch { }
             }
 
@@ -1416,7 +1421,7 @@ namespace RemoteManager.Client
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         var reason = ((IMsTscAxEvents_OnDisconnectedEvent)ev).discReason;
-                        Debug.WriteLine($"[RemoteManager] RDP disconnected: code {reason}");
+                        _log.Info($"RDP disconnected: code {reason}");
 
                         tab.RdpHost.Width = 1;
                         tab.RdpHost.Height = 1;
@@ -1434,7 +1439,7 @@ namespace RemoteManager.Client
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         var code = ((IMsTscAxEvents_OnFatalErrorEvent)ev).errorCode;
-                        Debug.WriteLine($"[RemoteManager] RDP fatal error: {code}");
+                        _log.Error($"RDP fatal error: code {code}");
 
                         tab.RdpHost.Width = 1;
                         tab.RdpHost.Height = 1;
@@ -1482,7 +1487,7 @@ namespace RemoteManager.Client
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] RDP connect error: {ex.Message}");
+                _log.Error("RDP connect error", ex);
                 SetRdpOverlayStatus(tab, $"Connection failed: {ex.Message}", true);
             }
         }
@@ -1883,6 +1888,7 @@ namespace RemoteManager.Client
             public RdpConnectionInfo RdpInfo { get; set; }
             public HardwareDeviceInfo WebInfo { get; set; }
             public bool AuthAttempted { get; set; }
+            public EventHandler<CoreWebView2BasicAuthenticationRequestedEventArgs> AuthHandler { get; set; }
             public Border TabButton { get; set; }
         }
 
