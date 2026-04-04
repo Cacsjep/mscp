@@ -15,7 +15,7 @@ namespace RemoteManager.Client
         private const string AutoAcceptCertsKey = "AutoAcceptCerts";
         private const string UserEntriesKey = "UserEntries";
         private const string RdpEntriesKey = "RdpEntries";
-        private const string TagOrgKey = "TagOrganization";
+        private const string TreeStructureKey = "TreeStructure";
 
         public RemoteManagerViewItemManager() : base("RemoteManagerViewItemManager") { }
 
@@ -164,34 +164,34 @@ namespace RemoteManager.Client
 
         #endregion
 
-        #region Tag Organization
+        #region Tree Structure
 
-        public TagOrganization GetTagOrganization()
+        public TreeStructure GetTreeStructure()
         {
-            var raw = GetProperty(TagOrgKey);
-            if (string.IsNullOrEmpty(raw)) return new TagOrganization();
+            var raw = GetProperty(TreeStructureKey);
+            if (string.IsNullOrEmpty(raw)) return new TreeStructure();
 
             try
             {
-                return JsonSerializer.Deserialize<TagOrganization>(raw) ?? new TagOrganization();
+                return JsonSerializer.Deserialize<TreeStructure>(raw) ?? new TreeStructure();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] Failed to deserialize tag org: {ex.Message}");
-                return new TagOrganization();
+                Debug.WriteLine($"[RemoteManager] Failed to deserialize tree structure: {ex.Message}");
+                return new TreeStructure();
             }
         }
 
-        public void SetTagOrganization(TagOrganization org)
+        public void SetTreeStructure(TreeStructure tree)
         {
             try
             {
-                var json = JsonSerializer.Serialize(org);
-                SetProperty(TagOrgKey, json);
+                var json = JsonSerializer.Serialize(tree);
+                SetProperty(TreeStructureKey, json);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RemoteManager] Failed to serialize tag org: {ex.Message}");
+                Debug.WriteLine($"[RemoteManager] Failed to serialize tree structure: {ex.Message}");
             }
         }
 
