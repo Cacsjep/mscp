@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.9.0] - 2026-04-04
 - Add: Remote Manager Smart Client Plugin (replaces RDP plugins)
+- Fix: Flex View: Modification of existing views was not possible #58.
 
 ## [1.8.0] - 2026-03-31
 - Add: Timelapse Smart Client Plugin

@@ -15,7 +15,7 @@
   },
   {
     "name": "SnapReport",
-    "displayName": "SnapReport Plugin",
+    "displayName": "Snapshot Report Plugin",
     "path": "Smart Client Plugins/SnapReport",
     "category": "SmartClient",
     "description": "Select cameras and generate PDF snapshot reports for site surveys and compliance"

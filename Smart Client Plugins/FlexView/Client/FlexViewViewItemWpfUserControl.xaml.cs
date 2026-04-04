@@ -699,6 +699,22 @@ namespace FlexView.Client
             statusText.Text = $"{mode} | {_panes.Count} pane{(_panes.Count != 1 ? "s" : "")} | {GridCols}x{GridRows} grid";
         }
 
+        private void ShowSavedStatus(string viewName)
+        {
+            var original = statusText.Foreground;
+            statusText.Text = $"Saved \"{viewName}\"";
+            statusText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4CAF50"));
+
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                statusText.Foreground = original;
+                UpdateStatus();
+            };
+            timer.Start();
+        }
+
         #endregion
 
         #region SDK Coordinate Conversion
@@ -783,6 +799,7 @@ namespace FlexView.Client
                 view.Layout = rects;
                 view.Save();
                 configFolder.PropertiesModified();
+                ShowSavedStatus(name);
             }
             catch (Exception ex)
             {
@@ -797,11 +814,82 @@ namespace FlexView.Client
             try
             {
                 var rects = ConvertPanesToSdkLayout();
-                _editingView.Layout = rects;
-                _editingView.Save();
+                var parentConfig = _editingParent as ConfigItem;
 
-                if (_editingParent is ConfigItem parentConfig)
-                    parentConfig.PropertiesModified();
+                // Try in-place update first (works when slot count hasn't changed)
+                bool needsRecreate = rects.Length != _originalSlotCount;
+
+                if (!needsRecreate)
+                {
+                    try
+                    {
+                        _editingView.Layout = rects;
+                        _editingView.Save();
+                        if (parentConfig != null)
+                            parentConfig.PropertiesModified();
+                        ShowSavedStatus(_editingView.Name);
+                        return;
+                    }
+                    catch
+                    {
+                        // Layout assignment rejected, fall through to recreate
+                        needsRecreate = true;
+                    }
+                }
+
+                // Recreate: delete old view and create new one with updated layout
+                if (parentConfig == null)
+                {
+                    MessageBox.Show("Cannot update view: parent folder is not valid.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var viewName = _editingView.Name;
+
+                // Collect camera assignments from current panes (ordered by slot)
+                var ordered = _panes
+                    .Where(p => p.OriginalSlotIndex >= 0)
+                    .OrderBy(p => p.OriginalSlotIndex)
+                    .Concat(_panes.Where(p => p.OriginalSlotIndex < 0))
+                    .ToList();
+
+                // Delete old view
+                parentConfig.RemoveChild(_editingView);
+
+                // Create new view with same name
+                var newView = parentConfig.AddChild(viewName, Kind.View, FolderType.No) as ViewAndLayoutItem;
+                if (newView == null)
+                {
+                    MessageBox.Show("Failed to recreate view.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                newView.Layout = rects;
+                newView.Save();
+
+                // Restore camera assignments to matching slots
+                var newConfig = newView as ConfigItem;
+                if (newConfig != null)
+                {
+                    var children = newConfig.GetChildren();
+                    if (children != null)
+                    {
+                        for (int i = 0; i < children.Count && i < ordered.Count; i++)
+                        {
+                            if (ordered[i].CameraId != Guid.Empty)
+                            {
+                                children[i].Properties["CameraId"] = ordered[i].CameraId.ToString();
+                            }
+                        }
+                    }
+                }
+
+                parentConfig.PropertiesModified();
+
+                // Update references for continued editing
+                _editingView = newView;
+                _originalSlotCount = rects.Length;
+                ShowSavedStatus(viewName);
             }
             catch (Exception ex)
             {
