@@ -32,7 +32,7 @@
     <!-- License -->
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
-    <!-- Custom UI sequence: Welcome → License → InstallDir → FeatureTree → Install -->
+    <!-- Custom UI sequence: Welcome → License → OemModeDlg → FeatureTree → Install -->
     <ui:WixUI Id="WixUI_FeatureTree" />
 
     <!-- Suppress reboot prompts and FilesInUse dialogs — our custom actions already
@@ -42,7 +42,39 @@
     <Property Id="ARPNORESTARTMANAGER" Value="1" />
     <Property Id="MSIFASTINSTALL" Value="7" />
 
-    <!-- Progress text shown in the installer UI during custom actions -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Custom install paths                                      -->
+    <!--                                                           -->
+    <!-- Properties named the SAME as Directory Ids function as   -->
+    <!-- MSI directory overrides: the property value becomes the  -->
+    <!-- physical path of that directory. The PathEdit controls    -->
+    <!-- and the folder-picker (DirectoryCombo / DirectoryList in  -->
+    <!-- MscpBrowseDlg) both require the bound name to be a real  -->
+    <!-- Directory Id  using a separate *DIR property broke the   -->
+    <!-- Browse dialog with MSI error 2727.                         -->
+    <!-- Silent installs can still override with                    -->
+    <!--   msiexec /i ... MIPPLUGINS="..." MIPDRIVERS="..."        -->
+    <!-- Both are Secure so edits survive the UI-to-Execute hop.  -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Property Id="MIPPLUGINS" Secure="yes" />
+    <Property Id="MIPDRIVERS" Secure="yes" />
+
+    <!-- Fill the defaults from [ProgramFiles64Folder] only if the user or
+         caller hasn't already set them. Before CostFinalize on both sequences
+         so they resolve correctly in both UI and Execute phases. -->
+    <SetProperty Id="MIPPLUGINS"
+                 Value="[ProgramFiles64Folder]Milestone\MIPPlugins\"
+                 Before="CostFinalize"
+                 Sequence="both"
+                 Condition="NOT MIPPLUGINS" />
+    <SetProperty Id="MIPDRIVERS"
+                 Value="[ProgramFiles64Folder]Milestone\MIPDrivers\"
+                 Before="CostFinalize"
+                 Sequence="both"
+                 Condition="NOT MIPDRIVERS" />
+
+    <!-- Progress text shown in the installer UI during custom actions, plus
+         the install-paths dialog spliced between License and Customize. -->
     <UI>
       <ProgressText Action="CA_StopSmartClient" Message="Closing XProtect Smart Client..." />
       <ProgressText Action="CA_StopManagementClient" Message="Closing XProtect Management Client..." />
@@ -51,6 +83,160 @@
       <ProgressText Action="CA_StopEventServer" Message="Stopping Milestone Event Server and waiting up to 3 minutes..." />
       <ProgressText Action="CA_StartRecordingServer" Message="Starting Milestone XProtect Recording Server and waiting up to 3 minutes..." />
       <ProgressText Action="CA_StartEventServer" Message="Starting Milestone Event Server and waiting up to 3 minutes..." />
+
+      <!--
+        InstallPathsDlg - shown between LicenseAgreementDlg and CustomizeDlg.
+        Two PathEdit fields pre-filled with the default Milestone paths; the
+        bound MIPPLUGINSDIR / MIPDRIVERSDIR properties drive the SetDirectory
+        redirects declared above.
+
+        Navigation Publishes on the License Next button and the Customize Back
+        button at Order=10 beat the stock Order=3 entries so our dialog lands
+        in between.
+      -->
+      <!--
+        OemInfoDlg - dedicated informational page shown between License and
+        InstallPaths. Spells out the OEM-install caveats explicitly so they
+        aren't missed: manual Smart Client close, manual service stop/start.
+        Pure reference  Next always enabled. The subsequent InstallPathsDlg
+        stays focused on the two path inputs with no OEM block.
+      -->
+      <Dialog Id="OemInfoDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\DlgTitleFont}OEM installations" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15"
+                 Transparent="yes"
+                 Text="Please read if your XProtect system is an OEM / rebranded edition." />
+
+        <Control Id="Intro" Type="Text" X="25" Y="60" Width="320" Height="30"
+                 Transparent="yes"
+                 Text="On OEM rebrands the install root may differ from the Milestone defaults, and Event Server / Recording Server services may run under different names." />
+
+        <Control Id="Step1" Type="Text" X="25" Y="100" Width="320" Height="26"
+                 Transparent="yes"
+                 Text="1. On the next page, set the MIP Plugins and MIP Drivers folders to match the OEM's MIP host scan location." />
+
+        <Control Id="Step2" Type="Text" X="25" Y="132" Width="320" Height="26"
+                 Transparent="yes"
+                 Text="2. Close any OEM-branded Smart Client and Management Client before continuing  the installer's taskkill only matches Milestone's executable names." />
+
+        <Control Id="Step3" Type="Text" X="25" Y="164" Width="320" Height="55"
+                 Transparent="yes"
+                 Text="3. Stop the OEM's Event Server and Recording Server services before clicking Install on the last page, and start them again after this installer finishes. The automatic service stop/start only targets Milestone's default service names." />
+
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+          <Publish Event="NewDialog" Value="LicenseAgreementDlg" Condition="1" />
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <Publish Event="NewDialog" Value="InstallPathsDlg" Condition="1" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+
+      <Dialog Id="InstallPathsDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="280" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\DlgTitleFont}Install locations" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15"
+                 Transparent="yes"
+                 Text="Defaults follow the Milestone convention. Adjust for OEM systems per the previous page." />
+
+        <Control Id="PluginsLabel" Type="Text" X="25" Y="70" Width="320" Height="15"
+                 Transparent="yes"
+                 Text="MIP Plugins folder:" />
+        <Control Id="PluginsEdit" Type="PathEdit" X="25" Y="88" Width="290" Height="18"
+                 Property="MIPPLUGINS" />
+        <Control Id="PluginsBrowse" Type="PushButton" X="320" Y="88" Width="25" Height="18" Text="...">
+          <Publish Property="_BrowseProperty" Value="MIPPLUGINS" Order="1" Condition="1" />
+          <Publish Event="SpawnDialog" Value="MscpBrowseDlg" Order="2" Condition="1" />
+        </Control>
+
+        <Control Id="DriversLabel" Type="Text" X="25" Y="120" Width="320" Height="15"
+                 Transparent="yes"
+                 Text="MIP Drivers folder:" />
+        <Control Id="DriversEdit" Type="PathEdit" X="25" Y="138" Width="290" Height="18"
+                 Property="MIPDRIVERS" />
+        <Control Id="DriversBrowse" Type="PushButton" X="320" Y="138" Width="25" Height="18" Text="...">
+          <Publish Property="_BrowseProperty" Value="MIPDRIVERS" Order="1" Condition="1" />
+          <Publish Event="SpawnDialog" Value="MscpBrowseDlg" Order="2" Condition="1" />
+        </Control>
+
+        <Control Id="Hint" Type="Text" X="25" Y="175" Width="320" Height="40"
+                 Transparent="yes"
+                 Text="Paths must end with a backslash. Missing folders are created automatically. OEM systems: see the previous page for manual steps." />
+
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+          <Publish Event="NewDialog" Value="OemInfoDlg" Condition="1" />
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <Publish Event="NewDialog" Value="CustomizeDlg" Condition="1" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+
+      <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog"
+               Value="OemInfoDlg" Order="10"
+               Condition="LicenseAccepted = &quot;1&quot;" />
+      <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog"
+               Value="InstallPathsDlg" Order="10"
+               Condition="1" />
+
+      <!--
+        MscpBrowseDlg - generic folder picker modeled on the stock MSI BrowseDlg.
+        WixUI_FeatureTree does not bundle a BrowseDlg (only WixUI_InstallDir does),
+        so we author our own minimal one. The caller (each Browse button on
+        InstallPathsDlg) stashes the target property name in _BrowseProperty,
+        then spawns this dialog; the controls below bind to _BrowseProperty via
+        Indirect="yes", and OK writes the picked path back via SetTargetPath.
+      -->
+      <Dialog Id="MscpBrowseDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="280" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\DlgTitleFont}Browse for folder" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15"
+                 Transparent="yes"
+                 Text="Choose a destination folder." />
+
+        <Control Id="DirectoryCombo" Type="DirectoryCombo" X="25" Y="58" Width="220" Height="80"
+                 Property="_BrowseProperty" Indirect="yes"
+                 Fixed="yes" Remote="yes" />
+        <Control Id="DirectoryList" Type="DirectoryList" X="25" Y="85" Width="320" Height="110"
+                 Property="_BrowseProperty" Indirect="yes"
+                 Sunken="yes" TabSkip="no" />
+        <Control Id="PathEdit" Type="PathEdit" X="25" Y="202" Width="320" Height="18"
+                 Property="_BrowseProperty" Indirect="yes" />
+
+        <Control Id="OK" Type="PushButton" X="240" Y="243" Width="56" Height="17"
+                 Default="yes" Text="OK">
+          <Publish Event="SetTargetPath" Value="[_BrowseProperty]" Order="1" Condition="1" />
+          <Publish Event="EndDialog" Value="Return" Order="2" Condition="1" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="Cancel">
+          <Publish Event="Reset" Value="0" Order="1" Condition="1" />
+          <Publish Event="EndDialog" Value="Return" Order="2" Condition="1" />
+        </Control>
+      </Dialog>
     </UI>
 
     <!-- ══════════════════════════════════════════════════════════ -->

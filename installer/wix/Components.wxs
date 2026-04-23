@@ -59,40 +59,6 @@
   </Fragment>
   <Fragment>
     <DirectoryRef Id="MIPPLUGINS">
-      <Directory Id="Dir_RDP" Name="RDP" />
-    </DirectoryRef>
-    <ComponentGroup Id="CG_RDP" Directory="Dir_RDP">
-      <Component Id="RDP_Comp1" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File1" Source="G:\mscp\mscp\build\staging\RDP\AxMSTSCLib.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp2" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File2" Source="G:\mscp\mscp\build\staging\RDP\FontAwesome5.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp3" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File3" Source="G:\mscp\mscp\build\staging\RDP\FontAwesome5.Net.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp4" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File4" Source="G:\mscp\mscp\build\staging\RDP\MSCRDPPlugin.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp5" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File5" Source="G:\mscp\mscp\build\staging\RDP\MSCRDPPlugin.pdb" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp6" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File6" Source="G:\mscp\mscp\build\staging\RDP\MSTSCLib.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp7" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File7" Source="G:\mscp\mscp\build\staging\RDP\plugin.def" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp8" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File8" Source="G:\mscp\mscp\build\staging\RDP\RDP.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="RDP_Comp9" Directory="Dir_RDP" Bitness="always64">
-        <File Id="RDP_File9" Source="G:\mscp\mscp\build\staging\RDP\RDP.pdb" KeyPath="yes" />
-      </Component>
-    </ComponentGroup>
-  </Fragment>
-  <Fragment>
-    <DirectoryRef Id="MIPPLUGINS">
       <Directory Id="Dir_Notepad" Name="Notepad" />
     </DirectoryRef>
     <ComponentGroup Id="CG_Notepad" Directory="Dir_Notepad">
@@ -610,6 +576,55 @@
     </ComponentGroup>
   </Fragment>
   <Fragment>
+    <DirectoryRef Id="MIPPLUGINS">
+      <Directory Id="Dir_ViewCarousel" Name="ViewCarousel" />
+    </DirectoryRef>
+    <ComponentGroup Id="CG_ViewCarousel" Directory="Dir_ViewCarousel">
+      <Component Id="ViewCarousel_Comp1" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File1" Source="G:\mscp\mscp\build\staging\ViewCarousel\FontAwesome5.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp2" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File2" Source="G:\mscp\mscp\build\staging\ViewCarousel\FontAwesome5.Net.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp3" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File3" Source="G:\mscp\mscp\build\staging\ViewCarousel\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp4" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File4" Source="G:\mscp\mscp\build\staging\ViewCarousel\plugin.def" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp5" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File5" Source="G:\mscp\mscp\build\staging\ViewCarousel\System.Buffers.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp6" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File6" Source="G:\mscp\mscp\build\staging\ViewCarousel\System.IO.Pipelines.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp7" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File7" Source="G:\mscp\mscp\build\staging\ViewCarousel\System.Memory.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp8" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File8" Source="G:\mscp\mscp\build\staging\ViewCarousel\System.Numerics.Vectors.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp9" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File9" Source="G:\mscp\mscp\build\staging\ViewCarousel\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp10" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File10" Source="G:\mscp\mscp\build\staging\ViewCarousel\System.Text.Encodings.Web.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp11" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File11" Source="G:\mscp\mscp\build\staging\ViewCarousel\System.Text.Json.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp12" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File12" Source="G:\mscp\mscp\build\staging\ViewCarousel\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp13" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File13" Source="G:\mscp\mscp\build\staging\ViewCarousel\ViewCarousel.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="ViewCarousel_Comp14" Directory="Dir_ViewCarousel" Bitness="always64">
+        <File Id="ViewCarousel_File14" Source="G:\mscp\mscp\build\staging\ViewCarousel\ViewCarousel.pdb" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
     <DirectoryRef Id="MIPDRIVERS">
       <Directory Id="Dir_RTSPDriver" Name="RTSPDriver">
         <Directory Id="Dir_RTSPDriver_x64" Name="x64" />
@@ -652,17 +667,439 @@
     </ComponentGroup>
   </Fragment>
   <Fragment>
+    <DirectoryRef Id="MIPPLUGINS">
+      <Directory Id="Dir_SCRemoteControl" Name="SCRemoteControl" />
+    </DirectoryRef>
+    <ComponentGroup Id="CG_SCRemoteControl" Directory="Dir_SCRemoteControl">
+      <Component Id="SCRemoteControl_Comp1" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File1" Source="G:\mscp\mscp\build\staging\SCRemoteControl\FontAwesome5.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp2" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File2" Source="G:\mscp\mscp\build\staging\SCRemoteControl\FontAwesome5.Net.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp3" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File3" Source="G:\mscp\mscp\build\staging\SCRemoteControl\Microsoft.Owin.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp4" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File4" Source="G:\mscp\mscp\build\staging\SCRemoteControl\Newtonsoft.Json.Bson.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp5" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File5" Source="G:\mscp\mscp\build\staging\SCRemoteControl\Newtonsoft.Json.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp6" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File6" Source="G:\mscp\mscp\build\staging\SCRemoteControl\Nowin.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp7" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File7" Source="G:\mscp\mscp\build\staging\SCRemoteControl\Owin.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp8" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File8" Source="G:\mscp\mscp\build\staging\SCRemoteControl\plugin.def" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp9" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File9" Source="G:\mscp\mscp\build\staging\SCRemoteControl\SCRemoteControl.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp10" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File10" Source="G:\mscp\mscp\build\staging\SCRemoteControl\SCRemoteControl.pdb" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp11" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File11" Source="G:\mscp\mscp\build\staging\SCRemoteControl\SCRemoteControl.xml" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp12" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File12" Source="G:\mscp\mscp\build\staging\SCRemoteControl\Swashbuckle.Core.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp13" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File13" Source="G:\mscp\mscp\build\staging\SCRemoteControl\System.Buffers.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp14" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File14" Source="G:\mscp\mscp\build\staging\SCRemoteControl\System.Memory.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp15" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File15" Source="G:\mscp\mscp\build\staging\SCRemoteControl\System.Net.Http.Formatting.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp16" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File16" Source="G:\mscp\mscp\build\staging\SCRemoteControl\System.Numerics.Vectors.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp17" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File17" Source="G:\mscp\mscp\build\staging\SCRemoteControl\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp18" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File18" Source="G:\mscp\mscp\build\staging\SCRemoteControl\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp19" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File19" Source="G:\mscp\mscp\build\staging\SCRemoteControl\System.Web.Http.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="SCRemoteControl_Comp20" Directory="Dir_SCRemoteControl" Bitness="always64">
+        <File Id="SCRemoteControl_File20" Source="G:\mscp\mscp\build\staging\SCRemoteControl\System.Web.Http.Owin.dll" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="MIPPLUGINS">
+      <Directory Id="Dir_Timelapse" Name="Timelapse">
+        <Directory Id="Dir_Timelapse_x64" Name="x64" />
+      </Directory>
+    </DirectoryRef>
+    <ComponentGroup Id="CG_Timelapse" Directory="Dir_Timelapse">
+      <Component Id="Timelapse_Comp1" Directory="Dir_Timelapse" Bitness="always64">
+        <File Id="Timelapse_File1" Source="G:\mscp\mscp\build\staging\Timelapse\FFmpeg.AutoGen.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp2" Directory="Dir_Timelapse" Bitness="always64">
+        <File Id="Timelapse_File2" Source="G:\mscp\mscp\build\staging\Timelapse\FontAwesome5.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp3" Directory="Dir_Timelapse" Bitness="always64">
+        <File Id="Timelapse_File3" Source="G:\mscp\mscp\build\staging\Timelapse\FontAwesome5.Net.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp4" Directory="Dir_Timelapse" Bitness="always64">
+        <File Id="Timelapse_File4" Source="G:\mscp\mscp\build\staging\Timelapse\plugin.def" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp5" Directory="Dir_Timelapse" Bitness="always64">
+        <File Id="Timelapse_File5" Source="G:\mscp\mscp\build\staging\Timelapse\Timelapse.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp6" Directory="Dir_Timelapse" Bitness="always64">
+        <File Id="Timelapse_File6" Source="G:\mscp\mscp\build\staging\Timelapse\Timelapse.pdb" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp7" Directory="Dir_Timelapse_x64" Bitness="always64">
+        <File Id="Timelapse_File7" Source="G:\mscp\mscp\build\staging\Timelapse\x64\avcodec-62.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp8" Directory="Dir_Timelapse_x64" Bitness="always64">
+        <File Id="Timelapse_File8" Source="G:\mscp\mscp\build\staging\Timelapse\x64\avdevice-62.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp9" Directory="Dir_Timelapse_x64" Bitness="always64">
+        <File Id="Timelapse_File9" Source="G:\mscp\mscp\build\staging\Timelapse\x64\avfilter-11.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp10" Directory="Dir_Timelapse_x64" Bitness="always64">
+        <File Id="Timelapse_File10" Source="G:\mscp\mscp\build\staging\Timelapse\x64\avformat-62.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp11" Directory="Dir_Timelapse_x64" Bitness="always64">
+        <File Id="Timelapse_File11" Source="G:\mscp\mscp\build\staging\Timelapse\x64\avutil-60.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp12" Directory="Dir_Timelapse_x64" Bitness="always64">
+        <File Id="Timelapse_File12" Source="G:\mscp\mscp\build\staging\Timelapse\x64\swresample-6.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="Timelapse_Comp13" Directory="Dir_Timelapse_x64" Bitness="always64">
+        <File Id="Timelapse_File13" Source="G:\mscp\mscp\build\staging\Timelapse\x64\swscale-9.dll" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="MIPPLUGINS">
+      <Directory Id="Dir_RemoteManager" Name="RemoteManager">
+        <Directory Id="Dir_RemoteManager_runtimes" Name="runtimes">
+          <Directory Id="Dir_RemoteManager_runtimes_win_arm64" Name="win-arm64">
+            <Directory Id="Dir_RemoteManager_runtimes_win_arm64_native" Name="native" />
+          </Directory>
+          <Directory Id="Dir_RemoteManager_runtimes_win_x64" Name="win-x64">
+            <Directory Id="Dir_RemoteManager_runtimes_win_x64_native" Name="native" />
+          </Directory>
+          <Directory Id="Dir_RemoteManager_runtimes_win_x86" Name="win-x86">
+            <Directory Id="Dir_RemoteManager_runtimes_win_x86_native" Name="native" />
+          </Directory>
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+    <ComponentGroup Id="CG_RemoteManager" Directory="Dir_RemoteManager">
+      <Component Id="RemoteManager_Comp1" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File1" Source="G:\mscp\mscp\build\staging\RemoteManager\AxMSTSCLib.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp2" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File2" Source="G:\mscp\mscp\build\staging\RemoteManager\FontAwesome5.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp3" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File3" Source="G:\mscp\mscp\build\staging\RemoteManager\FontAwesome5.Net.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp4" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File4" Source="G:\mscp\mscp\build\staging\RemoteManager\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp5" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File5" Source="G:\mscp\mscp\build\staging\RemoteManager\Microsoft.Web.WebView2.Core.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp6" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File6" Source="G:\mscp\mscp\build\staging\RemoteManager\Microsoft.Web.WebView2.WinForms.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp7" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File7" Source="G:\mscp\mscp\build\staging\RemoteManager\Microsoft.Web.WebView2.Wpf.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp8" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File8" Source="G:\mscp\mscp\build\staging\RemoteManager\MSTSCLib.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp9" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File9" Source="G:\mscp\mscp\build\staging\RemoteManager\plugin.def" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp10" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File10" Source="G:\mscp\mscp\build\staging\RemoteManager\RemoteManager.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp11" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File11" Source="G:\mscp\mscp\build\staging\RemoteManager\RemoteManager.pdb" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp12" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File12" Source="G:\mscp\mscp\build\staging\RemoteManager\System.Buffers.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp13" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File13" Source="G:\mscp\mscp\build\staging\RemoteManager\System.IO.Pipelines.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp14" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File14" Source="G:\mscp\mscp\build\staging\RemoteManager\System.Memory.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp15" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File15" Source="G:\mscp\mscp\build\staging\RemoteManager\System.Numerics.Vectors.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp16" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File16" Source="G:\mscp\mscp\build\staging\RemoteManager\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp17" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File17" Source="G:\mscp\mscp\build\staging\RemoteManager\System.Text.Encodings.Web.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp18" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File18" Source="G:\mscp\mscp\build\staging\RemoteManager\System.Text.Json.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp19" Directory="Dir_RemoteManager" Bitness="always64">
+        <File Id="RemoteManager_File19" Source="G:\mscp\mscp\build\staging\RemoteManager\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp20" Directory="Dir_RemoteManager_runtimes_win_arm64_native" Bitness="always64">
+        <File Id="RemoteManager_File20" Source="G:\mscp\mscp\build\staging\RemoteManager\runtimes\win-arm64\native\WebView2Loader.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp21" Directory="Dir_RemoteManager_runtimes_win_x64_native" Bitness="always64">
+        <File Id="RemoteManager_File21" Source="G:\mscp\mscp\build\staging\RemoteManager\runtimes\win-x64\native\WebView2Loader.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="RemoteManager_Comp22" Directory="Dir_RemoteManager_runtimes_win_x86_native" Bitness="always64">
+        <File Id="RemoteManager_File22" Source="G:\mscp\mscp\build\staging\RemoteManager\runtimes\win-x86\native\WebView2Loader.dll" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="MIPPLUGINS">
+      <Directory Id="Dir_BarcodeReader" Name="BarcodeReader">
+        <Directory Id="Dir_BarcodeReader_Admin" Name="Admin" />
+      </Directory>
+    </DirectoryRef>
+    <ComponentGroup Id="CG_BarcodeReader" Directory="Dir_BarcodeReader">
+      <Component Id="BarcodeReader_Comp1" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File1" Source="G:\mscp\mscp\build\staging\BarcodeReader\Autofac.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp2" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File2" Source="G:\mscp\mscp\build\staging\BarcodeReader\Azure.Core.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp3" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File3" Source="G:\mscp\mscp\build\staging\BarcodeReader\Azure.Identity.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp4" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File4" Source="G:\mscp\mscp\build\staging\BarcodeReader\BarcodeReader.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp5" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File5" Source="G:\mscp\mscp\build\staging\BarcodeReader\BarcodeReader.pdb" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp6" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File6" Source="G:\mscp\mscp\build\staging\BarcodeReader\BarcodeReaderHelper.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp7" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File7" Source="G:\mscp\mscp\build\staging\BarcodeReader\BarcodeReaderHelper.exe.config" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp8" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File8" Source="G:\mscp\mscp\build\staging\BarcodeReader\BarcodeReaderHelper.pdb" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp9" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File9" Source="G:\mscp\mscp\build\staging\BarcodeReader\FontAwesome5.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp10" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File10" Source="G:\mscp\mscp\build\staging\BarcodeReader\FontAwesome5.Net.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp11" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File11" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.ApplicationInsights.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp12" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File12" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.AspNetCore.JsonPatch.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp13" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File13" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Bcl.AsyncInterfaces.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp14" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File14" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Configuration.Abstractions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp15" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File15" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Configuration.Binder.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp16" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File16" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Configuration.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp17" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File17" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp18" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File18" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.DependencyInjection.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp19" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File19" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Diagnostics.Abstractions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp20" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File20" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Logging.Abstractions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp21" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File21" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Logging.Configuration.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp22" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File22" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Logging.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp23" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File23" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Options.ConfigurationExtensions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp24" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File24" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Options.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp25" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File25" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Extensions.Primitives.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp26" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File26" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Identity.Client.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp27" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File27" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Identity.Client.Extensions.Msal.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp28" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File28" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.IdentityModel.Abstractions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp29" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File29" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.IdentityModel.JsonWebTokens.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp30" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File30" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.IdentityModel.Logging.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp31" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File31" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.IdentityModel.Protocols.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp32" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File32" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp33" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File33" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.IdentityModel.Tokens.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp34" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File34" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Owin.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp35" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File35" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Win32.Registry.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp36" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File36" Source="G:\mscp\mscp\build\staging\BarcodeReader\Microsoft.Xaml.Behaviors.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp37" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File37" Source="G:\mscp\mscp\build\staging\BarcodeReader\NAudio.Asio.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp38" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File38" Source="G:\mscp\mscp\build\staging\BarcodeReader\NAudio.Core.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp39" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File39" Source="G:\mscp\mscp\build\staging\BarcodeReader\NAudio.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp40" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File40" Source="G:\mscp\mscp\build\staging\BarcodeReader\NAudio.Midi.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp41" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File41" Source="G:\mscp\mscp\build\staging\BarcodeReader\NAudio.Wasapi.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp42" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File42" Source="G:\mscp\mscp\build\staging\BarcodeReader\NAudio.WinForms.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp43" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File43" Source="G:\mscp\mscp\build\staging\BarcodeReader\NAudio.WinMM.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp44" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File44" Source="G:\mscp\mscp\build\staging\BarcodeReader\Newtonsoft.Json.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp45" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File45" Source="G:\mscp\mscp\build\staging\BarcodeReader\OpenTelemetry.Api.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp46" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File46" Source="G:\mscp\mscp\build\staging\BarcodeReader\OpenTelemetry.Api.ProviderBuilderExtensions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp47" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File47" Source="G:\mscp\mscp\build\staging\BarcodeReader\OpenTelemetry.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp48" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File48" Source="G:\mscp\mscp\build\staging\BarcodeReader\OpenTelemetry.Exporter.OpenTelemetryProtocol.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp49" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File49" Source="G:\mscp\mscp\build\staging\BarcodeReader\Owin.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp50" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File50" Source="G:\mscp\mscp\build\staging\BarcodeReader\plugin.def" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp51" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File51" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Buffers.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp52" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File52" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Diagnostics.DiagnosticSource.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp53" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File53" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.IdentityModel.Tokens.Jwt.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp54" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File54" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.IO.FileSystem.AccessControl.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp55" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File55" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Memory.Data.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp56" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File56" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Memory.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp57" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File57" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Net.Http.Formatting.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp58" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File58" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Numerics.Vectors.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp59" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File59" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp60" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File60" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Security.AccessControl.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp61" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File61" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Security.Cryptography.ProtectedData.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp62" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File62" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Security.Cryptography.Xml.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp63" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File63" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Security.Principal.Windows.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp64" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File64" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Text.Encodings.Web.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp65" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File65" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Text.Json.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp66" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File66" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp67" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File67" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.ValueTuple.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp68" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File68" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Web.Http.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp69" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File69" Source="G:\mscp\mscp\build\staging\BarcodeReader\System.Web.Http.Owin.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp70" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File70" Source="G:\mscp\mscp\build\staging\BarcodeReader\zxing.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp71" Directory="Dir_BarcodeReader" Bitness="always64">
+        <File Id="BarcodeReader_File71" Source="G:\mscp\mscp\build\staging\BarcodeReader\zxing.presentation.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="BarcodeReader_Comp72" Directory="Dir_BarcodeReader_Admin" Bitness="always64">
+        <File Id="BarcodeReader_File72" Source="G:\mscp\mscp\build\staging\BarcodeReader\Admin\HelpPage.html" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
     <Feature Id="SmartClientPlugins" Title="Smart Client Plugins" Description="Plugins for the XProtect Smart Client. Installs to C:\Program Files\Milestone\MIPPlugins\" Level="1" Display="expand" AllowAbsent="yes" AllowAdvertise="no">
       <Feature Id="Feature_Weather" Title="Weather Plugin" Description="Display live weather in Smart Client view items (Open-Meteo)" Level="1" AllowAbsent="yes" AllowAdvertise="no">
         <ComponentGroupRef Id="CG_Weather" />
       </Feature>
-      <Feature Id="Feature_RDP" Title="RDP Plugin" Description="Embed interactive RDP sessions in Smart Client view items" Level="1" AllowAbsent="yes" AllowAdvertise="no">
-        <ComponentGroupRef Id="CG_RDP" />
-      </Feature>
       <Feature Id="Feature_Notepad" Title="Notepad Plugin" Description="Simple text editor for operator notes in Smart Client view items" Level="1" AllowAbsent="yes" AllowAdvertise="no">
         <ComponentGroupRef Id="CG_Notepad" />
       </Feature>
-      <Feature Id="Feature_SnapReport" Title="SnapReport Plugin" Description="Select cameras and generate PDF snapshot reports for site surveys and compliance" Level="1" AllowAbsent="yes" AllowAdvertise="no">
+      <Feature Id="Feature_SnapReport" Title="Snapshot Report Plugin" Description="Select cameras and generate PDF snapshot reports for site surveys and compliance" Level="1" AllowAbsent="yes" AllowAdvertise="no">
         <ComponentGroupRef Id="CG_SnapReport" />
       </Feature>
       <Feature Id="Feature_MonitorRTMPStreamer" Title="Monitor RTMP Streamer" Description="Capture desktop monitors and stream via RTMP" Level="1" AllowAbsent="yes" AllowAdvertise="no">
@@ -673,6 +1110,18 @@
       </Feature>
       <Feature Id="Feature_FlexView" Title="FlexView" Description="Freeform grid-based view layout designer with drag-and-drop pane creation, resizing, and editing" Level="1" AllowAbsent="yes" AllowAdvertise="no">
         <ComponentGroupRef Id="CG_FlexView" />
+      </Feature>
+      <Feature Id="Feature_ViewCarousel" Title="View Carousel" Description="Cycle through XProtect Smart Client views inside a single view item slot" Level="1" AllowAbsent="yes" AllowAdvertise="no">
+        <ComponentGroupRef Id="CG_ViewCarousel" />
+      </Feature>
+      <Feature Id="Feature_SCRemoteControl" Title="Remote Control" Description="Control Smart Client remotely via REST API with Swagger UI (views, cameras, workspaces, modes)" Level="1" AllowAbsent="yes" AllowAdvertise="no">
+        <ComponentGroupRef Id="CG_SCRemoteControl" />
+      </Feature>
+      <Feature Id="Feature_Timelapse" Title="Timelapse" Description="Generate timelapse videos from recorded cameras with multi-camera stitch support" Level="1" AllowAbsent="yes" AllowAdvertise="no">
+        <ComponentGroupRef Id="CG_Timelapse" />
+      </Feature>
+      <Feature Id="Feature_RemoteManager" Title="Remote Manager" Description="Unified workspace for hardware web interfaces, custom websites, and RDP connections with tag-based filtering" Level="1" AllowAbsent="yes" AllowAdvertise="no">
+        <ComponentGroupRef Id="CG_RemoteManager" />
       </Feature>
     </Feature>
   </Fragment>
@@ -699,6 +1148,9 @@
       </Feature>
       <Feature Id="Feature_HttpRequests" Title="HTTP Requests Plugin" Description="Configure and execute HTTP requests as rule actions with custom payloads, authentication, and batch execution" Level="1" AllowAbsent="yes" AllowAdvertise="no">
         <ComponentGroupRef Id="CG_HttpRequests" />
+      </Feature>
+      <Feature Id="Feature_BarcodeReader" Title="Barcode Reader Plugin" Description="Decode QR and 1D/2D barcodes from live camera streams (ZXing)" Level="1" AllowAbsent="yes" AllowAdvertise="no">
+        <ComponentGroupRef Id="CG_BarcodeReader" />
       </Feature>
     </Feature>
   </Fragment>
