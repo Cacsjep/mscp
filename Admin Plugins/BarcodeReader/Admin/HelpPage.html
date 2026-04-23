@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Barcode Reader Plugin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #222;
+            padding: 0px 28px;
+            line-height: 1.55;
+        }
+        h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; color: #1a1a1a; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        h2 { font-size: 14px; font-weight: 600; margin: 18px 0 6px; color: #333; }
+        p { margin-bottom: 8px; }
+        ul { margin: 0 0 10px 20px; }
+        li { margin-bottom: 3px; }
+        code { font-family: Consolas, monospace; background: #f3f3f3; padding: 1px 4px; border-radius: 3px; }
+        .hint { color: #666; font-size: 12px; }
+        table { border-collapse: collapse; margin: 6px 0 12px 0; }
+        th, td { border: 1px solid #ddd; padding: 4px 10px; text-align: left; font-size: 12px; }
+        th { background: #f6f6f6; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <h1>Barcode Reader</h1>
+    <div class="subtitle">Decode QR codes and 1D/2D barcodes from live camera streams and persist detections as searchable bookmarks.</div>
+
+    <h2>How it works</h2>
+    <p>
+        For each enabled channel, a helper process runs inside the Event Server. It opens a
+        <code>JPEGLiveSource</code> on the selected camera, runs every frame through the ZXing
+        decoder, and (if enabled) creates a bookmark on the camera timeline for each detection.
+        A watchdog reconnects the live stream automatically if the camera goes offline or the
+        feed stalls.
+    </p>
+
+    <h2>Configuration</h2>
+    <p>Under <b>MIP Plug-ins &gt; Barcode Reader &gt; Barcode Channels</b>, right-click and
+    choose <b>Create New</b>. Each channel has:</p>
+    <ul>
+        <li><b>Camera</b> - which camera to decode from.</li>
+        <li><b>Barcode formats</b> - restrict to the code types you actually expect; fewer formats = faster decoding.</li>
+        <li><b>Decoder options</b> (Try Harder, Auto Rotate, Try Inverted) - accuracy/CPU trade-offs.</li>
+        <li><b>Create bookmarks for detections</b> - one bookmark per decoded barcode (see below).</li>
+        <li><b>Target frame rate</b> - hard cap on decode attempts per second.</li>
+        <li><b>Downscale to width</b> - resize large frames before decoding. Big speed-up on 4K/8K.</li>
+        <li><b>Duplicate debounce (ms)</b> - suppress repeat detections of the same text.</li>
+    </ul>
+
+    <h2>Saving detections: Bookmarks</h2>
+    <p>When <b>Create bookmarks for detections</b> is on, every decoded barcode creates a
+    Milestone bookmark on the camera's timeline:</p>
+    <ul>
+        <li><b>Header</b>: decoded text (truncated to ~60 chars).</li>
+        <li><b>Description</b>: <code>Format: {FORMAT} / Channel: {channel name}</code>.</li>
+        <li><b>Window</b>: 2 s before the detection, 2 s after.</li>
+    </ul>
+    <p>Find them in Smart Client:</p>
+    <ul>
+        <li><b>Search workspace</b> &rarr; add the <b>Bookmarks</b> filter &rarr; type into the
+        keyword box (matches both Header and Description).</li>
+        <li>Per-camera <b>timeline</b> &rarr; bookmark markers are clickable to jump to the frame.</li>
+    </ul>
+    <p>The same Duplicate debounce that governs logging also governs bookmarks - a barcode held
+    in front of the camera only produces one bookmark per debounce window.</p>
+
+    <h2>Live status panel</h2>
+    <p>While editing a channel, the bottom panel shows:</p>
+    <ul>
+        <li><b>Cam FPS</b> - frames arriving from the camera per second.</li>
+        <li><b>Decode FPS</b> - frames run through the decoder per second.</li>
+        <li><b>Inference avg / p95</b> - time spent in ZXing per frame.</li>
+        <li><b>Max FPS</b> - theoretical ceiling (<code>1000 / inference_ms_avg</code>).</li>
+        <li><b>Hint line</b> - green if there's headroom to raise Target FPS, amber if you're
+        at the limit.</li>
+        <li><b>Helper log</b> - last 40 lines including <code>DETECT</code> entries (newest first).</li>
+    </ul>
+
+    <h2>Camera offline / reconnect behaviour</h2>
+    <p>If no frames arrive for ~8 seconds while the channel is supposed to be live, the helper
+    tears down and re-opens the JPEGLiveSource in place. Status transitions
+    (<code>Running</code> &rarr; <code>Error:NoFrames</code> &rarr; <code>Running</code>)
+    are reflected in the admin UI in real time. If the helper process itself dies, the Event
+    Server background plugin restarts it within 10 seconds.</p>
+
+    <h2>Troubleshooting</h2>
+    <table>
+        <tr><th>Symptom</th><th>Fix</th></tr>
+        <tr><td>No detections</td><td>Narrow the format list to what you expect; enable Try Harder; raise Target FPS.</td></tr>
+        <tr><td>High CPU</td><td>Lower Target FPS, turn off Try Harder / Auto Rotate, enable Downscale.</td></tr>
+        <tr><td>Status stuck on <code>Error:Connect</code></td><td>Camera or Recording Server unreachable. Check recording server health; helper auto-retries.</td></tr>
+        <tr><td><code>Helper exe not found</code></td><td>Ensure <code>BarcodeReaderHelper.exe</code> is in the same folder as <code>BarcodeReader.dll</code>.</td></tr>
+        <tr><td>Bookmarks not appearing</td><td>Verify <b>Create bookmarks for detections</b> is checked; check the helper log for <code>BookmarkCreate failed</code>.</td></tr>
+    </table>
+
+    <h2>Logs</h2>
+    <p>Detailed per-channel output is written to the Event Server log:</p>
+    <p><code>C:\ProgramData\Milestone\XProtect Event Server\Logs\</code></p>
+    <p>Look for <code>DETECT</code> (successful decodes), <code>STATS</code> (once per second),
+    and <code>STATUS</code> (lifecycle transitions).</p>
+</body>
+</html>

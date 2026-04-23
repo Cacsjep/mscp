@@ -1,5 +1,5 @@
 site_name: MS Community Plugins
-site_description: Free open-source Milestone XProtect plugins, Smart Client extensions, device drivers, and VMS tools — community-built add-ons for video surveillance and security management
+site_description: Free open-source Milestone XProtect plugins, Smart Client extensions, device drivers, and VMS tools - community-built add-ons for video surveillance and security management
 site_url: https://cacsjep.github.io/mscp/
 repo_url: https://github.com/Cacsjep/mscp
 repo_name: Cacsjep/mscp
@@ -36,6 +36,7 @@ nav:
   - Plugins:
     - Admin Plugins:
       - Auditor: plugins/admin/auditor.md
+      - Barcode Reader: plugins/admin/barcode-reader.md
       - Certificate Watchdog: plugins/admin/cert-watchdog.md
       - HTTP Requests: plugins/admin/http-requests.md
       - RTMP Streamer: plugins/admin/rtmp-streamer.md

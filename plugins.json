@@ -120,5 +120,21 @@
     "path": "Smart Client Plugins/RemoteManager",
     "category": "SmartClient",
     "description": "Unified workspace for hardware web interfaces, custom websites, and RDP connections with tag-based filtering"
+  },
+  {
+    "name": "BarcodeReader",
+    "displayName": "Barcode Reader Plugin",
+    "path": "Admin Plugins/BarcodeReader",
+    "category": "AdminPlugin",
+    "description": "Decode QR and 1D/2D barcodes from live camera streams (ZXing)",
+    "extraProjects": [
+      "Admin Plugins/BarcodeReader/BarcodeReaderHelper/BarcodeReaderHelper.csproj"
+    ],
+    "extraStagingDirs": [
+      "Admin Plugins/BarcodeReader/BarcodeReaderHelper/bin/Release/net48"
+    ],
+    "extraStagingFiles": [
+      "Admin Plugins/BarcodeReader/plugin.def"
+    ]
   }
 ]

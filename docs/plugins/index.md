@@ -131,6 +131,10 @@ hide:
     <div class="pi ap"><i class="mdi mdi-shield-check"></i></div>
     <div class="pt"><span class="pn">Auditor</span><span class="pd">Audit user access to recorded video with per-user rules</span></div>
   </a>
+  <a class="pr" href="admin/barcode-reader/">
+    <div class="pi ap"><i class="mdi mdi-qrcode-scan"></i></div>
+    <div class="pt"><span class="pn">Barcode Reader</span><span class="pd">Decode QR and 1D/2D barcodes from live cameras; bookmarks + rule events</span></div>
+  </a>
   <a class="pr" href="admin/cert-watchdog/">
     <div class="pi ap"><i class="mdi mdi-certificate"></i></div>
     <div class="pt"><span class="pn">Certificate Watchdog</span><span class="pd">Monitor SSL certificate expiry for all HTTPS endpoints</span></div>

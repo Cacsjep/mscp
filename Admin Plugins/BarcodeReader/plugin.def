@@ -1,0 +1,4 @@
+<plugin>
+   <file name="BarcodeReader.dll"/>
+   <load env="Service, Administration"/>
+</plugin>
