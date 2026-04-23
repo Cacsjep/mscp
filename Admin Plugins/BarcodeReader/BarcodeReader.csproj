@@ -27,6 +27,8 @@
 
   <ItemGroup>
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+    <!-- Admin-side UI uses ZXing.Net's BarcodeWriter to render QR previews / exports. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.9" />
   </ItemGroup>
 
   <ItemGroup>

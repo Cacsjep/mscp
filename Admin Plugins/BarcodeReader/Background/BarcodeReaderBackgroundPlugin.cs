@@ -9,6 +9,7 @@ using BarcodeReader.Messaging;
 using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
+using VideoOS.Platform.Data;
 using VideoOS.Platform.Messaging;
 
 namespace BarcodeReader.Background
@@ -27,6 +28,13 @@ namespace BarcodeReader.Background
         private string _serverUri;
         private string _milestoneDir;
         private string _lastConfigSnapshot;
+
+        // QR Code library cache: exact payload text -> list of matching QR item FQIDs.
+        // Rebuilt on config-change alongside helper reload. Multiple FQIDs are allowed in
+        // the list for defensive reasons only  the admin UI forbids duplicate payloads at
+        // save time, so the list is normally size 1, but a crash-mid-save can't corrupt us.
+        private readonly ConcurrentDictionary<string, List<FQID>> _payloadToQRItems =
+            new ConcurrentDictionary<string, List<FQID>>(StringComparer.Ordinal);
 
         public override Guid Id => BarcodeReaderDefinition.BackgroundPluginId;
         public override string Name => "Barcode Reader Background";
@@ -61,21 +69,63 @@ namespace BarcodeReader.Background
                 return;
             }
 
+            // Subscribe to ConfigurationChangedIndication for BOTH our item kinds: channel
+            // edits affect helpers, QR Code edits affect the payload cache. A single filter
+            // can only carry one RelatedKind, so we register a single generic subscription
+            // and rely on the snapshot compare in OnConfigurationChanged to cheap-skip when
+            // nothing we care about changed.
             _configMessageObj = EnvironmentManager.Instance.RegisterReceiver(
                 OnConfigurationChanged,
-                new MessageIdAndRelatedKindFilter(
-                    MessageId.Server.ConfigurationChangedIndication,
-                    BarcodeReaderDefinition.PluginKindId));
+                new MessageIdFilter(MessageId.Server.ConfigurationChangedIndication));
 
             _sysLog.Register();
 
             _cmh.Start();
             _cmh.Register(OnStatusRequest, new CommunicationIdFilter(BarcodeMessageIds.StatusRequest));
 
+            LoadQRCodeCache();
             LoadAndStartChannels();
 
             _monitorTimer = new Timer(MonitorHelpers, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
         }
+
+        private void LoadQRCodeCache()
+        {
+            try
+            {
+                var qrItems = Configuration.Instance.GetItemConfigurations(
+                    BarcodeReaderDefinition.PluginId, null, BarcodeReaderDefinition.QRCodeKindId);
+
+                var fresh = new Dictionary<string, List<FQID>>(StringComparer.Ordinal);
+                foreach (var item in qrItems)
+                {
+                    if (!item.Properties.ContainsKey(QRCodeConfig_KeyPayload)) continue;
+                    var payload = item.Properties[QRCodeConfig_KeyPayload];
+                    if (string.IsNullOrEmpty(payload)) continue;
+
+                    if (!fresh.TryGetValue(payload, out var list))
+                    {
+                        list = new List<FQID>();
+                        fresh[payload] = list;
+                    }
+                    list.Add(item.FQID);
+                }
+
+                _payloadToQRItems.Clear();
+                foreach (var kv in fresh) _payloadToQRItems[kv.Key] = kv.Value;
+
+                _log.Info($"QR Code cache loaded: {_payloadToQRItems.Count} payload(s)");
+            }
+            catch (Exception ex)
+            {
+                _log.Error("Failed to load QR Code cache", ex);
+            }
+        }
+
+        // String constant mirror of QRCodeConfig.KeyPayload. Duplicating here instead of
+        // referencing the Admin type avoids pulling the admin-only namespace into the
+        // Event Server's loaded type graph.
+        private const string QRCodeConfig_KeyPayload = "Payload";
 
         public override void Close()
         {
@@ -225,6 +275,8 @@ namespace BarcodeReader.Background
                     _log.Info(logLine);
                     helper.AddLogLine($"{DateTime.Now:HH:mm:ss.fff} INFO  {parts[2]}: {text}");
                     TransmitStatusUpdate(helper.Config.ItemId);
+
+                    FireDetectionEvents(helper, parts[2], text);
                 }
                 return;
             }
@@ -234,6 +286,85 @@ namespace BarcodeReader.Background
             helper.AddLogLine(line);
             _log.Info($"[Helper:{helper.Config.Name}] {line}");
             TransmitStatusUpdate(helper.Config.ItemId);
+        }
+
+        private void FireDetectionEvents(HelperProcess helper, string format, string text)
+        {
+            // Always: "Barcode Detected" scoped to the scanning channel.
+            var channelFqid = new FQID
+            {
+                ServerId = EnvironmentManager.Instance.MasterSite.ServerId,
+                ObjectId = helper.Config.ItemId,
+                Kind = BarcodeReaderDefinition.PluginKindId,
+                FolderType = FolderType.No,
+            };
+            SendAnalyticsEvent(
+                eventType: "BarcodeDetected",
+                registeredMessage: "Barcode Detected",
+                sourceName: helper.Config.Name,
+                sourceFqid: channelFqid,
+                customTag: text);
+
+            // If the decoded text exactly matches a stored QR item's payload, also fire
+            // "QR Code Matched" scoped to that QR item. Admin UI rejects duplicate
+            // payloads so this is typically a single match; the loop tolerates leftovers
+            // from a legacy config that predates the uniqueness check.
+            if (_payloadToQRItems.TryGetValue(text, out var matches) && matches != null)
+            {
+                foreach (var qrFqid in matches)
+                {
+                    SendAnalyticsEvent(
+                        eventType: "QRCodeMatched",
+                        registeredMessage: "QR Code Matched",
+                        sourceName: ResolveName(qrFqid),
+                        sourceFqid: qrFqid,
+                        customTag: text);
+                }
+            }
+        }
+
+        private string ResolveName(FQID fqid)
+        {
+            try
+            {
+                var item = Configuration.Instance.GetItemConfiguration(
+                    BarcodeReaderDefinition.PluginId, fqid.Kind, fqid.ObjectId);
+                return item?.Name ?? "";
+            }
+            catch { return ""; }
+        }
+
+        private void SendAnalyticsEvent(string eventType, string registeredMessage,
+            string sourceName, FQID sourceFqid, string customTag)
+        {
+            try
+            {
+                var header = new EventHeader
+                {
+                    ID = Guid.NewGuid(),
+                    Class = "Operational",
+                    Type = eventType,
+                    Timestamp = DateTime.Now,
+                    Name = sourceName,
+                    // Message MUST equal the registered EventType.Message verbatim so the
+                    // Rules engine can match this analytics event to the event definition.
+                    Message = registeredMessage,
+                    CustomTag = customTag ?? "",
+                    Priority = 3,
+                    Source = new EventSource { Name = sourceName, FQID = sourceFqid }
+                };
+                var ev = new AnalyticsEvent { EventHeader = header };
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.Server.NewEventCommand)
+                    {
+                        Data = ev,
+                        RelatedFQID = sourceFqid
+                    });
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to send {eventType} event: {ex.Message}");
+            }
         }
 
         // Drop log lines that carry no actionable information. Specifically the Milestone
@@ -335,6 +466,7 @@ namespace BarcodeReader.Background
 
             try
             {
+                LoadQRCodeCache();
                 StopAllHelpers();
                 LoadAndStartChannels();
             }
