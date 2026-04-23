@@ -143,6 +143,10 @@ hide:
     <div class="pi ap"><i class="mdi mdi-send"></i></div>
     <div class="pt"><span class="pn">HTTP Requests</span><span class="pd">HTTP requests actions that are more powerful and flexible.</span></div>
   </a>
+  <a class="pr" href="admin/metadata-viewer/">
+    <div class="pi ap"><i class="mdi mdi-file-tree"></i></div>
+    <div class="pt"><span class="pn">Metadata Viewer</span><span class="pd">Subscribe to a metadata channel in the Management Client and inspect the live ONVIF event stream with a syntax-highlighted XML preview</span></div>
+  </a>
   <a class="pr" href="admin/rtmp-streamer/">
     <div class="pi ap"><i class="mdi mdi-broadcast"></i></div>
     <div class="pt"><span class="pn">RTMP Streamer</span><span class="pd">Stream cameras to RTMP destinations (YouTube, Twitch, Facebook)</span></div>

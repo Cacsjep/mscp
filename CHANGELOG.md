@@ -2,8 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-24-04
+- Add: Metadata Viewer Plugin
+
 ## [2.0.2] - 2026-23-04
-- Add: QR Code Barcode Scanner
+- Add: QR Code Barcode Scanner Plugin
 - Improve: Installer regarding to OEM installations
 - Improve CertWatchdog: Discovery drivers that are using https but have not default fields from milestone drivers (custom drivers)
 - Improve CertWatchdog: Discovery also failovers servers in failover groups or hotstandby
