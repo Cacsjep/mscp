@@ -136,5 +136,12 @@
     "extraStagingFiles": [
       "Admin Plugins/BarcodeReader/plugin.def"
     ]
+  },
+  {
+    "name": "MetadataViewer",
+    "displayName": "Metadata Viewer Plugin",
+    "path": "Admin Plugins/MetadataViewer",
+    "category": "AdminPlugin",
+    "description": "Subscribe to a metadata channel in the Management Client and view the live XML stream"
   }
 ]

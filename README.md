@@ -27,6 +27,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [FlexView](Smart%20Client%20Plugins/FlexView) | Smart Client | Freeform grid-based view layout designer with drag-and-drop pane creation |
 | [ViewCarousel](Smart%20Client%20Plugins/ViewCarousel) | Smart Client | Cycle through Smart Client views inside a single view item slot |
 | [Remote Control](Smart%20Client%20Plugins/SCRemoteControl) | Smart Client | Control Smart Client remotely via REST API with Swagger UI |
+| [MetadataViewer](Admin%20Plugins/MetadataViewer) | Admin Plugin | Subscribe to a metadata channel in the Management Client and inspect the live ONVIF event stream |
 
 ## Installation
 
@@ -66,8 +67,9 @@ mscp/
 │   └── Rtsp/                      RTSP pull stream driver (H.264/H.265 + audio)
 ├── Admin Plugins/
 │   ├── RTMPStreamer/              RTMP outbound streaming plugin
-│   ├── CertWatchdog/             SSL certificate expiry monitoring plugin
-│   └── Auditor/                 User access audit plugin
+│   ├── CertWatchdog/              SSL certificate expiry monitoring plugin
+│   ├── MetadataViewer/            Live ONVIF metadata inspector (Management Client)
+│   └── Auditor/                   User access audit plugin
 ├── CommunitySDK/                    Shared library (logging, messaging, UI helpers)
 ├── MSCPlugins.sln                 Visual Studio solution (all projects)
 ├── plugins.json                   Central plugin manifest (drives CI, build, installer)

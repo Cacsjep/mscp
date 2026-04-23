@@ -26,6 +26,10 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
+plugins:
+  - search
+  - glightbox
+
 extra_css:
   - assets/css/custom.css
 
@@ -39,6 +43,7 @@ nav:
       - Barcode Reader: plugins/admin/barcode-reader.md
       - Certificate Watchdog: plugins/admin/cert-watchdog.md
       - HTTP Requests: plugins/admin/http-requests.md
+      - Metadata Viewer: plugins/admin/metadata-viewer.md
       - RTMP Streamer: plugins/admin/rtmp-streamer.md
     - Smart Client:
       - Flex Viewer: plugins/smart-client/flexview.md
