@@ -17,6 +17,10 @@ Decode QR codes and 1D/2D barcodes from live camera streams. Each detection crea
 4. Pick a camera, leave defaults, click **Save**
 5. Hold a barcode in front of the camera; detections appear in the Live Status log and on the camera timeline as bookmarks
 
+<video controls width="100%">
+  <source src="../vids/qr_usage.mp4" type="video/mp4">
+</video>
+
 ## Barcode Channels
 
 Each Barcode Channel configures one running decoder, bound to one camera. A helper process runs inside the Event Server per enabled channel, pulling JPEG frames and running them through ZXing.
