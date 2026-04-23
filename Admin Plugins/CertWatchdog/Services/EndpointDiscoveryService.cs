@@ -70,21 +70,106 @@ namespace CertWatchdog.Services
 
         private static void DiscoverFailoverServers(Dictionary<string, EndpointInfo> endpoints)
         {
-            var management = new ManagementServer(EnvironmentManager.Instance.MasterSite);
+            var site = EnvironmentManager.Instance.MasterSite;
+            var management = new ManagementServer(site);
+            var serverId = site.ServerId;
             int count = 0;
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            // 1) Cold-standby: FailoverRecorders inside FailoverGroups
+            int groupCount = 0;
             foreach (var group in management.FailoverGroupFolder.FailoverGroups)
             {
+                groupCount++;
                 foreach (var fr in group.FailoverRecorderFolder.FailoverRecorders)
                 {
+                    if (!visited.Add(fr.Path ?? fr.Id)) continue;
                     if (!fr.Enabled) continue;
 
                     AddFailoverEndpoint(endpoints, fr, group.Name, ref count);
                 }
             }
+            _log.Info($"Enumerated {groupCount} failover group(s)");
+
+            // 2) Hot-standby + group references: RecordingServerFailover entries
+            foreach (var rs in management.RecordingServerFolder.RecordingServers)
+            {
+                foreach (var rsf in rs.RecordingServerFailoverFolder.RecordingServerFailovers)
+                {
+                    // Hot standby: direct FailoverRecorder reference
+                    TryResolveAndAddFailover(endpoints, serverId, rsf.HotStandby, rs.Name, "Hot Standby", visited, ref count);
+
+                    // Primary/Secondary: these are FailoverGroup paths; resolve their FailoverRecorders
+                    TryResolveAndAddFailoverGroup(endpoints, serverId, rsf.PrimaryFailoverGroup, rs.Name, "Primary Group", visited, ref count);
+                    TryResolveAndAddFailoverGroup(endpoints, serverId, rsf.SecondaryFailoverGroup, rs.Name, "Secondary Group", visited, ref count);
+                }
+            }
 
             _log.Info($"Discovered {count} failover server HTTPS endpoint(s)");
         }
+
+        private static bool IsEmptyConfigPath(string path)
+        {
+            // Milestone reports unassigned references as e.g. "FailoverGroup[00000000-0000-0000-0000-000000000000]"
+            return string.IsNullOrEmpty(path) || path.IndexOf("00000000-0000-0000-0000-000000000000", StringComparison.Ordinal) >= 0;
+        }
+
+        private static void TryResolveAndAddFailover(
+            Dictionary<string, EndpointInfo> endpoints,
+            ServerId serverId,
+            string path,
+            string rsName,
+            string kind,
+            HashSet<string> visited,
+            ref int count)
+        {
+            if (IsEmptyConfigPath(path)) return;
+            if (!visited.Add(path)) return;
+
+            try
+            {
+                var fr = new FailoverRecorder(serverId, path);
+                _log.Info($"Resolved {kind} for recording server '{rsName}': {fr.Name} (enabled={fr.Enabled})");
+                if (!fr.Enabled) return;
+                AddFailoverEndpoint(endpoints, fr, kind, ref count);
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to resolve {kind} path '{path}' for '{rsName}': {ex.Message}");
+            }
+        }
+
+        private static void TryResolveAndAddFailoverGroup(
+            Dictionary<string, EndpointInfo> endpoints,
+            ServerId serverId,
+            string path,
+            string rsName,
+            string kind,
+            HashSet<string> visited,
+            ref int count)
+        {
+            if (IsEmptyConfigPath(path)) return;
+
+            try
+            {
+                var group = new FailoverGroup(serverId, path);
+                foreach (var fr in group.FailoverRecorderFolder.FailoverRecorders)
+                {
+                    if (!visited.Add(fr.Path ?? fr.Id)) continue;
+                    if (!fr.Enabled) continue;
+                    AddFailoverEndpoint(endpoints, fr, $"{kind} {group.Name}", ref count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to resolve {kind} path '{path}' for '{rsName}': {ex.Message}");
+            }
+        }
+
+        // Port exposed by the Milestone Failover Server's own management API.
+        // Useful as a fallback when the recording-server port (WebServerUri) is only
+        // online during an active failover takeover.
+        private const int FailoverServicePort = 8990;
 
         private static void AddFailoverEndpoint(
             Dictionary<string, EndpointInfo> endpoints,
@@ -108,9 +193,15 @@ namespace CertWatchdog.Services
                     var authority = $"https://{parsed.Authority}";
                     if (!endpoints.ContainsKey(authority))
                     {
-                        endpoints[authority] = new EndpointInfo { Url = authority, ServiceType = serviceType };
+                        var fallback = $"https://{parsed.Host}:{FailoverServicePort}";
+                        endpoints[authority] = new EndpointInfo
+                        {
+                            Url = authority,
+                            ServiceType = serviceType,
+                            FallbackUrl = fallback
+                        };
                         count++;
-                        _log.Info($"  Failover '{fr.Name}': {authority}");
+                        _log.Info($"  Failover '{fr.Name}': {authority} (fallback {fallback})");
                     }
                 }
                 catch

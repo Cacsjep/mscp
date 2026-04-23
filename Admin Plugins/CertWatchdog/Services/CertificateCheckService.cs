@@ -12,7 +12,22 @@ namespace CertWatchdog.Services
 {
     internal static class CertificateCheckService
     {
-        public static CertificateInfo CheckCertificate(string httpsUrl, string serviceType = "")
+        public static CertificateInfo CheckCertificate(string httpsUrl, string serviceType = "", string fallbackUrl = null)
+        {
+            var info = TryFetchCertificate(httpsUrl, serviceType);
+
+            if (info.Status == CertStatus.Error && !string.IsNullOrEmpty(fallbackUrl) &&
+                !string.Equals(fallbackUrl, httpsUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                var fallbackInfo = TryFetchCertificate(fallbackUrl, serviceType);
+                if (fallbackInfo.Status != CertStatus.Error)
+                    return fallbackInfo;
+            }
+
+            return info;
+        }
+
+        private static CertificateInfo TryFetchCertificate(string httpsUrl, string serviceType)
         {
             var info = new CertificateInfo
             {
@@ -95,7 +110,7 @@ namespace CertWatchdog.Services
                 {
                     try
                     {
-                        var certInfo = CheckCertificate(endpoint.Url, endpoint.ServiceType);
+                        var certInfo = CheckCertificate(endpoint.Url, endpoint.ServiceType, endpoint.FallbackUrl);
                         certInfo.SourceItemId = endpoint.SourceItemId;
                         results.Add(certInfo);
                     }
