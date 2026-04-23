@@ -2,10 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.1] - 2026-23-04
+## [2.0.2] - 2026-23-04
 - Add: QR Code Barcode Scanner
 - Improve: Installer regarding to OEM installations
-
+- Improve CertWatchdog: Discovery drivers that are using https but have not default fields from milestone drivers (custom drivers)
+- Improve CertWatchdog: Discovery also failovers servers in failover groups or hotstandby
+- 
 ## [1.9.1] - 2026-04-04
 - Add: Remote Manager Smart Client Plugin (replaces RDP plugins)
 - Fix: Flex View: Modification of existing views was not possible #58.
