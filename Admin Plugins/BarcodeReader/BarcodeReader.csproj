@@ -1,0 +1,72 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BarcodeReader</RootNamespace>
+    <AssemblyName>BarcodeReader</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <PluginName>BarcodeReader</PluginName>
+    <StopAdminClient>true</StopAdminClient>
+    <StopEventServer>true</StopEventServer>
+    <StartEventServer>true</StartEventServer>
+    <!-- Management Client is launched by the VS launch profile (Properties/launchSettings.json).
+         Leaving LaunchAdminClient=true here would open a second instance after every build. -->
+    <LaunchAdminClient>false</LaunchAdminClient>
+  </PropertyGroup>
+
+  <!-- Exclude helper subfolder from parent project's auto-glob -->
+  <ItemGroup>
+    <Compile Remove="BarcodeReaderHelper\**" />
+    <None Remove="BarcodeReaderHelper\**" />
+    <Content Remove="BarcodeReaderHelper\**" />
+    <EmbeddedResource Remove="BarcodeReaderHelper\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Admin\HelpPage.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Build dependency: ensure helper exe is built before plugin -->
+    <ProjectReference Include="BarcodeReaderHelper\BarcodeReaderHelper.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <!-- Stop BarcodeReaderHelper before shared MIPStopProcesses -->
+  <Target Name="StopHelper" BeforeTargets="MIPStopProcesses"
+          Condition="'$(CIBuild)' != 'true'">
+    <Exec Command="taskkill /F /IM BarcodeReaderHelper.exe 2&gt;nul" IgnoreExitCode="true"/>
+  </Target>
+
+  <!-- Copy BarcodeReaderHelper output after shared MIPDeploy -->
+  <Target Name="DeployHelper" AfterTargets="MIPDeploy" BeforeTargets="MIPLaunch"
+          Condition="'$(CIBuild)' != 'true' and '$(PluginName)' != ''">
+    <!-- Helper output path has no $(Platform) subfolder because the helper csproj sets
+         AppendRuntimeIdentifierToOutputPath=false and doesn't declare Platforms. -->
+    <Exec Command="xcopy /Y /D /E /I &quot;$(ProjectDir)BarcodeReaderHelper\bin\$(Configuration)\net48\*&quot; &quot;$(MIPPluginDir)&quot;" IgnoreExitCode="true"/>
+  </Target>
+
+</Project>
