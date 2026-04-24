@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2026-24-04
+- Improve Timelapse: Continuous and Event-based modes backed by MIP SequenceDataSource (RecordingSequence)
+- Improve Timelapse: Preflight card shows sequences, recorded time, and coverage with per-camera breakdown and loading spinner
+- Improve Timelapse: Live segment-aware output estimate (real frame counts, not naive window ÷ interval)
+- Improve Timelapse: Multi-camera union timeline with mode-dependent fallbacks (dimmed last frame + badge for Continuous, black "no event" placeholder for Event-based)
+- Improve Timelapse: UTC-normalized MIP queries with lookback to catch sequences that span the start of the window
+- Improve Timelapse: Redesigned idle view with card-style layout, bold-Run tooltips, and close-preview button
+- Improve Timelapse: Logging to MIPLog.txt under `Timelapse` and `Timelapse.SequenceQuery` categories
+
 ## [2.1.0] - 2026-24-04
 - Add: Metadata Viewer Plugin
 

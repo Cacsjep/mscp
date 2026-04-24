@@ -12,6 +12,64 @@
     <external:ViewItemWpfUserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
+        <!-- Dark tooltip for plain-string content. Wraps at 340 px so text never clips.
+             The template uses a TextBlock bound to Content instead of ContentPresenter because
+             WPF's ContentPresenter does NOT honor TextWrapping for auto-generated string TextBlocks. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Placement" Value="Right"/>
+            <Setter Property="HorizontalOffset" Value="-2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="#FF2A2A2A"
+                                BorderBrush="#FF444444"
+                                BorderThickness="1"
+                                Padding="10,8"
+                                CornerRadius="2">
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       TextWrapping="Wrap"
+                                       MaxWidth="340"
+                                       Foreground="#FFD0D0D0"
+                                       FontSize="12"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Rich-content tooltip (StackPanel, multiple TextBlocks) for the Mode help icon. -->
+        <Style x:Key="RichToolTip" TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="#FF2A2A2A"
+                                BorderBrush="#FF444444"
+                                BorderThickness="1"
+                                Padding="10,8"
+                                CornerRadius="2"
+                                MaxWidth="360">
+                            <Border.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextWrapping" Value="Wrap"/>
+                                    <Setter Property="Foreground" Value="#FFD0D0D0"/>
+                                    <Setter Property="FontSize" Value="12"/>
+                                </Style>
+                            </Border.Resources>
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Keep tooltips open while the cursor hovers the anchor (default WPF auto-hides after 5 s). -->
+        <Style x:Key="PersistentToolTipHost" TargetType="FrameworkElement">
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="150"/>
+            <Setter Property="ToolTipService.BetweenShowDelay" Value="0"/>
+        </Style>
+
         <!-- Dark Button Style (from SCRemoteControl) -->
         <Style x:Key="DarkButton" TargetType="Button">
             <Setter Property="Background" Value="#FF2A2A2A"/>
@@ -140,6 +198,10 @@
             <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItem}"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <!-- Keep tooltips open as long as the mouse hovers the combo. -->
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="150"/>
+            <Setter Property="ToolTipService.BetweenShowDelay" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBox">
@@ -317,6 +379,71 @@
 
                         <!-- Settings - two column -->
                         <TextBlock Text="SETTINGS" Style="{StaticResource LabelText}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Mode" Style="{StaticResource LabelText}"/>
+                        <ComboBox x:Name="modeCombo" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"
+                                  ToolTip="Continuous: permanent recordings, e.g. construction site. Event-based: motion or trigger-driven recordings, sampled per event."/>
+
+                        <!-- Continuous-only fields -->
+                        <Grid x:Name="continuousFields" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Frame Interval" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="intervalCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,0"
+                                      ToolTip="Spacing between sampled frames across the selected time range. Smaller intervals yield smoother but longer timelapses. Gaps with no recording are skipped automatically."/>
+                        </Grid>
+
+                        <!-- Event-only fields -->
+                        <Grid x:Name="eventFields" Margin="0,0,0,8" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Interval per event" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="eventIntervalCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8">
+                                <ComboBox.ToolTip>
+                                    <ToolTip Style="{StaticResource RichToolTip}">
+                                        <TextBlock TextWrapping="Wrap" MaxWidth="340">Time between sampled frames inside each recording event. The first frame is always included, then additional frames every N seconds until <Run FontWeight="Bold">Max frames / event</Run> is reached.</TextBlock>
+                                    </ToolTip>
+                                </ComboBox.ToolTip>
+                            </ComboBox>
+
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="Max frames / event" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="maxPerEventCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8">
+                                <ComboBox.ToolTip>
+                                    <ToolTip Style="{StaticResource RichToolTip}">
+                                        <TextBlock TextWrapping="Wrap" MaxWidth="340">Upper bound on frames taken from a single event. Prevents one long recording from dominating the timelapse. A 20 s clip with <Run FontWeight="Bold">Interval per event</Run> of 2 s gives 10 frames. The cap only kicks in for longer events.</TextBlock>
+                                    </ToolTip>
+                                </ComboBox.ToolTip>
+                            </ComboBox>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Min frames / event" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="minPerEventCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}">
+                                <ComboBox.ToolTip>
+                                    <ToolTip Style="{StaticResource RichToolTip}">
+                                        <TextBlock TextWrapping="Wrap" MaxWidth="340">Lower bound on frames per event. If an event is too short for <Run FontWeight="Bold">Interval per event</Run> to produce this many frames, they are distributed evenly across its duration instead.</TextBlock>
+                                    </ToolTip>
+                                </ComboBox.ToolTip>
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- Shared FPS/Resolution -->
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -330,14 +457,13 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Frame Interval" Style="{StaticResource LabelText}"/>
-                            <ComboBox x:Name="intervalCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Output FPS" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="fpsCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"
+                                      ToolTip="Playback speed of the generated MP4. Total frames ÷ FPS = video length. Lower FPS plays better for short frame counts. 24 to 30 feels like a normal video but requires more frames."/>
 
-                            <TextBlock Grid.Row="0" Grid.Column="2" Text="Output FPS" Style="{StaticResource LabelText}"/>
-                            <ComboBox x:Name="fpsCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Resolution" Style="{StaticResource LabelText}"/>
-                            <ComboBox x:Name="resolutionCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="Resolution" Style="{StaticResource LabelText}"/>
+                            <ComboBox x:Name="resolutionCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"
+                                      ToolTip="Scale applied to each camera frame before it is placed in the grid. Half / Quarter shrinks the output file and speeds up encoding at the cost of image detail."/>
                         </Grid>
 
                         <Separator Background="#FF30363D" Margin="0,12"/>
@@ -347,7 +473,9 @@
                             <StackPanel Margin="0,8,0,0">
                                 <CheckBox x:Name="showTimestampCheck" Content="Show Timestamp"
                                           Foreground="#FFD0D0D0" FontSize="12" Margin="0,0,0,8"
-                                          IsChecked="False"/>
+                                          IsChecked="False"
+                                          ToolTipService.ShowDuration="60000" ToolTipService.InitialShowDelay="150"
+                                          ToolTip="Burns the wall-clock timestamp of each source frame onto the output video. Useful for construction-site timelapses so viewers can tell which time of day a frame was captured."/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -366,19 +494,34 @@
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Position" Style="{StaticResource LabelText}"/>
-                                    <ComboBox x:Name="tsPositionCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+                                    <ComboBox x:Name="tsPositionCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"
+                                              ToolTip="Corner of the full canvas where the timestamp is drawn. Applies to the whole grid, not per camera cell."/>
 
                                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Format" Style="{StaticResource LabelText}"/>
-                                    <ComboBox x:Name="tsFormatCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+                                    <ComboBox x:Name="tsFormatCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8">
+                                        <ComboBox.ToolTip>
+                                            <ToolTip Style="{StaticResource RichToolTip}">
+                                                <TextBlock TextWrapping="Wrap" MaxWidth="340">Date/time format for the overlay. <Run FontWeight="Bold">Time only</Run> is useful when the date is already in the filename. <Run FontWeight="Bold">Date + Time</Run> is the safest default for evidence.</TextBlock>
+                                            </ToolTip>
+                                        </ComboBox.ToolTip>
+                                    </ComboBox>
 
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Color" Style="{StaticResource LabelText}"/>
-                                    <ComboBox x:Name="tsColorCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+                                    <ComboBox x:Name="tsColorCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"
+                                              ToolTip="Color of the overlay text. Pick a color with high contrast against your typical scene."/>
 
                                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Background" Style="{StaticResource LabelText}"/>
-                                    <ComboBox x:Name="tsBgCombo" Grid.Row="3" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"/>
+                                    <ComboBox x:Name="tsBgCombo" Grid.Row="3" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8">
+                                        <ComboBox.ToolTip>
+                                            <ToolTip Style="{StaticResource RichToolTip}">
+                                                <TextBlock TextWrapping="Wrap" MaxWidth="340">Semi-transparent rectangle drawn behind the text so it stays readable when the scene brightness changes. Select <Run FontWeight="Bold">None</Run> for no background.</TextBlock>
+                                            </ToolTip>
+                                        </ComboBox.ToolTip>
+                                    </ComboBox>
 
                                     <TextBlock Grid.Row="4" Grid.Column="0" Text="Font Size" Style="{StaticResource LabelText}"/>
-                                    <ComboBox x:Name="tsFontSizeCombo" Grid.Row="5" Grid.Column="0" Style="{StaticResource DarkComboBox}"/>
+                                    <ComboBox x:Name="tsFontSizeCombo" Grid.Row="5" Grid.Column="0" Style="{StaticResource DarkComboBox}"
+                                              ToolTip="Pixel size of the overlay text. Choose larger sizes for 4K canvases or when the timelapse will be viewed on small screens."/>
                                 </Grid>
                             </StackPanel>
                         </Expander>
@@ -397,13 +540,26 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Max Workers" Style="{StaticResource LabelText}"/>
-                                    <ComboBox x:Name="workersCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}"/>
+                                    <ComboBox x:Name="workersCombo" Grid.Row="1" Grid.Column="0" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"
+                                              ToolTip="Number of parallel frame-fetch threads. More workers speed up generation when the recording server and network can keep up, but too many can overload the server and slow things down. 5 is a good default."/>
 
                                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Batch Size" Style="{StaticResource LabelText}"/>
-                                    <ComboBox x:Name="batchSizeCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}"/>
+                                    <ComboBox x:Name="batchSizeCombo" Grid.Row="1" Grid.Column="2" Style="{StaticResource DarkComboBox}" Margin="0,0,0,8"
+                                              ToolTip="How many frames are fetched before being handed to the FFmpeg encoder. Larger batches use more memory but let fetch and encode overlap better. 50 is fine for most cases."/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Event Merge Gap" Style="{StaticResource LabelText}"/>
+                                    <ComboBox x:Name="mergeGapCombo" Grid.Row="3" Grid.Column="0" Style="{StaticResource DarkComboBox}">
+                                        <ComboBox.ToolTip>
+                                            <ToolTip Style="{StaticResource RichToolTip}">
+                                                <TextBlock TextWrapping="Wrap" MaxWidth="340">Event-based mode only. Two recording blocks separated by less than this gap are merged into one event, so you don't get duplicate <Run FontWeight="Bold">first frames</Run> when the server fragments a continuous motion into several short sequences.</TextBlock>
+                                            </ToolTip>
+                                        </ComboBox.ToolTip>
+                                    </ComboBox>
                                 </Grid>
                             </StackPanel>
                         </Expander>
@@ -439,6 +595,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Orientation="Horizontal">
                             <Button x:Name="playPauseButton" Content="&#9654;" Style="{StaticResource DarkButton}"
@@ -451,6 +608,10 @@
                                 Style="{StaticResource DarkSlider}"/>
                         <TextBlock x:Name="playbackTimeText" Grid.Column="2" Foreground="#FF8B949E"
                                    FontSize="11" VerticalAlignment="Center" Text="00:00 / 00:00"/>
+                        <Button x:Name="closePreviewButton" Grid.Column="3" Content="&#10005;"
+                                Style="{StaticResource DarkButton}"
+                                Click="OnClosePreviewClick" FontSize="14" Padding="8,4" Margin="12,0,0,0"
+                                ToolTip="Close preview and return to configuration"/>
                     </Grid>
                 </Border>
 
@@ -474,55 +635,129 @@
                                      Background="#FF30363D" Foreground="#FF238636" Minimum="0"/>
                     </StackPanel>
 
-                    <!-- Idle placeholder with estimate -->
-                    <StackPanel x:Name="idlePlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40">
-                        <TextBlock Text="&#9202;" FontSize="48" HorizontalAlignment="Center"
-                                   Margin="0,0,0,20" Foreground="#FF58A6FF"/>
+                    <!-- Idle placeholder: hero icon, preflight card, estimate card -->
+                    <ScrollViewer x:Name="idlePlaceholder" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled" Padding="40,24">
+                        <StackPanel HorizontalAlignment="Center" MaxWidth="560">
 
-                        <!-- Default hint (shown when no cameras/range selected) -->
-                        <TextBlock x:Name="idleHintText"
-                                   Text="Select cameras and time range, then click Generate"
-                                   Foreground="#FF8B949E" FontSize="14" HorizontalAlignment="Center"
-                                   TextAlignment="Center" TextWrapping="Wrap"/>
+                            <!-- Hero icon: spinning during preflight, static clock otherwise -->
+                            <Grid HorizontalAlignment="Center" Margin="0,0,0,18" Width="64" Height="64">
+                                <fa5:ImageAwesome x:Name="idleClockIcon" Icon="Regular_Clock"
+                                                  Foreground="#FF58A6FF" Width="54" Height="54"/>
+                                <fa5:ImageAwesome x:Name="idleSpinnerIcon" Icon="Solid_CircleNotch" Spin="True" SpinDuration="1.2"
+                                                  Foreground="#FF58A6FF" Width="58" Height="58"
+                                                  Visibility="Collapsed"/>
+                            </Grid>
 
-                        <!-- Estimate grid (shown when cameras + range are valid) -->
-                        <Grid x:Name="estimateGrid" Visibility="Collapsed" HorizontalAlignment="Center">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                            <!-- Default hint (no cameras/range) -->
+                            <TextBlock x:Name="idleHintText"
+                                       Text="Select cameras and time range, then click Generate"
+                                       Foreground="#FFB1BAC4" FontSize="15" HorizontalAlignment="Center"
+                                       TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,4"/>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Cameras" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
-                            <TextBlock Grid.Row="0" Grid.Column="2" x:Name="estCameras" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+                            <!-- Preflight card: sequences found -->
+                            <Border x:Name="preflightCard" Visibility="Collapsed"
+                                    Background="#FF21262D" BorderBrush="#FF30363D" BorderThickness="1"
+                                    CornerRadius="6" Padding="18,14" Margin="0,18,0,0" MinWidth="420">
+                                <StackPanel>
+                                    <TextBlock Text="RECORDING SEQUENCES" Foreground="#FF666666"
+                                               FontSize="10" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Layout" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" x:Name="estLayout" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+                                    <!-- Headline metrics row -->
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Resolution" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
-                            <TextBlock Grid.Row="2" Grid.Column="2" x:Name="estResolution" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock x:Name="preflightSeqCount" Text="0"
+                                                       Foreground="#FFE6EDF3" FontSize="22" FontWeight="SemiBold"/>
+                                            <TextBlock Text="sequences" Foreground="#FF8B949E" FontSize="11"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock x:Name="preflightRecorded" Text="0s"
+                                                       Foreground="#FFE6EDF3" FontSize="22" FontWeight="SemiBold"/>
+                                            <TextBlock Text="recorded" Foreground="#FF8B949E" FontSize="11"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock x:Name="preflightCoverage" Text="0%"
+                                                       Foreground="#FFE6EDF3" FontSize="22" FontWeight="SemiBold"/>
+                                            <TextBlock Text="coverage (max)" Foreground="#FF8B949E" FontSize="11"/>
+                                        </StackPanel>
+                                    </Grid>
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Time Span" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
-                            <TextBlock Grid.Row="3" Grid.Column="2" x:Name="estTimeSpan" Foreground="#FFE6EDF3" FontSize="12" Margin="0,0,0,2"/>
+                                    <Separator Background="#FF30363D" Margin="0,4,0,8"/>
 
-                            <Separator Grid.Row="4" Grid.ColumnSpan="3" Background="#FF30363D" Margin="0,8"/>
+                                    <!-- Per-camera expandable breakdown -->
+                                    <Expander x:Name="preflightExpander"
+                                              Foreground="#FF8B949E" FontSize="12" IsExpanded="False">
+                                        <Expander.Header>
+                                            <TextBlock Text="Per-camera breakdown" Foreground="#FF8B949E" FontSize="12"/>
+                                        </Expander.Header>
+                                        <StackPanel x:Name="preflightPerCameraPanel" Margin="0,8,0,0"/>
+                                    </Expander>
 
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Frames" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
-                            <TextBlock Grid.Row="5" Grid.Column="2" x:Name="estFrames" Foreground="#FF58A6FF" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,2"/>
+                                    <!-- Loading indicator (row) -->
+                                    <StackPanel x:Name="preflightLoadingRow" Orientation="Horizontal"
+                                                Visibility="Collapsed" Margin="0,4,0,0">
+                                        <fa5:ImageAwesome Icon="Solid_CircleNotch" Spin="True" SpinDuration="1.2"
+                                                          Foreground="#FF58A6FF" Width="12" Height="12"
+                                                          VerticalAlignment="Center"/>
+                                        <TextBlock Text="Querying server..." Foreground="#FF8B949E"
+                                                   FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Video" Foreground="#FF666666" FontSize="12" Margin="0,0,0,2"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" x:Name="estVideo" Foreground="#FF58A6FF" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,2"/>
-                        </Grid>
-                    </StackPanel>
+                            <!-- Output estimate card -->
+                            <Border x:Name="estimateCard" Visibility="Collapsed"
+                                    Background="#FF21262D" BorderBrush="#FF30363D" BorderThickness="1"
+                                    CornerRadius="6" Padding="18,14" Margin="0,12,0,0" MinWidth="420">
+                                <StackPanel>
+                                    <TextBlock Text="OUTPUT ESTIMATE" Foreground="#FF666666"
+                                               FontSize="10" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+                                    <Grid x:Name="estimateGrid">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Cameras" Foreground="#FF8B949E" FontSize="12" Margin="0,2,0,3"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="estCameras" Foreground="#FFE6EDF3" FontSize="13" Margin="0,2,0,3"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Layout" Foreground="#FF8B949E" FontSize="12" Margin="0,2,0,3"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="estLayout" Foreground="#FFE6EDF3" FontSize="13" Margin="0,2,0,3"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Resolution" Foreground="#FF8B949E" FontSize="12" Margin="0,2,0,3"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="estResolution" Foreground="#FFE6EDF3" FontSize="13" Margin="0,2,0,3"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Time Span" Foreground="#FF8B949E" FontSize="12" Margin="0,2,0,3"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="estTimeSpan" Foreground="#FFE6EDF3" FontSize="13" Margin="0,2,0,3" TextWrapping="Wrap"/>
+
+                                        <Separator Grid.Row="4" Grid.ColumnSpan="2" Background="#FF30363D" Margin="0,8"/>
+
+                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Frames" Foreground="#FF8B949E" FontSize="12" Margin="0,2,0,3"/>
+                                        <TextBlock Grid.Row="5" Grid.Column="1" x:Name="estFrames" Foreground="#FF58A6FF" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,3"/>
+
+                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Video" Foreground="#FF8B949E" FontSize="12" Margin="0,2,0,3"/>
+                                        <TextBlock Grid.Row="6" Grid.Column="1" x:Name="estVideo" Foreground="#FF58A6FF" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,3"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </DockPanel>
         </Grid>

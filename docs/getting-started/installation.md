@@ -42,28 +42,30 @@ hide:
 
 <div class="download-grid">
   <div class="download-card">
-    <h3>Unified Installer <span class="rec">Recommended</span></h3>
-    <p>Single installer with component selection.</p>
+    <h3>Installer <span class="rec">Recommended</span></h3>
+    <small>Single installer with component selection.</small>
     <a id="installer-download" href="https://github.com/Cacsjep/mscp/releases/latest" class="md-button md-button--primary" style="width:100%;text-align:center;font-weight:400">Download MSCPlugins-Setup.msi</a>
-    <small>Choose exactly which plugins and drivers to install.</small>
+    <small>Minimum Version: Milestone XProtect 2023 R3</small>
   </div>
   <div class="download-card">
-    <h3>Individual ZIPs</h3>
-    <p>Download only the plugin you need.</p>
+    <h3>Plugins ZIPs</h3>
+    <small>A la carte plugin downloads, please read below Manual Installation info.</small>
     <a href="https://github.com/Cacsjep/mscp/releases/latest" class="md-button" style="width:100%;text-align:center;font-weight:400">Browse Releases</a>
-    <small>Extract to the correct Milestone directory and restart the relevant service.</small>
+    <small>Minimum Version: Milestone XProtect 2023 R3</small>
   </div>
 </div>
-
-!!! warning "Minimum Version"
-    All plugins and drivers require **Milestone XProtect 2023 R3** or newer.
 
 !!! info "Windows SmartScreen"
     The installer is not code-signed, so Windows SmartScreen may show a **"Windows protected your PC"** dialog when you run it. This is normal for unsigned open-source software. Click **More info** and then **Run anyway** to proceed with the installation.
 
+## Installation Video
+<video controls width="100%">
+  <source src="../vids/installation.mp4" type="video/mp4">
+</video>
+
 ---
 
-## Unified Installer
+## Installer
 
 1. Download `MSCPlugins-vX.X-Setup.msi` from the [Releases](https://github.com/Cacsjep/mscp/releases) page
 2. Run as **Administrator**
@@ -73,7 +75,7 @@ hide:
     The installer handles stopping/starting the required Milestone services automatically
 ---
 
-## Manual Installation (ZIP)
+## Plugins ZIPs - Manual Installation
 
 Individual ZIPs for each plugin/driver are available on the [Releases](https://github.com/Cacsjep/mscp/releases) page.
 
