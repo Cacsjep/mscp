@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using CommunitySDK;
 using Microsoft.Win32;
 using Timelapse.Services;
 using VideoOS.Platform;
@@ -22,12 +23,20 @@ namespace Timelapse.Client
 {
     public partial class TimelapseViewItemWpfUserControl : ViewItemWpfUserControl
     {
+        private static readonly PluginLog Log = new PluginLog("Timelapse");
+
         private readonly ObservableCollection<CameraEntry> _cameras = new ObservableCollection<CameraEntry>();
         private CancellationTokenSource _cts;
         private string _currentVideoPath;
         private DispatcherTimer _playbackTimer;
         private bool _isSeeking;
         private bool _wasPlayingBeforeSeek;
+
+        // Preflight (sequence list per camera) - debounced
+        private DispatcherTimer _preflightDebounce;
+        private CancellationTokenSource _preflightCts;
+        private IReadOnlyDictionary<Guid, IReadOnlyList<RecordingSegment>> _preflightSegments
+            = new Dictionary<Guid, IReadOnlyList<RecordingSegment>>();
 
         public TimelapseViewItemWpfUserControl()
         {
@@ -95,7 +104,13 @@ namespace Timelapse.Client
                 batchSizeCombo.Items.Add(new BatchSizeOption(b));
             batchSizeCombo.SelectedIndex = 2; // 50
 
-            // Frame interval options
+            // Mode
+            modeCombo.Items.Add(new ModeOption("Continuous", TimelapseMode.Continuous));
+            modeCombo.Items.Add(new ModeOption("Event-based", TimelapseMode.EventBased));
+            modeCombo.SelectedIndex = 0;
+            modeCombo.SelectionChanged += OnModeChanged;
+
+            // Frame interval options (continuous)
             intervalCombo.Items.Add(new IntervalOption("Every 10 seconds", TimeSpan.FromSeconds(10)));
             intervalCombo.Items.Add(new IntervalOption("Every 30 seconds", TimeSpan.FromSeconds(30)));
             intervalCombo.Items.Add(new IntervalOption("Every 1 minute", TimeSpan.FromMinutes(1)));
@@ -105,6 +120,33 @@ namespace Timelapse.Client
             intervalCombo.Items.Add(new IntervalOption("Every 30 minutes", TimeSpan.FromMinutes(30)));
             intervalCombo.Items.Add(new IntervalOption("Every 1 hour", TimeSpan.FromHours(1)));
             intervalCombo.SelectedIndex = 2; // 1 minute
+
+            // Event-based interval (shorter options)
+            eventIntervalCombo.Items.Add(new IntervalOption("Every 1 second", TimeSpan.FromSeconds(1)));
+            eventIntervalCombo.Items.Add(new IntervalOption("Every 2 seconds", TimeSpan.FromSeconds(2)));
+            eventIntervalCombo.Items.Add(new IntervalOption("Every 5 seconds", TimeSpan.FromSeconds(5)));
+            eventIntervalCombo.Items.Add(new IntervalOption("Every 10 seconds", TimeSpan.FromSeconds(10)));
+            eventIntervalCombo.Items.Add(new IntervalOption("Every 30 seconds", TimeSpan.FromSeconds(30)));
+            eventIntervalCombo.Items.Add(new IntervalOption("Every 1 minute", TimeSpan.FromMinutes(1)));
+            eventIntervalCombo.SelectedIndex = 3; // 10s
+
+            // Max frames per event
+            foreach (var n in new[] { 1, 3, 5, 10, 20, 50, 100 })
+                maxPerEventCombo.Items.Add(new CountOption(n));
+            maxPerEventCombo.SelectedIndex = 3; // 10
+
+            // Min frames per event
+            foreach (var n in new[] { 1, 2, 3, 5 })
+                minPerEventCombo.Items.Add(new CountOption(n));
+            minPerEventCombo.SelectedIndex = 0; // 1
+
+            // Event merge gap (Advanced)
+            mergeGapCombo.Items.Add(new GapOption("None", TimeSpan.Zero));
+            mergeGapCombo.Items.Add(new GapOption("1 s", TimeSpan.FromSeconds(1)));
+            mergeGapCombo.Items.Add(new GapOption("2 s", TimeSpan.FromSeconds(2)));
+            mergeGapCombo.Items.Add(new GapOption("5 s", TimeSpan.FromSeconds(5)));
+            mergeGapCombo.Items.Add(new GapOption("10 s", TimeSpan.FromSeconds(10)));
+            mergeGapCombo.SelectedIndex = 2; // 2 s
 
             // Output FPS
             foreach (var fps in new[] { 5, 10, 15, 24, 30 })
@@ -186,15 +228,33 @@ namespace Timelapse.Client
                     }
                 }));
 
-            // Update estimate when settings change
+            // Update estimate when settings change (fast, no server call)
             intervalCombo.SelectionChanged += (s, e) => UpdateEstimate();
+            eventIntervalCombo.SelectionChanged += (s, e) => UpdateEstimate();
+            maxPerEventCombo.SelectionChanged += (s, e) => UpdateEstimate();
+            minPerEventCombo.SelectionChanged += (s, e) => UpdateEstimate();
+            mergeGapCombo.SelectionChanged += (s, e) => UpdateEstimate();
             fpsCombo.SelectionChanged += (s, e) => UpdateEstimate();
-            startDatePicker.SelectedDateChanged += (s, e) => UpdateEstimate();
-            endDatePicker.SelectedDateChanged += (s, e) => UpdateEstimate();
-            startHourCombo.SelectionChanged += (s, e) => UpdateEstimate();
-            startMinuteCombo.SelectionChanged += (s, e) => UpdateEstimate();
-            endHourCombo.SelectionChanged += (s, e) => UpdateEstimate();
-            endMinuteCombo.SelectionChanged += (s, e) => UpdateEstimate();
+
+            // Preflight (debounced, only on cameras/start/end changes)
+            _preflightDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _preflightDebounce.Tick += async (s, e) => { _preflightDebounce.Stop(); await RunPreflightAsync(); };
+
+            _cameras.CollectionChanged += (s, e) => SchedulePreflight();
+            startDatePicker.SelectedDateChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+            endDatePicker.SelectedDateChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+            startHourCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+            startMinuteCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+            endHourCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+            endMinuteCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+        }
+
+        private void OnModeChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var mode = GetSelectedMode();
+            continuousFields.Visibility = mode == TimelapseMode.Continuous ? Visibility.Visible : Visibility.Collapsed;
+            eventFields.Visibility = mode == TimelapseMode.EventBased ? Visibility.Visible : Visibility.Collapsed;
+            UpdateEstimate();
         }
 
         #endregion
@@ -283,6 +343,141 @@ namespace Timelapse.Client
 
         #endregion
 
+        #region Preflight
+
+        private void SchedulePreflight()
+        {
+            _preflightDebounce?.Stop();
+            _preflightDebounce?.Start();
+        }
+
+        private void SetPreflightLoading(bool loading)
+        {
+            preflightLoadingRow.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
+            idleClockIcon.Visibility = loading ? Visibility.Collapsed : Visibility.Visible;
+            idleSpinnerIcon.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private async Task RunPreflightAsync()
+        {
+            var range = GetTimeRange();
+            if (range == null || _cameras.Count == 0)
+            {
+                Log.Info($"Preflight skipped (cameras={_cameras.Count}, range={(range == null ? "null" : "ok")})");
+                preflightCard.Visibility = Visibility.Collapsed;
+                SetPreflightLoading(false);
+                _preflightSegments = new Dictionary<Guid, IReadOnlyList<RecordingSegment>>();
+                UpdateEstimate();
+                return;
+            }
+
+            _preflightCts?.Cancel();
+            _preflightCts = new CancellationTokenSource();
+            var token = _preflightCts.Token;
+
+            var (start, end) = range.Value;
+            var cameras = _cameras.ToList();
+
+            Log.Info($"Preflight start: cams={cameras.Count} range={start:O}..{end:O}");
+
+            // Show card + loading spinner immediately; keep any previous values visible until replaced.
+            preflightCard.Visibility = Visibility.Visible;
+            SetPreflightLoading(true);
+
+            var perCam = new Dictionary<Guid, (string name, IReadOnlyList<RecordingSegment> segs)>();
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    foreach (var cam in cameras)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        using (var q = new SequenceQuery(cam.Item))
+                        {
+                            var segs = q.GetRecordingSegments(start, end);
+                            perCam[cam.Item.FQID.ObjectId] = (cam.Name, segs);
+                        }
+                    }
+                }, token);
+            }
+            catch (OperationCanceledException)
+            {
+                Log.Info("Preflight cancelled");
+                // A newer query is running; let IT clear the spinner.
+                return;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Preflight failed", ex);
+                SetPreflightLoading(false);
+                preflightSeqCount.Text = "–";
+                preflightRecorded.Text = ex.Message.Length > 40 ? ex.Message.Substring(0, 40) + "…" : ex.Message;
+                preflightCoverage.Text = "error";
+                return;
+            }
+
+            if (token.IsCancellationRequested) return;
+
+            _preflightSegments = perCam.ToDictionary(p => p.Key, p => p.Value.segs);
+
+            int totalSeq = 0;
+            long totalTicks = 0;
+            foreach (var p in perCam.Values)
+            {
+                totalSeq += p.segs.Count;
+                foreach (var s in p.segs) totalTicks += s.Duration.Ticks;
+            }
+            var totalRecorded = TimeSpan.FromTicks(totalTicks);
+            var totalWindow = (end - start);
+            double coverage = 0;
+            if (totalWindow.Ticks > 0 && perCam.Count > 0)
+            {
+                foreach (var p in perCam.Values)
+                {
+                    long camTicks = 0;
+                    foreach (var s in p.segs) camTicks += s.Duration.Ticks;
+                    var pct = (double)camTicks / totalWindow.Ticks;
+                    if (pct > coverage) coverage = pct;
+                }
+            }
+
+            SetPreflightLoading(false);
+            preflightSeqCount.Text = totalSeq.ToString();
+            preflightRecorded.Text = FormatDuration(totalRecorded.TotalSeconds);
+            preflightCoverage.Text = $"{coverage * 100:F0}%";
+
+            Log.Info($"Preflight done: totalSeq={totalSeq} totalRecorded={totalRecorded} coverageMax={coverage * 100:F1}%");
+            foreach (var p in perCam.Values)
+            {
+                long camTicksLog = 0;
+                foreach (var s in p.segs) camTicksLog += s.Duration.Ticks;
+                Log.Info($"  cam='{p.name}' seq={p.segs.Count} recorded={TimeSpan.FromTicks(camTicksLog)}");
+            }
+
+            preflightPerCameraPanel.Children.Clear();
+            foreach (var p in perCam.Values)
+            {
+                long camTicks = 0;
+                foreach (var s in p.segs) camTicks += s.Duration.Ticks;
+                var camDur = TimeSpan.FromTicks(camTicks);
+                var line = new TextBlock
+                {
+                    Text = $"{p.name}: {p.segs.Count} seq · {FormatDuration(camDur.TotalSeconds)}",
+                    Foreground = p.segs.Count == 0
+                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF8, 0x5A, 0x5A))
+                        : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD0, 0xD0, 0xD0)),
+                    FontSize = 12,
+                    Margin = new Thickness(0, 2, 0, 2)
+                };
+                preflightPerCameraPanel.Children.Add(line);
+            }
+
+            UpdateEstimate();
+        }
+
+        #endregion
+
         #region Estimate
 
         private void UpdateEstimate()
@@ -291,28 +486,69 @@ namespace Timelapse.Client
             if (range == null || _cameras.Count == 0)
             {
                 idleHintText.Visibility = Visibility.Visible;
-                estimateGrid.Visibility = Visibility.Collapsed;
+                estimateCard.Visibility = Visibility.Collapsed;
                 return;
             }
 
             var (start, end) = range.Value;
-            var interval = GetSelectedInterval();
             var fps = GetSelectedFps();
-            var timestamps = FrameGrabberService.GenerateTimestamps(start, end, interval);
-            int frameCount = timestamps.Count;
-            double durationSec = (double)frameCount / fps;
+            var mode = GetSelectedMode();
             var totalSpan = end - start;
             var resLabel = (resolutionCombo.SelectedItem as ResolutionOption)?.Label ?? "Original";
 
+            // Pick timestamps the same way Generate will, using preflight segments if present.
+            List<DateTime> timestamps = BuildTimestampsFromPreflight(mode, start, end);
+            int frameCount = timestamps.Count;
+            double durationSec = (double)frameCount / fps;
+
             idleHintText.Visibility = Visibility.Collapsed;
-            estimateGrid.Visibility = Visibility.Visible;
+            estimateCard.Visibility = Visibility.Visible;
 
             estCameras.Text = $"{_cameras.Count}";
             estLayout.Text = GetLayoutDescription(_cameras.Count);
             estResolution.Text = resLabel;
-            estTimeSpan.Text = $"{FormatDuration(totalSpan.TotalSeconds)}  ({(intervalCombo.SelectedItem as IntervalOption)?.Label})";
+
+            string intervalLabel = mode == TimelapseMode.Continuous
+                ? (intervalCombo.SelectedItem as IntervalOption)?.Label ?? ""
+                : $"{(eventIntervalCombo.SelectedItem as IntervalOption)?.Label}, max {GetMaxPerEvent()} / event";
+
+            estTimeSpan.Text = $"{FormatDuration(totalSpan.TotalSeconds)}  ({intervalLabel})";
             estFrames.Text = $"~{frameCount}";
             estVideo.Text = $"{FormatDuration(durationSec)} @ {fps} FPS";
+        }
+
+        /// <summary>
+        /// Produces the timestamp list that Generate will use, based on preflight segments.
+        /// If preflight hasn't run yet, falls back to naive interval across the full range.
+        /// </summary>
+        private List<DateTime> BuildTimestampsFromPreflight(TimelapseMode mode, DateTime start, DateTime end)
+        {
+            var perCameraSegs = new List<IReadOnlyList<RecordingSegment>>();
+            foreach (var cam in _cameras)
+            {
+                if (_preflightSegments.TryGetValue(cam.Item.FQID.ObjectId, out var segs))
+                    perCameraSegs.Add(segs);
+            }
+
+            if (perCameraSegs.Count == 0)
+            {
+                // Preflight not yet available - approximate with naive interval
+                var interval = mode == TimelapseMode.Continuous ? GetSelectedInterval() : GetSelectedEventInterval();
+                return FrameGrabberService.GenerateTimestamps(start, end, interval);
+            }
+
+            var union = TimestampGenerator.Union(perCameraSegs);
+            if (union.Count == 0) return new List<DateTime>();
+
+            if (mode == TimelapseMode.Continuous)
+                return TimestampGenerator.GenerateContinuous(union, GetSelectedInterval());
+
+            return TimestampGenerator.GenerateEventBased(
+                union,
+                GetSelectedEventInterval(),
+                GetMaxPerEvent(),
+                GetMinPerEvent(),
+                GetSelectedMergeGap());
         }
 
         #endregion
@@ -337,16 +573,63 @@ namespace Timelapse.Client
             }
 
             var (start, end) = range.Value;
-            var interval = GetSelectedInterval();
+            var mode = GetSelectedMode();
             var fps = GetSelectedFps();
             var scale = GetSelectedResolution();
             var maxWorkers = GetSelectedWorkers();
             var batchSize = GetSelectedBatchSize();
             var tsConfig = GetTimestampConfig();
-            var timestamps = FrameGrabberService.GenerateTimestamps(start, end, interval);
+            var mergeGap = GetSelectedMergeGap();
+
+            // Ensure preflight has run (fetch segments for cameras that don't have them yet).
+            var cameras = _cameras.ToList();
+            var perCameraSegs = new Dictionary<Guid, IReadOnlyList<RecordingSegment>>();
+            try
+            {
+                await Task.Run(() =>
+                {
+                    foreach (var cam in cameras)
+                    {
+                        if (_preflightSegments.TryGetValue(cam.Item.FQID.ObjectId, out var s))
+                        {
+                            perCameraSegs[cam.Item.FQID.ObjectId] = s;
+                        }
+                        else
+                        {
+                            using (var q = new SequenceQuery(cam.Item))
+                                perCameraSegs[cam.Item.FQID.ObjectId] = q.GetRecordingSegments(start, end);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to query recording sequences:\n\n{ex.Message}", "Timelapse",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Union of all cameras' segments drives the shared wall-clock timeline.
+            var union = TimestampGenerator.Union(perCameraSegs.Values.ToList());
+            Log.Info($"Generate: mode={mode} cams={cameras.Count} range={start:O}..{end:O} unionSegments={union.Count}");
+            if (union.Count == 0)
+            {
+                Log.Info("Generate aborted: union is empty");
+                MessageBox.Show("No recordings found in the selected time range for any camera.", "Timelapse",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            List<DateTime> timestamps = mode == TimelapseMode.Continuous
+                ? TimestampGenerator.GenerateContinuous(union, GetSelectedInterval())
+                : TimestampGenerator.GenerateEventBased(union, GetSelectedEventInterval(),
+                    GetMaxPerEvent(), GetMinPerEvent(), mergeGap);
+
+            Log.Info($"Generate: timestamps={timestamps.Count} interval={(mode == TimelapseMode.Continuous ? GetSelectedInterval() : GetSelectedEventInterval())} maxPerEvent={GetMaxPerEvent()} minPerEvent={GetMinPerEvent()} mergeGap={mergeGap}");
 
             if (timestamps.Count == 0)
             {
+                Log.Info("Generate aborted: no timestamps after generation");
                 MessageBox.Show("No frames in the selected time range.", "Timelapse",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -374,36 +657,18 @@ namespace Timelapse.Client
             progressBar.Value = 0;
 
             var tempPath = Path.Combine(Path.GetTempPath(), $"Timelapse_{Guid.NewGuid()}.mp4");
-            var cameras = _cameras.ToList();
             var (gridCols, gridRows) = GetGridLayout(cameras.Count);
+
+            // Pick a sample camera that actually has recordings for sizing.
+            var sampleCam = cameras.FirstOrDefault(c =>
+                perCameraSegs.TryGetValue(c.Item.FQID.ObjectId, out var s) && s.Count > 0)
+                ?? cameras[0];
+            var sampleTs = perCameraSegs[sampleCam.Item.FQID.ObjectId].Count > 0
+                ? perCameraSegs[sampleCam.Item.FQID.ObjectId][0].Start
+                : timestamps[0];
 
             try
             {
-                // Check recordings exist
-                progressDetailText.Text = "Checking recordings...";
-                progressStepText.Text = "Checking recordings...";
-                progressDetailText.Text = "Verifying cameras have recorded data";
-
-                var hasRecordings = await Task.Run(() =>
-                {
-                    foreach (var cam in cameras)
-                    {
-                        using (var src = new CameraFrameSource(cam.Item))
-                        {
-                            if (!src.HasRecordings())
-                                return (false, cam.Name);
-                        }
-                    }
-                    return (true, (string)null);
-                });
-
-                if (!hasRecordings.Item1)
-                {
-                    MessageBox.Show($"No recordings found for camera: {hasRecordings.Item2}", "Timelapse",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
                 // Get sample frame for resolution
                 progressDetailText.Text = "Fetching sample frame...";
                 progressStepText.Text = "Initializing...";
@@ -412,9 +677,9 @@ namespace Timelapse.Client
                 int singleWidth = 0, singleHeight = 0;
                 await Task.Run(() =>
                 {
-                    using (var src = new CameraFrameSource(cameras[0].Item))
+                    using (var src = new CameraFrameSource(sampleCam.Item))
                     {
-                        var (frame, error) = src.GetFrame(timestamps[0]);
+                        var (frame, error) = src.GetFrame(sampleTs);
                         if (frame == null)
                             throw new Exception($"Could not fetch sample frame: {error}");
                         using (frame)
@@ -431,8 +696,25 @@ namespace Timelapse.Client
                 int workerCount = maxWorkers;
                 int totalFrames = timestamps.Count;
 
+                Log.Info($"Generate: canvas={totalWidth}x{totalHeight} cell={singleWidth}x{singleHeight} layout={gridCols}x{gridRows} fps={fps} workers={workerCount} batch={batchSize} totalFrames={totalFrames}");
+
                 progressStepText.Text = $"Generating timelapse ({cameras.Count} camera(s), {GetLayoutDescription(cameras.Count)})";
                 progressDetailText.Text = $"{totalWidth}x{totalHeight} @ {fps} FPS | {workerCount} workers, batch {batchSize}";
+
+                // Per-camera segment arrays (indexed by camera position) for fast Covers() checks.
+                var segsByIndex = new IReadOnlyList<RecordingSegment>[cameras.Count];
+                for (int c = 0; c < cameras.Count; c++)
+                {
+                    segsByIndex[c] = perCameraSegs.TryGetValue(cameras[c].Item.FQID.ObjectId, out var s)
+                        ? s : (IReadOnlyList<RecordingSegment>)Array.Empty<RecordingSegment>();
+                }
+
+                // Continuous mode keeps a "last valid frame" per camera so stale cells show
+                // the previous scene dimmed. Timestamps are processed in order (we fetch in
+                // parallel but encode in order), so we fill the cache sequentially on the encode
+                // side rather than inside the Parallel.For.
+                Bitmap[] lastKnownFrame = mode == TimelapseMode.Continuous
+                    ? new Bitmap[cameras.Count] : null;
 
                 await Task.Run(() =>
                 {
@@ -448,10 +730,11 @@ namespace Timelapse.Client
 
                             int batchEnd = Math.Min(batchStart + batchSize, totalFrames);
                             int batchLen = batchEnd - batchStart;
-                            var batchFrames = new Bitmap[batchLen];
 
-                            // Fetch frames in parallel within the batch
-                            // Each worker gets its own CameraFrameSource per camera (thread-local)
+                            // Per-batch raw per-camera fetch results (one Bitmap per cell per timestamp)
+                            // Layout: rawCells[timestampIndex][cameraIndex]
+                            var rawCells = new Bitmap[batchLen][];
+
                             int fetchedInBatch = 0;
                             System.Threading.Tasks.Parallel.For(0, batchLen,
                                 new ParallelOptions { MaxDegreeOfParallelism = workerCount, CancellationToken = token },
@@ -465,33 +748,18 @@ namespace Timelapse.Client
                                 (j, state, localSources) =>
                                 {
                                     var ts = timestamps[batchStart + j];
-                                    var canvas = new Bitmap(totalWidth, totalHeight);
-                                    using (var g = Graphics.FromImage(canvas))
+                                    var cells = new Bitmap[cameras.Count];
+                                    for (int c = 0; c < cameras.Count; c++)
                                     {
-                                        g.Clear(Color.Black);
-                                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                                        // Skip the server round-trip if we know this camera has no recording here.
+                                        if (!TimestampGenerator.Covers(segsByIndex[c], ts))
+                                            continue;
 
-                                        for (int c = 0; c < cameras.Count; c++)
-                                        {
-                                            var (frame, error) = localSources[c].GetFrame(ts);
-                                            if (frame != null)
-                                            {
-                                                int col = c % gridCols;
-                                                int row = c / gridCols;
-                                                using (frame)
-                                                {
-                                                    g.DrawImage(frame, col * singleWidth, row * singleHeight,
-                                                        singleWidth, singleHeight);
-                                                }
-                                            }
-                                        }
-
-                                        // Draw timestamp overlay
-                                        DrawTimestamp(g, totalWidth, totalHeight, ts, tsConfig);
+                                        var (frame, _) = localSources[c].GetFrame(ts);
+                                        if (frame != null) cells[c] = frame;
                                     }
-                                    batchFrames[j] = canvas;
+                                    rawCells[j] = cells;
 
-                                    // Update fetch progress
                                     var fetched = Interlocked.Increment(ref fetchedInBatch);
                                     int frameNum = batchStart + fetched;
                                     Dispatcher.BeginInvoke(new Action(() =>
@@ -510,6 +778,60 @@ namespace Timelapse.Client
                                     foreach (var s in localSources)
                                         s?.Dispose();
                                 });
+
+                            // Compose frames sequentially so the "last known frame" cache reflects
+                            // temporal order and isn't mutated concurrently.
+                            var batchFrames = new Bitmap[batchLen];
+                            for (int j = 0; j < batchLen; j++)
+                            {
+                                var ts = timestamps[batchStart + j];
+                                var cells = rawCells[j] ?? new Bitmap[cameras.Count];
+
+                                var canvas = new Bitmap(totalWidth, totalHeight);
+                                using (var g = Graphics.FromImage(canvas))
+                                {
+                                    g.Clear(Color.Black);
+                                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+                                    for (int c = 0; c < cameras.Count; c++)
+                                    {
+                                        int col = c % gridCols;
+                                        int row = c / gridCols;
+                                        int x = col * singleWidth;
+                                        int y = row * singleHeight;
+
+                                        var live = cells[c];
+                                        if (live != null)
+                                        {
+                                            g.DrawImage(live, x, y, singleWidth, singleHeight);
+
+                                            if (mode == TimelapseMode.Continuous)
+                                            {
+                                                // Update last-known cache (clone; we'll dispose `live` below).
+                                                lastKnownFrame[c]?.Dispose();
+                                                lastKnownFrame[c] = (Bitmap)live.Clone();
+                                            }
+                                            live.Dispose();
+                                        }
+                                        else if (mode == TimelapseMode.Continuous && lastKnownFrame[c] != null)
+                                        {
+                                            // Stale: draw dimmed and overlay "no recording" badge.
+                                            g.DrawImage(lastKnownFrame[c], x, y, singleWidth, singleHeight);
+                                            using (var dim = new SolidBrush(Color.FromArgb(130, 0, 0, 0)))
+                                                g.FillRectangle(dim, x, y, singleWidth, singleHeight);
+                                            DrawStaleBadge(g, x, y, singleWidth, singleHeight, cameras[c].Name);
+                                        }
+                                        else
+                                        {
+                                            // Event-mode or never-seen camera in Continuous: black placeholder.
+                                            DrawNoEventPlaceholder(g, x, y, singleWidth, singleHeight, cameras[c].Name);
+                                        }
+                                    }
+
+                                    DrawTimestamp(g, totalWidth, totalHeight, ts, tsConfig);
+                                }
+                                batchFrames[j] = canvas;
+                            }
 
                             // Encode batch sequentially (frames must be in order)
                             for (int j = 0; j < batchLen; j++)
@@ -532,9 +854,19 @@ namespace Timelapse.Client
 
                         encoder.Finish();
                     }
+
+                    if (lastKnownFrame != null)
+                    {
+                        for (int i = 0; i < lastKnownFrame.Length; i++)
+                        {
+                            lastKnownFrame[i]?.Dispose();
+                            lastKnownFrame[i] = null;
+                        }
+                    }
                 }, token);
 
                 _currentVideoPath = tempPath;
+                Log.Info($"Generate complete: output='{tempPath}'");
 
                 // Show playback
                 progressPanel.Visibility = Visibility.Collapsed;
@@ -552,6 +884,7 @@ namespace Timelapse.Client
             }
             catch (OperationCanceledException)
             {
+                Log.Info("Generate cancelled by user");
                 progressDetailText.Text = "Generation cancelled.";
                 progressPanel.Visibility = Visibility.Collapsed;
                 idlePlaceholder.Visibility = Visibility.Visible;
@@ -559,6 +892,7 @@ namespace Timelapse.Client
             }
             catch (Exception ex)
             {
+                Log.Error("Generate failed", ex);
                 progressDetailText.Text = "Generation failed.";
                 progressPanel.Visibility = Visibility.Collapsed;
                 idlePlaceholder.Visibility = Visibility.Visible;
@@ -579,6 +913,28 @@ namespace Timelapse.Client
         private void OnCancelClick(object sender, RoutedEventArgs e)
         {
             _cts?.Cancel();
+        }
+
+        private void OnClosePreviewClick(object sender, RoutedEventArgs e)
+        {
+            // Stop playback and release any file lock on the temp video.
+            mediaPlayer.Stop();
+            mediaPlayer.Close();
+            mediaPlayer.Source = null;
+            _playbackTimer?.Stop();
+            playPauseButton.Content = "▶";
+            seekSlider.Value = 0;
+            seekSlider.IsEnabled = false;
+            playbackTimeText.Text = "00:00 / 00:00";
+
+            // Switch back to the configuration / idle view.
+            mediaPlayer.Visibility = Visibility.Collapsed;
+            playbackControls.Visibility = Visibility.Collapsed;
+            saveButton.Visibility = Visibility.Collapsed;
+            idlePlaceholder.Visibility = Visibility.Visible;
+
+            CleanupTempVideo();
+            UpdateEstimate();
         }
 
         #endregion
@@ -727,9 +1083,34 @@ namespace Timelapse.Client
             return (start, end);
         }
 
+        private TimelapseMode GetSelectedMode()
+        {
+            return (modeCombo?.SelectedItem as ModeOption)?.Mode ?? TimelapseMode.Continuous;
+        }
+
         private TimeSpan GetSelectedInterval()
         {
             return (intervalCombo.SelectedItem as IntervalOption)?.Interval ?? TimeSpan.FromMinutes(1);
+        }
+
+        private TimeSpan GetSelectedEventInterval()
+        {
+            return (eventIntervalCombo?.SelectedItem as IntervalOption)?.Interval ?? TimeSpan.FromSeconds(10);
+        }
+
+        private int GetMaxPerEvent()
+        {
+            return (maxPerEventCombo?.SelectedItem as CountOption)?.Count ?? 10;
+        }
+
+        private int GetMinPerEvent()
+        {
+            return (minPerEventCombo?.SelectedItem as CountOption)?.Count ?? 1;
+        }
+
+        private TimeSpan GetSelectedMergeGap()
+        {
+            return (mergeGapCombo?.SelectedItem as GapOption)?.Gap ?? TimeSpan.FromSeconds(2);
         }
 
         private int GetSelectedFps()
@@ -820,6 +1201,51 @@ namespace Timelapse.Client
         }
 
         /// <summary>
+        /// Continuous-mode "stale" overlay: shows the camera name in the top-left of a dimmed cell.
+        /// </summary>
+        private static void DrawStaleBadge(Graphics g, int x, int y, int w, int h, string cameraName)
+        {
+            float fontSize = Math.Max(10f, Math.Min(w, h) * 0.04f);
+            using (var font = new Font("Segoe UI", fontSize, System.Drawing.FontStyle.Regular, GraphicsUnit.Pixel))
+            using (var textBrush = new SolidBrush(Color.FromArgb(200, 255, 255, 255)))
+            using (var bgBrush = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
+            {
+                var label = $"{cameraName} · no recording";
+                var size = g.MeasureString(label, font);
+                int pad = 4;
+                g.FillRectangle(bgBrush, x + pad, y + pad, size.Width + pad * 2, size.Height + pad);
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+                g.DrawString(label, font, textBrush, x + pad * 2, y + pad + pad / 2f);
+            }
+        }
+
+        /// <summary>
+        /// Event-mode "nothing here" cell: black fill plus camera name + "no event" centered.
+        /// </summary>
+        private static void DrawNoEventPlaceholder(Graphics g, int x, int y, int w, int h, string cameraName)
+        {
+            using (var bg = new SolidBrush(Color.Black))
+                g.FillRectangle(bg, x, y, w, h);
+
+            float fontSize = Math.Max(12f, Math.Min(w, h) * 0.05f);
+            using (var nameFont = new Font("Segoe UI", fontSize, System.Drawing.FontStyle.Bold, GraphicsUnit.Pixel))
+            using (var subFont = new Font("Segoe UI", fontSize * 0.75f, System.Drawing.FontStyle.Regular, GraphicsUnit.Pixel))
+            using (var brushName = new SolidBrush(Color.FromArgb(220, 200, 200, 200)))
+            using (var brushSub = new SolidBrush(Color.FromArgb(180, 120, 120, 120)))
+            {
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+                var nameSize = g.MeasureString(cameraName ?? "", nameFont);
+                var subText = "no event";
+                var subSize = g.MeasureString(subText, subFont);
+
+                float cx = x + w / 2f;
+                float cy = y + h / 2f;
+                g.DrawString(cameraName ?? "", nameFont, brushName, cx - nameSize.Width / 2f, cy - nameSize.Height);
+                g.DrawString(subText, subFont, brushSub, cx - subSize.Width / 2f, cy + 2);
+            }
+        }
+
+        /// <summary>
         /// Determines the grid layout for stitching cameras.
         /// Returns (columns, rows).
         /// </summary>
@@ -896,11 +1322,36 @@ namespace Timelapse.Client
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
     }
 
+    internal enum TimelapseMode { Continuous, EventBased }
+
+    internal class ModeOption
+    {
+        public string Label { get; }
+        public TimelapseMode Mode { get; }
+        public ModeOption(string label, TimelapseMode mode) { Label = label; Mode = mode; }
+        public override string ToString() => Label;
+    }
+
     internal class IntervalOption
     {
         public string Label { get; }
         public TimeSpan Interval { get; }
         public IntervalOption(string label, TimeSpan interval) { Label = label; Interval = interval; }
+        public override string ToString() => Label;
+    }
+
+    internal class CountOption
+    {
+        public int Count { get; }
+        public CountOption(int count) { Count = count; }
+        public override string ToString() => $"{Count}";
+    }
+
+    internal class GapOption
+    {
+        public string Label { get; }
+        public TimeSpan Gap { get; }
+        public GapOption(string label, TimeSpan gap) { Label = label; Gap = gap; }
         public override string ToString() => Label;
     }
 

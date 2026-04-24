@@ -61,46 +61,15 @@ namespace Timelapse.Services
         }
 
         /// <summary>
-        /// Checks if the camera has any recorded data and returns the available range.
+        /// Does this camera have any recording inside [from, to]?
+        /// Delegates to SequenceDataSource (RecordingSequence) so we get a range-aware answer.
         /// </summary>
-        public (DateTime? Begin, DateTime? End) GetRecordingRange()
+        public bool HasRecordings(DateTime from, DateTime to)
         {
             try
             {
-                DateTime? begin = null;
-                DateTime? end = null;
-
-                var beginData = _source.GetBegin();
-                if (beginData != null)
-                {
-                    // GetBegin returns a JPEGData; we need its timestamp.
-                    // Use the source - after GetBegin, the position is at the start.
-                    // The BitmapSource has no timestamp, so we store the fact that data exists.
-                    begin = DateTime.MinValue; // placeholder - data exists
-                }
-
-                var endData = _source.GetEnd();
-                if (endData != null)
-                {
-                    end = DateTime.MaxValue; // placeholder - data exists
-                }
-
-                return (begin, end);
-            }
-            catch
-            {
-                return (null, null);
-            }
-        }
-
-        /// <summary>
-        /// Quick check: does this camera have any recordings at all?
-        /// </summary>
-        public bool HasRecordings()
-        {
-            try
-            {
-                return _source.GetBegin() != null;
+                using (var q = new SequenceQuery(CameraItem))
+                    return q.AnyRecording(from, to);
             }
             catch
             {
