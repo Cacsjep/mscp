@@ -27,6 +27,12 @@ namespace PKI
         internal static readonly Guid PkiDot1xKindId         = new Guid("AE29EE2B-8D42-4A13-BE55-15DEA4C4D029");
         internal static readonly Guid PkiServiceKindId       = new Guid("3E264439-F043-4333-901C-951D5B5E5ACC");
 
+        // Overview kind. Single auto-created item; clicking it shows a grid
+        // of every certificate in the vault and a button to import new ones.
+        // No "Add new" because the manager refuses to create more than the
+        // singleton.
+        internal static readonly Guid PkiOverviewKindId      = new Guid("1403A91F-CB8E-43B9-AF55-3E8B5F9F2966");
+
         private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
         private List<ItemNode> _itemNodes;
 
@@ -34,6 +40,9 @@ namespace PKI
         private Image _folderIcon = PluginIcon.FallbackIcon;
         private Image _certIcon   = PluginIcon.FallbackIcon;
         private Image _caIcon     = PluginIcon.FallbackIcon;
+        private Image _overviewIcon = PluginIcon.FallbackIcon;
+        private Image _caFolderIcon = PluginIcon.FallbackIcon;
+        private Image _clientFolderIcon = PluginIcon.FallbackIcon;
 
         internal static readonly PluginLog Log = new PluginLog("PKI");
 
@@ -51,10 +60,13 @@ namespace PKI
             {
                 try
                 {
-                    _pluginIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_Key);
-                    _folderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
-                    _certIcon   = PluginIcon.Render(EFontAwesomeIcon.Solid_Certificate);
-                    _caIcon     = PluginIcon.Render(EFontAwesomeIcon.Solid_Stamp);
+                    _pluginIcon       = PluginIcon.Render(EFontAwesomeIcon.Solid_Key);
+                    _folderIcon       = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
+                    _certIcon         = PluginIcon.Render(EFontAwesomeIcon.Solid_Certificate);
+                    _caIcon           = PluginIcon.Render(EFontAwesomeIcon.Solid_Stamp);
+                    _overviewIcon     = PluginIcon.Render(EFontAwesomeIcon.Solid_ListAlt);
+                    _caFolderIcon     = PluginIcon.Render(EFontAwesomeIcon.Solid_Landmark);
+                    _clientFolderIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_IdCard);
                 }
                 catch (Exception ex)
                 {
@@ -77,7 +89,7 @@ namespace PKI
 
         // The Management Client wraps every plugin's ItemNodes under a top-level
         // node named after the plugin (here: "PKI"). Returning two top-level
-        // groups (CA Certificates, Client Certificates) is enough — adding our
+        // groups (CA Certificates, Client Certificates) is enough - adding our
         // own "PKI" wrapper duplicates the auto-generated one.
         public override List<ItemNode> ItemNodes
         {
@@ -105,8 +117,8 @@ namespace PKI
 
                 var caFolderNode = new ItemNode(
                     PkiCAFolderKindId, Guid.Empty,
-                    "CA Certificates", _folderIcon,
-                    "CA Certificates", _folderIcon,
+                    "CA Certificates", _caFolderIcon,
+                    "CA Certificates", _caFolderIcon,
                     Category.Text, false, ItemsAllowed.None,
                     null, new List<ItemNode> { rootCertNode, intermediateNode });
 
@@ -133,12 +145,19 @@ namespace PKI
 
                 var clientFolderNode = new ItemNode(
                     PkiClientFolderKindId, Guid.Empty,
-                    "Client Certificates", _folderIcon,
-                    "Client Certificates", _folderIcon,
+                    "Client Certificates", _clientFolderIcon,
+                    "Client Certificates", _clientFolderIcon,
                     Category.Text, false, ItemsAllowed.None,
                     null, new List<ItemNode> { httpsNode, dot1xNode, serviceNode });
 
-                _itemNodes = new List<ItemNode> { caFolderNode, clientFolderNode };
+                var overviewNode = new ItemNode(
+                    PkiOverviewKindId, Guid.Empty,
+                    "Overview", _overviewIcon,
+                    "Overview", _overviewIcon,
+                    Category.Text, true, ItemsAllowed.One,
+                    new OverviewItemManager(PkiOverviewKindId), null);
+
+                _itemNodes = new List<ItemNode> { overviewNode, caFolderNode, clientFolderNode };
                 return _itemNodes;
             }
         }

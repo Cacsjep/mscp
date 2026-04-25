@@ -10,7 +10,7 @@ namespace PKI.Storage
     // machine scope = any process on this machine can decrypt; another
     // machine cannot).
     //
-    // Pragmatic v1 storage — the original design called for Windows cert
+    // Pragmatic v1 storage - the original design called for Windows cert
     // store on the Management Server. That move comes in the Storage / Cert
     // store / Background plugin task; for now keys travel with the MIP
     // configuration so the form flow can be exercised end-to-end without

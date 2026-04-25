@@ -157,9 +157,17 @@ namespace PKI.Admin
 
         private void GenerateAndStore(Item item)
         {
+            // CN is optional in the form. When empty, fall back to the display
+            // name so the cert always has a sensible Subject CN. Browsers don't
+            // verify hostnames against CN any more (SAN does that), but CN still
+            // shows up in cert dumps and chain inspectors so it shouldn't be
+            // empty.
+            var cn = GetProp(item, "Subject_CN");
+            if (string.IsNullOrWhiteSpace(cn)) cn = item.Name;
+
             var subject = new CertSubject
             {
-                CommonName         = GetProp(item, "Subject_CN"),
+                CommonName         = cn,
                 Organization       = GetProp(item, "Subject_O"),
                 OrganizationalUnit = GetProp(item, "Subject_OU"),
                 Country            = GetProp(item, "Subject_C"),
@@ -275,7 +283,7 @@ namespace PKI.Admin
             return result;
         }
 
-        private static List<string> FindCertsIssuedBy(string issuerThumbprint)
+        internal static List<string> FindCertsIssuedBy(string issuerThumbprint)
         {
             var hits = new List<string>();
             foreach (var kind in AllCertKinds())
