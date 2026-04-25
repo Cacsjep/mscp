@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - Add RTMP Driver: Per-stream statistics block emitted to the driver log every 30 seconds.
 - Improve RTMP Driver: Parse AMF `@setDataFrame onMetaData` messages so source-declared metadata (width, height, framerate, video / audio bitrate, audio codec, sample rate) ends up in the stats block. Previously the driver silently ignored these messages.
 - Improve RTMP Driver: Replaced the per-150-frame and per-20-second ad-hoc log lines with the new periodic stats block.
+- Add Installer: Optional **Local download page** feature for the management server.
+- Improve Installer: Service stop/start is now gated on the feature action state. Smart Client-only installs no longer stop the Recording Server; admin-plugin-only installs no longer stop the Event Server; driver-only installs no longer stop the Event Server. Process kills (Smart Client, Management Client, Driver Framework) still run unconditionally because they're cheap.
 
 ## [2.2.0] - 2026-04-25
 - Improve Timelapse: Continuous and Event-based modes backed by MIP SequenceDataSource (RecordingSequence)

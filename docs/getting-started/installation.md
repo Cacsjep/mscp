@@ -72,7 +72,8 @@ hide:
 3. Select the plugins and drivers you want to install
 
 !!! note
-    The installer handles stopping/starting the required Milestone services automatically
+    The installer handles stopping/starting the required Milestone services automatically. It only stops the Recording Server when device drivers are being installed or removed, and only stops the Event Server when admin plugins are being installed or removed. Smart Client-only or driver-only installs leave the other service untouched.
+
 ---
 
 ## Plugins ZIPs - Manual Installation
@@ -83,21 +84,6 @@ Individual ZIPs for each plugin/driver are available on the [Releases](https://g
     Always **unblock** downloaded ZIP files before extracting: right-click the `.zip` → Properties → Unblock → OK. Windows marks downloaded files as untrusted and will prevent the DLLs from loading.
 
 
-### Install Paths
-
-| Plugin | Install Path |
-|---|---|
-| Weather | `C:\Program Files\Milestone\MIPPlugins\Weather\` |
-| RDP | `C:\Program Files\Milestone\MIPPlugins\RDP\` |
-| Notepad | `C:\Program Files\Milestone\MIPPlugins\Notepad\` |
-| SnapReport | `C:\Program Files\Milestone\MIPPlugins\SnapReport\` |
-| MonitorRTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\MonitorRTMPStreamer\` |
-| RTMPDriver | `C:\Program Files\Milestone\MIPDrivers\RTMPDriver\` |
-| RTMPStreamer | `C:\Program Files\Milestone\MIPPlugins\RTMPStreamer\` |
-| CertWatchdog | `C:\Program Files\Milestone\MIPPlugins\CertWatchdog\` |
-| Auditor | `C:\Program Files\Milestone\MIPPlugins\Auditor\` |
-| SmartBar | `C:\Program Files\Milestone\MIPPlugins\SmartBar\` |
-
 ### Services 
 
 After manual installation, restart the relevant service, if you update, you need to stop the services before.
@@ -107,6 +93,17 @@ After manual installation, restart the relevant service, if you update, you need
 | Smart Client Plugins | Restart the **Smart Client** |
 | Device Drivers | Restart the **Recording Server** service |
 | Admin Plugins | Restart the **Event Server** service, then the **Management Client** and **Smart Client** |
+
+## Local Download Page
+
+When you install on a machine that has IIS (Managment Server), the installer offers an optional feature called **Local download page on this server**. 
+
+When enabled, it publishes the MSI and every per-plugin ZIP to `http://this-server/mscp/`, so other admins on the same network can browse to the page and download any plugin without having to fetch the MSI from GitHub.
+
+The feature is **off by default**. It is hidden entirely on machines without IIS.
+
+After install, browse to `http://<management-server>/mscp/`. If the management server has an encryption enabled, `https://...` works automatically with the same certificate.
+
 
 <script>
 fetch("https://api.github.com/repos/Cacsjep/mscp/releases/latest")
