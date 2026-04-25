@@ -154,6 +154,7 @@ jobs:
           dotnet tool install --global wix --version 5.*
           wix extension add WixToolset.UI.wixext/5 -g
           wix extension add WixToolset.Util.wixext/5 -g
+          wix extension add WixToolset.Iis.wixext/5.0.2 -g
 
       - name: Generate WiX components
         shell: pwsh
@@ -170,16 +171,41 @@ jobs:
             /t:Rebuild `
             /v:minimal
 
+      - name: Stage IIS hosting payload
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}' -replace '^v',''
+          $publicStaged = Join-Path (Get-Location) 'public-staged'
+          # The CI extracted artifacts into staging/, but the per-plugin ZIPs
+          # are still under artifacts/<name>/<name>-v$version.zip. Collect them
+          # into a flat folder for the staging script.
+          $zipsRoot = Join-Path (Get-Location) 'zips-flat'
+          if (Test-Path $zipsRoot) { Remove-Item $zipsRoot -Recurse -Force }
+          New-Item -ItemType Directory -Path $zipsRoot -Force | Out-Null
+          Get-ChildItem 'artifacts' -Recurse -Filter '*.zip' | ForEach-Object {
+            Copy-Item $_.FullName -Destination $zipsRoot -Force
+          }
+          pwsh installer/stage-iis-hosting.ps1 `
+            -ManifestPath plugins.json `
+            -PublicSrc installer/public `
+            -PublicStaged $publicStaged `
+            -ZipsRoot $zipsRoot `
+            -WixOutPath installer/wix/IisHostingPlugins.wxs `
+            -Version $version
+
       - name: Build MSI installer
         shell: pwsh
         run: |
           $version = '${{ github.ref_name }}' -replace '^v',''
-          wix build installer/wix/Product.wxs installer/wix/Components.wxs `
+          $publicStaged = Join-Path (Get-Location) 'public-staged'
+          wix build installer/wix/Product.wxs installer/wix/Components.wxs installer/wix/IisHosting.wxs installer/wix/IisHostingPlugins.wxs `
             -ext WixToolset.UI.wixext `
             -ext WixToolset.Util.wixext `
+            -ext WixToolset.Iis.wixext `
             -d Version=$version `
             -arch x64 `
             -b installer/wix `
+            -bindpath "publicroot=$publicStaged" `
             -pdbtype none `
             -o "MSCPlugins-$version-Setup.msi"
 

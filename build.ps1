@@ -160,109 +160,20 @@ if ($wixCmd) {
         /v:minimal
     if ($LASTEXITCODE -ne 0) { Write-Error "Installer custom actions build failed"; exit 1 }
 
-    # Stage public/index.html and web.config into build/public/, copy each
-    # per-plugin ZIP into build/public/plugins/, generate the WiX fragment
-    # that turns those ZIPs into installable components, and inject the
-    # plugin-list rows into index.html.
+    # Stage public/index.html, web.config, per-plugin ZIPs into build/public/
+    # and generate IisHostingPlugins.wxs. Same logic CI uses, see
+    # installer/stage-iis-hosting.ps1.
     $publicSrc = Join-Path $root 'installer\public'
     $publicStaged = Join-Path $buildDir 'public'
-    $publicPluginsStaged = Join-Path $publicStaged 'plugins'
-    if (Test-Path $publicStaged) { Remove-Item $publicStaged -Recurse -Force }
-    New-Item -ItemType Directory -Path $publicStaged -Force | Out-Null
-    New-Item -ItemType Directory -Path $publicPluginsStaged -Force | Out-Null
-
-    Add-Type -AssemblyName System.Web | Out-Null
-
-    # Deterministic GUID derived from a fixed namespace + plugin name. Stable
-    # across builds and machines, so MSI upgrade swaps the prior version's ZIP
-    # cleanly. WiX does not allow Guid="*" for components rooted outside a
-    # standard directory like ProgramFilesFolder, which our MSCP_PUBLIC is.
-    $md5 = [System.Security.Cryptography.MD5]::Create()
-    function Get-StableGuid([string]$seed) {
-        $bytes = $md5.ComputeHash([System.Text.Encoding]::UTF8.GetBytes("MscpPluginZip:$seed"))
-        # Stamp version=4 / variant=10 bits per RFC 4122 so the value is a
-        # well-formed UUID (purely cosmetic, MSI doesn't care).
-        $bytes[6] = ($bytes[6] -band 0x0F) -bor 0x40
-        $bytes[8] = ($bytes[8] -band 0x3F) -bor 0x80
-        ([System.Guid]::new($bytes)).ToString().ToUpper()
-    }
-
-    # Copy per-plugin ZIPs into the staged plugins folder, build the WiX
-    # component fragment, and produce per-category HTML sections sorted by
-    # display name. Categories that aren't present in plugins.json are simply
-    # absent from the page.
-    $categoryDefs = @(
-        @{ Key = 'SmartClient';  Title = 'Smart Client plugins';      Path = 'C:\Program Files\Milestone\MIPPlugins'; Note = 'Install on each Smart Client / Management Client workstation.' }
-        @{ Key = 'DeviceDriver'; Title = 'Device drivers';            Path = 'C:\Program Files\Milestone\MIPDrivers'; Note = 'Install on the Recording Server.' }
-        @{ Key = 'AdminPlugin';  Title = 'Management Client plugins'; Path = 'C:\Program Files\Milestone\MIPPlugins'; Note = 'Install on the Management Server (and on each Management Client that needs the configuration UI).' }
-    )
-
-    $pluginRows = New-Object System.Text.StringBuilder
-    $pluginCmpEntries = New-Object System.Text.StringBuilder
-    $sortedPlugins = $plugins | Sort-Object {
-        if ($_ | Get-Member -Name displayName -MemberType NoteProperty) { $_.displayName } else { $_.name }
-    }
-
-    # Always emit the WiX components for every plugin (regardless of category).
-    foreach ($p in $sortedPlugins) {
-        $zipName = "$($p.name)-v$version.zip"
-        $zipSrc = Join-Path $buildDir $zipName
-        Copy-Item -Path $zipSrc -Destination $publicPluginsStaged -Force
-
-        $cmpId = "cmpZip_$($p.name)"
-        $cmpGuid = Get-StableGuid $p.name
-        [void]$pluginCmpEntries.AppendLine("      <Component Id=`"$cmpId`" Directory=`"MSCP_PLUGINS_DIR`" Guid=`"$cmpGuid`" Condition=`"IIS_PRESENT`">")
-        [void]$pluginCmpEntries.AppendLine("        <File Source=`"!(bindpath.publicroot)\plugins\$zipName`" KeyPath=`"yes`" />")
-        [void]$pluginCmpEntries.AppendLine("      </Component>")
-    }
-
-    foreach ($cat in $categoryDefs) {
-        $catPlugins = $sortedPlugins | Where-Object {
-            ($_ | Get-Member -Name category -MemberType NoteProperty) -and $_.category -eq $cat.Key
-        }
-        if (-not $catPlugins -or $catPlugins.Count -eq 0) { continue }
-
-        $titleEnc = [System.Web.HttpUtility]::HtmlEncode($cat.Title)
-        $pathEnc = [System.Web.HttpUtility]::HtmlEncode($cat.Path)
-        $noteEnc = [System.Web.HttpUtility]::HtmlEncode($cat.Note)
-        [void]$pluginRows.AppendLine("      <h3>$titleEnc</h3>")
-        [void]$pluginRows.AppendLine("      <p class=`"path`">$noteEnc Installs to <code>$pathEnc</code>.</p>")
-        [void]$pluginRows.AppendLine("      <ul class=`"plugin-list`">")
-        foreach ($p in $catPlugins) {
-            $zipName = "$($p.name)-v$version.zip"
-            $display = if ($p | Get-Member -Name displayName -MemberType NoteProperty) { $p.displayName } else { $p.name }
-            $displayEnc = [System.Web.HttpUtility]::HtmlEncode($display)
-            [void]$pluginRows.AppendLine("        <li><a href=`"plugins/$zipName`" download>$displayEnc</a></li>")
-        }
-        [void]$pluginRows.AppendLine("      </ul>")
-    }
-
-    # Materialize index.html with __VERSION__ and __PLUGINS_HTML__ replaced.
-    $indexHtml = Get-Content (Join-Path $publicSrc 'index.html') -Raw
-    $indexHtml = $indexHtml.Replace('__VERSION__', $version).Replace('__PLUGINS_HTML__', $pluginRows.ToString().TrimEnd())
-    Set-Content -Path (Join-Path $publicStaged 'index.html') -Value $indexHtml -NoNewline -Encoding UTF8
-
-    # Materialize web.config (no token replacement, just copy).
-    Copy-Item -Path (Join-Path $publicSrc 'web.config') -Destination $publicStaged -Force
-
-    # Materialize the auto-generated WiX fragment for the plugin ZIPs.
-    $iisHostingPluginsContent = @"
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-  AUTO-GENERATED by build.ps1 from plugins.json. Do not edit by hand;
-  changes will be overwritten on the next build.
--->
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Fragment>
-    <ComponentGroup Id="MscpPluginZips">
-$($pluginCmpEntries.ToString().TrimEnd())
-    </ComponentGroup>
-  </Fragment>
-</Wix>
-"@
-    Set-Content -Path $iisHostingPluginsWxs -Value $iisHostingPluginsContent -Encoding UTF8
-
-    Write-Host "Staged index.html (v$version), web.config, $($plugins.Count) plugin ZIPs, IisHostingPlugins.wxs" -ForegroundColor DarkYellow
+    $stageScript = Join-Path $root 'installer\stage-iis-hosting.ps1'
+    & $stageScript `
+        -ManifestPath $manifestPath `
+        -PublicSrc $publicSrc `
+        -PublicStaged $publicStaged `
+        -ZipsRoot $buildDir `
+        -WixOutPath $iisHostingPluginsWxs `
+        -Version $version
+    if ($LASTEXITCODE -ne 0) { Write-Error "stage-iis-hosting failed"; exit 1 }
 
     # Ensure the IIS extension is registered with the wix CLI. The latest IIS
     # extension on NuGet (v7) is not compatible with WiX 5; pin to the v5 line.
