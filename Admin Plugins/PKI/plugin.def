@@ -1,0 +1,4 @@
+<plugin>
+   <file name="PKI.dll"/>
+   <load env="Service, Administration"/>
+</plugin>

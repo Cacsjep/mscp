@@ -143,5 +143,12 @@
     "path": "Admin Plugins/MetadataViewer",
     "category": "AdminPlugin",
     "description": "Subscribe to a metadata channel in the Management Client and view the live XML stream"
+  },
+  {
+    "name": "PKI",
+    "displayName": "PKI Plugin",
+    "path": "Admin Plugins/PKI",
+    "category": "AdminPlugin",
+    "description": "Certificate vault: create / import / sign CSRs / export Root and Intermediate CAs and client certs (HTTPS, 802.1X, Service)"
   }
 ]

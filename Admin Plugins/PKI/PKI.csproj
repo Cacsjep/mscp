@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>PKI</RootNamespace>
+    <AssemblyName>PKI</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <PluginName>PKI</PluginName>
+    <StopAdminClient>true</StopAdminClient>
+    <StopEventServer>true</StopEventServer>
+    <StartEventServer>true</StartEventServer>
+    <LaunchAdminClient>false</LaunchAdminClient>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Security" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <Target Name="MergeBouncyCastle" AfterTargets="MergeCommunitySDK"
+          Condition="Exists('$(TargetDir)BouncyCastle.Cryptography.dll')">
+    <Exec Command="&quot;$(PkgILRepack)\tools\ILRepack.exe&quot; /internalize /lib:&quot;$(TargetDir).&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)BouncyCastle.Cryptography.dll&quot;" />
+    <Delete Files="$(TargetDir)BouncyCastle.Cryptography.dll;$(TargetDir)BouncyCastle.Cryptography.pdb;$(TargetDir)BouncyCastle.Cryptography.xml" />
+  </Target>
+</Project>
