@@ -3,7 +3,65 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Save View" Width="420" Height="220"
         WindowStartupLocation="CenterOwner"
-        Background="#FF1C2326" ResizeMode="NoResize">
+        Background="#FF0D1117" ResizeMode="NoResize">
+    <Window.Resources>
+        <ControlTemplate x:Key="FlatButtonTemplate" TargetType="Button">
+            <Border x:Name="border" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  RecognizesAccessKey="True"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="border" Property="Background" Value="#FF4A4F54"/>
+                    <Setter TargetName="border" Property="BorderBrush" Value="#FF666666"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="border" Property="Background" Value="#FF555A5F"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+        <ControlTemplate x:Key="AccentButtonTemplate" TargetType="Button">
+            <Border x:Name="border" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  RecognizesAccessKey="True"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="border" Property="Background" Value="#FF2EA043"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter TargetName="border" Property="Background" Value="#FF3AB550"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+        <Style x:Key="FlatButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF3A3F44"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template" Value="{StaticResource FlatButtonTemplate}"/>
+        </Style>
+        <Style x:Key="AccentButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF238636"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF2EA043"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template" Value="{StaticResource AccentButtonTemplate}"/>
+        </Style>
+    </Window.Resources>
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -20,8 +78,8 @@
         <DockPanel Grid.Row="1" Margin="0,0,0,10">
             <TextBlock Text="Name:" Foreground="#FFB0B0B0" VerticalAlignment="Center"
                        Width="60" FontSize="12"/>
-            <TextBox x:Name="nameBox" Background="#FF0D1117" Foreground="White"
-                     BorderBrush="#FF30363D" Padding="6,4" FontSize="12"
+            <TextBox x:Name="nameBox" Background="#FF050811" Foreground="White"
+                     CaretBrush="White" BorderBrush="#FF30363D" Padding="6,4" FontSize="12"
                      VerticalContentAlignment="Center"/>
         </DockPanel>
 
@@ -30,9 +88,8 @@
             <TextBlock Text="Folder:" Foreground="#FFB0B0B0" VerticalAlignment="Center"
                        Width="60" FontSize="12"/>
             <Button DockPanel.Dock="Right" Content="Browse" Click="OnBrowseFolder"
-                    Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
-                    Padding="10,4" Margin="8,0,0,0" Cursor="Hand" FontSize="12"
-                    MinHeight="26"/>
+                    Style="{StaticResource FlatButton}"
+                    Padding="10,4" Margin="8,0,0,0" MinHeight="26"/>
             <TextBlock x:Name="folderLabel" Foreground="#FF58A6FF" VerticalAlignment="Center"
                        FontSize="12" Text="(none selected)" TextTrimming="CharacterEllipsis"/>
         </DockPanel>
@@ -40,12 +97,11 @@
         <!-- Buttons -->
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
             <Button Content="Save" Click="OnSaveClick"
-                    Background="#FF238636" Foreground="White" BorderBrush="#FF2EA043"
-                    Padding="18,6" Cursor="Hand" FontSize="12" FontWeight="SemiBold"
-                    Margin="0,0,8,0" MinHeight="28"/>
+                    Style="{StaticResource AccentButton}"
+                    Padding="18,6" Margin="0,0,8,0" MinHeight="28"/>
             <Button Content="Cancel" Click="OnCancelClick"
-                    Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
-                    Padding="18,6" Cursor="Hand" FontSize="12" MinHeight="28"/>
+                    Style="{StaticResource FlatButton}"
+                    Padding="18,6" MinHeight="28"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.2.0] - 2026-24-04
+## [2.2.1] - 2026-04-26
+- Fix FlexView: Saving an opened view no longer clears camera assignments. Smart Client rejects `ViewAndLayoutItem.Layout` mutation on an existing view; FlexView now recreates the view and re-attaches each slot's built-in content (Camera, Hotspot, Carousel, Matrix, HTML) via `InsertBuiltinViewItem`.
+- Fix FlexView: A `Save` with no edits is now a no-op (was destructively recreating the view).
+- Add FlexView: **Save As** button (visible only when editing an existing view) — duplicates the current view to a new name/folder and carries over camera assignments.
+- Add FlexView: Search field in the view picker to filter views by name as you type. Folders auto-expand to reveal matches.
+- Add FlexView: Confirmation dialog before opening an existing view explains that saving recreates the view..
+- Improve FlexView: Save success and error notifications use a custom dark themed dialog matching the rest of the FlexView UI.
+- Improve FlexView: Heavy diagnostic logging under the `FlexView` category in `MIPLog.txt` for load and save flows (per-slot snapshot/restore, recreate phases, success/failure summaries).
+
+## [2.2.0] - 2026-04-25
 - Improve Timelapse: Continuous and Event-based modes backed by MIP SequenceDataSource (RecordingSequence)
 - Improve Timelapse: Preflight card shows sequences, recorded time, and coverage with per-camera breakdown and loading spinner
 - Improve Timelapse: Live segment-aware output estimate (real frame counts, not naive window ÷ interval)
@@ -11,10 +20,10 @@ All notable changes to this project will be documented in this file.
 - Improve Timelapse: Redesigned idle view with card-style layout, bold-Run tooltips, and close-preview button
 - Improve Timelapse: Logging to MIPLog.txt under `Timelapse` and `Timelapse.SequenceQuery` categories
 
-## [2.1.0] - 2026-24-04
+## [2.1.0] - 2026-04-24
 - Add: Metadata Viewer Plugin
 
-## [2.0.2] - 2026-23-04
+## [2.0.2] - 2026-04-23
 - Add: QR Code Barcode Scanner Plugin
 - Improve: Installer regarding to OEM installations
 - Improve CertWatchdog: Discovery drivers that are using https but have not default fields from milestone drivers (custom drivers)

@@ -64,8 +64,8 @@ namespace FlexView.Client
         // Edit mode
         private ViewAndLayoutItem _editingView;
         private Item _editingParent;
-        private int _originalSlotCount;
         private bool _isEditMode;
+        private bool _isDirty;
 
         // Save target
         private Item _targetFolder;
@@ -470,6 +470,7 @@ namespace FlexView.Client
                 if (_selectedPane == pane) _selectedPane = null;
                 if (_hoveredPane == pane) _hoveredPane = null;
                 RenumberPanes();
+                _isDirty = true;
                 RedrawCanvas();
                 UpdateStatus();
             }
@@ -484,6 +485,7 @@ namespace FlexView.Client
                 _panes.Remove(_selectedPane);
                 _selectedPane = null;
                 RenumberPanes();
+                _isDirty = true;
                 RedrawCanvas();
                 UpdateStatus();
                 e.Handled = true;
@@ -520,6 +522,7 @@ namespace FlexView.Client
 
             _panes.Add(newPane);
             _selectedPane = newPane;
+            _isDirty = true;
         }
 
         private void FinalizeMove()
@@ -528,6 +531,10 @@ namespace FlexView.Client
             {
                 _selectedPane.Col = _moveOrigCol;
                 _selectedPane.Row = _moveOrigRow;
+            }
+            else if (_selectedPane.Col != _moveOrigCol || _selectedPane.Row != _moveOrigRow)
+            {
+                _isDirty = true;
             }
         }
 
@@ -539,6 +546,11 @@ namespace FlexView.Client
                 _selectedPane.Row = _resizeOrigRow;
                 _selectedPane.ColSpan = _resizeOrigColSpan;
                 _selectedPane.RowSpan = _resizeOrigRowSpan;
+            }
+            else if (_selectedPane.Col != _resizeOrigCol || _selectedPane.Row != _resizeOrigRow ||
+                     _selectedPane.ColSpan != _resizeOrigColSpan || _selectedPane.RowSpan != _resizeOrigRowSpan)
+            {
+                _isDirty = true;
             }
         }
 
@@ -777,123 +789,168 @@ namespace FlexView.Client
 
         #region View Save / Load
 
-        private void SaveNewView(string name, Item folder)
+        // Returns the freshly-created view on success, null on failure.
+        // If slotContent is provided, the new view's slots are populated via
+        // InsertBuiltinViewItem in the same order ConvertPanesToSdkLayout produces.
+        private ViewAndLayoutItem SaveNewView(string name, Item folder, List<SlotSnapshot> slotContent = null)
         {
             try
             {
                 var configFolder = folder as ConfigItem;
                 if (configFolder == null)
                 {
-                    MessageBox.Show("Selected folder is not valid.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                    MessageDialog.ShowError("Save Failed", "Selected folder is not valid.", Window.GetWindow(this));
+                    return null;
                 }
 
                 var rects = ConvertPanesToSdkLayout();
                 var view = configFolder.AddChild(name, Kind.View, FolderType.No) as ViewAndLayoutItem;
                 if (view == null)
                 {
-                    MessageBox.Show("Failed to create view. Check folder permissions.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                    MessageDialog.ShowError("Save Failed", "Failed to create view. Check folder permissions.", Window.GetWindow(this));
+                    return null;
                 }
 
                 view.Layout = rects;
                 view.Save();
+                if (slotContent != null && slotContent.Count > 0)
+                {
+                    RestoreSlotContent(view, slotContent);
+                    view.Save();
+                }
                 configFolder.PropertiesModified();
                 ShowSavedStatus(name);
+                MessageDialog.ShowSuccess("View Saved", $"View \"{name}\" was saved successfully.", Window.GetWindow(this));
+                return view;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save view:\n{ex.Message}", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                FlexViewDefinition.Log.Info($"SaveNewView failed: {ex}");
+                MessageDialog.ShowError("Save Failed", $"Failed to save view:\n{ex.Message}", Window.GetWindow(this));
+                return null;
             }
         }
 
+        // ViewAndLayoutItem.Layout is one-shot — its setter throws "Cannot change layout
+        // on existing View" on any saved view. Every edit must delete the existing view
+        // and create a new one. We snapshot each slot's builtin content (camera, hotspot,
+        // …) before deletion and re-attach via InsertBuiltinViewItem on the new view —
+        // plain Properties writes on slot children silently revert to "Empty ViewItem"
+        // because the owning plugin doesn't persist them.
         private void SaveEditedView()
         {
             if (_editingView == null) return;
 
+            if (!_isDirty)
+            {
+                ShowSavedStatus(_editingView.Name);
+                return;
+            }
+
+            var parentConfig = _editingParent as ConfigItem;
+            if (parentConfig == null)
+            {
+                MessageDialog.ShowError("Save Failed", "Cannot update view: parent folder is not valid.", Window.GetWindow(this));
+                return;
+            }
+
             try
             {
                 var rects = ConvertPanesToSdkLayout();
-                var parentConfig = _editingParent as ConfigItem;
-
-                // Try in-place update first (works when slot count hasn't changed)
-                bool needsRecreate = rects.Length != _originalSlotCount;
-
-                if (!needsRecreate)
-                {
-                    try
-                    {
-                        _editingView.Layout = rects;
-                        _editingView.Save();
-                        if (parentConfig != null)
-                            parentConfig.PropertiesModified();
-                        ShowSavedStatus(_editingView.Name);
-                        return;
-                    }
-                    catch
-                    {
-                        // Layout assignment rejected, fall through to recreate
-                        needsRecreate = true;
-                    }
-                }
-
-                // Recreate: delete old view and create new one with updated layout
-                if (parentConfig == null)
-                {
-                    MessageBox.Show("Cannot update view: parent folder is not valid.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
                 var viewName = _editingView.Name;
 
-                // Collect camera assignments from current panes (ordered by slot)
-                var ordered = _panes
-                    .Where(p => p.OriginalSlotIndex >= 0)
-                    .OrderBy(p => p.OriginalSlotIndex)
-                    .Concat(_panes.Where(p => p.OriginalSlotIndex < 0))
-                    .ToList();
+                FlexViewDefinition.Log.Info($"SaveEditedView: name='{viewName}', panes={_panes.Count}, rects={rects.Length}");
 
-                // Delete old view
+                var slotContent = SnapshotSlotContent(_editingView);
+
                 parentConfig.RemoveChild(_editingView);
-
-                // Create new view with same name
                 var newView = parentConfig.AddChild(viewName, Kind.View, FolderType.No) as ViewAndLayoutItem;
                 if (newView == null)
                 {
-                    MessageBox.Show("Failed to recreate view.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                    FlexViewDefinition.Log.Info("SaveEditedView: AddChild returned null/non-ViewAndLayoutItem");
+                    MessageDialog.ShowError("Save Failed", "Failed to recreate view.", Window.GetWindow(this));
                     return;
                 }
 
                 newView.Layout = rects;
                 newView.Save();
-
-                // Restore camera assignments to matching slots
-                var newConfig = newView as ConfigItem;
-                if (newConfig != null)
-                {
-                    var children = newConfig.GetChildren();
-                    if (children != null)
-                    {
-                        for (int i = 0; i < children.Count && i < ordered.Count; i++)
-                        {
-                            if (ordered[i].CameraId != Guid.Empty)
-                            {
-                                children[i].Properties["CameraId"] = ordered[i].CameraId.ToString();
-                            }
-                        }
-                    }
-                }
+                RestoreSlotContent(newView, slotContent);
+                newView.Save();
 
                 parentConfig.PropertiesModified();
 
-                // Update references for continued editing
                 _editingView = newView;
-                _originalSlotCount = rects.Length;
+                _isDirty = false;
                 ShowSavedStatus(viewName);
+                FlexViewDefinition.Log.Info("SaveEditedView: success");
+                MessageDialog.ShowSuccess("View Saved", $"View \"{viewName}\" was saved successfully.", Window.GetWindow(this));
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to update view:\n{ex.Message}", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                FlexViewDefinition.Log.Info($"SaveEditedView failed: {ex}");
+                MessageDialog.ShowError("Save Failed", $"Failed to update view:\n{ex.Message}", Window.GetWindow(this));
+            }
+        }
+
+        private class SlotSnapshot
+        {
+            public Guid BuiltinId;
+            public Dictionary<string, string> Properties;
+        }
+
+        // One entry per pane in ConvertPanesToSdkLayout order: original slots first
+        // (sorted by OriginalSlotIndex), then newly-added panes get null entries.
+        private List<SlotSnapshot> SnapshotSlotContent(ViewAndLayoutItem view)
+        {
+            var children = (view as ConfigItem)?.GetChildren();
+            var ordered = _panes
+                .Where(p => p.OriginalSlotIndex >= 0)
+                .OrderBy(p => p.OriginalSlotIndex)
+                .Concat(_panes.Where(p => p.OriginalSlotIndex < 0));
+
+            var result = new List<SlotSnapshot>();
+            foreach (var pane in ordered)
+            {
+                SlotSnapshot snap = null;
+                if (pane.OriginalSlotIndex >= 0 && children != null && pane.OriginalSlotIndex < children.Count)
+                {
+                    var src = children[pane.OriginalSlotIndex];
+                    if (src?.Properties != null &&
+                        src.Properties.TryGetValue("ViewItemId", out var vid) &&
+                        Guid.TryParse(vid, out var builtinId))
+                    {
+                        snap = new SlotSnapshot { BuiltinId = builtinId, Properties = new Dictionary<string, string>() };
+                        foreach (var key in src.Properties.Keys)
+                        {
+                            if (key == "ViewItemId" || key == "Index" || key == "Builtin") continue;
+                            snap.Properties[key] = src.Properties[key];
+                        }
+                    }
+                }
+                result.Add(snap);
+            }
+            return result;
+        }
+
+        private void RestoreSlotContent(ViewAndLayoutItem view, List<SlotSnapshot> snapshots)
+        {
+            Guid emptyBuiltinId;
+            try { emptyBuiltinId = ViewAndLayoutItem.EmptyBuiltinId; }
+            catch { emptyBuiltinId = new Guid("57abe978-8861-4577-8a09-5fa6e43c4109"); }
+
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                var snap = snapshots[i];
+                if (snap == null || snap.BuiltinId == emptyBuiltinId) continue;
+                try
+                {
+                    view.InsertBuiltinViewItem(i, snap.BuiltinId, snap.Properties);
+                    FlexViewDefinition.Log.Info($"slot[{i}]: restored builtin={snap.BuiltinId} props={snap.Properties.Count}");
+                }
+                catch (Exception ex)
+                {
+                    FlexViewDefinition.Log.Info($"slot[{i}]: InsertBuiltinViewItem failed: {ex.Message}");
+                }
             }
         }
 
@@ -912,12 +969,15 @@ namespace FlexView.Client
                 return;
             }
 
-            _originalSlotCount = layout.Length;
+            FlexViewDefinition.Log.Info($"LoadViewForEditing: name='{view.Name}', slots={layout.Length}");
+
             LoadFromSdkLayout(layout);
             TryReadCameraData(view);
 
             _targetFolder = parent;
             viewNameLabel.Text = view.Name;
+            _isDirty = false;
+            saveAsButton.Visibility = Visibility.Visible;
 
             RedrawCanvas();
             UpdateStatus();
@@ -998,8 +1058,9 @@ namespace FlexView.Client
             _isEditMode = false;
             _editingView = null;
             _editingParent = null;
-            _originalSlotCount = 0;
             _targetFolder = null;
+            _isDirty = false;
+            saveAsButton.Visibility = Visibility.Collapsed;
             viewNameLabel.Text = "";
             RedrawCanvas();
             UpdateStatus();
@@ -1009,6 +1070,15 @@ namespace FlexView.Client
         {
             try
             {
+                bool proceed = MessageDialog.Confirm(
+                    "Edit Existing View",
+                    "Saving will recreate the view. Name and folder stay the same, but the internal ID changes.",
+                    okText: "Continue",
+                    cancelText: "Cancel",
+                    owner: Window.GetWindow(this));
+
+                if (!proceed) return;
+
                 var browser = new ViewBrowserWindow(BrowseMode.SelectView);
                 browser.Owner = Application.Current.MainWindow;
                 if (browser.ShowDialog() == true && browser.SelectedItem != null)
@@ -1016,8 +1086,7 @@ namespace FlexView.Client
                     var view = browser.SelectedItem as ViewAndLayoutItem;
                     if (view == null)
                     {
-                        MessageBox.Show("Selected item is not a view layout.", "FlexView",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageDialog.ShowError("Open Failed", "Selected item is not a view layout.", Window.GetWindow(this));
                         return;
                     }
 
@@ -1026,8 +1095,7 @@ namespace FlexView.Client
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to open view:\n{ex.Message}", "FlexView",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageDialog.ShowError("Open Failed", $"Failed to open view:\n{ex.Message}", Window.GetWindow(this));
             }
         }
 
@@ -1035,14 +1103,16 @@ namespace FlexView.Client
         {
             if (_panes.Count == 0) return;
 
-            var result = MessageBox.Show("Clear all panes?", "FlexView",
-                MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result == MessageBoxResult.Yes)
+            if (MessageDialog.Confirm("Clear All Panes",
+                    "Remove every pane from the current layout?",
+                    okText: "Clear", cancelText: "Cancel",
+                    owner: Window.GetWindow(this)))
             {
                 _panes.Clear();
                 _selectedPane = null;
                 _hoveredPane = null;
                 _nextPaneId = 1;
+                _isDirty = true;
                 RedrawCanvas();
                 UpdateStatus();
             }
@@ -1052,7 +1122,7 @@ namespace FlexView.Client
         {
             if (_panes.Count == 0)
             {
-                MessageBox.Show("Please create at least one pane.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageDialog.ShowError("Cannot Save", "Please create at least one pane.", Window.GetWindow(this));
                 return;
             }
 
@@ -1070,6 +1140,43 @@ namespace FlexView.Client
                     SaveNewView(dlg.ViewName, dlg.SelectedFolder);
                 }
             }
+        }
+
+        // Save As: always prompts the folder/name picker and creates a fresh view, even
+        // when editing an existing one. Camera assignments from the source view are
+        // carried over via the same slot-content snapshot/restore used by SaveEditedView.
+        private void OnSaveAsClick(object sender, RoutedEventArgs e)
+        {
+            if (_panes.Count == 0)
+            {
+                MessageDialog.ShowError("Cannot Save", "Please create at least one pane.", Window.GetWindow(this));
+                return;
+            }
+
+            string defaultName = null;
+            List<SlotSnapshot> slotContent = null;
+            if (_isEditMode && _editingView != null)
+            {
+                defaultName = _editingView.Name + " (copy)";
+                slotContent = SnapshotSlotContent(_editingView);
+            }
+
+            var dlg = new SaveViewWindow(defaultName, _targetFolder);
+            dlg.Owner = Application.Current.MainWindow;
+            if (dlg.ShowDialog() != true) return;
+
+            var newView = SaveNewView(dlg.ViewName, dlg.SelectedFolder, slotContent);
+            if (newView == null) return;
+
+            // Switch to editing the freshly-created copy so subsequent Saves target it
+            // (and don't try to recreate the source view).
+            _editingView = newView;
+            _editingParent = dlg.SelectedFolder;
+            _targetFolder = dlg.SelectedFolder;
+            _isEditMode = true;
+            _isDirty = false;
+            viewNameLabel.Text = newView.Name;
+            UpdateStatus();
         }
 
         #endregion
