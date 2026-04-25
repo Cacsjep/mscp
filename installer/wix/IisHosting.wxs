@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Optional "Local download page" feature. When enabled at install time and
+  IIS is detected on the machine, this fragment:
+
+    1. Creates C:\inetpub\wwwroot\mscp\ and drops index.html there.
+    2. Adds an IIS virtual directory '/mscp' under "Default Web Site" pointing
+       at that folder, so admins can browse to http://this-server/mscp/.
+    3. A custom action in Product.wxs copies the running MSI into that folder
+       so the page can offer it for download.
+
+  All of this is reference-counted by component GUIDs so a Major Upgrade
+  cleanly swaps the old vdir/index.html for the new one. Uninstall removes
+  everything WiX knows about; the empty mscp folder is left behind.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:iis="http://wixtoolset.org/schemas/v4/wxs/iis">
+  <Fragment>
+
+    <!-- Reference the existing IIS Default Web Site (SiteId=1, anonymous,
+         port 80). At fragment level (not inside a Component) this is a
+         lookup, not a creation. -->
+    <iis:WebSite Id="DefaultWebSite" Description="Default Web Site" SiteId="1">
+      <iis:WebAddress Id="DefaultWebSiteAddress" Port="80" />
+    </iis:WebSite>
+
+    <!-- The Directory id matches the Property MSCP_PUBLIC declared in
+         Product.wxs; the property override sets the physical path at
+         CostFinalize so it lands at C:\inetpub\wwwroot\mscp\. The
+         "plugins" subfolder holds the per-plugin ZIP downloads referenced
+         from the index.html page. -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="MSCP_PUBLIC" Name=".">
+        <Directory Id="MSCP_PLUGINS_DIR" Name="plugins" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Feature visibility:
+           Level=2 by default = visible in Customize tree, NOT included in
+                                Typical / /qn / ADDLOCAL=ALL... wait, ALL
+                                does include Level>=2 features explicitly,
+                                but the components are still gated on
+                                IIS_PRESENT so they're absent on no-IIS hosts.
+           Level=0 when NOT IIS_PRESENT = hidden entirely, cannot be selected
+                                          even via ADDLOCAL=IISHosting.
+         The combination means: a Smart Client workstation install never sees
+         the option and never runs IIS work. A management-server install sees
+         it as an opt-in checkbox. -->
+    <Feature Id="IISHosting"
+             Title="Local download page on this server"
+             Description="Optional. Adds a virtual directory '/mscp' to IIS Default Web Site so admins can browse to http://this-server/mscp/ and download the MSC Community Plugins MSI. Requires IIS with the Static Content role."
+             Level="2"
+             AllowAdvertise="no"
+             InstallDefault="local"
+             TypicalDefault="install">
+      <Level Value="0" Condition="NOT IIS_PRESENT" />
+      <ComponentRef Id="cmpMscpIndexHtml" />
+      <ComponentRef Id="cmpMscpWebConfig" />
+      <ComponentRef Id="cmpMscpVdir" />
+      <!-- Per-plugin ZIPs. The MscpPluginZips component group is generated
+           at build time from plugins.json by build.ps1, see
+           installer/wix/IisHostingPlugins.wxs. -->
+      <ComponentGroupRef Id="MscpPluginZips" />
+    </Feature>
+
+    <!-- index.html is component-tracked, so it's added/removed automatically
+         on install/uninstall and reference-counted across Major Upgrades. -->
+    <Component Id="cmpMscpIndexHtml" Directory="MSCP_PUBLIC" Guid="A7F9E2C1-3B5D-4A6F-9C8E-1D2F3B4C5D6E"
+               Condition="IIS_PRESENT">
+      <File Id="MscpIndexHtml" Name="index.html"
+            Source="!(bindpath.publicroot)\index.html" KeyPath="yes" />
+    </Component>
+
+    <!-- web.config registers index.html as the default document for /mscp/
+         and pins the .msi MIME type. Without it, IIS hands the directory
+         request off to the ASP.NET extensionless URL handler and returns
+         403.1. -->
+    <Component Id="cmpMscpWebConfig" Directory="MSCP_PUBLIC" Guid="C9D1E4F3-5D7F-6C8B-BE0F-3F4D5E6F7A8B"
+               Condition="IIS_PRESENT">
+      <File Id="MscpWebConfig" Name="web.config"
+            Source="!(bindpath.publicroot)\web.config" KeyPath="yes" />
+    </Component>
+
+    <!-- The vdir component. CreateFolder lets WiX track the physical folder
+         even though we don't drop a file in this component.
+
+         WebApplication promotes the vdir from a plain virtual directory to an
+         IIS Application. That is required for the per-folder web.config to be
+         honored (defaultDocument, handlers, etc.). Without it, the inherited
+         ASP.NET extensionless URL handler grabs requests for /mscp and
+         returns 403.1. -->
+    <Component Id="cmpMscpVdir" Directory="MSCP_PUBLIC" Guid="B8E0D3F2-4C6E-5B7A-AD9F-2E3F4C5D6E7F"
+               Condition="IIS_PRESENT">
+      <CreateFolder />
+      <iis:WebVirtualDir Id="MscpVdir"
+                          Alias="mscp"
+                          Directory="MSCP_PUBLIC"
+                          WebSite="DefaultWebSite">
+        <!-- Promoting the vdir to a Web Application is required so that the
+             per-folder web.config below (defaultDocument, MIME map) is parsed
+             as the application root. -->
+        <iis:WebApplication Id="MscpWebApp" Name="MscpDownloadApp" />
+        <!-- No iis:WebDirProperties on purpose: anything we'd set here writes
+             into applicationHost.config at the application's location and can
+             override the inherited handlers' accessPolicy. With Read="yes"
+             the wixext writes accessPolicy="Read" (Script removed), which
+             stops the DefaultDocument module from being able to map the
+             rewritten /mscp/index.html request and the directory request
+             returns 403.1. Anonymous access is inherited from the site. -->
+      </iis:WebVirtualDir>
+    </Component>
+
+  </Fragment>
+</Wix>

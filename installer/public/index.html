@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MSC Community Plugins</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --accent: #238636;
+      --accent-hover: #2ea043;
+      --link: #58a6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      font: 14px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-size: 26px; font-weight: 600; }
+    .lead { color: var(--muted); margin: 0 0 28px; font-size: 14px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .version-tag {
+      display: inline-block;
+      padding: 2px 10px;
+      background: #1f6feb33;
+      color: var(--link);
+      border: 1px solid #1f6feb55;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .actions { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      text-decoration: none;
+      font-size: 14px;
+      border: 1px solid transparent;
+      transition: background 0.1s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent-hover); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    h3 { font-size: 14px; margin: 18px 0 4px; color: var(--fg); font-weight: 600; }
+    h3:first-of-type { margin-top: 0; }
+    .path { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+    code { background: #161b22; border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px;
+           font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; }
+    pre { background: #161b22; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px;
+          font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; color: var(--fg);
+          overflow-x: auto; margin: 6px 0 0; }
+    .note { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+    .plugin-list { list-style: none; padding: 0; margin: 0 0 4px; }
+    .plugin-list li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .plugin-list li:last-child { border-bottom: none; }
+    .plugin-list a { color: var(--link); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>MSC Community Plugins</h1>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <h2 style="margin: 0 0 6px;">Full installer</h2>
+          <span class="version-tag">v__VERSION__</span>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn btn-primary" href="MscpCommunityPlugins-__VERSION__.msi" download>
+          Download MSI
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="color: #ff8801">ZIP Downloads - Readme</h2>
+      <p class="note">When you download a ZIP from this page on a different machine, Windows attaches a "Mark of the Web" flag and Smart Client / Recording Server may refuse to load the DLLs inside. Right-click the ZIP, choose <strong>Properties</strong>, tick <strong>Unblock</strong>, then extract.</p>
+      <p class="note">Downloads done on this management server itself (via <code>http://localhost/mscp/</code>) are not flagged.</p>
+    </div>
+
+    <div class="card">
+      <h2>Individual plugins</h2>
+__PLUGINS_HTML__
+    </div>
+  </div>
+</body>
+</html>
