@@ -44,7 +44,7 @@ namespace RTMPDriver
 
         public override void Close()
         {
-            Toolbox.Log.Trace("VideoStreamSession: Closing path={0} h264={1}", _streamPath, _h264Count);
+            Toolbox.Log.Trace("VideoStreamSession: Closing path={0}", _streamPath);
             _settingsManager.OnSettingsChanged -= OnSettingsChanged;
 
             // Remove buffer so disabled/removed devices reject new RTMP publishers
@@ -137,9 +137,6 @@ namespace RTMPDriver
             };
         }
 
-        private int _h264Count;
-        private DateTime _lastDiagLog = DateTime.MinValue;
-
         protected override bool GetLiveFrameInternal(TimeSpan timeout, out BaseDataHeader header, out byte[] data)
         {
             header = null;
@@ -183,6 +180,7 @@ namespace RTMPDriver
                     // When queue is empty, WaitForFrame already provided natural pacing.
                     // When queue is deep (>30), skip pacing to drain backlog.
                     int queueDepth = _streamBuffer.QueueDepth;
+                    double pacingSleepMs = 0;
                     if (queueDepth > 0 && queueDepth <= 30
                         && _prevFrameTs != DateTime.MinValue && _prevDeliverTick != 0
                         && frameTs > _prevFrameTs)
@@ -194,6 +192,7 @@ namespace RTMPDriver
 
                         if (remainingMs > 0 && remainingMs < 200)
                         {
+                            pacingSleepMs = remainingMs;
                             int coarseSleepMs = (int)remainingMs - 2;
                             if (coarseSleepMs > 0)
                                 Thread.Sleep(coarseSleepMs);
@@ -204,14 +203,7 @@ namespace RTMPDriver
                     _prevFrameTs = frameTs;
                     _prevDeliverTick = Stopwatch.GetTimestamp();
 
-                    _h264Count++;
-                    var diagNow = DateTime.UtcNow;
-                    if ((diagNow - _lastDiagLog).TotalSeconds >= 20)
-                    {
-                        Toolbox.Log.Trace("Session[{0}]: h264={1} queued={2} isLive={3}",
-                            _streamPath, _h264Count, _streamBuffer.QueueDepth, _streamBuffer.IsLive);
-                        _lastDiagLog = diagNow;
-                    }
+                    _streamBuffer.Stats?.RecordPacingSleep(pacingSleepMs);
                     data = frameData;
                     header = BuildH264Header(frameData, isKeyFrame, frameTs);
                     return true;

@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 - Add FlexView: Confirmation dialog before opening an existing view explains that saving recreates the view..
 - Improve FlexView: Save success and error notifications use a custom dark themed dialog matching the rest of the FlexView UI.
 - Improve FlexView: Heavy diagnostic logging under the `FlexView` category in `MIPLog.txt` for load and save flows (per-slot snapshot/restore, recreate phases, success/failure summaries).
+- Add RTMP Driver: Per-stream statistics block emitted to the driver log every 30 seconds (and one final block on disconnect). Reports publisher endpoint, video codec, source-declared resolution / framerate / bitrate from `onMetaData`, push and pop frame rates, queue depth (avg/max), inter-frame jitter, pacing sleep, and drops broken down by reason (overflow, SEI-only, non-H264). Lets a field engineer pinpoint whether an FPS shortfall is on the source, the driver, or the Recording Server side without instrumenting the publisher.
+- Improve RTMP Driver: Parse AMF `@setDataFrame onMetaData` messages so source-declared metadata (width, height, framerate, video / audio bitrate, audio codec, sample rate) ends up in the stats block. Previously the driver silently ignored these messages.
+- Improve RTMP Driver: Replaced the per-150-frame and per-20-second ad-hoc log lines with the new periodic stats block.
 
 ## [2.2.0] - 2026-04-25
 - Improve Timelapse: Continuous and Event-based modes backed by MIP SequenceDataSource (RecordingSequence)

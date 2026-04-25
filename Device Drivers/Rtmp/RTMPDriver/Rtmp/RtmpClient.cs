@@ -296,8 +296,9 @@ namespace RTMPDriver.Rtmp
                     }
                     break;
 
-                case 18: // AMF0 Data (metadata like @setDataFrame)
-                    break; // Ignore
+                case 18: // AMF0 Data (metadata like @setDataFrame onMetaData)
+                    HandleAmfData(msg.Data);
+                    break;
 
                 case 20: // AMF0 Command
                     HandleAmfCommand(msg);
@@ -496,6 +497,107 @@ namespace RTMPDriver.Rtmp
             }
         }
 
+        // AMF0 data messages carry source-side metadata. The publisher (OBS, FFmpeg, …)
+        // typically sends a "@setDataFrame onMetaData {…}" tuple containing the declared
+        // resolution, framerate, bitrates, audio config, encoder name, etc. We don't act
+        // on these values, but we feed them to the StreamStatsCollector so the periodic
+        // stats block can compare what the source advertised against what we actually
+        // received.
+        private void HandleAmfData(byte[] data)
+        {
+            if (data == null || data.Length == 0 || _activeBuffer == null) return;
+            List<object> values;
+            try { values = Amf0Reader.ParseCommand(data); }
+            catch (Exception ex)
+            {
+                Toolbox.Log.Trace("RtmpClient: {0} AMF0 data parse failed: {1}", _remoteEndPoint, ex.Message);
+                return;
+            }
+
+            // Find the metadata dict and its preceding name. Either form is valid:
+            //   ["@setDataFrame", "onMetaData", { … }]
+            //   ["onMetaData", { … }]
+            Dictionary<string, object> meta = null;
+            string label = null;
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (values[i] is Dictionary<string, object> dict)
+                {
+                    meta = dict;
+                    if (i > 0 && values[i - 1] is string s) label = s;
+                    break;
+                }
+            }
+            if (meta == null) return;
+
+            int width = ReadInt(meta, "width");
+            int height = ReadInt(meta, "height");
+            double fps = ReadDouble(meta, "framerate", "fps", "videoFrameRate");
+            double videoKbps = ReadDouble(meta, "videodatarate", "videoBitrate");
+            double audioKbps = ReadDouble(meta, "audiodatarate", "audioBitrate");
+            double audioRate = ReadDouble(meta, "audiosamplerate");
+
+            string audioCodec = null;
+            if (meta.TryGetValue("audiocodecid", out object acVal))
+            {
+                if (acVal is double acd) audioCodec = AudioCodecName((int)acd);
+                else if (acVal is string acs) audioCodec = acs;
+            }
+
+            _activeBuffer.Stats?.SetSourceMetadata(width, height, fps, videoKbps, audioCodec, audioRate, audioKbps);
+            Toolbox.Log.Trace("RtmpClient: {0} onMetaData {1}: {2}x{3} @ {4:0.##}fps videoKbps={5:0} audioCodec={6} audioRate={7:0}",
+                _remoteEndPoint, label ?? "(unnamed)", width, height, fps, videoKbps, audioCodec ?? "?", audioRate);
+        }
+
+        private static int ReadInt(Dictionary<string, object> dict, params string[] keys)
+        {
+            foreach (var k in keys)
+            {
+                if (dict.TryGetValue(k, out object v))
+                {
+                    if (v is double d) return (int)d;
+                    if (v is int i) return i;
+                    if (v is string s && int.TryParse(s, out int parsed)) return parsed;
+                }
+            }
+            return 0;
+        }
+
+        private static double ReadDouble(Dictionary<string, object> dict, params string[] keys)
+        {
+            foreach (var k in keys)
+            {
+                if (dict.TryGetValue(k, out object v))
+                {
+                    if (v is double d) return d;
+                    if (v is int i) return i;
+                    if (v is string s && double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsed)) return parsed;
+                }
+            }
+            return 0;
+        }
+
+        // FLV audio codec id mapping (per Adobe FLV spec).
+        private static string AudioCodecName(int id)
+        {
+            switch (id)
+            {
+                case 0: return "Linear PCM";
+                case 1: return "ADPCM";
+                case 2: return "MP3";
+                case 3: return "Linear PCM LE";
+                case 4: return "Nellymoser 16kHz";
+                case 5: return "Nellymoser 8kHz";
+                case 6: return "Nellymoser";
+                case 7: return "G.711 A-law";
+                case 8: return "G.711 mu-law";
+                case 10: return "AAC";
+                case 11: return "Speex";
+                case 14: return "MP3 8kHz";
+                default: return "id=" + id;
+            }
+        }
+
         #endregion
 
         #region Video Data Handling
@@ -541,6 +643,7 @@ namespace RTMPDriver.Rtmp
             if (codecId != 7) // Not AVC/H.264
             {
                 Toolbox.Log.Trace("RtmpClient: {0} non-H.264 codec: {1}", _remoteEndPoint, codecId);
+                _activeBuffer?.Stats?.RecordNonH264Drop();
                 return;
             }
 
@@ -695,6 +798,7 @@ namespace RTMPDriver.Rtmp
                 byte level = (offset + 3 < payload.Length) ? payload[offset + 3] : (byte)0;
                 Toolbox.Log.Trace("RtmpClient: {0} SPS({1}b) PPS({2}b) naluLenSize={3} profile={4} level={5}",
                     _remoteEndPoint, sps.Length, pps.Length, _naluLengthSize, profile, level);
+                _activeBuffer?.Stats?.SetVideoCodec(string.Format("H.264 (profile={0} level={1})", profile, level));
             }
         }
 
@@ -775,6 +879,7 @@ namespace RTMPDriver.Rtmp
                             _remoteEndPoint, naluCount, naluInfo);
                         _seiDropLogCount++;
                     }
+                    _activeBuffer?.Stats?.RecordSeiOnlyDrop();
                     return null;
                 }
 
