@@ -35,3 +35,5 @@ site/
 installer/wix/Components.wxs
 installer/wix/Components.wxs
 installer/wix/Components.wxs
+build.log
+*.log
