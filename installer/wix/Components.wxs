@@ -1092,6 +1092,33 @@
     </ComponentGroup>
   </Fragment>
   <Fragment>
+    <DirectoryRef Id="MIPPLUGINS">
+      <Directory Id="Dir_MetadataViewer" Name="MetadataViewer">
+        <Directory Id="Dir_MetadataViewer_Admin" Name="Admin" />
+      </Directory>
+    </DirectoryRef>
+    <ComponentGroup Id="CG_MetadataViewer" Directory="Dir_MetadataViewer">
+      <Component Id="MetadataViewer_Comp1" Directory="Dir_MetadataViewer" Bitness="always64">
+        <File Id="MetadataViewer_File1" Source="G:\mscp\mscp\build\staging\MetadataViewer\FontAwesome5.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="MetadataViewer_Comp2" Directory="Dir_MetadataViewer" Bitness="always64">
+        <File Id="MetadataViewer_File2" Source="G:\mscp\mscp\build\staging\MetadataViewer\FontAwesome5.Net.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="MetadataViewer_Comp3" Directory="Dir_MetadataViewer" Bitness="always64">
+        <File Id="MetadataViewer_File3" Source="G:\mscp\mscp\build\staging\MetadataViewer\MetadataViewer.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="MetadataViewer_Comp4" Directory="Dir_MetadataViewer" Bitness="always64">
+        <File Id="MetadataViewer_File4" Source="G:\mscp\mscp\build\staging\MetadataViewer\MetadataViewer.pdb" KeyPath="yes" />
+      </Component>
+      <Component Id="MetadataViewer_Comp5" Directory="Dir_MetadataViewer" Bitness="always64">
+        <File Id="MetadataViewer_File5" Source="G:\mscp\mscp\build\staging\MetadataViewer\plugin.def" KeyPath="yes" />
+      </Component>
+      <Component Id="MetadataViewer_Comp6" Directory="Dir_MetadataViewer_Admin" Bitness="always64">
+        <File Id="MetadataViewer_File6" Source="G:\mscp\mscp\build\staging\MetadataViewer\Admin\HelpPage.html" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
     <Feature Id="SmartClientPlugins" Title="Smart Client Plugins" Description="Plugins for the XProtect Smart Client. Installs to C:\Program Files\Milestone\MIPPlugins\" Level="1" Display="expand" AllowAbsent="yes" AllowAdvertise="no">
       <Feature Id="Feature_Weather" Title="Weather Plugin" Description="Display live weather in Smart Client view items (Open-Meteo)" Level="1" AllowAbsent="yes" AllowAdvertise="no">
         <ComponentGroupRef Id="CG_Weather" />
@@ -1151,6 +1178,9 @@
       </Feature>
       <Feature Id="Feature_BarcodeReader" Title="Barcode Reader Plugin" Description="Decode QR and 1D/2D barcodes from live camera streams (ZXing)" Level="1" AllowAbsent="yes" AllowAdvertise="no">
         <ComponentGroupRef Id="CG_BarcodeReader" />
+      </Feature>
+      <Feature Id="Feature_MetadataViewer" Title="Metadata Viewer Plugin" Description="Subscribe to a metadata channel in the Management Client and view the live XML stream" Level="1" AllowAbsent="yes" AllowAdvertise="no">
+        <ComponentGroupRef Id="CG_MetadataViewer" />
       </Feature>
     </Feature>
   </Fragment>
