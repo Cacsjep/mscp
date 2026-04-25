@@ -95,7 +95,6 @@ After manual installation, restart the relevant service, if you update, you need
 | Admin Plugins | Restart the **Event Server** service, then the **Management Client** and **Smart Client** |
 
 ## Local Download Page
-
 When you install on a machine that has IIS (Managment Server), the installer offers an optional feature called **Local download page on this server**. 
 
 When enabled, it publishes the MSI and every per-plugin ZIP to `http://this-server/mscp/`, so other admins on the same network can browse to the page and download any plugin without having to fetch the MSI from GitHub.
@@ -103,8 +102,6 @@ When enabled, it publishes the MSI and every per-plugin ZIP to `http://this-serv
 The feature is **off by default**. It is hidden entirely on machines without IIS.
 
 After install, browse to `http://<management-server>/mscp/`. If the management server has an encryption enabled, `https://...` works automatically with the same certificate.
-
-
 <script>
 fetch("https://api.github.com/repos/Cacsjep/mscp/releases/latest")
   .then(function(r) { return r.json(); })
