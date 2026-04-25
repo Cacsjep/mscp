@@ -1,6 +1,6 @@
 ---
 title: "FlexView Plugin for Milestone XProtect"
-description: "FlexView plugin for Milestone XProtect Smart Client — design custom view layouts beyond standard templates with a free-form canvas."
+description: "FlexView plugin for Milestone XProtect Smart Client. Design custom view layouts beyond standard templates with a free-form canvas."
 ---
 
 <div class="show-title" markdown>
@@ -37,7 +37,7 @@ Click and drag on empty cells to create a new pane. A preview outline shows the 
 
 ## Editing Existing Views
 
-Click **Open View** to load an existing view. A confirmation appears first explaining that saving will recreate the view (Smart Client does not allow editing the layout of an existing view in place — see [How saves work](#how-saves-work) below). After confirming, the view picker opens. Use the **search field** at the top of the picker to filter views by name as you type.
+Click **Open View** to load an existing view. A confirmation appears first explaining that saving will recreate the view (Smart Client does not allow editing the layout of an existing view in place. See [How saves work](#how-saves-work) below). After confirming, the view picker opens. Use the **search field** at the top of the picker to filter views by name as you type.
 
 When a view is loaded, its existing camera and built-in view-item assignments (Camera, Hotspot, Carousel, Matrix, HTML) are remembered. Camera names are shown in blue on each pane. After editing:
 
@@ -47,10 +47,10 @@ When a view is loaded, its existing camera and built-in view-item assignments (C
 
 ## Saving Views
 
-- **Save** — for a new view, opens the save dialog (name + folder). For an opened existing view, recreates the view in place under the same name and folder while restoring camera assignments.
-- **Save As** — only available when an existing view is loaded. Creates a duplicate at a new name/folder, carrying over the camera assignments. After Save As, the editor switches to the new copy so subsequent saves target the duplicate, not the original.
+- **Save**: for a new view, opens the save dialog (name + folder). For an opened existing view, recreates the view in place under the same name and folder while restoring camera assignments.
+- **Save As**: only available when an existing view is loaded. Creates a duplicate at a new name/folder, carrying over the camera assignments. After Save As, the editor switches to the new copy so subsequent saves target the duplicate, not the original.
 
-The created view works like any standard XProtect view — assign cameras to empty slots in the normal Smart Client view builder.
+The created view works like any standard XProtect view. Assign cameras to empty slots in the normal Smart Client view builder.
 
 ## How Saves Work
 
@@ -63,11 +63,11 @@ Smart Client's `ViewAndLayoutItem.Layout` is one-shot: assigning a new layout to
 
 Practical consequences:
 
-- The view's name and parent folder are preserved, but its **internal `ObjectId` changes** on every save. Any external reference that pins the view by ID — favorites, shortcut URIs, scripts — will need to be updated.
+- The view's name and parent folder are preserved, but its **internal `ObjectId` changes** on every save. Any external reference that pins the view by ID (favorites, shortcut URIs, scripts) will need to be updated.
 - Only **built-in view items** are restored: Camera, Empty, Hotspot, Carousel, Matrix, HTML. Custom MIP plug-in view items in slots are not currently re-attached.
 - Slot-level state Smart Client computes lazily (last-selected stream, runtime overlays) is not part of the snapshot.
 
-The `Save` button is a no-op when no edits have been made since the view was loaded — this avoids unnecessary view recreation. The dirty flag is reset after `New`, after a successful save, and when an existing view is loaded.
+The `Save` button is a no-op when no edits have been made since the view was loaded; this avoids unnecessary view recreation. The dirty flag is reset after `New`, after a successful save, and when an existing view is loaded.
 
 ## Controls
 
@@ -79,7 +79,7 @@ The `Save` button is a no-op when no edits have been made since the view was loa
 | **Delete pane** | Right-click a pane, or select + Delete key |
 | **New layout** | Click **New** to start fresh |
 | **Open view** | Click **Open View**, confirm the recreate notice, pick a view (use the search field to filter) |
-| **Save** | Save the current view — recreates an existing view with cameras restored |
+| **Save** | Save the current view, recreating an existing view with cameras restored |
 | **Save As** | Duplicate an opened view to a new name/folder, carrying camera assignments |
 
 ## Diagnostics
