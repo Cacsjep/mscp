@@ -140,15 +140,16 @@ Write-Host "`n[6/6] Building WiX MSI installer..." -ForegroundColor Yellow
 
 $wixCmd = Get-Command wix -ErrorAction SilentlyContinue
 if ($wixCmd) {
-    # Generate WiX components from staging
+    # Generate WiX components from plugins.json. The new generator emits one
+    # <Component> per plugin (a single ZIP File) plus the per-plugin extract /
+    # cleanup CAs and Features — it doesn't need the staging tree any more.
     $genWixScript = Join-Path $root 'installer\generate-wix.ps1'
-    & $genWixScript -ManifestPath $manifestPath -StagingRoot $staging
+    & $genWixScript -ManifestPath $manifestPath
 
     $wixDir = Join-Path $root 'installer\wix'
     $productWxs = Join-Path $wixDir 'Product.wxs'
     $componentsWxs = Join-Path $wixDir 'Components.wxs'
     $iisHostingWxs = Join-Path $wixDir 'IisHosting.wxs'
-    $iisHostingPluginsWxs = Join-Path $wixDir 'IisHostingPlugins.wxs'
     $msiPath = Join-Path $buildDir "MSCPlugins-v$version.msi"
     $customActionProj = Join-Path $root 'installer\customactions\InstallerCustomActions.csproj'
 
@@ -160,9 +161,11 @@ if ($wixCmd) {
         /v:minimal
     if ($LASTEXITCODE -ne 0) { Write-Error "Installer custom actions build failed"; exit 1 }
 
-    # Stage public/index.html, web.config, per-plugin ZIPs into build/public/
-    # and generate IisHostingPlugins.wxs. Same logic CI uses, see
-    # installer/stage-iis-hosting.ps1.
+    # Stage public/index.html and web.config into build/public/. The
+    # per-plugin ZIPs are NOT staged here — they live next to the MSI in
+    # $buildDir and are referenced directly from Components.wxs via the
+    # wix bindpath zips=<buildDir>. CA_CopyPluginZipsToPublic replicates
+    # them into MSCP_PUBLIC\plugins\ at install time when IISHosting is on.
     $publicSrc = Join-Path $root 'installer\public'
     $publicStaged = Join-Path $buildDir 'public'
     $stageScript = Join-Path $root 'installer\stage-iis-hosting.ps1'
@@ -170,8 +173,6 @@ if ($wixCmd) {
         -ManifestPath $manifestPath `
         -PublicSrc $publicSrc `
         -PublicStaged $publicStaged `
-        -ZipsRoot $buildDir `
-        -WixOutPath $iisHostingPluginsWxs `
         -Version $version
     if ($LASTEXITCODE -ne 0) { Write-Error "stage-iis-hosting failed"; exit 1 }
 
@@ -183,13 +184,14 @@ if ($wixCmd) {
     if ($LASTEXITCODE -ne 0) { Write-Error "Failed to install WixToolset.Iis.wixext"; exit 1 }
 
     & wix build `
-        -src $productWxs $componentsWxs $iisHostingWxs $iisHostingPluginsWxs `
+        -src $productWxs $componentsWxs $iisHostingWxs `
         -d "Version=$version" `
         -ext WixToolset.UI.wixext `
         -ext WixToolset.Util.wixext `
         -ext WixToolset.Iis.wixext `
         -b $wixDir `
         -bindpath "publicroot=$publicStaged" `
+        -bindpath "zips=$buildDir" `
         -o $msiPath `
         -pdbtype none `
         -arch x64

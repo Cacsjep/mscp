@@ -85,6 +85,27 @@
 
     <Property Id="MSCP_MSI_NAME" Secure="yes" Value="MscpCommunityPlugins-$(var.Version).msi" />
 
+    <!-- Folder where the per-plugin ZIPs land at install time (one File per
+         plugin component, see installer/generate-wix.ps1). The sweep CA
+         CA_CopyPluginZipsToPublic walks this folder when IISHosting is on
+         and copies each *.zip into [MSCP_PUBLIC]plugins\ as
+         <Name>-v<Version>.zip. -->
+    <Property Id="MSCP_PAYLOAD_PATH" Secure="yes" />
+    <SetProperty Id="MSCP_PAYLOAD_PATH"
+                 Value="[CommonAppDataFolder]Milestone\MSCPPluginPayload"
+                 Before="CostFinalize"
+                 Sequence="both"
+                 Condition="NOT MSCP_PAYLOAD_PATH" />
+
+    <!-- Public plugins folder — produced by the sweep CA and torn down by
+         CA_RemovePluginZips. Matches the plugins/ hrefs in index.html. -->
+    <Property Id="MSCP_PLUGINS_DIR_PATH" Secure="yes" />
+    <SetProperty Id="MSCP_PLUGINS_DIR_PATH"
+                 Value="[MSCP_PUBLIC]plugins"
+                 Before="CostFinalize"
+                 Sequence="both"
+                 Condition="NOT MSCP_PLUGINS_DIR_PATH" />
+
     <!-- Fill the defaults from [ProgramFiles64Folder] only if the user or
          caller hasn't already set them. Before CostFinalize on both sequences
          so they resolve correctly in both UI and Execute phases. -->
@@ -403,6 +424,37 @@
                   Impersonate="no"
                   Return="ignore" />
 
+    <!-- IIS sweep: copy every plugin ZIP currently under
+         [CommonAppDataFolder]Milestone\MSCPPluginPayload\ into
+         MSCP_PUBLIC\plugins\ as <Name>-v<Version>.zip. The IISHosting feature
+         pulls in MscpAllPluginZips so when this CA fires the source folder
+         contains every plugin's ZIP — even on a "page only" install where
+         the user picked no plugin features. -->
+    <SetProperty Id="CA_CopyPluginZipsToPublic"
+                 Before="CA_CopyPluginZipsToPublic"
+                 Sequence="execute"
+                 Value="Source=[MSCP_PAYLOAD_PATH];Dest=[MSCP_PLUGINS_DIR_PATH];Version=$(var.Version)" />
+    <CustomAction Id="CA_CopyPluginZipsToPublic"
+                  BinaryRef="InstallerCustomActions"
+                  DllEntry="CopyPluginZipsToPublic"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- Cleanup: wipe the per-plugin ZIPs under MSCP_PUBLIC\plugins\ on
+         IISHosting removal / full uninstall. The folder itself is removed
+         by RemoveFiles for the cmpMscpVdir component. -->
+    <SetProperty Id="CA_RemovePluginZips"
+                 Before="CA_RemovePluginZips"
+                 Sequence="execute"
+                 Value="DestinationFolder=[MSCP_PLUGINS_DIR_PATH]" />
+    <CustomAction Id="CA_RemovePluginZips"
+                  BinaryRef="InstallerCustomActions"
+                  DllEntry="RemovePluginZips"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- Install sequence                                          -->
     <!--   1. Kill processes (SC, MC, DFP)                         -->
@@ -438,10 +490,22 @@
 
       <!-- IIS publishing (only if user opted in to IISHosting AND IIS exists).
            &amp;IISHosting=3 means "feature is going to local install in this transaction".
-           &amp;IISHosting=2 means "feature was installed and is now being removed". -->
+           &amp;IISHosting=2 means "feature was installed and is now being removed".
+           CA_CopyPluginZipsToPublic runs after CA_PublishMsi (which copies the
+           running MSI itself into MSCP_PUBLIC) and after the per-plugin
+           extract CAs in Components.wxs (so the source folder under
+           ProgramData is guaranteed populated). -->
       <Custom Action="CA_PublishMsi"
               After="InstallFiles"
               Condition="(&amp;IISHosting=3) AND IIS_PRESENT" />
+      <Custom Action="CA_CopyPluginZipsToPublic"
+              After="CA_PublishMsi"
+              Condition="(&amp;IISHosting=3) AND IIS_PRESENT" />
+      <!-- Remove the generated per-plugin ZIPs first, then unpublish the MSI.
+           Both run before RemoveFiles so the directories are still present. -->
+      <Custom Action="CA_RemovePluginZips"
+              Before="CA_UnpublishMsi"
+              Condition="((&amp;IISHosting=2) OR REMOVE=&quot;ALL&quot;) AND IIS_PRESENT" />
       <Custom Action="CA_UnpublishMsi"
               Before="RemoveFiles"
               Condition="((&amp;IISHosting=2) OR REMOVE=&quot;ALL&quot;) AND IIS_PRESENT" />

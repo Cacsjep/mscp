@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.2.2] - 2026-04-26
+## [2.2.3] - 2026-04-26
 - Fix FlexView: Saving an opened view no longer clears camera assignments. Smart Client rejects `ViewAndLayoutItem.Layout` mutation on an existing view; FlexView now recreates the view and re-attaches each slot's built-in content (Camera, Hotspot, Carousel, Matrix, HTML) via `InsertBuiltinViewItem`.
 - Fix FlexView: A `Save` with no edits is now a no-op (was destructively recreating the view).
 - Add FlexView: **Save As** button (visible only when editing an existing view) — duplicates the current view to a new name/folder and carries over camera assignments.

@@ -141,15 +141,6 @@ jobs:
         with:
           path: artifacts
 
-      - name: Extract staging directories
-        shell: pwsh
-        run: |
-          $names = '${{ needs.setup.outputs.names }}' | ConvertFrom-Json
-          foreach ($name in $names) {
-            $zip = Get-ChildItem "artifacts\$name\*.zip" | Select-Object -First 1
-            Expand-Archive -Path $zip.FullName -DestinationPath staging -Force
-          }
-
       - name: Install WiX Toolset
         shell: pwsh
         run: |
@@ -161,8 +152,7 @@ jobs:
       - name: Generate WiX components
         shell: pwsh
         run: |
-          $stagingRoot = (Resolve-Path 'staging').Path
-          pwsh installer/generate-wix.ps1 -StagingRoot $stagingRoot
+          pwsh installer/generate-wix.ps1
 
       - name: Build installer custom actions
         shell: pwsh
@@ -181,19 +171,32 @@ jobs:
           elseif ($tag -match '^d(\d+\.\d+)') { $version = "$($Matches[1]).0" }
           else { $version = "0.0.${{ github.run_number }}" }
           $publicStaged = Join-Path (Get-Location) 'public-staged'
-          $zipsRoot = Join-Path (Get-Location) 'zips-flat'
-          if (Test-Path $zipsRoot) { Remove-Item $zipsRoot -Recurse -Force }
-          New-Item -ItemType Directory -Path $zipsRoot -Force | Out-Null
-          Get-ChildItem 'artifacts' -Recurse -Filter '*.zip' | ForEach-Object {
-            Copy-Item $_.FullName -Destination $zipsRoot -Force
-          }
           pwsh installer/stage-iis-hosting.ps1 `
             -ManifestPath plugins.json `
             -PublicSrc installer/public `
             -PublicStaged $publicStaged `
-            -ZipsRoot $zipsRoot `
-            -WixOutPath installer/wix/IisHostingPlugins.wxs `
             -Version $version
+
+      - name: Collect per-plugin ZIPs for WiX bindpath
+        shell: pwsh
+        run: |
+          # Components.wxs references each plugin ZIP via !(bindpath.zips).
+          # The dev workflow uploads ZIPs without the version suffix, so we
+          # rename them to <Name>-v<Version>.zip when collecting them.
+          $tag = '${{ github.ref_name }}'
+          if ($tag -match '^d(\d+\.\d+\.\d+)') { $version = $Matches[1] }
+          elseif ($tag -match '^d(\d+\.\d+)') { $version = "$($Matches[1]).0" }
+          else { $version = "0.0.${{ github.run_number }}" }
+          $zipsRoot = Join-Path (Get-Location) 'zips-flat'
+          if (Test-Path $zipsRoot) { Remove-Item $zipsRoot -Recurse -Force }
+          New-Item -ItemType Directory -Path $zipsRoot -Force | Out-Null
+          Get-ChildItem 'artifacts' -Directory | ForEach-Object {
+            $name = $_.Name
+            $src = Join-Path $_.FullName "$name.zip"
+            if (Test-Path $src) {
+              Copy-Item $src -Destination (Join-Path $zipsRoot "$name-v$version.zip") -Force
+            }
+          }
 
       - name: Build MSI installer
         shell: pwsh
@@ -203,7 +206,8 @@ jobs:
           elseif ($tag -match '^d(\d+\.\d+)') { $version = "$($Matches[1]).0" }
           else { $version = "0.0.${{ github.run_number }}" }
           $publicStaged = Join-Path (Get-Location) 'public-staged'
-          wix build installer/wix/Product.wxs installer/wix/Components.wxs installer/wix/IisHosting.wxs installer/wix/IisHostingPlugins.wxs `
+          $zipsRoot = Join-Path (Get-Location) 'zips-flat'
+          wix build installer/wix/Product.wxs installer/wix/Components.wxs installer/wix/IisHosting.wxs `
             -ext WixToolset.UI.wixext `
             -ext WixToolset.Util.wixext `
             -ext WixToolset.Iis.wixext `
@@ -211,6 +215,7 @@ jobs:
             -arch x64 `
             -b installer/wix `
             -bindpath "publicroot=$publicStaged" `
+            -bindpath "zips=$zipsRoot" `
             -pdbtype none `
             -o "MSCPlugins-dev-Setup.msi"
 
