@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using RTMPDriver.Diagnostics;
 using VideoOS.Platform.DriverFramework.Utilities;
 
 namespace RTMPDriver.Rtmp
@@ -13,26 +14,26 @@ namespace RTMPDriver.Rtmp
     internal class RtmpStreamBuffer
     {
         private const int MaxQueueSize = 300; // ~10 seconds at 30fps
-        private const int LogIntervalFrames = 150; // Log stats every ~5 seconds at 30fps
 
         private readonly string _streamPath;
         private readonly object _lock = new object();
         private readonly Queue<FrameInfo> _frameQueue = new Queue<FrameInfo>();
         private readonly ManualResetEventSlim _frameAvailable = new ManualResetEventSlim(false);
+        private readonly StreamStatsCollector _stats;
         private byte[] _sps;
         private byte[] _pps;
         private volatile bool _isLive;
         private string _clientInfo;
-        private int _pushCount;
-        private int _popCount;
 
         public RtmpStreamBuffer(string streamPath)
         {
             _streamPath = streamPath;
+            _stats = new StreamStatsCollector(streamPath);
         }
 
         public bool IsLive => _isLive;
         public string ClientInfo { get { lock (_lock) { return _clientInfo; } } }
+        public StreamStatsCollector Stats => _stats;
 
         /// <summary>
         /// Store SPS/PPS extracted from AVC sequence header.
@@ -52,22 +53,23 @@ namespace RTMPDriver.Rtmp
         /// </summary>
         public void PushFrame(byte[] annexBData, bool isKeyFrame, DateTime timestamp)
         {
+            int queueDepthAfter;
+            int overflowDropped = 0;
             lock (_lock)
             {
                 // Drop to next keyframe if queue is full to avoid reference frame corruption
                 if (_frameQueue.Count >= MaxQueueSize)
                 {
-                    int dropped = 0;
                     // Dequeue until we find a keyframe or the queue is empty
                     while (_frameQueue.Count > 0)
                     {
                         var peek = _frameQueue.Peek();
-                        if (peek.IsKeyFrame && dropped > 0)
+                        if (peek.IsKeyFrame && overflowDropped > 0)
                             break; // keep this keyframe as the new start
                         _frameQueue.Dequeue();
-                        dropped++;
+                        overflowDropped++;
                     }
-                    Toolbox.Log.Trace("RtmpStreamBuffer[{0}]: Queue full, dropped {1} frames to keyframe boundary (max={2}, remaining={3})", _streamPath, dropped, MaxQueueSize, _frameQueue.Count);
+                    Toolbox.Log.Trace("RtmpStreamBuffer[{0}]: Queue full, dropped {1} frames to keyframe boundary (max={2}, remaining={3})", _streamPath, overflowDropped, MaxQueueSize, _frameQueue.Count);
                 }
 
                 _frameQueue.Enqueue(new FrameInfo
@@ -77,14 +79,11 @@ namespace RTMPDriver.Rtmp
                     Timestamp = timestamp,
                 });
 
-                _pushCount++;
-                if (_pushCount % LogIntervalFrames == 0)
-                {
-                    Toolbox.Log.Trace("RtmpStreamBuffer[{0}]: pushed={1} popped={2} queued={3}",
-                        _streamPath, _pushCount, _popCount, _frameQueue.Count);
-                }
+                queueDepthAfter = _frameQueue.Count;
             }
             _frameAvailable.Set();
+            if (overflowDropped > 0) _stats.RecordOverflowDrop(overflowDropped);
+            _stats.RecordPush(annexBData?.Length ?? 0, isKeyFrame, timestamp, queueDepthAfter);
         }
 
         /// <summary>
@@ -94,6 +93,7 @@ namespace RTMPDriver.Rtmp
         /// </summary>
         public bool TryGetFrame(out byte[] data, out bool isKeyFrame, out DateTime timestamp)
         {
+            bool gotFrame;
             lock (_lock)
             {
                 if (_frameQueue.Count == 0)
@@ -109,9 +109,10 @@ namespace RTMPDriver.Rtmp
                 data = frame.Data;
                 isKeyFrame = frame.IsKeyFrame;
                 timestamp = frame.Timestamp;
-                _popCount++;
-                return true;
+                gotFrame = true;
             }
+            if (gotFrame) _stats.RecordPop();
+            return true;
         }
 
         /// <summary>
@@ -159,6 +160,7 @@ namespace RTMPDriver.Rtmp
                     Toolbox.Log.Trace("RtmpStreamBuffer[{0}]: SetLive client={1}", _streamPath, clientInfo);
             }
             _frameAvailable.Reset();
+            _stats.OnPublishStart(clientInfo);
             return true;
         }
 
@@ -177,7 +179,8 @@ namespace RTMPDriver.Rtmp
                 remaining = _frameQueue.Count;
             }
             _frameAvailable.Set(); // wake up consumer so it sees IsLive=false
-            Toolbox.Log.Trace("RtmpStreamBuffer[{0}]: SetOffline, {1} frames remaining to drain, pushed={2} popped={3}", _streamPath, remaining, _pushCount, _popCount);
+            Toolbox.Log.Trace("RtmpStreamBuffer[{0}]: SetOffline, {1} frames remaining to drain", _streamPath, remaining);
+            _stats.OnPublishStop();
         }
 
         /// <summary>

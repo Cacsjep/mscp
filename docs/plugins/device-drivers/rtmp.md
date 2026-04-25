@@ -135,12 +135,63 @@ Export-PfxCertificate -Cert $cert `
 - The driver supports **TLS 1.2**
 - Changing any TLS setting restarts the RTMP server, momentarily disconnecting all active streams
 
+## Stream Statistics
+
+While a publisher is connected, the driver writes a multi-line statistics block to the driver log every 30 seconds, plus one final block when the publisher disconnects. The block lets you tell whether an FPS shortfall is caused by the source, the driver, or the Recording Server, without instrumenting the source side.
+
+Stats blocks are written to the standard driver log:
+
+```
+C:\ProgramData\Milestone\XProtect Recording Server\Logs\DriverFramework_RTMPDriver.log
+```
+
+Search for `RTMP Stream Stats:` to jump straight to the latest block, or filter by stream path (e.g. `RTMP Stream Stats: /stream1`).
+
+```
+================ RTMP Stream Stats: /stream1 ================
+ Publisher       : 192.168.1.10:54321
+ Uptime          : 00:05:30 (since 2026-04-25 06:30:00 UTC)
+ Video codec     : H.264 (profile=100 level=40)
+ Source declared : 1920x1080 @ 30 fps, video=4500 kbps
+ Source audio    : codec=AAC rate=48000 Hz (160 kbps) (audio is ignored by the driver)
+ --- Last 30s window ---
+ Push (RTMP)     : 900 frames (30.00 fps), 4.50 Mbit/s, avg 18.7 KB/frame, 30 keyframes (GOP~30.0)
+ Pop (XProtect)  : 870 frames (29.00 fps)
+ Drops in window : overflow=0, SEI-only=0, non-H264=0
+ Queue depth     : avg=1.5, max=12, capacity=300
+ Inter-frame ms  : avg=33.3, min=30.1, max=41.8 (899 samples)
+ Pacing sleep    : avg=2.1 ms (840 sleeps), driver throttled to publisher rate
+ --- Cumulative ---
+ Push total      : 9900 frames, 167.8 MB
+ Pop total       : 9870 frames (gap to push: 30)
+ Drops total     : overflow=0, SEI-only=0, non-H264=0
+=========================================================
+```
+
+### What the fields mean
+
+| Section | Field | Meaning |
+|---|---|---|
+| Header | `Publisher` | Remote endpoint (IP:port) of the RTMP source |
+| Header | `Uptime` | Time since the publisher started this session |
+| Header | `Video codec` | Parsed from the AVC sequence header (profile + level) |
+| Header | `Source declared` | Resolution, framerate, and video bitrate the publisher advertised in `onMetaData`. Missing if the publisher does not send `onMetaData`. |
+| Header | `Source audio` | Audio metadata from `onMetaData`. The driver ignores audio at runtime; this field is informational. |
+| Window | `Push (RTMP)` | Frames received from the publisher during the last window, with derived FPS, bitrate, average frame size, keyframe count, and approximate GOP length |
+| Window | `Pop (XProtect)` | Frames the Recording Server pulled from the driver during the same window |
+| Window | `Drops in window` | `overflow`: queue was full, dropped to next keyframe. `SEI-only`: a frame contained only non-VCL NALUs (e.g. some DJI drones). `non-H264`: a frame arrived with a codec id other than AVC. |
+| Window | `Queue depth` | Frame queue occupancy (avg/max) and capacity. Sustained high values mean the consumer is slower than the producer. |
+| Window | `Inter-frame ms` | Distribution of arrival deltas between consecutive frames, derived from RTMP timestamps. High `max` with a normal `avg` indicates a publisher stall. |
+| Window | `Pacing sleep` | Time the driver slept to throttle delivery to the publisher's rate. Zero means the queue was empty most of the time, so no pacing was needed. |
+| Cumulative | `Push total` / `Pop total` | Counts since the publisher connected. The `gap to push` is `pushed - popped`; growing across blocks indicates the consumer is falling behind. |
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---|---|
 | No video in Smart Client | Check stream path matches camera config. Check driver log. |
 | Stream connects but no video | Ensure H.264 (not HEVC/H.265). Check log for `SPS/PPS` messages. |
+| FPS lower than expected | Read the [Stream Statistics block](#stream-statistics) and compare `Push` fps, `Pop` fps, and `Drops`. |
 | DLLs blocked / driver not loading | Unblock the ZIP before extracting. |
 | "Hardware not responding" | Verify Recording Server is running and DLLs are in the correct path. |
 | Port already in use | Each driver instance must use a unique port. Change **Server Port**. |
