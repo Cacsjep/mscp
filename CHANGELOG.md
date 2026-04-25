@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 - Fix FlexView: A `Save` with no edits is now a no-op (was destructively recreating the view).
 - Add FlexView: **Save As** button (visible only when editing an existing view) — duplicates the current view to a new name/folder and carries over camera assignments.
 - Add FlexView: Search field in the view picker to filter views by name as you type. Folders auto-expand to reveal matches.
-- Add FlexView: Confirmation dialog before opening an existing view explains that saving recreates the view (and that the internal `ObjectId` changes), so external references pinned by ID can be updated.
+- Add FlexView: Confirmation dialog before opening an existing view explains that saving recreates the view..
 - Improve FlexView: Save success and error notifications use a custom dark themed dialog matching the rest of the FlexView UI.
 - Improve FlexView: Heavy diagnostic logging under the `FlexView` category in `MIPLog.txt` for load and save flows (per-slot snapshot/restore, recreate phases, success/failure summaries).
 
