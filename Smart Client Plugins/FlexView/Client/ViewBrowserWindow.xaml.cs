@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,7 @@ namespace FlexView.Client
             headerText.Text = mode == BrowseMode.SelectFolder
                 ? "Select a folder to save the view in"
                 : "Select a view to edit";
+            searchBox.ToolTip = "Type to filter by name";
             LoadTree();
         }
 
@@ -60,7 +62,7 @@ namespace FlexView.Client
             {
                 Header = icon + item.Name,
                 Tag = item,
-                IsExpanded = true
+                IsExpanded = true,
             };
 
             if (isFolder)
@@ -108,6 +110,44 @@ namespace FlexView.Client
                 btnSelect.IsEnabled = !isFolder;
         }
 
+        private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+        {
+            var query = (searchBox.Text ?? string.Empty).Trim();
+            ApplyFilter(tree.Items, query);
+        }
+
+        // Returns true if the subtree rooted at one of these items has any visible match.
+        // A node is visible when it (or any descendant) matches the query; folders auto-expand
+        // while a query is active so matches are revealed.
+        private bool ApplyFilter(ItemCollection items, string query)
+        {
+            bool anyVisible = false;
+            foreach (var obj in items)
+            {
+                var node = obj as TreeViewItem;
+                if (node == null) continue;
+
+                bool selfMatches = string.IsNullOrEmpty(query) || NodeMatches(node, query);
+                bool childMatches = ApplyFilter(node.Items, query);
+
+                bool visible = selfMatches || childMatches;
+                node.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+
+                if (!string.IsNullOrEmpty(query) && childMatches)
+                    node.IsExpanded = true;
+
+                if (visible) anyVisible = true;
+            }
+            return anyVisible;
+        }
+
+        private static bool NodeMatches(TreeViewItem node, string query)
+        {
+            var item = node.Tag as Item;
+            if (item == null) return false;
+            return (item.Name ?? string.Empty).IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private void OnSelectClick(object sender, RoutedEventArgs e)
         {
             var selected = tree.SelectedItem as TreeViewItem;
@@ -115,7 +155,6 @@ namespace FlexView.Client
 
             SelectedItem = selected.Tag as Item;
 
-            // Get parent folder
             var parentNode = selected.Parent as TreeViewItem;
             if (parentNode != null)
                 SelectedParent = parentNode.Tag as Item;

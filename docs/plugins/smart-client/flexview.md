@@ -37,21 +37,37 @@ Click and drag on empty cells to create a new pane. A preview outline shows the 
 
 ## Editing Existing Views
 
-Click **Open View** to browse all Private and Shared views. Select a view to load its layout onto the grid. The view name is displayed in the toolbar. Camera names are shown in blue on each pane when available. After editing:
+Click **Open View** to load an existing view. A confirmation appears first explaining that saving will recreate the view (Smart Client does not allow editing the layout of an existing view in place — see [How saves work](#how-saves-work) below). After confirming, the view picker opens. Use the **search field** at the top of the picker to filter views by name as you type.
 
-- Existing camera assignments are preserved for unchanged slots
-- New panes become empty slots
-- Removed panes are cleanly dropped from the layout
+When a view is loaded, its existing camera and built-in view-item assignments (Camera, Hotspot, Carousel, Matrix, HTML) are remembered. Camera names are shown in blue on each pane. After editing:
+
+- Camera and built-in view-item assignments are restored to their original slot positions in the saved view.
+- New panes start as empty slots.
+- Removed panes are dropped from the layout.
 
 ## Saving Views
 
-Click **Save** in the toolbar to open the save dialog:
+- **Save** — for a new view, opens the save dialog (name + folder). For an opened existing view, recreates the view in place under the same name and folder while restoring camera assignments.
+- **Save As** — only available when an existing view is loaded. Creates a duplicate at a new name/folder, carrying over the camera assignments. After Save As, the editor switches to the new copy so subsequent saves target the duplicate, not the original.
 
-1. Enter a view name
-2. Click **Browse** to select a destination folder
-3. Click **Save** to confirm
+The created view works like any standard XProtect view — assign cameras to empty slots in the normal Smart Client view builder.
 
-The created view works like any standard XProtect view - assign cameras to the slots in the normal view builder.
+## How Saves Work
+
+Smart Client's `ViewAndLayoutItem.Layout` is one-shot: assigning a new layout to an existing view throws `Cannot change layout on existing View`. To work around this, FlexView's save flow always:
+
+1. Snapshots the source view's per-slot built-in content (Camera plugin GUID + properties such as `CameraId`, `StreamId`, `URL`, etc.).
+2. Removes the existing view from its parent folder.
+3. Creates a new view with the same name, applies the new layout.
+4. Re-attaches each preserved built-in via `InsertBuiltinViewItem` so cameras land back on their original slot positions.
+
+Practical consequences:
+
+- The view's name and parent folder are preserved, but its **internal `ObjectId` changes** on every save. Any external reference that pins the view by ID — favorites, shortcut URIs, scripts — will need to be updated.
+- Only **built-in view items** are restored: Camera, Empty, Hotspot, Carousel, Matrix, HTML. Custom MIP plug-in view items in slots are not currently re-attached.
+- Slot-level state Smart Client computes lazily (last-selected stream, runtime overlays) is not part of the snapshot.
+
+The `Save` button is a no-op when no edits have been made since the view was loaded — this avoids unnecessary view recreation. The dirty flag is reset after `New`, after a successful save, and when an existing view is loaded.
 
 ## Controls
 
@@ -62,5 +78,19 @@ The created view works like any standard XProtect view - assign cameras to the s
 | **Resize pane** | Drag the bottom-right corner handle |
 | **Delete pane** | Right-click a pane, or select + Delete key |
 | **New layout** | Click **New** to start fresh |
+| **Open view** | Click **Open View**, confirm the recreate notice, pick a view (use the search field to filter) |
+| **Save** | Save the current view — recreates an existing view with cameras restored |
+| **Save As** | Duplicate an opened view to a new name/folder, carrying camera assignments |
+
+## Diagnostics
+
+FlexView writes structured save/load logs to `MIPLog.txt` under the `FlexView` category:
+
+- `LoadViewForEditing: name='…', slots=N`
+- `SaveEditedView: name='…', panes=N, rects=N` followed by `slot[i]: restored builtin=… props=N` per restored slot
+- `SaveEditedView: success` or `SaveEditedView failed: <stack>` on the unhappy path
+- `SaveNewView failed: <stack>` if creation of a new view fails
+
+Use these to diagnose missing camera bindings or unexpected slot counts. A `slot[i]: InsertBuiltinViewItem failed: …` line indicates the SDK rejected re-attaching that slot's content.
 
 </div>

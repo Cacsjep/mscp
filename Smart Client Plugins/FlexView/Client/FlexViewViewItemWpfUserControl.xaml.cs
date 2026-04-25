@@ -789,33 +789,45 @@ namespace FlexView.Client
 
         #region View Save / Load
 
-        private void SaveNewView(string name, Item folder)
+        // Returns the freshly-created view on success, null on failure.
+        // If slotContent is provided, the new view's slots are populated via
+        // InsertBuiltinViewItem in the same order ConvertPanesToSdkLayout produces.
+        private ViewAndLayoutItem SaveNewView(string name, Item folder, List<SlotSnapshot> slotContent = null)
         {
             try
             {
                 var configFolder = folder as ConfigItem;
                 if (configFolder == null)
                 {
-                    MessageBox.Show("Selected folder is not valid.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                    MessageDialog.ShowError("Save Failed", "Selected folder is not valid.", Window.GetWindow(this));
+                    return null;
                 }
 
                 var rects = ConvertPanesToSdkLayout();
                 var view = configFolder.AddChild(name, Kind.View, FolderType.No) as ViewAndLayoutItem;
                 if (view == null)
                 {
-                    MessageBox.Show("Failed to create view. Check folder permissions.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                    MessageDialog.ShowError("Save Failed", "Failed to create view. Check folder permissions.", Window.GetWindow(this));
+                    return null;
                 }
 
                 view.Layout = rects;
                 view.Save();
+                if (slotContent != null && slotContent.Count > 0)
+                {
+                    RestoreSlotContent(view, slotContent);
+                    view.Save();
+                }
                 configFolder.PropertiesModified();
                 ShowSavedStatus(name);
+                MessageDialog.ShowSuccess("View Saved", $"View \"{name}\" was saved successfully.", Window.GetWindow(this));
+                return view;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save view:\n{ex.Message}", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                FlexViewDefinition.Log.Info($"SaveNewView failed: {ex}");
+                MessageDialog.ShowError("Save Failed", $"Failed to save view:\n{ex.Message}", Window.GetWindow(this));
+                return null;
             }
         }
 
@@ -838,7 +850,7 @@ namespace FlexView.Client
             var parentConfig = _editingParent as ConfigItem;
             if (parentConfig == null)
             {
-                MessageBox.Show("Cannot update view: parent folder is not valid.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageDialog.ShowError("Save Failed", "Cannot update view: parent folder is not valid.", Window.GetWindow(this));
                 return;
             }
 
@@ -856,7 +868,7 @@ namespace FlexView.Client
                 if (newView == null)
                 {
                     FlexViewDefinition.Log.Info("SaveEditedView: AddChild returned null/non-ViewAndLayoutItem");
-                    MessageBox.Show("Failed to recreate view.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageDialog.ShowError("Save Failed", "Failed to recreate view.", Window.GetWindow(this));
                     return;
                 }
 
@@ -871,11 +883,12 @@ namespace FlexView.Client
                 _isDirty = false;
                 ShowSavedStatus(viewName);
                 FlexViewDefinition.Log.Info("SaveEditedView: success");
+                MessageDialog.ShowSuccess("View Saved", $"View \"{viewName}\" was saved successfully.", Window.GetWindow(this));
             }
             catch (Exception ex)
             {
                 FlexViewDefinition.Log.Info($"SaveEditedView failed: {ex}");
-                MessageBox.Show($"Failed to update view:\n{ex.Message}", "FlexView", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageDialog.ShowError("Save Failed", $"Failed to update view:\n{ex.Message}", Window.GetWindow(this));
             }
         }
 
@@ -964,6 +977,7 @@ namespace FlexView.Client
             _targetFolder = parent;
             viewNameLabel.Text = view.Name;
             _isDirty = false;
+            saveAsButton.Visibility = Visibility.Visible;
 
             RedrawCanvas();
             UpdateStatus();
@@ -1046,6 +1060,7 @@ namespace FlexView.Client
             _editingParent = null;
             _targetFolder = null;
             _isDirty = false;
+            saveAsButton.Visibility = Visibility.Collapsed;
             viewNameLabel.Text = "";
             RedrawCanvas();
             UpdateStatus();
@@ -1055,6 +1070,15 @@ namespace FlexView.Client
         {
             try
             {
+                bool proceed = MessageDialog.Confirm(
+                    "Edit Existing View",
+                    "Saving will recreate the view. Name and folder stay the same, but the internal ID changes.",
+                    okText: "Continue",
+                    cancelText: "Cancel",
+                    owner: Window.GetWindow(this));
+
+                if (!proceed) return;
+
                 var browser = new ViewBrowserWindow(BrowseMode.SelectView);
                 browser.Owner = Application.Current.MainWindow;
                 if (browser.ShowDialog() == true && browser.SelectedItem != null)
@@ -1062,8 +1086,7 @@ namespace FlexView.Client
                     var view = browser.SelectedItem as ViewAndLayoutItem;
                     if (view == null)
                     {
-                        MessageBox.Show("Selected item is not a view layout.", "FlexView",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageDialog.ShowError("Open Failed", "Selected item is not a view layout.", Window.GetWindow(this));
                         return;
                     }
 
@@ -1072,8 +1095,7 @@ namespace FlexView.Client
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to open view:\n{ex.Message}", "FlexView",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageDialog.ShowError("Open Failed", $"Failed to open view:\n{ex.Message}", Window.GetWindow(this));
             }
         }
 
@@ -1081,9 +1103,10 @@ namespace FlexView.Client
         {
             if (_panes.Count == 0) return;
 
-            var result = MessageBox.Show("Clear all panes?", "FlexView",
-                MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result == MessageBoxResult.Yes)
+            if (MessageDialog.Confirm("Clear All Panes",
+                    "Remove every pane from the current layout?",
+                    okText: "Clear", cancelText: "Cancel",
+                    owner: Window.GetWindow(this)))
             {
                 _panes.Clear();
                 _selectedPane = null;
@@ -1099,7 +1122,7 @@ namespace FlexView.Client
         {
             if (_panes.Count == 0)
             {
-                MessageBox.Show("Please create at least one pane.", "FlexView", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageDialog.ShowError("Cannot Save", "Please create at least one pane.", Window.GetWindow(this));
                 return;
             }
 
@@ -1117,6 +1140,43 @@ namespace FlexView.Client
                     SaveNewView(dlg.ViewName, dlg.SelectedFolder);
                 }
             }
+        }
+
+        // Save As: always prompts the folder/name picker and creates a fresh view, even
+        // when editing an existing one. Camera assignments from the source view are
+        // carried over via the same slot-content snapshot/restore used by SaveEditedView.
+        private void OnSaveAsClick(object sender, RoutedEventArgs e)
+        {
+            if (_panes.Count == 0)
+            {
+                MessageDialog.ShowError("Cannot Save", "Please create at least one pane.", Window.GetWindow(this));
+                return;
+            }
+
+            string defaultName = null;
+            List<SlotSnapshot> slotContent = null;
+            if (_isEditMode && _editingView != null)
+            {
+                defaultName = _editingView.Name + " (copy)";
+                slotContent = SnapshotSlotContent(_editingView);
+            }
+
+            var dlg = new SaveViewWindow(defaultName, _targetFolder);
+            dlg.Owner = Application.Current.MainWindow;
+            if (dlg.ShowDialog() != true) return;
+
+            var newView = SaveNewView(dlg.ViewName, dlg.SelectedFolder, slotContent);
+            if (newView == null) return;
+
+            // Switch to editing the freshly-created copy so subsequent Saves target it
+            // (and don't try to recreate the source view).
+            _editingView = newView;
+            _editingParent = dlg.SelectedFolder;
+            _targetFolder = dlg.SelectedFolder;
+            _isEditMode = true;
+            _isDirty = false;
+            viewNameLabel.Text = newView.Name;
+            UpdateStatus();
         }
 
         #endregion
