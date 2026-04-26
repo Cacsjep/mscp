@@ -101,6 +101,23 @@
     </div>
 
     <div class="card">
+      <div class="row">
+        <div>
+          <h2 style="margin: 0 0 6px;">PKI Cert Installer</h2>
+          <span class="version-tag">v__VERSION__</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top: 12px;">
+        Standalone single-file Windows EXE. Connects to this management server, lists every PKI-plugin certificate, and installs the picked ones into the local Windows certificate store with the right private-key ACLs. Run this on each XProtect server (Recording / Management / Mobile / Event / Failover) you want to deploy certs to. Requires admin (UAC).
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="Mscp.PkiCertInstaller-v__VERSION__.exe" download>
+          Download Cert Installer
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>Individual plugins</h2>
 __PLUGINS_HTML__
     </div>

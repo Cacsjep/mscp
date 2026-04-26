@@ -438,7 +438,15 @@ namespace PKI.Admin
         // safe.
         private void OnAutoSetupClick()
         {
-            const string rootName = "MSCP PKI - Root CA";
+            // Year + month stamp on every auto-generated name so admins
+            // can tell at a glance (in certlm.msc, the issuer dropdowns,
+            // the Mgmt Client tree) when this batch was issued.
+            // Re-running auto setup later in a different month produces
+            // a new stamped Root + new stamped service certs and won't
+            // collide with the previous batch.
+            var stamp = DateTime.UtcNow.ToString("yyyy.MM");
+            var prefix = $"MSCP PKI ({stamp})";
+            var rootName = $"{prefix} - Root CA";
             const int fifteenYears = 15 * 365;
 
             var confirm = MessageBox.Show(
@@ -493,14 +501,25 @@ namespace PKI.Admin
                 var details = new System.Text.StringBuilder();
                 foreach (var svc in services)
                 {
-                    // "MSCP PKI - <CategoryLabel> <hostname>" so every
-                    // auto-generated cert sorts together in certlm.msc
-                    // and Server Configurator and is easy to spot
-                    // against hand-rolled or vendor certs.
-                    var label = (svc.DisplayName ?? svc.Hostname ?? "").Trim();
-                    var name = string.IsNullOrEmpty(label)
-                        ? $"MSCP PKI - {svc.CategoryLabel}"
-                        : $"MSCP PKI - {svc.CategoryLabel} {label}";
+                    // "MSCP PKI (yyyy.MM) - <CategoryLabel> <hostname>"
+                    // so every auto-generated cert sorts together in
+                    // certlm.msc and Server Configurator and the
+                    // year+month tells admins when the batch was made.
+                    // Hostname wins over registered display name -
+                    // Event Server / Mobile Server register under
+                    // names like "Event Server service" which would
+                    // otherwise duplicate the category label.
+                    var hostLabel = (svc.Hostname ?? "").Trim();
+                    if (string.IsNullOrEmpty(hostLabel))
+                    {
+                        var disp = (svc.DisplayName ?? "").Trim();
+                        if (disp.StartsWith(svc.CategoryLabel, StringComparison.OrdinalIgnoreCase))
+                            disp = disp.Substring(svc.CategoryLabel.Length).Trim();
+                        hostLabel = disp;
+                    }
+                    var name = string.IsNullOrEmpty(hostLabel)
+                        ? $"{prefix} - {svc.CategoryLabel}"
+                        : $"{prefix} - {svc.CategoryLabel} {hostLabel}";
                     if (FindByName(name) != null)
                     {
                         skipped++;

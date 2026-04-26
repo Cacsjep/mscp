@@ -161,6 +161,37 @@ foreach ($p in $plugins) {
     Copy-Item -Path "$srcPath\*" -Destination $stageDir -Recurse
     Write-Host "  Staged: $($p.name) <- $($p.path)\$outputPath"
 
+    # PKI plugin ships the standalone Cert Installer EXE alongside it.
+    # Publish the .NET 9 single-file self-contained binary, drop a copy
+    # into the PKI staging dir (so PKI.zip carries it), and keep a
+    # versioned copy in $buildDir for the WiX File component used by
+    # the IISHosting download page.
+    if ($p.name -eq 'PKI') {
+        $installerProj = Join-Path $root 'Installer\Mscp.PkiCertInstaller\Mscp.PkiCertInstaller.csproj'
+        Write-Host "    Publishing single-file PKI Cert Installer..."
+        & dotnet publish $installerProj `
+            -c Release `
+            -r win-x64 `
+            --self-contained `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -v minimal | Out-Null
+        if ($LASTEXITCODE -ne 0) { Write-Error "PKI Cert Installer publish failed"; exit 1 }
+        $publishedExe = Join-Path $root 'Installer\Mscp.PkiCertInstaller\bin\Release\net9.0-windows\win-x64\publish\Mscp.PkiCertInstaller.exe'
+        if (-not (Test-Path $publishedExe)) {
+            Write-Error "Expected published EXE not found at: $publishedExe"
+            exit 1
+        }
+        # Inside the PKI plugin folder so the ZIP / installed plugin
+        # carries the EXE next to PKI.dll - admins find it where they
+        # look for the plugin.
+        Copy-Item $publishedExe (Join-Path $stageDir 'Mscp.PkiCertInstaller.exe') -Force
+        # Versioned copy in $buildDir for the WiX File source.
+        Copy-Item $publishedExe (Join-Path $buildDir "Mscp.PkiCertInstaller-v$version.exe") -Force
+        Write-Host "    + bundled Mscp.PkiCertInstaller.exe (single-file, self-contained)"
+    }
+
     # Extra staging directories
     if (($p | Get-Member -Name extraStagingDirs -MemberType NoteProperty) -and $p.extraStagingDirs) {
         foreach ($dir in $p.extraStagingDirs) {
