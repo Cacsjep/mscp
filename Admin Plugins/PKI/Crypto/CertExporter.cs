@@ -12,10 +12,10 @@ namespace PKI.Crypto
 {
     // Shared cert-export entry point. Used by both the per-cert form
     // (PkiCertificateUserControl) and the Overview pane. Loads cert+key
-    // from the MIP item (DPAPI-encrypted PFX or DER-only fallback for
-    // imported cert-only certs), shows a SaveFileDialog, and writes the
-    // requested format. Key-bearing formats refuse on items that only
-    // hold a public cert.
+    // from the MIP item (PFX bytes for issued/imported-with-key items,
+    // DER fallback for imported cert-only items), shows a SaveFileDialog,
+    // and writes the requested format. Key-bearing formats refuse on
+    // items that only hold a public cert.
     public static class CertExporter
     {
         public static class Format
@@ -130,8 +130,8 @@ namespace PKI.Crypto
         }
 
         // Loads cert + (optional) private key + chain from the MIP item.
-        // Items issued by this plugin carry an EncryptedPfx (DPAPI). Items
-        // imported as cert-only carry an EncryptedDer instead.
+        // Items with a key carry "Pfx" (base64 PKCS#12 bytes). Items
+        // imported cert-only carry "Der" instead.
         private class LoadResult
         {
             public X509Certificate Certificate;
@@ -141,10 +141,10 @@ namespace PKI.Crypto
 
         private static LoadResult Load(Item item)
         {
-            var pfxB64 = Get(item, "EncryptedPfx");
+            var pfxB64 = Get(item, "Pfx");
             if (!string.IsNullOrEmpty(pfxB64))
             {
-                var pfx = CertVault.DecryptFromBase64(pfxB64);
+                var pfx = CertVault.FromBase64(pfxB64);
                 var loaded = Pkcs12Bundle.Load(pfx, "");
                 return new LoadResult
                 {
@@ -154,7 +154,7 @@ namespace PKI.Crypto
                 };
             }
 
-            var derB64 = Get(item, "EncryptedDer");
+            var derB64 = Get(item, "Der");
             if (!string.IsNullOrEmpty(derB64))
             {
                 var der = Convert.FromBase64String(derB64);

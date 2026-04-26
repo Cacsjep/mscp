@@ -280,6 +280,21 @@
     </InstallExecuteSequence>
   </Fragment>
   <Fragment>
+    <DirectoryRef Id="MSCP_PAYLOAD_DIR">
+      <Component Guid="B98FA0BC-8CB7-534F-99C5-B85C351B7190" Id="cmpZip_PKI" Bitness="always64">
+        <File Source="!(bindpath.zips)\PKI-v$(var.Version).zip" Name="PKI.zip" Id="zip_PKI" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <SetProperty Before="CA_Extract_PKI" Id="CA_Extract_PKI" Value="Source=[CommonAppDataFolder]Milestone\MSCPPluginPayload\PKI.zip;Dest=[MIPPLUGINS]PKI" Sequence="execute" />
+    <CustomAction Id="CA_Extract_PKI" Return="check" DllEntry="ExtractZipToFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <SetProperty Before="CA_Cleanup_PKI" Id="CA_Cleanup_PKI" Value="Dest=[MIPPLUGINS]PKI" Sequence="execute" />
+    <CustomAction Id="CA_Cleanup_PKI" Return="ignore" DllEntry="RemoveExtractedFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <InstallExecuteSequence>
+      <Custom Condition="&amp;Feature_PKI=3" Action="CA_Extract_PKI" After="InstallFiles" />
+      <Custom Before="RemoveFiles" Condition="(&amp;Feature_PKI=2) OR REMOVE=&quot;ALL&quot;" Action="CA_Cleanup_PKI" />
+    </InstallExecuteSequence>
+  </Fragment>
+  <Fragment>
     <Feature Id="SmartClientPlugins" Description="Plugins for the XProtect Smart Client. Installs to C:\Program Files\Milestone\MIPPlugins\" AllowAdvertise="no" Display="expand" Level="1" Title="Smart Client Plugins" AllowAbsent="yes">
       <Feature Id="Feature_Weather" Description="Display live weather in Smart Client view items (Open-Meteo)" AllowAdvertise="no" Level="1" Title="Weather Plugin" AllowAbsent="yes">
         <ComponentRef Id="cmpZip_Weather" />
@@ -343,6 +358,9 @@
       <Feature Id="Feature_MetadataViewer" Description="Subscribe to a metadata channel in the Management Client and view the live XML stream" AllowAdvertise="no" Level="1" Title="Metadata Viewer Plugin" AllowAbsent="yes">
         <ComponentRef Id="cmpZip_MetadataViewer" />
       </Feature>
+      <Feature Id="Feature_PKI" Description="Certificate vault: create / import / sign CSRs / export Root and Intermediate CAs and client certs (HTTPS, 802.1X, Service)" AllowAdvertise="no" Level="1" Title="PKI Plugin" AllowAbsent="yes">
+        <ComponentRef Id="cmpZip_PKI" />
+      </Feature>
     </Feature>
   </Fragment>
   <Fragment>
@@ -365,6 +383,7 @@
       <ComponentRef Id="cmpZip_RemoteManager" />
       <ComponentRef Id="cmpZip_BarcodeReader" />
       <ComponentRef Id="cmpZip_MetadataViewer" />
+      <ComponentRef Id="cmpZip_PKI" />
     </ComponentGroup>
   </Fragment>
 </Wix>

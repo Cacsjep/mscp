@@ -1,0 +1,28 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Mscp.PkiCertInstaller.ViewModels"
+        xmlns:v="using:Mscp.PkiCertInstaller.Views"
+        mc:Ignorable="d"
+        x:Class="Mscp.PkiCertInstaller.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="MSCP PKI Cert Installer"
+        Icon="/Assets/app.ico"
+        WindowStartupLocation="CenterScreen"
+        Background="#0F1115"
+        SizeToContent="Height"
+        Width="460"
+        MinWidth="420">
+
+  <ContentControl Content="{Binding CurrentView}">
+    <ContentControl.DataTemplates>
+      <DataTemplate DataType="vm:LoginViewModel">
+        <v:LoginView />
+      </DataTemplate>
+      <DataTemplate DataType="vm:CertListViewModel">
+        <v:CertListView />
+      </DataTemplate>
+    </ContentControl.DataTemplates>
+  </ContentControl>
+</Window>

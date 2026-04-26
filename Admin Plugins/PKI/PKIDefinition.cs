@@ -1,7 +1,6 @@
 using CommunitySDK;
 using FontAwesome5;
 using PKI.Admin;
-using PKI.Background;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,8 +12,7 @@ namespace PKI
 {
     public class PKIDefinition : PluginDefinition
     {
-        internal static readonly Guid PluginId           = new Guid("A6027637-6C03-4C58-A6DB-7B837C74AA60");
-        internal static readonly Guid BackgroundPluginId = new Guid("D1CB31FC-2EC8-42F8-B436-BCA6C2F65FAC");
+        internal static readonly Guid PluginId = new Guid("A6027637-6C03-4C58-A6DB-7B837C74AA60");
 
         // Top-level container kinds.
         internal static readonly Guid PkiCAFolderKindId      = new Guid("673BF7C2-098D-413C-98C1-6F31278F853A");
@@ -29,11 +27,8 @@ namespace PKI
 
         // Overview kind. Single auto-created item; clicking it shows a grid
         // of every certificate in the vault and a button to import new ones.
-        // No "Add new" because the manager refuses to create more than the
-        // singleton.
         internal static readonly Guid PkiOverviewKindId      = new Guid("1403A91F-CB8E-43B9-AF55-3E8B5F9F2966");
 
-        private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
         private List<ItemNode> _itemNodes;
 
         private Image _pluginIcon = PluginIcon.FallbackIcon;
@@ -74,17 +69,11 @@ namespace PKI
                 }
                 _itemNodes = null;
             }
-
-            if (env == EnvironmentType.Service)
-            {
-                _backgroundPlugins.Add(new PkiBackgroundPlugin());
-            }
         }
 
         public override void Close()
         {
             _itemNodes = null;
-            _backgroundPlugins.Clear();
         }
 
         // The Management Client wraps every plugin's ItemNodes under a top-level
@@ -161,7 +150,5 @@ namespace PKI
                 return _itemNodes;
             }
         }
-
-        public override List<BackgroundPlugin> BackgroundPlugins => _backgroundPlugins;
     }
 }

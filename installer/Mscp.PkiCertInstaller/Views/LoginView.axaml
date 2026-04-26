@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Mscp.PkiCertInstaller.ViewModels"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             x:Class="Mscp.PkiCertInstaller.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+
+  <Border Background="#1A1D24" Padding="32,28">
+    <StackPanel Spacing="14">
+
+      <StackPanel Orientation="Vertical" Spacing="2" Margin="0,0,0,4"
+                  HorizontalAlignment="Center">
+        <mi:MaterialIcon Kind="Shield" Width="36" Height="36" Foreground="#0099DA"
+                         HorizontalAlignment="Center" Margin="0,0,0,4" />
+        <TextBlock Text="Certificate Installer"
+                   FontSize="20" FontWeight="SemiBold"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="MSCP - PKI"
+                   Foreground="#8A93A6" FontSize="12"
+                   HorizontalAlignment="Center" />
+      </StackPanel>
+
+      <TextBlock Text="Server URL" Margin="0,8,0,0" Foreground="#8A93A6" FontSize="11" />
+      <TextBox Text="{Binding ServerUrl}" Watermark="https://mgmt.example.local" />
+
+      <TextBlock Text="Authentication" Margin="0,10,0,0" Foreground="#8A93A6" FontSize="11" />
+      <StackPanel Spacing="2">
+        <RadioButton GroupName="auth"
+                     Content="Basic user"
+                     IsChecked="{Binding Mode, Mode=TwoWay,
+                                 Converter={x:Static vm:EnumToBoolConverter.Instance},
+                                 ConverterParameter=Basic}" />
+        <RadioButton GroupName="auth"
+                     Content="Windows authentication (current user)"
+                     IsChecked="{Binding Mode, Mode=TwoWay,
+                                 Converter={x:Static vm:EnumToBoolConverter.Instance},
+                                 ConverterParameter=WindowsCurrentUser}" />
+        <RadioButton GroupName="auth"
+                     Content="Windows authentication (other user)"
+                     IsChecked="{Binding Mode, Mode=TwoWay,
+                                 Converter={x:Static vm:EnumToBoolConverter.Instance},
+                                 ConverterParameter=WindowsOtherUser}" />
+      </StackPanel>
+
+      <!-- Static line shown when "current user" is picked. -->
+      <Border Background="#22262E" CornerRadius="4" Padding="10,6"
+              IsVisible="{Binding IsWindowsCurrent}">
+        <TextBlock Foreground="#B6C0D6" FontSize="11">
+          <Run Text="Signing in as " />
+          <Run Text="{Binding CurrentWindowsIdentity}" FontWeight="SemiBold" />
+          <Run Text=" via Windows Negotiate (no password needed)." />
+        </TextBlock>
+      </Border>
+
+      <!-- Username + password are hidden for current-user mode. -->
+      <StackPanel Spacing="6" IsVisible="{Binding NeedsExplicitCreds}">
+        <TextBlock Text="Username" Margin="0,4,0,0" Foreground="#8A93A6" FontSize="11" />
+        <TextBox Text="{Binding Username}" Watermark="user@domain or DOMAIN\user" />
+        <TextBlock Text="Password" Margin="0,6,0,0" Foreground="#8A93A6" FontSize="11" />
+        <TextBox Text="{Binding Password}" PasswordChar="*" Watermark="•••" />
+      </StackPanel>
+
+      <Button Content="{Binding IsBusy, Converter={x:Static vm:BusyConverter.Instance}}"
+              Command="{Binding ConnectCommand}"
+              IsEnabled="{Binding !IsBusy}"
+              HorizontalAlignment="Stretch"
+              Height="38"
+              Margin="0,12,0,0"
+              Classes="accent" />
+
+      <TextBlock Text="{Binding ErrorMessage}"
+                 Foreground="#E06363"
+                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 TextWrapping="Wrap"
+                 FontSize="11" />
+    </StackPanel>
+  </Border>
+</UserControl>

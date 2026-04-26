@@ -102,6 +102,15 @@ namespace PKI.Admin
 
         private void EnsureSingleton()
         {
+            // The singleton item is created from the Management Client only.
+            // The Event Server's Service env also sees this ItemNode, but
+            // MasterSite.ServerId can't be resolved into LoginSettings
+            // there, so we'd just log a noisy error every time the tree is
+            // walked. Skip it - the Mgmt Client will create the item and
+            // the Service env will then find it via GetItems normally.
+            if (EnvironmentManager.Instance.EnvironmentType != EnvironmentType.Administration)
+                return;
+
             var list = Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, _kind);
             if (list != null && list.Count > 0) return;
 

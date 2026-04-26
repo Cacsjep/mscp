@@ -539,9 +539,9 @@ namespace PKI.Admin
                 item.Properties["CreatedAt"]     = DateTime.UtcNow.ToString("o");
 
                 if (pfxBytes != null)
-                    item.Properties["EncryptedPfx"] = CertVault.EncryptToBase64(pfxBytes);
+                    item.Properties["Pfx"] = CertVault.ToBase64(pfxBytes);
                 else
-                    item.Properties["EncryptedDer"] = Convert.ToBase64String(_parsedCert.GetEncoded());
+                    item.Properties["Der"] = Convert.ToBase64String(_parsedCert.GetEncoded());
 
                 Configuration.Instance.SaveItemConfiguration(PKIDefinition.PluginId, item);
 

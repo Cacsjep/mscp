@@ -287,9 +287,24 @@ namespace PKI.Admin
                 grid.RowCount++;
             }
 
-            // ── Identity ──────────────────────────────────────────────────
+            // ── Identity (required only) ──────────────────────────────────
             Section("Identity");
+            Pair(0, "Display name", true,  _displayName, "Shown in the tree on the left. Auto-fills from CN if you set CN first.");
+            NewRow();
+            Pair(0, "Validity (days)", true, _validityDays,
+                _role == RolePreset.RootCA      ? "Root CAs typically last 10 to 20 years." :
+                _role == RolePreset.IntermediateCA ? "Intermediate CAs typically last 5 to 10 years." :
+                "Leaf certs typically last 1 year (max 397 days for browser trust).");
+            NewRow();
+            Pair(0, "Key algorithm", true, _keyAlg, "RSA-3072 or ECDSA-P256 are good defaults.");
+            NewRow();
 
+            // ── Extended properties (collapsible) ─────────────────────────
+            // CN, O, OU, Country are all optional for cert generation -
+            // they get embedded in the Subject DN if set, otherwise we
+            // fall back to defaults. Stuffing them behind a toggle keeps
+            // the main form focused on the four fields admins almost
+            // always need: display name, validity, key alg, and SANs.
             string cnHint;
             switch (_role)
             {
@@ -304,23 +319,83 @@ namespace PKI.Admin
                     cnHint = "Primary identifier embedded in the cert."; break;
             }
 
-            // Left column = required, right column = optional.
-            Pair(0, "Display name", true,  _displayName, "Shown in the tree on the left. Auto-fills from CN if you set CN first.");
-            Pair(2, "Common Name (CN)", false, _cn, cnHint + " Leave empty to use the display name.");
-            NewRow();
-            Pair(0, "Validity (days)", true, _validityDays,
-                _role == RolePreset.RootCA      ? "Root CAs typically last 10 to 20 years." :
-                _role == RolePreset.IntermediateCA ? "Intermediate CAs typically last 5 to 10 years." :
-                "Leaf certs typically last 1 year (max 397 days for browser trust).");
-            Pair(2, "Organization (O)", false, _o, "Your company or department.");
-            NewRow();
-            Pair(0, "Key algorithm", true, _keyAlg, "RSA-3072 or ECDSA-P256 are good defaults.");
-            Pair(2, "Organizational Unit (OU)", false, _ou, "e.g. IT, Security, R&D.");
-            NewRow();
-            grid.Controls.Add(new Label(), 0, grid.RowCount);
-            grid.Controls.Add(new Label(), 1, grid.RowCount);
-            Pair(2, "Country (C)", false, _country, "ISO 3166-1 alpha-2 code.");
-            NewRow();
+            // The expander is just a Label that toggles a panel's
+            // visibility. WinForms has no native Expander control and
+            // pulling in a third-party UI lib for one accordion isn't
+            // worth it.
+            var extToggle = new Label
+            {
+                Text = "▶  Extended properties (CN, O, OU, Country)",
+                AutoSize = true, Cursor = Cursors.Hand,
+                Font = new Font(Font.FontFamily, 10F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(50, 80, 120),
+                Margin = new Padding(0, 14, 0, 6),
+            };
+            grid.Controls.Add(extToggle, 0, grid.RowCount);
+            grid.SetColumnSpan(extToggle, 4);
+            grid.RowCount++;
+
+            var extPanel = new TableLayoutPanel
+            {
+                AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 4, Visible = false,
+                Margin = new Padding(0, 0, 0, 6),
+            };
+            extPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
+            extPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320));
+            extPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
+            extPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320));
+
+            void ExtPair(int col, string label, Control input, string hint, int width = 280)
+            {
+                input.Width = width;
+                input.Anchor = AnchorStyles.Left;
+                var lblPanel = new FlowLayoutPanel
+                {
+                    AutoSize = true, FlowDirection = FlowDirection.LeftToRight,
+                    Margin = new Padding(0, 6, 0, 0), Padding = Padding.Empty, WrapContents = false,
+                };
+                lblPanel.Controls.Add(new Label
+                {
+                    Text = label, AutoSize = true,
+                    Margin = new Padding(0, 3, 0, 0), Padding = Padding.Empty,
+                });
+                var inputBox = new FlowLayoutPanel
+                {
+                    AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false,
+                    Margin = new Padding(0, 4, 14, 0),
+                };
+                inputBox.Controls.Add(input);
+                if (!string.IsNullOrEmpty(hint))
+                {
+                    inputBox.Controls.Add(new Label
+                    {
+                        Text = hint, AutoSize = true, MaximumSize = new Size(width, 0),
+                        ForeColor = Color.Gray, Font = new Font(Font.FontFamily, 8F),
+                        Margin = new Padding(2, 2, 0, 0),
+                    });
+                }
+                extPanel.Controls.Add(lblPanel, col, extPanel.RowCount);
+                extPanel.Controls.Add(inputBox, col + 1, extPanel.RowCount);
+            }
+
+            ExtPair(0, "Common Name (CN)", _cn, cnHint + " Leave empty to use the display name.");
+            ExtPair(2, "Organization (O)", _o,  "Your company or department.");
+            extPanel.RowCount++;
+            ExtPair(0, "Organizational Unit (OU)", _ou, "e.g. IT, Security, R&D.");
+            ExtPair(2, "Country (C)", _country, "ISO 3166-1 alpha-2 code.");
+            extPanel.RowCount++;
+
+            grid.Controls.Add(extPanel, 0, grid.RowCount);
+            grid.SetColumnSpan(extPanel, 4);
+            grid.RowCount++;
+
+            extToggle.Click += (s, e) =>
+            {
+                extPanel.Visible = !extPanel.Visible;
+                extToggle.Text = (extPanel.Visible ? "▼" : "▶")
+                               + "  Extended properties (CN, O, OU, Country)";
+            };
 
             // ── Subject Alternative Names (only relevant for non-CA roles) ─
             if (_role != RolePreset.RootCA && _role != RolePreset.IntermediateCA)
@@ -588,7 +663,7 @@ namespace PKI.Admin
                 {
                     var thumb = ca.Properties.ContainsKey("Thumbprint") ? ca.Properties["Thumbprint"] : "";
                     if (string.IsNullOrEmpty(thumb)) continue;
-                    var pfx = ca.Properties.ContainsKey("EncryptedPfx") ? ca.Properties["EncryptedPfx"] : "";
+                    var pfx = ca.Properties.ContainsKey("Pfx") ? ca.Properties["Pfx"] : "";
                     if (string.IsNullOrEmpty(pfx)) continue;
                     var cn = ca.Properties.ContainsKey("Subject_CN") ? ca.Properties["Subject_CN"] : "";
                     _issuer.Items.Add(new IssuerEntry { Name = ca.Name, Cn = cn, Thumbprint = thumb });

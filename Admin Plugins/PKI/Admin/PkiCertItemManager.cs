@@ -13,7 +13,7 @@ namespace PKI.Admin
     //
     // v1 behavior: cert + key generation runs inside the Management Client
     // process when the admin clicks Save (ValidateAndSaveUserControl). The PFX
-    // bundle is stored DPAPI-encrypted on the MIP item (CertVault). After
+    // bundle is stored as base64 on the MIP item ("Pfx" property). After
     // first issue the form goes read-only and shows export buttons.
     public abstract class PkiCertItemManager : ItemManager
     {
@@ -72,6 +72,21 @@ namespace PKI.Admin
                 }
 
                 _uc.UpdateItem(CurrentItem);
+
+                // Reject duplicate display names across the whole plugin
+                // tree. The ItemNode framework happily accepts dup names,
+                // which then surfaces as confusion in Overview / Issuing
+                // CA dropdowns.
+                var newName = (CurrentItem.Name ?? "").Trim();
+                if (newName.Length > 0 && IsDuplicateName(newName, CurrentItem))
+                {
+                    MessageBox.Show(
+                        $"Another certificate already uses the name \"{newName}\".\n\nPick a unique display name.",
+                        "PKI - duplicate name",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
                 try
                 {
                     GenerateAndStore(CurrentItem);
@@ -216,11 +231,11 @@ namespace PKI.Admin
                 if (issuerItem == null)
                     throw new InvalidOperationException("Selected issuing CA was not found.");
 
-                var pfxB64 = GetProp(issuerItem, "EncryptedPfx");
+                var pfxB64 = GetProp(issuerItem, "Pfx");
                 if (string.IsNullOrEmpty(pfxB64))
                     throw new InvalidOperationException("Issuing CA has no private key on this machine; pick another or re-issue it.");
 
-                var pfx = CertVault.DecryptFromBase64(pfxB64);
+                var pfx = CertVault.FromBase64(pfxB64);
                 var loaded = Pkcs12Bundle.Load(pfx, "");
                 if (loaded.PrivateKey == null)
                     throw new InvalidOperationException("Issuing CA's PFX has no private key.");
@@ -233,12 +248,12 @@ namespace PKI.Admin
             var cert = CertBuilder.Build(build);
 
             // Bundle cert + key (+ chain extras when we have an issuer) and
-            // DPAPI-encrypt for storage.
+            // base64-encode for MIP property storage.
             var chainExtras = new List<Org.BouncyCastle.X509.X509Certificate>();
             if (build.IssuerCert != null) chainExtras.Add(build.IssuerCert);
 
             var pfxBytes = Pkcs12Bundle.Build(cert, keyPair.Private, chainExtras, "", item.Name);
-            item.Properties["EncryptedPfx"] = CertVault.EncryptToBase64(pfxBytes);
+            item.Properties["Pfx"] = CertVault.ToBase64(pfxBytes);
 
             // Stash metadata on the MIP item.
             item.Properties["Thumbprint"]   = ToHex(GetThumbprint(cert));
@@ -281,6 +296,28 @@ namespace PKI.Admin
                 if (items != null) result.AddRange(items);
             }
             return result;
+        }
+
+        // Walks every PKI kind and returns true if any item other than
+        // `excluding` already uses `name` (case-insensitive). Used by
+        // ValidateAndSaveUserControl to block duplicates.
+        internal static bool IsDuplicateName(string name, Item excluding)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            foreach (var kind in AllCertKinds())
+            {
+                var items = Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, kind);
+                if (items == null) continue;
+                foreach (var i in items)
+                {
+                    if (excluding != null
+                        && i.FQID != null && excluding.FQID != null
+                        && i.FQID.ObjectId == excluding.FQID.ObjectId) continue;
+                    if (string.Equals((i.Name ?? "").Trim(), name, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+            return false;
         }
 
         internal static List<string> FindCertsIssuedBy(string issuerThumbprint)

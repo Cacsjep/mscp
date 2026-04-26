@@ -1,0 +1,80 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             x:Class="Mscp.PkiCertInstaller.App"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <!-- Milestone-style brand blue. We override the Fluent system
+             accent so every Classes="accent" button picks up the
+             corporate palette automatically. -->
+        <ResourceDictionary x:Key="Dark">
+          <Color x:Key="SystemAccentColor">#FF0099DA</Color>
+          <Color x:Key="SystemAccentColorDark1">#FF0085BE</Color>
+          <Color x:Key="SystemAccentColorDark2">#FF0072A2</Color>
+          <Color x:Key="SystemAccentColorDark3">#FF005E86</Color>
+          <Color x:Key="SystemAccentColorLight1">#FF1FA9E2</Color>
+          <Color x:Key="SystemAccentColorLight2">#FF40B7E8</Color>
+          <Color x:Key="SystemAccentColorLight3">#FF66C7EE</Color>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://FluentAvalonia/Styling/FluentAvaloniaTheme.axaml" />
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+
+    <!-- Force white text on every Classes="accent" button. Without this
+         FluentAvalonia auto-picks black for the WCAG contrast on a
+         medium-bright accent like Milestone blue, which the brand
+         guidelines (and the user) specifically reject. -->
+    <Style Selector="Button.accent">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.accent /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <!-- Row-only selection. Avalonia's DataGrid has both a "focused
+         cell" border and a "current cell" rectangle (CurrencyVisual)
+         that float on top of the row highlight. Both are killed here
+         so a clicked row gets a clean full-row highlight with no
+         per-cell artifacts. The cell is also made non-focusable so
+         keyboard navigation goes row-by-row, not cell-by-cell. -->
+    <Style Selector="DataGridCell">
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="IsTabStop" Value="False" />
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="DataGridCell:focus, DataGridCell:focus-within, DataGridCell:current">
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="DataGridCell /template/ Rectangle#CurrencyVisual">
+      <Setter Property="IsVisible" Value="False" />
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="StrokeThickness" Value="0" />
+    </Style>
+    <Style Selector="DataGridCell /template/ Rectangle#FocusVisual">
+      <Setter Property="IsVisible" Value="False" />
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="StrokeThickness" Value="0" />
+    </Style>
+    <Style Selector="DataGridCell /template/ Grid#FocusVisual">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="DataGridCell:current /template/ Rectangle#CurrencyVisual">
+      <Setter Property="IsVisible" Value="False" />
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="DataGridCell:focus /template/ Rectangle#FocusVisual">
+      <Setter Property="IsVisible" Value="False" />
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+  </Application.Styles>
+</Application>

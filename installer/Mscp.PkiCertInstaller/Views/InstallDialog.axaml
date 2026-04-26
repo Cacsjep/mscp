@@ -1,0 +1,75 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Mscp.PkiCertInstaller.ViewModels"
+        x:Class="Mscp.PkiCertInstaller.Views.InstallDialog"
+        x:DataType="vm:InstallDialogViewModel"
+        Title="Install certificates"
+        Icon="/Assets/app.ico"
+        Width="600" Height="560"
+        Background="#0F1115"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+  <Border Background="#1A1D24">
+    <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="20">
+
+      <TextBlock Grid.Row="0" Text="{Binding Heading}"
+                 FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4" />
+      <TextBlock Grid.Row="1"
+                 Text="Each certificate is imported into the Windows store shown below it (Milestone Certificates Guide 2025 R1). For leaf certs (HTTPS / 802.1X / Service) the listed Windows accounts get Full Control + Read on the private-key file, per the guide. Root and Intermediate CAs only need their public cert in the trust store; the account list is ignored for them."
+                 Foreground="#8A93A6" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12" />
+
+      <Border Grid.Row="2" Background="#22262E" CornerRadius="4" Padding="0">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Grid.Row="0" Text="Selected certificates"
+                     Foreground="#8A93A6" FontSize="11"
+                     Margin="12,8,12,4" />
+          <ListBox Grid.Row="1" ItemsSource="{Binding Items}"
+                   Background="Transparent" BorderThickness="0"
+                   Margin="4,0,4,8" />
+        </Grid>
+      </Border>
+
+      <TextBlock Grid.Row="3" Text="Service accounts that need the key (leaf certs only)"
+                 Foreground="#8A93A6" FontSize="11" Margin="0,14,0,4"
+                 IsVisible="{Binding AnyNeedsKeyAcl}" />
+
+      <Border Grid.Row="4" Background="#22262E" CornerRadius="4" Padding="0"
+              IsVisible="{Binding AnyNeedsKeyAcl}">
+        <Grid RowDefinitions="*,Auto">
+          <ListBox Grid.Row="0"
+                   ItemsSource="{Binding Accounts}"
+                   SelectedItem="{Binding SelectedAccount, Mode=TwoWay}"
+                   Background="Transparent" BorderThickness="0"
+                   Height="140" Margin="4,4,4,0">
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="vm:InstallDialogViewModel+AccountRow">
+                <StackPanel Orientation="Horizontal" Spacing="10"
+                            ToolTip.Tip="{Binding Tooltip}">
+                  <TextBlock Text="{Binding StatusText}"
+                             Foreground="{Binding StatusBrush}"
+                             FontWeight="Bold" FontSize="14"
+                             Width="20" TextAlignment="Center" />
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6"
+                      Margin="8,8,8,8">
+            <Button Content="Add account..." Click="OnAddAccount" />
+            <Button Content="Remove" Command="{Binding RemoveAccountCommand}"
+                    IsEnabled="{Binding SelectedAccount, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right"
+                  Spacing="8" Margin="0,16,0,0">
+        <Button Content="Cancel" Click="OnCancel" />
+        <Button Content="Install" Classes="accent" Click="OnConfirm" />
+      </StackPanel>
+
+    </Grid>
+  </Border>
+</Window>

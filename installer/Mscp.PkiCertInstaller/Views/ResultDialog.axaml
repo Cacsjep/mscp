@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Mscp.PkiCertInstaller.Views.ResultDialog"
+        Title="Result"
+        Icon="/Assets/app.ico"
+        Width="520"
+        SizeToContent="Height"
+        Background="#0F1115"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+  <Window.Resources>
+    <StreamGeometry x:Key="IconCheck">M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z</StreamGeometry>
+    <StreamGeometry x:Key="IconError">M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z</StreamGeometry>
+  </Window.Resources>
+
+  <Border Background="#1A1D24" Padding="24,20">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+      <PathIcon Name="ResultIcon"
+                Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
+                Width="36" Height="36"
+                VerticalAlignment="Top"
+                Margin="0,4,16,0" />
+
+      <TextBlock Name="TitleText" Grid.Row="0" Grid.Column="1"
+                 FontSize="18" FontWeight="SemiBold"
+                 Margin="0,0,0,4" />
+
+      <TextBlock Name="SummaryText" Grid.Row="1" Grid.Column="1"
+                 Foreground="#B6C0D6" FontSize="12"
+                 TextWrapping="Wrap" Margin="0,0,0,8" />
+
+      <Border Name="DetailBorder" Grid.Row="2" Grid.Column="1"
+              Background="#22262E" CornerRadius="4" Padding="12,8"
+              IsVisible="False">
+        <ScrollViewer MaxHeight="220">
+          <SelectableTextBlock Name="DetailText"
+                               FontFamily="Cascadia Code,Consolas,monospace"
+                               FontSize="11"
+                               Foreground="#D4DCE9"
+                               TextWrapping="Wrap" />
+        </ScrollViewer>
+      </Border>
+
+      <Button Grid.Row="3" Grid.Column="1"
+              Content="OK" Classes="accent"
+              HorizontalAlignment="Right"
+              MinWidth="100"
+              Margin="0,16,0,0"
+              Click="OnOk" />
+    </Grid>
+  </Border>
+</Window>

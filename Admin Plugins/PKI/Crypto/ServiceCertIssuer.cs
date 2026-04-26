@@ -18,7 +18,7 @@ namespace PKI.Crypto
         public string Country;
         public List<string> DnsNames = new List<string>();
         public List<string> IpAddresses = new List<string>();
-        public Item IssuingCA;                // must have EncryptedPfx with private key
+        public Item IssuingCA;                // must have "Pfx" property with private key
         public int ValidityDays = 397;
         public KeyAlgorithm KeyAlgorithm = KeyAlgorithm.Rsa2048;
     }
@@ -45,11 +45,11 @@ namespace PKI.Crypto
                 if (string.IsNullOrWhiteSpace(req.CommonName))
                     throw new InvalidOperationException("CommonName is required.");
 
-                var pfxB64 = GetProp(req.IssuingCA, "EncryptedPfx");
+                var pfxB64 = GetProp(req.IssuingCA, "Pfx");
                 if (string.IsNullOrEmpty(pfxB64))
                     throw new InvalidOperationException("Issuing CA has no private key on this machine.");
 
-                var caPfx = CertVault.DecryptFromBase64(pfxB64);
+                var caPfx = CertVault.FromBase64(pfxB64);
                 var caBundle = Pkcs12Bundle.Load(caPfx, "");
                 if (caBundle.PrivateKey == null)
                     throw new InvalidOperationException("Issuing CA's PFX has no private key.");
@@ -100,7 +100,7 @@ namespace PKI.Crypto
                 item.Properties["Subject_C"]       = req.Country ?? "";
                 item.Properties["SubjectAlternativeNames"] = SerializeSans(sans);
                 item.Properties["IssuerThumbprint"] = GetProp(req.IssuingCA, "Thumbprint");
-                item.Properties["EncryptedPfx"]    = CertVault.EncryptToBase64(pfxBytes);
+                item.Properties["Pfx"]             = CertVault.ToBase64(pfxBytes);
                 item.Properties["Thumbprint"]      = ToHex(Sha1(cert.GetEncoded()));
                 item.Properties["Subject"]         = cert.SubjectDN.ToString();
                 item.Properties["Issuer"]          = cert.IssuerDN.ToString();
