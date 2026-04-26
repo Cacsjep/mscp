@@ -6,13 +6,13 @@
              x:Class="Mscp.PkiCertInstaller.Views.LoginView"
              x:DataType="vm:LoginViewModel">
 
-  <Border Background="#1A1D24" Padding="32,28">
+  <Border Background="#1A1D24" Padding="32,14,32,28">
     <StackPanel Spacing="14">
 
-      <StackPanel Orientation="Vertical" Spacing="2" Margin="0,0,0,4"
+      <StackPanel Orientation="Vertical" Spacing="2"
                   HorizontalAlignment="Center">
-        <mi:MaterialIcon Kind="Shield" Width="36" Height="36" Foreground="#0099DA"
-                         HorizontalAlignment="Center" Margin="0,0,0,4" />
+        <mi:MaterialIcon Kind="Shield" Width="32" Height="32" Foreground="#0099DA"
+                         HorizontalAlignment="Center" Margin="0,0,0,2" />
         <TextBlock Text="Certificate Installer"
                    FontSize="20" FontWeight="SemiBold"
                    HorizontalAlignment="Center" />

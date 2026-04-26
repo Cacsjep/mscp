@@ -16,17 +16,33 @@
       <TextBlock Grid.Row="0" Text="{Binding Heading}"
                  FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4" />
       <TextBlock Grid.Row="1"
-                 Text="Each certificate is imported into the Windows store shown below it (Milestone Certificates Guide 2025 R1). For leaf certs (HTTPS / 802.1X / Service) the listed Windows accounts get Full Control + Read on the private-key file, per the guide. Root and Intermediate CAs only need their public cert in the trust store; the account list is ignored for them."
+                 Text="Each certificate goes into the Windows store shown next to it. For leaf certs the listed accounts get Full Control on the private key."
                  Foreground="#8A93A6" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12" />
 
       <Border Grid.Row="2" Background="#22262E" CornerRadius="4" Padding="0">
         <Grid RowDefinitions="Auto,*">
-          <TextBlock Grid.Row="0" Text="Selected certificates"
-                     Foreground="#8A93A6" FontSize="11"
-                     Margin="12,8,12,4" />
-          <ListBox Grid.Row="1" ItemsSource="{Binding Items}"
-                   Background="Transparent" BorderThickness="0"
-                   Margin="4,0,4,8" />
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto"
+                Margin="14,10,14,6">
+            <TextBlock Grid.Column="0" Text="Name"
+                       FontWeight="SemiBold" Foreground="#8A93A6" FontSize="10" />
+            <TextBlock Grid.Column="1" Text="Target Windows store"
+                       FontWeight="SemiBold" Foreground="#8A93A6" FontSize="10" />
+          </Grid>
+          <ScrollViewer Grid.Row="1" Padding="0,0,0,8">
+            <ItemsControl ItemsSource="{Binding Items}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:InstallDialogViewModel+CertRow">
+                  <Grid ColumnDefinitions="*,Auto" Margin="14,3,14,3">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1" Text="{Binding Store}"
+                               Foreground="#8A93A6" FontSize="11"
+                               Margin="12,0,0,0" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
         </Grid>
       </Border>
 

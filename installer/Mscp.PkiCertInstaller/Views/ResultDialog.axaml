@@ -1,9 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Mscp.PkiCertInstaller.ViewModels"
         x:Class="Mscp.PkiCertInstaller.Views.ResultDialog"
         Title="Result"
         Icon="/Assets/app.ico"
-        Width="520"
+        Width="640"
         SizeToContent="Height"
         Background="#0F1115"
         WindowStartupLocation="CenterOwner"
@@ -17,8 +18,8 @@
   <Border Background="#1A1D24" Padding="24,20">
     <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*">
       <PathIcon Name="ResultIcon"
-                Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
-                Width="36" Height="36"
+                Grid.Row="0" Grid.Column="0" Grid.RowSpan="2"
+                Width="32" Height="32"
                 VerticalAlignment="Top"
                 Margin="0,4,16,0" />
 
@@ -28,21 +29,54 @@
 
       <TextBlock Name="SummaryText" Grid.Row="1" Grid.Column="1"
                  Foreground="#B6C0D6" FontSize="12"
-                 TextWrapping="Wrap" Margin="0,0,0,8" />
+                 TextWrapping="Wrap" Margin="0,0,0,12" />
 
-      <Border Name="DetailBorder" Grid.Row="2" Grid.Column="1"
-              Background="#22262E" CornerRadius="4" Padding="12,8"
-              IsVisible="False">
-        <ScrollViewer MaxHeight="220">
-          <SelectableTextBlock Name="DetailText"
-                               FontFamily="Cascadia Code,Consolas,monospace"
-                               FontSize="11"
-                               Foreground="#D4DCE9"
-                               TextWrapping="Wrap" />
+      <Border Name="EntriesBorder"
+              Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+              Background="#22262E" CornerRadius="4" Padding="0"
+              IsVisible="False"
+              MaxHeight="360">
+        <ScrollViewer Padding="0,4,0,4">
+          <ItemsControl Name="EntriesList">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vm:CertListViewModel+OpResultEntry">
+                <Grid ColumnDefinitions="Auto,*,Auto"
+                      Margin="14,6,14,6" ColumnSpacing="12">
+                  <!-- Twin PathIcons toggled by IsVisible. Avoids the
+                       Application.Current.TryGetResource lookup that
+                       can fail when the geometry lives in a Window
+                       resource dictionary, not the App's. -->
+                  <Panel Grid.Column="0" Width="20" Height="20"
+                         VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource IconCheck}"
+                              Width="18" Height="18"
+                              Foreground="#4CC26E"
+                              IsVisible="{Binding Success}" />
+                    <PathIcon Data="{StaticResource IconError}"
+                              Width="18" Height="18"
+                              Foreground="#E06363"
+                              IsVisible="{Binding !Success}" />
+                  </Panel>
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Name}"
+                             FontWeight="SemiBold"
+                             VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2"
+                             Text="{Binding Status}"
+                             Foreground="{Binding Success, Converter={x:Static vm:ResultBrushConverter.Instance}}"
+                             VerticalAlignment="Center"
+                             TextWrapping="Wrap"
+                             MaxWidth="320"
+                             TextAlignment="Right" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </ScrollViewer>
       </Border>
 
-      <Button Grid.Row="3" Grid.Column="1"
+      <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
               Content="OK" Classes="accent"
               HorizontalAlignment="Right"
               MinWidth="100"

@@ -13,15 +13,21 @@ public partial class InstallDialogViewModel : ObservableObject
     [ObservableProperty] private AccountRow? selectedAccount;
 
     public string Heading { get; }
-    public ObservableCollection<string> Items { get; }
     public ObservableCollection<AccountRow> Accounts { get; } = new();
 
     public bool AnyNeedsKeyAcl { get; }
 
+    // Two-column row in the cert preview list: left = display name,
+    // right = target Windows store. Read-only - the user is just
+    // confirming what's about to be installed.
+    public sealed record CertRow(string Name, string Store);
+
+    public ObservableCollection<CertRow> Items { get; }
+
     public InstallDialogViewModel(IReadOnlyList<CertItemViewModel> items, string defaultAccountsCsv)
     {
-        Items = new ObservableCollection<string>(items.Select(i =>
-            $"{i.KindLabel}  -  {i.Name}\n   -> {i.TargetStoreDisplay}"));
+        Items = new ObservableCollection<CertRow>(items.Select(i =>
+            new CertRow(i.Name, i.TargetStoreDisplay)));
         Heading = items.Count == 1
             ? "Install 1 certificate"
             : $"Install {items.Count} certificates";

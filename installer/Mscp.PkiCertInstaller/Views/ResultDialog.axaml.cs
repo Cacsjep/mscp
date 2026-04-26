@@ -1,9 +1,10 @@
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Mscp.PkiCertInstaller.Services;
+using Mscp.PkiCertInstaller.ViewModels;
 
 namespace Mscp.PkiCertInstaller.Views;
 
@@ -15,33 +16,30 @@ public partial class ResultDialog : Window
         WindowChromeHelper.HookDarkTitleBar(this);
     }
 
-    public static async System.Threading.Tasks.Task ShowSuccess(Window owner, string title, string summary, string? detail = null)
-        => await Show(owner, title, summary, detail, success: true);
+    public static System.Threading.Tasks.Task ShowResult(Window owner, CertListViewModel.OpResult r)
+        => Show(owner, r);
 
-    public static async System.Threading.Tasks.Task ShowError(Window owner, string title, string summary, string? detail = null)
-        => await Show(owner, title, summary, detail, success: false);
-
-    private static async System.Threading.Tasks.Task Show(Window owner, string title, string summary, string? detail, bool success)
+    private static async System.Threading.Tasks.Task Show(Window owner, CertListViewModel.OpResult r)
     {
         var dlg = new ResultDialog();
-        dlg.TitleText.Text = title;
-        dlg.SummaryText.Text = summary;
-        dlg.Title = title;
+        dlg.TitleText.Text = r.Title;
+        dlg.SummaryText.Text = r.Summary;
+        dlg.Title = r.Title;
 
-        var iconRes = success ? "IconCheck" : "IconError";
+        var iconRes = r.Success ? "IconCheck" : "IconError";
         if (Avalonia.Application.Current!.TryFindResource(iconRes, out var geom)
             && geom is StreamGeometry sg)
         {
             dlg.ResultIcon.Data = sg;
         }
-        dlg.ResultIcon.Foreground = success
+        dlg.ResultIcon.Foreground = r.Success
             ? new SolidColorBrush(Color.FromRgb(0x4C, 0xC2, 0x6E))
             : new SolidColorBrush(Color.FromRgb(0xE0, 0x63, 0x63));
 
-        if (!string.IsNullOrEmpty(detail))
+        if (r.Entries.Count > 0)
         {
-            dlg.DetailText.Text = detail;
-            dlg.DetailBorder.IsVisible = true;
+            dlg.EntriesList.ItemsSource = r.Entries;
+            dlg.EntriesBorder.IsVisible = true;
         }
 
         await dlg.ShowDialog(owner);

@@ -27,8 +27,7 @@ public partial class CertListView : UserControl
     private async void OnResultReady(object? sender, CertListViewModel.OpResult r)
     {
         if (VisualRoot is not Window owner) return;
-        if (r.Success) await ResultDialog.ShowSuccess(owner, r.Title, r.Summary, r.Detail);
-        else           await ResultDialog.ShowError  (owner, r.Title, r.Summary, r.Detail);
+        await ResultDialog.ShowResult(owner, r);
     }
 
     private async void OnInstallRequested(object? sender, CertListViewModel.InstallRequest req)

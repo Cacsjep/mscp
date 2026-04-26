@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Mscp.PkiCertInstaller.Models;
 using Mscp.PkiCertInstaller.Services;
 
 namespace Mscp.PkiCertInstaller.ViewModels;
@@ -26,10 +27,13 @@ public partial class CertListViewModel : ObservableObject, IDisposable
 
     public string ServerLabel => _client.BaseUri.ToString();
 
-    // Default service identities the cert keys get ACL'd for. Used to
-    // pre-populate the install dialog's account list.
-    public string DefaultGrantAccountsCsv { get; }
-        = "NETWORK SERVICE, NT SERVICE\\MilestoneEventServerService";
+    // Default service identity the cert keys get ACL'd for. Per the
+    // Milestone Certificates Guide (p.104, p.127): "By default,
+    // XProtect software uses the NETWORK SERVICE account." Anything
+    // else (domain service accounts, NT SERVICE\<svc> virtual
+    // accounts) is install-specific and the admin adds it via the
+    // picker.
+    public string DefaultGrantAccountsCsv { get; } = "NETWORK SERVICE";
 
     // Filter dropdown source. We deliberately omit HTTPS and 802.1X
     // here: the installer's primary use case is deploying Root /
@@ -51,7 +55,8 @@ public partial class CertListViewModel : ObservableObject, IDisposable
     public event EventHandler<OpResult>? ResultReady;
 
     public sealed record InstallRequest(IReadOnlyList<CertItemViewModel> Items, string DefaultAccountsCsv);
-    public sealed record OpResult(bool Success, string Title, string Summary, string? Detail);
+    public sealed record OpResult(bool Success, string Title, string Summary, IReadOnlyList<OpResultEntry> Entries);
+    public sealed record OpResultEntry(bool Success, string Name, string Status);
 
     public CertListViewModel(MilestoneClient client) { _client = client; }
 
@@ -64,7 +69,16 @@ public partial class CertListViewModel : ObservableObject, IDisposable
         IsBusy = true;
         try
         {
-            var certs = await _client.ListPkiCertsAsync();
+            IReadOnlyList<CertItem> certs;
+            try { certs = await _client.ListPkiCertsAsync(); }
+            catch (Exception ex)
+            {
+                ResultReady?.Invoke(this, new OpResult(false,
+                    "Reload failed",
+                    "Couldn't pull the certificate list from the management server.",
+                    new[] { new OpResultEntry(false, "GET /mipKinds/.../mipItems", ex.Message) }));
+                return;
+            }
             SelectedItems.Clear();
             _all.Clear();
             foreach (var c in certs.Where(c => !string.IsNullOrEmpty(c.Thumbprint))
@@ -75,11 +89,6 @@ public partial class CertListViewModel : ObservableObject, IDisposable
                 _all.Add(vm);
             }
             Refilter();
-        }
-        catch (Exception ex)
-        {
-            ResultReady?.Invoke(this, new OpResult(false,
-                "Reload failed", "Couldn't pull the certificate list from the management server.", ex.ToString()));
         }
         finally
         {
@@ -154,7 +163,9 @@ public partial class CertListViewModel : ObservableObject, IDisposable
         if (SelectedItems.Count == 0)
         {
             ResultReady?.Invoke(this, new OpResult(false,
-                "Nothing to install", "Tick the certificates you want to install first.", null));
+                "Nothing to install",
+                "Tick the certificates you want to install first.",
+                Array.Empty<OpResultEntry>()));
             return;
         }
         // Leaf certs need the private key to be useful; trust-store
@@ -166,7 +177,7 @@ public partial class CertListViewModel : ObservableObject, IDisposable
             ResultReady?.Invoke(this, new OpResult(false,
                 "No installable rows",
                 "None of the ticked leaf certificates have a private key on the server. Re-issue with a key, or pick different rows.",
-                null));
+                Array.Empty<OpResultEntry>()));
             return;
         }
         InstallRequested?.Invoke(this, new InstallRequest(installable, DefaultGrantAccountsCsv));
@@ -198,71 +209,64 @@ public partial class CertListViewModel : ObservableObject, IDisposable
 
     // Invoked by the View after the install dialog returns OK. For
     // each ticked cert we walk its chain and install root → CA →
-    // ... → leaf so trust is in place before the leaf binds.
+    // ... → leaf so trust is in place before the leaf binds. The
+    // result dialog shows one row per ticked cert with a clean
+    // success / error status; per-step diagnostics still go to the
+    // log if anyone needs them.
     public void PerformInstall(IReadOnlyList<CertItemViewModel> items, IReadOnlyList<string> accounts)
     {
+        var entries = new List<OpResultEntry>();
         var ok = 0;
-        var detail = new System.Text.StringBuilder();
         foreach (var picked in items)
         {
             var chain = ResolveChain(picked);
+            string? error = null;
             try
             {
-                detail.AppendLine($"=== {picked.KindLabel}: {picked.Name} (chain {chain.Count} cert(s)) ===");
-                // Install root-down so the trust path exists before the
-                // leaf is registered.
                 for (int i = chain.Count - 1; i >= 0; i--)
                 {
                     var node = chain[i];
-                    if (string.IsNullOrEmpty(node.Source.PfxBase64))
-                    {
-                        detail.AppendLine($"  SKIP  {node.KindLabel}: {node.Name}  (no PFX bytes on server)");
-                        continue;
-                    }
+                    if (string.IsNullOrEmpty(node.Source.PfxBase64)) continue;
                     var pfx = Convert.FromBase64String(node.Source.PfxBase64);
-                    var res = CertInstaller.InstallPfx(
+                    CertInstaller.InstallPfx(
                         pfx, "",
                         targetStore: node.TargetStore,
                         aclPrivateKey: node.NeedsKeyAcl,
+                        friendlyName: node.Name,
                         grantAccounts: node.NeedsKeyAcl ? accounts.ToArray() : Array.Empty<string>());
                     node.Refresh();
-                    detail.AppendLine($"  OK    {node.KindLabel}: {node.Name}");
-                    detail.AppendLine($"        Store: {CertInstaller.StoreDisplayName(res.Store)}");
-                    detail.AppendLine($"        Thumb: {res.Thumbprint}");
-                    if (node.NeedsKeyAcl)
-                    {
-                        if (!string.IsNullOrEmpty(res.KeyFilePath))
-                            detail.AppendLine($"        Key:   {res.KeyFilePath}");
-                        if (res.GrantedAccounts.Length > 0)
-                            detail.AppendLine($"        ACL:   {string.Join(", ", res.GrantedAccounts)}");
-                    }
                 }
-                // Warn if the chain stopped at a non-self-signed cert
-                // (i.e. its issuer wasn't in the PKI vault).
                 var top = chain[chain.Count - 1];
                 var topIssuer = (top.Source.IssuerThumbprint ?? "").Trim();
                 if (topIssuer.Length > 0 &&
                     !string.Equals(topIssuer, top.Thumbprint, StringComparison.OrdinalIgnoreCase))
                 {
-                    detail.AppendLine($"  WARN  Chain ends at \"{top.Name}\" but its issuer thumbprint");
-                    detail.AppendLine($"        {topIssuer} is not in the PKI vault. The trust path may");
-                    detail.AppendLine($"        be incomplete - import the missing CA and re-run install.");
+                    // Trust path won't validate without the missing CA.
+                    error = $"Trust chain incomplete - issuer of \"{top.Name}\" not in vault.";
                 }
-                ok++;
             }
             catch (Exception ex)
             {
-                detail.AppendLine($"  FAIL  {picked.Name}: {ex.Message}");
+                error = ex.Message;
             }
-            detail.AppendLine();
+
+            if (error == null)
+            {
+                ok++;
+                entries.Add(new OpResultEntry(true, picked.Name, "Successful"));
+            }
+            else
+            {
+                entries.Add(new OpResultEntry(false, picked.Name, error));
+            }
         }
         bool success = ok == items.Count;
         var summary = success
-            ? $"Installed {ok} certificate chain(s)."
-            : $"{ok} of {items.Count} chain(s) installed; the rest failed (see details).";
+            ? $"Installed {ok} certificate(s)."
+            : $"{ok} of {items.Count} succeeded.";
         ResultReady?.Invoke(this, new OpResult(success,
             success ? "Install successful" : "Install partially failed",
-            summary, detail.ToString().TrimEnd()));
+            summary, entries));
     }
 
     [RelayCommand]
@@ -271,11 +275,13 @@ public partial class CertListViewModel : ObservableObject, IDisposable
         if (SelectedItems.Count == 0)
         {
             ResultReady?.Invoke(this, new OpResult(false,
-                "Nothing to uninstall", "Tick the certificates you want to uninstall first.", null));
+                "Nothing to uninstall",
+                "Tick the certificates you want to uninstall first.",
+                Array.Empty<OpResultEntry>()));
             return;
         }
+        var entries = new List<OpResultEntry>();
         var ok = 0;
-        var detail = new System.Text.StringBuilder();
         foreach (var vm in SelectedItems.ToList())
         {
             try
@@ -283,23 +289,22 @@ public partial class CertListViewModel : ObservableObject, IDisposable
                 if (CertInstaller.RemoveByThumbprint(vm.Source.Thumbprint, vm.TargetStore))
                 {
                     ok++;
-                    detail.AppendLine($"OK   {vm.Name}  ({CertInstaller.StoreDisplayName(vm.TargetStore)})");
+                    entries.Add(new OpResultEntry(true, vm.Name, "Removed"));
                 }
                 else
                 {
-                    detail.AppendLine($"SKIP {vm.Name}  not installed");
+                    entries.Add(new OpResultEntry(true, vm.Name, "Not installed (skipped)"));
                 }
                 vm.Refresh();
             }
             catch (Exception ex)
             {
-                detail.AppendLine($"FAIL {vm.Name}  {ex.Message}");
+                entries.Add(new OpResultEntry(false, vm.Name, ex.Message));
             }
         }
         ResultReady?.Invoke(this, new OpResult(true,
             "Uninstall complete",
-            $"Removed {ok} certificate(s).",
-            detail.ToString().TrimEnd()));
+            $"Removed {ok} certificate(s).", entries));
     }
 
     [RelayCommand]
@@ -307,7 +312,7 @@ public partial class CertListViewModel : ObservableObject, IDisposable
     {
         if (!ServerConfiguratorLauncher.TryLaunch(out var err))
             ResultReady?.Invoke(this, new OpResult(false,
-                "Could not launch Server Configurator", err, null));
+                "Could not launch Server Configurator", err, Array.Empty<OpResultEntry>()));
     }
 
     public void Dispose() => _client.Dispose();

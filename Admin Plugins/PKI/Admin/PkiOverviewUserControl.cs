@@ -438,7 +438,7 @@ namespace PKI.Admin
         // safe.
         private void OnAutoSetupClick()
         {
-            const string rootName = "MSCP Auto-Setup Root CA";
+            const string rootName = "MSCP PKI - Root CA";
             const int fifteenYears = 15 * 365;
 
             var confirm = MessageBox.Show(
@@ -493,7 +493,14 @@ namespace PKI.Admin
                 var details = new System.Text.StringBuilder();
                 foreach (var svc in services)
                 {
-                    var name = "Auto-Setup " + svc.Prefix + " " + (svc.DisplayName ?? svc.Hostname ?? "service");
+                    // "MSCP PKI - <CategoryLabel> <hostname>" so every
+                    // auto-generated cert sorts together in certlm.msc
+                    // and Server Configurator and is easy to spot
+                    // against hand-rolled or vendor certs.
+                    var label = (svc.DisplayName ?? svc.Hostname ?? "").Trim();
+                    var name = string.IsNullOrEmpty(label)
+                        ? $"MSCP PKI - {svc.CategoryLabel}"
+                        : $"MSCP PKI - {svc.CategoryLabel} {label}";
                     if (FindByName(name) != null)
                     {
                         skipped++;
@@ -634,7 +641,7 @@ namespace PKI.Admin
                 item.Properties["HasPrivateKey"]       = "True";
 
                 Configuration.Instance.SaveItemConfiguration(PKIDefinition.PluginId, item);
-                PKIDefinition.Log.Info("Auto-setup Root CA created: " + rootName);
+                PKIDefinition.Log.Info("Root CA created: " + rootName);
                 return item;
             }
             catch (Exception ex)

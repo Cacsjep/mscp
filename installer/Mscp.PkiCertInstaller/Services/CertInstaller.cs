@@ -63,6 +63,7 @@ public static class CertInstaller
         string pfxPassword,
         StoreName targetStore,
         bool aclPrivateKey,
+        string friendlyName,
         params string[] grantAccounts)
     {
         var flags = X509KeyStorageFlags.MachineKeySet
@@ -74,11 +75,33 @@ public static class CertInstaller
         // target machine has no business holding a CA's private key.
         var toAdd = aclPrivateKey ? fromPfx : X509CertificateLoader.LoadCertificate(fromPfx.RawData);
 
+        // Set the FriendlyName so the cert appears with a recognisable
+        // label in certlm.msc / Server Configurator instead of "<None>".
+        // Must be set BEFORE store.Add() because the persisted copy
+        // copies its name from the in-memory cert.
+        if (!string.IsNullOrWhiteSpace(friendlyName))
+        {
+            try { toAdd.FriendlyName = friendlyName; } catch { /* not supported on non-Windows */ }
+        }
+
         using var store = new X509Store(targetStore, StoreLocation.LocalMachine);
         store.Open(OpenFlags.ReadWrite);
         var existing = store.Certificates.Find(X509FindType.FindByThumbprint, toAdd.Thumbprint, false);
         if (existing.Count > 0) store.RemoveRange(existing);
         store.Add(toAdd);
+
+        // Belt-and-suspenders: ensure the FriendlyName is persisted on
+        // the on-disk copy too. Some Windows builds reset it on Add().
+        if (!string.IsNullOrWhiteSpace(friendlyName))
+        {
+            var persistedForName = store.Certificates
+                .Find(X509FindType.FindByThumbprint, toAdd.Thumbprint, false)
+                .OfType<X509Certificate2>().FirstOrDefault();
+            if (persistedForName != null)
+            {
+                try { persistedForName.FriendlyName = friendlyName; } catch { }
+            }
+        }
 
         string keyPath = "";
         string[] granted = Array.Empty<string>();

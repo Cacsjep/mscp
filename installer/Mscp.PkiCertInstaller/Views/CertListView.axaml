@@ -113,7 +113,7 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Installed" Width="Auto" MinWidth="120"
+          <DataGridTemplateColumn Header="Installed" Width="120"
                                   CanUserSort="True" SortMemberPath="StatusText">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
@@ -125,7 +125,7 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Machine" Width="Auto" MinWidth="100"
+          <DataGridTemplateColumn Header="Machine Match" Width="140"
                                   CanUserSort="True" SortMemberPath="MachineMatchText">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
@@ -138,9 +138,9 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="Name"   Binding="{Binding Name}"      Width="*"    MinWidth="180" />
-          <DataGridTextColumn Header="Folder" Binding="{Binding KindLabel}" Width="Auto" MinWidth="110" />
-          <DataGridTemplateColumn Header="SANs" Width="2*" MinWidth="160"
+          <DataGridTextColumn Header="Name"   Binding="{Binding Name}"      Width="*" />
+          <DataGridTextColumn Header="Folder" Binding="{Binding KindLabel}" Width="130" />
+          <DataGridTemplateColumn Header="SANs" Width="2*"
                                   CanUserSort="True" SortMemberPath="SansShort">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
@@ -152,7 +152,7 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Thumbprint" Width="Auto" MinWidth="180"
+          <DataGridTemplateColumn Header="Thumbprint" Width="200"
                                   CanUserSort="True" SortMemberPath="Thumbprint">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
@@ -165,7 +165,7 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
-          <DataGridTextColumn Header="Remaining" Binding="{Binding Remaining}" Width="Auto" MinWidth="100" />
+          <DataGridTextColumn Header="Remaining" Binding="{Binding Remaining}" Width="110" />
         </DataGrid.Columns>
       </DataGrid>
     </Border>
