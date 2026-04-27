@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>802.1X Certificates</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif; font-size: 13px;
+               color: #222; padding: 0 28px; line-height: 1.55; }
+        h2 { font-size: 14px; font-weight: 600; margin: -4px 0 8px; color: #333; }
+        h3 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; color: #444; }
+        ul, ol { margin: 0 0 0 20px; padding: 0; }
+        li { margin-bottom: 4px; }
+        p { margin-bottom: 10px; }
+        .card { background: #fff; border: 1px solid #dde0e4; border-radius: 6px;
+                padding: 16px 20px; margin-bottom: 14px; }
+        .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+        .chip-blue { display: inline-block; background: #eef4fb; border: 1px solid #a3c4e4;
+                     border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500;
+                     color: #2a5a96; white-space: nowrap; }
+        code { font-family: Consolas, monospace; font-size: 12px;
+               background: #f4f5f7; border: 1px solid #e1e3e6; padding: 1px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header-row">
+        Client certificates for IEEE 802.1X port authentication
+        <div class="chips"><span class="chip-blue">EAP-TLS / device identity</span></div>
+    </div>
+
+    <div class="card">
+        <h2>What lives here</h2>
+        <p>
+            802.1X is a network-port authentication protocol used by managed switches to
+            decide whether a device may sit on the wire. Cameras, NVRs, and recording
+            servers each present a client certificate as their identity; this folder is
+            where you issue those client certs.
+        </p>
+        <p>
+            The cert ends up loaded onto the device (or into the Windows <em>Personal</em>
+            store if it's a server) and the matching Root / Intermediate must also be
+            trusted by the RADIUS server that does the authentication.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Required fields</h2>
+        <ul>
+            <li><strong>Sign with</strong> &mdash; a CA already trusted by your RADIUS / NPS
+                server.</li>
+            <li><strong>Display name</strong> &mdash; identifies the device or user.</li>
+            <li><strong>Common Name</strong> &mdash; e.g. <code>camera-01.example.local</code>
+                or <code>alice@example.com</code>. Many RADIUS policies key on this value.</li>
+            <li><strong>Validity</strong> &mdash; commonly 1-2 years. Schedule renewals before
+                expiry; a stale 802.1X cert means devices stop authenticating onto the network.</li>
+            <li><strong>Key algorithm</strong> &mdash; check what your endpoint device
+                actually accepts. Many older cameras require RSA.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Deployment</h2>
+        <p>
+            For Windows hosts, the PKI Cert Installer drops the cert into the
+            <em>Personal</em> store and ACLs the key for the chosen account. For cameras
+            and other embedded devices, export a PFX from this vault (Export &gt;
+            <em>PFX (cert + key)...</em>) and upload via the device's web UI.
+        </p>
+    </div>
+</body>
+</html>

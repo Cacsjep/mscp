@@ -4,6 +4,7 @@ using PKI.Admin;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Windows.Forms;
 using VideoOS.Platform;
 using VideoOS.Platform.Admin;
 using VideoOS.Platform.Background;
@@ -149,6 +150,17 @@ namespace PKI
                 _itemNodes = new List<ItemNode> { overviewNode, caFolderNode, clientFolderNode };
                 return _itemNodes;
             }
+        }
+
+        // Plugin-level help. Returned UserControl is rendered when the
+        // admin clicks the top-level "PKI" node in the Mgmt Client tree.
+        // Per-folder help (Root CA / Intermediate / HTTPS / 802.1X / Service)
+        // lives on each ItemManager via GenerateOverviewUserControl.
+        public override UserControl GenerateUserControl()
+        {
+            return new HtmlHelpUserControl(
+                System.Reflection.Assembly.GetExecutingAssembly(),
+                "Admin", "HelpPage.html");
         }
     }
 }

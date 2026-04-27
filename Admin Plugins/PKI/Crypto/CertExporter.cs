@@ -129,6 +129,122 @@ namespace PKI.Crypto
             }
         }
 
+        // Multi-export: one folder + one shared password (for key
+        // formats) applied to every selected cert. Skips items missing
+        // material the format requires (no-key items for PFX / PEM key /
+        // bundle) and reports them in the summary instead of aborting.
+        public static void ExportInteractiveBatch(IList<Item> items, string format, IWin32Window owner)
+        {
+            if (items == null || items.Count == 0) return;
+            if (items.Count == 1) { ExportInteractive(items[0], format, owner); return; }
+
+            string defaultExt;
+            switch (format)
+            {
+                case Format.PemCert:     defaultExt = "pem"; break;
+                case Format.DerCert:     defaultExt = "der"; break;
+                case Format.Crt:         defaultExt = "crt"; break;
+                case Format.Pfx:         defaultExt = "pfx"; break;
+                case Format.PemKeyPkcs8: defaultExt = "pem"; break;
+                case Format.PemKeyPkcs1: defaultExt = "pem"; break;
+                case Format.PemBundle:   defaultExt = "pem"; break;
+                default: return;
+            }
+
+            string folder;
+            using (var fbd = new FolderBrowserDialog
+            {
+                Description = $"Pick a folder. Each certificate is written as <name>.{defaultExt}.",
+                ShowNewFolderButton = true,
+            })
+            {
+                if (fbd.ShowDialog(owner) != DialogResult.OK) return;
+                folder = fbd.SelectedPath;
+            }
+
+            // Only PFX and PEM-PKCS#8 prompt for a password; PKCS#1 RSA
+            // and the PEM bundle write keys unencrypted by design.
+            string sharedPwd = null;
+            if (format == Format.Pfx || format == Format.PemKeyPkcs8)
+            {
+                sharedPwd = PromptPassword(owner,
+                    format == Format.Pfx
+                        ? "PFX password (used for every exported cert; leave empty for unencrypted)"
+                        : "PEM key password (used for every exported cert; leave empty for unencrypted)");
+                if (sharedPwd == null) return;
+            }
+
+            int ok = 0, skipped = 0, failed = 0;
+            var errors = new List<string>();
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    var loaded = Load(item);
+                    if (loaded.Certificate == null)
+                    {
+                        skipped++;
+                        errors.Add($"{item.Name}: no exportable material");
+                        continue;
+                    }
+                    if (RequiresKey(format) && loaded.PrivateKey == null)
+                    {
+                        skipped++;
+                        errors.Add($"{item.Name}: no private key on this server");
+                        continue;
+                    }
+                    byte[] bytes;
+                    switch (format)
+                    {
+                        case Format.PemCert:
+                            bytes = Encoding.UTF8.GetBytes(PemIo.WriteCertPem(loaded.Certificate));
+                            break;
+                        case Format.DerCert:
+                        case Format.Crt:
+                            bytes = loaded.Certificate.GetEncoded();
+                            break;
+                        case Format.Pfx:
+                            bytes = Pkcs12Bundle.Build(loaded.Certificate, loaded.PrivateKey,
+                                loaded.ChainExtras, sharedPwd, item.Name);
+                            break;
+                        case Format.PemKeyPkcs8:
+                            bytes = Encoding.UTF8.GetBytes(
+                                PemIo.WritePrivateKeyPemPkcs8(loaded.PrivateKey, sharedPwd));
+                            break;
+                        case Format.PemKeyPkcs1:
+                            bytes = Encoding.UTF8.GetBytes(
+                                PemIo.WriteRsaPrivateKeyPemPkcs1(loaded.PrivateKey));
+                            break;
+                        case Format.PemBundle:
+                        {
+                            var sb = new StringBuilder();
+                            sb.Append(PemIo.WriteCertPem(loaded.Certificate));
+                            sb.Append(PemIo.WritePrivateKeyPemPkcs8(loaded.PrivateKey, ""));
+                            bytes = Encoding.UTF8.GetBytes(sb.ToString());
+                            break;
+                        }
+                        default: continue;
+                    }
+                    var path = Path.Combine(folder, SafeFileName(item.Name) + "." + defaultExt);
+                    File.WriteAllBytes(path, bytes);
+                    ok++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    errors.Add($"{item.Name}: {ex.Message}");
+                }
+            }
+
+            var summary = $"Exported {ok} of {items.Count} certificate(s) to:\n{folder}";
+            if (skipped > 0 || failed > 0)
+                summary += $"\n\nSkipped: {skipped}, failed: {failed}\n\n" + string.Join("\n", errors);
+            MessageBox.Show(owner, summary, "Export",
+                MessageBoxButtons.OK,
+                (failed == 0 && skipped == 0) ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+
         // Loads cert + (optional) private key + chain from the MIP item.
         // Items with a key carry "Pfx" (base64 PKCS#12 bytes). Items
         // imported cert-only carry "Der" instead.

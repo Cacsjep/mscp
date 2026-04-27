@@ -122,16 +122,21 @@ namespace PKI.Admin
                 form.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
+            // Anchor=Left only (no Top, no Bottom) tells TableLayoutPanel
+            // to vertically center the control inside the cell so the
+            // label baselines line up with the ComboBox / NumericUpDown
+            // text instead of sitting at the top of the row.
             void Cell(int c, Control ctl, int padRight)
             {
                 ctl.Margin = new Padding(0, 0, padRight, 0);
+                ctl.Anchor = AnchorStyles.Left;
                 form.Controls.Add(ctl, c, 0);
             }
-            Cell(0, new Label { Text = "Issuing CA",     AutoSize = true, Margin = new Padding(0, 6, 8, 0) }, 8);
+            Cell(0, new Label { Text = "Issuing CA",      AutoSize = true }, 8);
             Cell(1, _issuer, 16);
-            Cell(2, new Label { Text = "Validity (days)", AutoSize = true, Margin = new Padding(0, 6, 8, 0) }, 8);
+            Cell(2, new Label { Text = "Validity (days)", AutoSize = true }, 8);
             Cell(3, _validity, 16);
-            Cell(4, new Label { Text = "Key",            AutoSize = true, Margin = new Padding(0, 6, 8, 0) }, 8);
+            Cell(4, new Label { Text = "Key",             AutoSize = true }, 8);
             Cell(5, _keyAlg, 0);
 
             _keyAlg.Items.AddRange(new object[] { "RSA-2048", "RSA-3072", "RSA-4096", "ECDSA-P256", "ECDSA-P384" });

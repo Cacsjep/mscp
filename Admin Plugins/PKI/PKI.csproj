@@ -37,6 +37,27 @@
     <Content Include="plugin.def">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <!-- Plugin-level + per-folder help pages. Loaded by the WebBrowser
+         inside HtmlHelpUserControl / HtmlHelpItemNodeUserControl from
+         <plugin-output>\Admin\*.html at runtime. -->
+    <Content Include="Admin\HelpPage.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage_RootCA.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage_IntermediateCA.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage_Https.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage_Dot1x.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage_Service.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <Target Name="MergeBouncyCastle" AfterTargets="MergeCommunitySDK"

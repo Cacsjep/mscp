@@ -225,27 +225,11 @@ namespace PKI.Admin
                 input.Width = width;
                 input.Anchor = AnchorStyles.Left;
 
-                var lblPanel = new FlowLayoutPanel
+                var lbl = new FieldLabel
                 {
-                    AutoSize = true, FlowDirection = FlowDirection.LeftToRight,
-                    Margin = new Padding(0, 6, 0, 0), Padding = Padding.Empty, WrapContents = false,
+                    Text = label, Required = required,
+                    Margin = new Padding(0, 9, 0, 0),
                 };
-                lblPanel.Controls.Add(new Label
-                {
-                    Text = label, AutoSize = true,
-                    Margin = new Padding(0, 3, 0, 0), Padding = Padding.Empty,
-                });
-                if (required)
-                {
-                    lblPanel.Controls.Add(new Label
-                    {
-                        Text = "*", AutoSize = true,
-                        ForeColor = Color.FromArgb(200, 40, 40),
-                        Font = new Font(Font, FontStyle.Bold),
-                        // 4px gap to the label, top-aligned with the field text.
-                        Margin = new Padding(4, 3, 0, 0), Padding = Padding.Empty,
-                    });
-                }
 
                 var inputBox = new FlowLayoutPanel
                 {
@@ -262,7 +246,7 @@ namespace PKI.Admin
                         Margin = new Padding(2, 2, 0, 0),
                     });
                 }
-                grid.Controls.Add(lblPanel, col, grid.RowCount);
+                grid.Controls.Add(lbl, col, grid.RowCount);
                 grid.Controls.Add(inputBox, col + 1, grid.RowCount);
             }
 
@@ -350,16 +334,11 @@ namespace PKI.Admin
             {
                 input.Width = width;
                 input.Anchor = AnchorStyles.Left;
-                var lblPanel = new FlowLayoutPanel
+                var lbl = new FieldLabel
                 {
-                    AutoSize = true, FlowDirection = FlowDirection.LeftToRight,
-                    Margin = new Padding(0, 6, 0, 0), Padding = Padding.Empty, WrapContents = false,
+                    Text = label, Required = false,
+                    Margin = new Padding(0, 9, 0, 0),
                 };
-                lblPanel.Controls.Add(new Label
-                {
-                    Text = label, AutoSize = true,
-                    Margin = new Padding(0, 3, 0, 0), Padding = Padding.Empty,
-                });
                 var inputBox = new FlowLayoutPanel
                 {
                     AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false,
@@ -375,7 +354,7 @@ namespace PKI.Admin
                         Margin = new Padding(2, 2, 0, 0),
                     });
                 }
-                extPanel.Controls.Add(lblPanel, col, extPanel.RowCount);
+                extPanel.Controls.Add(lbl, col, extPanel.RowCount);
                 extPanel.Controls.Add(inputBox, col + 1, extPanel.RowCount);
             }
 
@@ -898,6 +877,47 @@ namespace PKI.Admin
             {
                 public NoneEntry() { Name = "(select an issuing CA)"; Thumbprint = ""; }
                 public override string ToString() => Name;
+            }
+        }
+
+        // Label that paints an optional red "*" tightly after the text.
+        // Building "label + asterisk" out of two AutoSize labels in a
+        // FlowLayoutPanel left a noticeable gap between them because
+        // WinForms' AutoSize Label measurement bakes in glyph-overhang
+        // padding. Drawing both pieces in one ClientSize with
+        // TextRenderer.NoPadding keeps the asterisk ~3px after the text.
+        private class FieldLabel : Label
+        {
+            private static readonly Color AsteriskColor = Color.FromArgb(200, 40, 40);
+            private const TextFormatFlags Flags =
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.Left;
+
+            public bool Required { get; set; }
+
+            public FieldLabel()
+            {
+                AutoSize = true;
+                Padding = Padding.Empty;
+            }
+
+            public override Size GetPreferredSize(Size proposedSize)
+            {
+                var size = TextRenderer.MeasureText(Text ?? "", Font, proposedSize, Flags);
+                if (Required)
+                {
+                    using (var bold = new Font(Font, FontStyle.Bold))
+                        size.Width += TextRenderer.MeasureText("*", bold, proposedSize, Flags).Width;
+                }
+                return size;
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                TextRenderer.DrawText(e.Graphics, Text ?? "", Font, new Point(0, 0), ForeColor, Flags);
+                if (!Required) return;
+                var w = TextRenderer.MeasureText(e.Graphics, Text ?? "", Font, ClientSize, Flags).Width;
+                using (var bold = new Font(Font, FontStyle.Bold))
+                    TextRenderer.DrawText(e.Graphics, "*", bold, new Point(w, 0), AsteriskColor, Flags);
             }
         }
     }

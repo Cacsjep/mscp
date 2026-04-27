@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>PKI Plugin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #222;
+            padding: 0px 28px;
+            line-height: 1.55;
+        }
+        h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; color: #1a1a1a; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        h2 { font-size: 14px; font-weight: 600; margin: -4px 0 8px; color: #333; }
+        h3 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; color: #444; }
+        ul { margin: 0 0 0 20px; padding: 0; }
+        li { margin-bottom: 4px; }
+        p { margin-bottom: 10px; }
+        .card {
+            background: #fff; border: 1px solid #dde0e4; border-radius: 6px;
+            padding: 16px 20px; margin-bottom: 14px;
+        }
+        .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+        .chip-amber { display: inline-block; background: #fdf6ec; border: 1px solid #e0b96a;
+            border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500;
+            color: #7a5a1a; white-space: nowrap; margin-right: 3px; }
+        .chip-blue { display: inline-block; background: #eef4fb; border: 1px solid #a3c4e4;
+            border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500;
+            color: #2a5a96; white-space: nowrap; margin-right: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+        th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e8e8e8; }
+        th { font-weight: 600; color: #444; background: #fafafa; }
+        code { font-family: Consolas, monospace; font-size: 12px;
+            background: #f4f5f7; border: 1px solid #e1e3e6; padding: 1px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header-row">
+        Internal certificate authority and TLS cert vault for XProtect&trade; servers and devices
+        <div class="chips">
+            <span class="chip-amber" title="Independent open-source project provided as-is under the MIT License, with no warranty. Not affiliated with Milestone Systems.">Open source &mdash; no warranty, use at own risk</span>
+            <span class="chip-blue">Stores certs in MIP item config</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>What this plugin does</h2>
+        <p>
+            The PKI plugin lets you run a small internal certificate authority for your
+            XProtect site without leaving the Management Client. You can issue a Root CA
+            and Intermediate CAs, generate HTTPS / 802.1X / Service certificates signed by
+            those CAs, import existing certificates (PEM, DER, PKCS#12), and export them
+            back out for distribution.
+        </p>
+        <p>
+            Every certificate (and its private key, where present) lives on the Management
+            Server as a MIP item, which means the entire vault travels with your XProtect
+            configuration backups.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Tree layout</h2>
+        <table>
+            <tr><th>Node</th><th>Purpose</th></tr>
+            <tr><td>Overview</td><td>Master grid of every cert across all folders. Filter by folder / issuer, search, bulk export, bulk delete, run Auto setup.</td></tr>
+            <tr><td>CA Certificates &gt; Root Certificates</td><td>Self-signed Root CAs. Sign Intermediates and leaf certs.</td></tr>
+            <tr><td>CA Certificates &gt; Intermediate Certificates</td><td>CAs signed by a Root. Recommended issuer for day-to-day leaf certs.</td></tr>
+            <tr><td>Client Certificates &gt; HTTPS Certificates</td><td>Server TLS certs (Recording Server / Mobile / Event Server / Mgmt Server).</td></tr>
+            <tr><td>Client Certificates &gt; 802.1X Certificates</td><td>Client certs for IEEE 802.1X port authentication on cameras / NVRs.</td></tr>
+            <tr><td>Client Certificates &gt; Service Certificates</td><td>Generic service-to-service TLS certs.</td></tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Typical first run (Auto setup)</h2>
+        <p>
+            From the <strong>Overview</strong> node, click <strong>Auto setup</strong>. This will:
+        </p>
+        <ul>
+            <li>Generate a self-signed Root CA named <code>MSCP PKI (yyyy.MM) - Root CA</code> valid for 15 years (skipped if it already exists).</li>
+            <li>Discover every XProtect service registered on this site (Recording Server, Mobile, Event, Mgmt) and issue one Service certificate per service signed by the Root CA, valid for 15 years.</li>
+            <li>Fill the SAN list of each service cert with the hostname, FQDN, and registered IPs of that service so the cert is immediately usable.</li>
+        </ul>
+        <p>
+            Re-running Auto setup later in a different month produces a new stamped batch
+            and won't collide with the previous one. Existing certs with the same names
+            are never overwritten.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Deploying issued certs</h2>
+        <p>
+            The Mgmt Client side only stores the certificates &mdash; it does not push them
+            into the Windows certificate store on each XProtect server. Two ways to deploy:
+        </p>
+        <ul>
+            <li><strong>PKI Cert Installer (recommended):</strong> the standalone single-file EXE
+                shipped next to <code>PKI.dll</code> (and downloadable from the local download page
+                at <code>http://&lt;mgmt-server&gt;/mscp/</code>). Run it on each XProtect server
+                with admin rights, sign in to the Mgmt Server, pick the certs that match the
+                machine, click Install. It places the cert in the right Windows store and grants
+                the service account the private-key ACL.</li>
+            <li><strong>Manual export:</strong> select certs in the Overview pane and click
+                <strong>Export</strong>. PFX includes the private key (with optional password);
+                cert-only formats (PEM / DER / .crt) are also available.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Storage and security notes</h2>
+        <ul>
+            <li>Cert and key bytes are stored as PKCS#12 (PFX) on the MIP item, base64-encoded.
+                Anyone with read access to the Management Server config can extract them.</li>
+            <li>The plugin does not auto-renew. Watch <strong>Remaining</strong> in the Overview;
+                generate a fresh cert before expiry and re-deploy with the Cert Installer.</li>
+            <li>Deleting a CA item is blocked while other certs in the vault still reference its
+                thumbprint as their issuer. Delete the dependents (or re-issue them against a
+                different CA) first.</li>
+        </ul>
+    </div>
+
+    <div class="card" style="font-size:12px; line-height:1.5;">
+        <h2>Legal</h2>
+        <p>
+            Independent open-source project, not affiliated with, endorsed by, or
+            supported by Milestone Systems. XProtect&reg; is a registered trademark of
+            Milestone Systems A/S.
+        </p>
+        <p>
+            This software is provided &ldquo;as is&rdquo;, without warranty of any kind,
+            express or implied. In no event shall the authors be liable for any claim,
+            damages, or other liability. Use at your own risk &mdash; always test in a
+            non-production environment first. MIT License.
+        </p>
+    </div>
+</body>
+</html>

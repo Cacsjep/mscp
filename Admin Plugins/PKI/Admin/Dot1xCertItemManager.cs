@@ -6,5 +6,6 @@ namespace PKI.Admin
     {
         public Dot1xCertItemManager(Guid kind) : base(kind) { }
         public override RolePreset RolePreset => RolePreset.Dot1xClient;
+        protected override string HelpFileName => "HelpPage_Dot1x.html";
     }
 }

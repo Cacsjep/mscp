@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
 using System.Windows.Forms;
 using PKI.Crypto;
 using VideoOS.Platform;
@@ -32,7 +33,6 @@ namespace PKI.Admin
         private readonly Button _autoSetup   = new Button { Text = "Auto setup",                       Width = 110, Height = 32 };
         private readonly Button _export      = new Button { Text = "Export...",                        Width = 100, Height = 32, Enabled = false };
         private readonly Button _delete      = new Button { Text = "Delete",                           Width = 90,  Height = 32, Enabled = false };
-        private readonly Button _refresh     = new Button { Text = "Refresh",                          Width = 100, Height = 32 };
 
         // Filter row controls.
         private readonly TextBox  _search       = new TextBox  { Width = 260 };
@@ -40,6 +40,11 @@ namespace PKI.Admin
         private readonly ComboBox _issuerFilter = new ComboBox { Width = 240, DropDownStyle = ComboBoxStyle.DropDownList };
 
         private ContextMenuStrip _exportMenu;
+        // Grid is editable for the checkbox column only; every other
+        // column is marked ReadOnly = true at construction time. The
+        // first column is a DataGridViewCheckBoxColumn that drives the
+        // selection used by Delete and Export - clicking a row no longer
+        // does anything special, only checking its box does.
         private readonly DataGridView _grid = new DataGridView
         {
             Dock = DockStyle.Fill,
@@ -50,10 +55,10 @@ namespace PKI.Admin
             AllowUserToResizeRows = false,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
             ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
-            ReadOnly = true,
+            ReadOnly = false,
             RowHeadersVisible = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            MultiSelect = false,
+            MultiSelect = true,
         };
 
         // Master list - everything matching the five leaf kinds. Filter
@@ -77,8 +82,19 @@ namespace PKI.Admin
             _autoSetup.Click    += (s, e) => OnAutoSetupClick();
             _export.Click       += (s, e) => OnExportClick();
             _delete.Click       += (s, e) => OnDeleteClick();
-            _refresh.Click      += (s, e) => Refresh();
-            _grid.SelectionChanged += (s, e) => UpdateRowActions();
+            // Commit the checkbox edit immediately on click so the bool
+            // value lands before CellValueChanged fires; otherwise we
+            // count stale state.
+            _grid.CurrentCellDirtyStateChanged += (s, e) =>
+            {
+                if (_grid.IsCurrentCellDirty && _grid.CurrentCell is DataGridViewCheckBoxCell)
+                    _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            };
+            _grid.CellValueChanged += (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex != 0) return;
+                UpdateRowActions();
+            };
             _search.TextChanged              += (s, e) => RenderRows();
             _folderFilter.SelectedIndexChanged += (s, e) => RenderRows();
             _issuerFilter.SelectedIndexChanged += (s, e) => RenderRows();
@@ -118,14 +134,12 @@ namespace PKI.Admin
             _genServices.Margin  = new Padding(0, 0, 8, 0);
             _autoSetup.Margin    = new Padding(0, 0, 8, 0);
             _export.Margin       = new Padding(0, 0, 8, 0);
-            _delete.Margin       = new Padding(0, 0, 8, 0);
-            _refresh.Margin      = new Padding(0, 0, 0, 0);
+            _delete.Margin       = new Padding(0, 0, 0, 0);
             actions.Controls.Add(_import);
             actions.Controls.Add(_genServices);
             actions.Controls.Add(_autoSetup);
             actions.Controls.Add(_export);
             actions.Controls.Add(_delete);
-            actions.Controls.Add(_refresh);
             headerStrip.Controls.Add(actions, 1, 0);
 
             top.Controls.Add(headerStrip, 0, 1);
@@ -171,29 +185,45 @@ namespace PKI.Admin
 
         private void BuildGridColumns()
         {
+            // Pick column: fixed-width checkbox at the very left. AutoSize=None
+            // keeps the Fill mode on the rest of the columns from stretching it.
+            _grid.Columns.Add(new DataGridViewCheckBoxColumn
+            {
+                HeaderText = "", Name = "Pick",
+                Width = 32, MinimumWidth = 32,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                Resizable = DataGridViewTriState.False,
+                SortMode = DataGridViewColumnSortMode.NotSortable,
+            });
             _grid.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "Display name", Name = "Display", FillWeight = 200, MinimumWidth = 160,
+                ReadOnly = true,
             });
             _grid.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "Folder", Name = "Folder", FillWeight = 130, MinimumWidth = 130,
+                ReadOnly = true,
             });
             _grid.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "Issuer", Name = "Issuer", FillWeight = 200, MinimumWidth = 160,
+                ReadOnly = true,
             });
             _grid.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "Valid until", Name = "NotAfter", FillWeight = 110, MinimumWidth = 110,
+                ReadOnly = true,
             });
             _grid.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "Remaining", Name = "Remaining", FillWeight = 100, MinimumWidth = 100,
+                ReadOnly = true,
             });
             _grid.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "Have Private Key", Name = "HasKey", FillWeight = 90, MinimumWidth = 100,
+                ReadOnly = true,
             });
         }
 
@@ -287,6 +317,7 @@ namespace PKI.Admin
                     continue;
 
                 var rowIdx = _grid.Rows.Add(
+                    false,
                     item.Name,
                     label,
                     issuer,
@@ -306,6 +337,8 @@ namespace PKI.Admin
             _subHeading.Text = $"{shown} of {total} certificate{(total == 1 ? "" : "s")} shown. "
                              + $"{expired} expired, {soon} expiring within 30 days, {noKey} without private key.";
             _subHeading.ForeColor = Color.FromArgb(110, 110, 110);
+
+            UpdateRowActions();
         }
 
         private static bool MatchesQuery(Item item, string label, string issuer, string query)
@@ -686,27 +719,53 @@ namespace PKI.Admin
             return sb.ToString();
         }
 
+        // Drives the Delete / Export button enable state from the
+        // checkbox column - row click selection no longer matters.
         private void UpdateRowActions()
         {
-            var hasRow = _grid.SelectedRows.Count == 1
-                && _grid.SelectedRows[0].Tag is RowItem;
-            _delete.Enabled = hasRow;
-            _export.Enabled = hasRow;
+            int n = CheckedCount();
+            _delete.Enabled = n > 0;
+            _export.Enabled = n > 0;
+            _delete.Text = n > 1 ? $"Delete ({n})" : "Delete";
+            _export.Text = n > 1 ? $"Export... ({n})" : "Export...";
+        }
+
+        private int CheckedCount()
+        {
+            int n = 0;
+            foreach (DataGridViewRow row in _grid.Rows)
+                if (row.Cells["Pick"].Value is bool b && b) n++;
+            return n;
+        }
+
+        private List<Item> CheckedItems()
+        {
+            var list = new List<Item>();
+            foreach (DataGridViewRow row in _grid.Rows)
+                if (row.Cells["Pick"].Value is bool b && b
+                    && row.Tag is RowItem ri)
+                    list.Add(ri.Item);
+            return list;
         }
 
         private void BuildExportMenu()
         {
-            // One drop-down lists every export format. Key-bearing items
-            // are surfaced regardless of HasPrivateKey; CertExporter
-            // refuses with a friendly message for cert-only items.
+            // One drop-down lists every export format. Single selection
+            // funnels into ExportInteractive (per-cert SaveFileDialog);
+            // multi-selection funnels into ExportInteractiveBatch (folder
+            // browser + one shared password for key formats).
             _exportMenu = new ContextMenuStrip();
             void Add(string text, string format)
             {
                 var mi = new ToolStripMenuItem(text);
                 mi.Click += (s, e) =>
                 {
-                    var ri = SelectedRowItem();
-                    if (ri != null) CertExporter.ExportInteractive(ri.Item, format, this);
+                    var items = CheckedItems();
+                    if (items.Count == 0) return;
+                    if (items.Count == 1)
+                        CertExporter.ExportInteractive(items[0], format, this);
+                    else
+                        CertExporter.ExportInteractiveBatch(items, format, this);
                 };
                 _exportMenu.Items.Add(mi);
             }
@@ -722,59 +781,76 @@ namespace PKI.Admin
 
         private void OnExportClick()
         {
-            if (SelectedRowItem() == null) return;
+            if (CheckedCount() == 0) return;
             _exportMenu.Show(_export, new Point(0, _export.Height));
-        }
-
-        private RowItem SelectedRowItem()
-        {
-            if (_grid.SelectedRows.Count != 1) return null;
-            return _grid.SelectedRows[0].Tag as RowItem;
         }
 
         private void OnDeleteClick()
         {
-            if (_grid.SelectedRows.Count != 1) return;
-            if (!(_grid.SelectedRows[0].Tag is RowItem ri)) return;
+            var items = CheckedItems();
+            if (items.Count == 0) return;
 
-            var item = ri.Item;
-            var thumb = GetProp(item, "Thumbprint");
-
-            // Block delete if other certs reference this one as their issuer.
-            // Same rule the per-folder ItemManager enforces; reproduced here
-            // so admins get the same protection from the Overview pane.
-            if (!string.IsNullOrEmpty(thumb))
+            // Block delete if any selected cert has dependents that are
+            // NOT also in the current selection. Dependents within the
+            // same batch are fine - they'll be removed too.
+            var selectedNames = new HashSet<string>(
+                items.Select(i => (i.Name ?? "").Trim()),
+                StringComparer.OrdinalIgnoreCase);
+            var blocked = new List<string>();
+            foreach (var item in items)
             {
-                var dependents = PkiCertItemManager.FindCertsIssuedBy(thumb);
-                if (dependents.Count > 0)
-                {
-                    var names = string.Join("\n  - ", dependents);
-                    MessageBox.Show(
-                        "This certificate has issued other certificates and cannot be deleted.\n\n"
-                        + "Dependent certificates:\n  - " + names
-                        + "\n\nDelete or re-issue those first.",
-                        "Delete blocked",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+                var thumb = GetProp(item, "Thumbprint");
+                if (string.IsNullOrEmpty(thumb)) continue;
+                var deps = PkiCertItemManager.FindCertsIssuedBy(thumb)
+                    .Where(d => !selectedNames.Contains((d ?? "").Trim()))
+                    .ToList();
+                if (deps.Count > 0)
+                    blocked.Add($"{item.Name}: {string.Join(", ", deps)}");
+            }
+            if (blocked.Count > 0)
+            {
+                MessageBox.Show(
+                    "Cannot delete - some certificates have dependents outside this selection:\n\n  - "
+                    + string.Join("\n  - ", blocked)
+                    + "\n\nInclude the dependents in the selection or re-issue them against a different CA.",
+                    "Delete blocked",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
+            string msg = items.Count == 1
+                ? $"Delete certificate \"{items[0].Name}\"?"
+                : $"Delete {items.Count} certificates?\n\n  - "
+                    + string.Join("\n  - ", items.Select(i => i.Name));
             var confirm = MessageBox.Show(
-                $"Delete certificate \"{item.Name}\"?\n\nThis removes the cert and its private key from this server.",
+                msg + "\n\nThis removes the cert and its private key from this server.",
                 "Delete certificate",
                 MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (confirm != DialogResult.OK) return;
 
-            try
+            int ok = 0, fail = 0;
+            var errors = new List<string>();
+            foreach (var item in items)
             {
-                Configuration.Instance.DeleteItemConfiguration(PKIDefinition.PluginId, item);
-                PKIDefinition.Log.Info($"Deleted cert from Overview: {item.Name} (thumbprint {thumb})");
+                try
+                {
+                    Configuration.Instance.DeleteItemConfiguration(PKIDefinition.PluginId, item);
+                    PKIDefinition.Log.Info($"Deleted cert from Overview: {item.Name} (thumbprint {GetProp(item, "Thumbprint")})");
+                    ok++;
+                }
+                catch (Exception ex)
+                {
+                    fail++;
+                    errors.Add($"{item.Name}: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+
+            if (fail > 0)
             {
-                MessageBox.Show("Delete failed:\n\n" + ex.Message, "PKI",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+                MessageBox.Show(
+                    $"Deleted {ok} of {items.Count} certificate(s). Failures:\n\n"
+                    + string.Join("\n", errors),
+                    "Delete", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
             Refresh();

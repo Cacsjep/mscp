@@ -21,8 +21,21 @@ namespace PKI.Admin
         protected PkiCertItemManager(Guid kind) { Kind = kind; }
         public abstract RolePreset RolePreset { get; }
 
+        // Subclass picks the per-role help page (RootCA, HTTPS, ...).
+        // Returned by GenerateOverviewUserControl below as the user
+        // control shown when the admin clicks the FOLDER node in the
+        // tree (before drilling into an individual cert).
+        protected abstract string HelpFileName { get; }
+
         public override void Init() { }
         public override void Close() { ReleaseUserControl(); }
+
+        public override ItemNodeUserControl GenerateOverviewUserControl()
+        {
+            return new CommunitySDK.HtmlHelpItemNodeUserControl(
+                System.Reflection.Assembly.GetExecutingAssembly(),
+                "Admin", HelpFileName);
+        }
 
         // ── User control ─────────────────────────────────────────────────
 
