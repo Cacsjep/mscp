@@ -27,7 +27,11 @@ public sealed class TrustStore
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "MSCP", "PkiCertInstaller");
-        try { Directory.CreateDirectory(dir); } catch { }
+        try { Directory.CreateDirectory(dir); }
+        catch (Exception ex)
+        {
+            Log.Warn($"TrustStore: could not create '{dir}': {ex.GetType().Name}: {ex.Message}");
+        }
         _path = Path.Combine(dir, "trusted_servers.json");
         Load();
     }
@@ -69,10 +73,12 @@ public sealed class TrustStore
             foreach (var kvp in loaded)
                 _map[kvp.Key] = NormalizeThumbprint(kvp.Value ?? "");
         }
-        catch
+        catch (Exception ex)
         {
             // Corrupt store → start fresh. Worst case the admin gets
-            // re-prompted on next connect.
+            // re-prompted on next connect. Log so a missing pin isn't
+            // a complete mystery to the admin afterwards.
+            Log.Warn($"TrustStore: could not load '{_path}', starting empty: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
@@ -84,10 +90,11 @@ public sealed class TrustStore
                 new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_path, json);
         }
-        catch
+        catch (Exception ex)
         {
             // Disk-full or perms; the in-memory copy still works for
-            // this session.
+            // this session, the pin just won't survive a restart.
+            Log.Warn($"TrustStore: could not save '{_path}': {ex.GetType().Name}: {ex.Message}");
         }
     }
 }

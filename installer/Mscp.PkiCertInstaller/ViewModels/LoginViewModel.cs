@@ -177,10 +177,11 @@ public partial class LoginViewModel : ObservableObject
             return "The OAuth client was rejected. Make sure you're connecting to a Milestone XProtect "
                  + "2021 R1 or newer management server.";
 
-        // SSL trust failures - we already trust everything, so this is rare.
-        if (Has("SSL") || Has("TLS") || Has("certificate") || Has("HTTPS handshake"))
-            return "TLS / certificate handshake failed. Try the http:// scheme if your management server "
-                 + "isn't running encrypted, or verify the server certificate.";
+        // TLS handshake errors that bypass the typed UntrustedServerCertException
+        // path (rare - usually a protocol mismatch or a closed-port reset
+        // that LOOKS like TLS). The trust prompt has already had its shot.
+        if (Has("SSL") || Has("TLS") || Has("HTTPS handshake"))
+            return "TLS handshake failed. Verify the server URL and that the management server is reachable.";
 
         // Last resort: trim the .NET noise but keep the original line so
         // we never lose information for genuinely unexpected failures.
