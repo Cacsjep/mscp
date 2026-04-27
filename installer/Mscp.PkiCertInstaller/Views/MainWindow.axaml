@@ -15,7 +15,12 @@
         Width="460"
         MinWidth="420">
 
-  <ContentControl Content="{Binding CurrentView}">
+  <!-- Content is assigned imperatively in MainWindow.axaml.cs after the
+       window state / size changes have been applied. Binding here would
+       run BEFORE OnVmChanged (XAML bindings subscribe first), causing
+       the new view to be measured at the old window size and the
+       DataGrid star columns to cache at the wrong width. -->
+  <ContentControl Name="MainContent">
     <ContentControl.DataTemplates>
       <DataTemplate DataType="vm:LoginViewModel">
         <v:LoginView />

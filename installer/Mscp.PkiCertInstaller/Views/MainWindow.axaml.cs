@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using Mscp.PkiCertInstaller.Services;
 using Mscp.PkiCertInstaller.ViewModels;
 
@@ -22,19 +23,44 @@ public partial class MainWindow : Window
         {
             vm.PropertyChanged -= OnVmChanged;
             vm.PropertyChanged += OnVmChanged;
-            ApplyForCurrentView(vm);
+            // Initial state: apply size first, then assign content so
+            // the first measure of the inner view sees the correct
+            // window dimensions.
+            ApplyAndSwap(vm);
         }
+    }
+
+    private void OnVmChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MainWindowViewModel.CurrentView)) return;
+        if (sender is MainWindowViewModel vm) ApplyAndSwap(vm);
+    }
+
+    // Two-phase swap: resize the window to the target dimensions FIRST
+    // and let the layout pass settle, then assign the new content. This
+    // is the only reliable way to make the DataGrid in CertListView
+    // measure its star columns at the maximized client size on first
+    // paint - if the binding fires before the resize, the columns cache
+    // at the 460-wide login dimensions and never reflow.
+    private void ApplyAndSwap(MainWindowViewModel vm)
+    {
+        ApplyForCurrentView(vm);
+
+        // Defer the content swap until after the WindowState change
+        // has propagated through the OS round-trip (WM_SIZE) and the
+        // Avalonia layout pass has updated ClientSize. DispatcherPriority
+        // .Background runs after Layout/Render, which is exactly when
+        // we want the new view to mount.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (MainContent != null)
+                MainContent.Content = vm.CurrentView;
+        }, DispatcherPriority.Background);
     }
 
     // The login screen is meant to look like a tight card; the cert list
     // needs a wide working area. We resize and recenter when the active
     // view changes so each phase gets the dimensions it deserves.
-    private void OnVmChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(MainWindowViewModel.CurrentView)) return;
-        if (sender is MainWindowViewModel vm) ApplyForCurrentView(vm);
-    }
-
     private void ApplyForCurrentView(MainWindowViewModel vm)
     {
         switch (vm.CurrentView)
@@ -52,11 +78,11 @@ public partial class MainWindow : Window
                 SizeToContent = SizeToContent.Manual;
                 CanResize = true;
                 MinWidth = 1100; MinHeight = 700;
+                Width = 1400; Height = 900;   // restore size if un-maximized
                 // The cert list view earns the full screen - lots of
                 // columns plus a side detail panel. Maximize on entry
                 // so the admin doesn't fight with corner-drag resize.
                 WindowState = WindowState.Maximized;
-                Width = 1400; Height = 900;   // restore size if un-maximized
                 break;
         }
         // Recenter on the primary screen each switch so the larger grid
