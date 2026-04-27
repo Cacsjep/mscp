@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using PKI.Crypto;
@@ -31,6 +32,7 @@ namespace PKI.Admin
         private readonly Button _import      = new Button { Text = "Import certificate...",            Width = 200, Height = 32 };
         private readonly Button _genServices = new Button { Text = "Generate service certificates...", Width = 240, Height = 32 };
         private readonly Button _autoSetup   = new Button { Text = "Auto setup",                       Width = 110, Height = 32 };
+        private readonly Button _saveInstaller = new Button { Text = "Save Cert Installer...",         Width = 180, Height = 32 };
         private readonly Button _export      = new Button { Text = "Export...",                        Width = 100, Height = 32, Enabled = false };
         private readonly Button _delete      = new Button { Text = "Delete",                           Width = 90,  Height = 32, Enabled = false };
 
@@ -80,6 +82,7 @@ namespace PKI.Admin
             _import.Click       += (s, e) => OnImportClick();
             _genServices.Click  += (s, e) => OnGenerateServiceClick();
             _autoSetup.Click    += (s, e) => OnAutoSetupClick();
+            _saveInstaller.Click+= (s, e) => OnSaveInstallerClick();
             _export.Click       += (s, e) => OnExportClick();
             _delete.Click       += (s, e) => OnDeleteClick();
             // Commit the checkbox edit immediately on click so the bool
@@ -133,11 +136,13 @@ namespace PKI.Admin
             _import.Margin       = new Padding(0, 0, 8, 0);
             _genServices.Margin  = new Padding(0, 0, 8, 0);
             _autoSetup.Margin    = new Padding(0, 0, 8, 0);
+            _saveInstaller.Margin= new Padding(0, 0, 8, 0);
             _export.Margin       = new Padding(0, 0, 8, 0);
             _delete.Margin       = new Padding(0, 0, 0, 0);
             actions.Controls.Add(_import);
             actions.Controls.Add(_genServices);
             actions.Controls.Add(_autoSetup);
+            actions.Controls.Add(_saveInstaller);
             actions.Controls.Add(_export);
             actions.Controls.Add(_delete);
             headerStrip.Controls.Add(actions, 1, 0);
@@ -790,6 +795,57 @@ namespace PKI.Admin
         {
             if (CheckedCount() == 0) return;
             _exportMenu.Show(_export, new Point(0, _export.Height));
+        }
+
+        // Locates Mscp.PkiCertInstaller.exe sitting next to PKI.dll (the
+        // build script bundles it into PKI.zip so it's always there) and
+        // copies it wherever the admin chooses. We avoid depending on
+        // the optional IIS download page so this works regardless of
+        // whether the local download feature was enabled at MSI install
+        // time.
+        private void OnSaveInstallerClick()
+        {
+            try
+            {
+                var pluginDir = Path.GetDirectoryName(typeof(PKIDefinition).Assembly.Location);
+                if (string.IsNullOrEmpty(pluginDir))
+                {
+                    MessageBox.Show(this,
+                        "Could not resolve the PKI plugin folder.",
+                        "Save Cert Installer", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                var src = Path.Combine(pluginDir, "Mscp.PkiCertInstaller.exe");
+                if (!File.Exists(src))
+                {
+                    MessageBox.Show(this,
+                        $"Mscp.PkiCertInstaller.exe was not found next to PKI.dll.\n\nExpected at:\n{src}\n\n" +
+                        "Reinstall the PKI plugin (the EXE is bundled with it) and try again.",
+                        "Save Cert Installer", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                using (var dlg = new SaveFileDialog
+                {
+                    Title = "Save PKI Cert Installer",
+                    FileName = "Mscp.PkiCertInstaller.exe",
+                    Filter = "Executable (*.exe)|*.exe|All files (*.*)|*.*",
+                    OverwritePrompt = true,
+                    AddExtension = true,
+                    DefaultExt = "exe",
+                })
+                {
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                    File.Copy(src, dlg.FileName, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                PKIDefinition.Log.Error($"Save Cert Installer failed: {ex.Message}");
+                MessageBox.Show(this,
+                    "Could not save the cert installer:\n\n" + ex.Message,
+                    "Save Cert Installer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void OnDeleteClick()

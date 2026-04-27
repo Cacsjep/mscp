@@ -149,6 +149,9 @@
     "displayName": "PKI Plugin",
     "path": "Admin Plugins/PKI",
     "category": "AdminPlugin",
-    "description": "Certificate vault: create / import / sign CSRs / export Root and Intermediate CAs and client certs (HTTPS, 802.1X, Service)"
+    "description": "Certificate vault: create / import / sign CSRs / export Root and Intermediate CAs and client certs (HTTPS, 802.1X, Service)",
+    "extraStagingFiles": [
+      "Installer/Mscp.PkiCertInstaller/bin/Release/net9.0-windows/win-x64/publish/Mscp.PkiCertInstaller.exe"
+    ]
   }
 ]

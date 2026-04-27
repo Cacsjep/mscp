@@ -86,6 +86,22 @@ jobs:
           }
         shell: pwsh
 
+      # The PKI plugin ships the standalone single-file Cert Installer
+      # EXE alongside it (used by the "Save Cert Installer..." button on
+      # the Overview node, and bundled in PKI.zip). Publish it BEFORE the
+      # Extra staging step so plugins.json's extraStagingFiles entry
+      # resolves to a real file.
+      - name: Publish PKI Cert Installer (PKI matrix entry only)
+        if: matrix.name == 'PKI'
+        shell: pwsh
+        run: |
+          dotnet publish Installer\Mscp.PkiCertInstaller\Mscp.PkiCertInstaller.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:CIBuild=true /v:minimal /nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Stage ${{ matrix.name }}
         run: |
           New-Item -ItemType Directory -Path staging\${{ matrix.stage_to }} -Force
@@ -184,6 +200,27 @@ jobs:
           Get-ChildItem 'artifacts' -Recurse -Filter '*.zip' | ForEach-Object {
             Copy-Item $_.FullName -Destination $zipsRoot -Force
           }
+
+      - name: Stage PKI Cert Installer EXE (versioned) for WiX
+        shell: pwsh
+        run: |
+          # IisHosting.wxs has a <File Source="!(bindpath.zips)\Mscp.PkiCertInstaller-v<Version>.exe" />
+          # that ships the standalone EXE on the local /mscp/ download
+          # page. The PKI matrix step bundled the EXE inside PKI.zip;
+          # pull it back out, rename to the versioned filename, drop
+          # next to the per-plugin ZIPs so wix can resolve the source.
+          $version = '${{ github.ref_name }}' -replace '^v',''
+          $zipsRoot = Join-Path (Get-Location) 'zips-flat'
+          $pkiZip = Get-ChildItem 'artifacts\PKI' -Filter 'PKI*.zip' -Recurse | Select-Object -First 1
+          if (-not $pkiZip) { throw "PKI artifact not found under artifacts\PKI" }
+          $tmp = Join-Path $env:RUNNER_TEMP 'pki-extract'
+          if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+          New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+          Expand-Archive -Path $pkiZip.FullName -DestinationPath $tmp -Force
+          $exe = Get-ChildItem $tmp -Filter 'Mscp.PkiCertInstaller.exe' -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "Mscp.PkiCertInstaller.exe not found inside $($pkiZip.Name)" }
+          Copy-Item $exe.FullName -Destination (Join-Path $zipsRoot "Mscp.PkiCertInstaller-v$version.exe") -Force
+          Write-Host "Staged Mscp.PkiCertInstaller-v$version.exe ($([math]::Round($exe.Length/1MB,1)) MB)"
 
       - name: Build MSI installer
         shell: pwsh
