@@ -239,6 +239,13 @@ namespace PKI.Admin
 
                 foreach (var (kind, label) in EnumerateLeafKinds())
                 {
+                    // Per-folder permission gate: a role with read on
+                    // HTTPS but not on Root CA sees HTTPS certs here
+                    // and never sees Root CA certs.
+                    var actionId = PKIDefinition.ActionFor(kind);
+                    if (actionId != null && !PKIDefinition.HasReadPermission(actionId))
+                        continue;
+
                     var items = Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, kind);
                     if (items == null) continue;
                     foreach (var item in items)

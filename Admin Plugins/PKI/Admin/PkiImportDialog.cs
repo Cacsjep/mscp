@@ -102,29 +102,27 @@ namespace PKI.Admin
                 grid.RowCount++;
             }
 
+            // Every row goes through the same FlowLayoutPanel wrapper so
+            // single-input rows (Password, Display name) line up at the
+            // same X as multi-input rows (Certificate file, Separate key
+            // file). Without the wrapper, single inputs inherited the
+            // WinForms default Control.Margin of (3,3,3,3) and rendered
+            // 3px to the right of the wrapped rows.
             void Row(string label, Control[] inputs, string hint)
             {
                 grid.Controls.Add(new Label { Text = label, AutoSize = true, Margin = new Padding(0, 8, 0, 0) }, 0, grid.RowCount);
-                if (inputs.Length == 1)
+                var row = new FlowLayoutPanel
                 {
-                    grid.Controls.Add(inputs[0], 1, grid.RowCount);
-                    grid.SetColumnSpan(inputs[0], 2);
-                }
-                else
+                    AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false,
+                    Margin = new Padding(0, 4, 0, 0), Padding = Padding.Empty,
+                };
+                for (int i = 0; i < inputs.Length; i++)
                 {
-                    var row = new FlowLayoutPanel
-                    {
-                        AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false,
-                        Margin = new Padding(0, 4, 0, 0),
-                    };
-                    foreach (var c in inputs)
-                    {
-                        c.Margin = new Padding(0, 0, 6, 0);
-                        row.Controls.Add(c);
-                    }
-                    grid.Controls.Add(row, 1, grid.RowCount);
-                    grid.SetColumnSpan(row, 2);
+                    inputs[i].Margin = new Padding(0, 0, i == inputs.Length - 1 ? 0 : 6, 0);
+                    row.Controls.Add(inputs[i]);
                 }
+                grid.Controls.Add(row, 1, grid.RowCount);
+                grid.SetColumnSpan(row, 2);
                 grid.RowCount++;
                 if (!string.IsNullOrEmpty(hint))
                 {

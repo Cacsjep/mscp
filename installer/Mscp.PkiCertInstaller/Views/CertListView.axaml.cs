@@ -14,6 +14,42 @@ public partial class CertListView : UserControl
         InitializeComponent();
         DataContextChanged += (_, _) => Hook();
         Hook();
+
+        // The CertListView is created inside MainWindow.ContentControl
+        // when CurrentView flips to CertListViewModel. The Window then
+        // resizes from the login card (460 wide) to maximized; if the
+        // DataGrid's first measure pass happens BEFORE that resize, its
+        // * columns settle at the column MinWidths and never re-flow.
+        // Avalonia 11.3's DataGrid caches the * column widths from the
+        // first measure pass and InvalidateMeasure alone doesn't make
+        // it recompute. The reliable fix is to re-assign Width on the
+        // * columns themselves: assigning a DataGridLength forces the
+        // column to re-measure with the current available width.
+        SizeChanged += (_, _) => ForceStarColumns();
+    }
+
+    private void ForceStarColumns()
+    {
+        var g = this.FindControl<DataGrid>("Grid");
+        if (g == null || g.Bounds.Width <= 0 || g.Columns.Count == 0) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            // Re-assigning the same DataGridLength.Star value triggers
+            // a fresh column measurement with the actual available
+            // width. Wrapped in try/catch because the grid may still
+            // be tearing down on view switch.
+            try
+            {
+                foreach (var col in g.Columns)
+                {
+                    if (col.Width.IsStar)
+                        col.Width = new DataGridLength(col.Width.Value, DataGridLengthUnitType.Star);
+                }
+                g.InvalidateMeasure();
+                g.UpdateLayout();
+            }
+            catch { }
+        }, DispatcherPriority.Background);
     }
 
     private void Hook()
@@ -67,20 +103,36 @@ public partial class CertListView : UserControl
             await CertDetailsDialog.ShowFor(owner, vm);
     }
 
-    // First Loaded fires before the DataGrid has its final width, so
-    // the * columns can settle to their MinWidth instead of consuming
-    // the leftover space - the grid only "snaps right" once the user
-    // resizes the window. Posting an InvalidateMeasure() at Background
-    // priority forces a second layout pass with the actual width and
-    // the * columns claim their fair share immediately.
+    // First Loaded handler: same recipe as SizeChanged, applied once
+    // the grid is hooked into the visual tree. Re-asserts * column
+    // widths so they reflow against the actual available width.
     private void OnGridLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        ForceStarColumns();
+    }
+
+    // The DataGrid still tracks an internal SelectedItem when the user
+    // clicks a row, even though we hide every selection visual. Some
+    // theme paths (the per-cell focus rectangle in particular) re-derive
+    // their visibility from the selection state and pop a "big border"
+    // on click. Clearing the selection via Dispatcher.Post avoids the
+    // re-entrant crash we saw with an inline mutation - by the time the
+    // post runs, the framework's internal selection bookkeeping is done.
+    private void OnGridSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
         if (sender is not DataGrid g) return;
+        if (g.SelectedItem == null) return;
         Dispatcher.UIThread.Post(() =>
         {
-            g.InvalidateMeasure();
-            g.InvalidateArrange();
-            g.UpdateLayout();
+            try
+            {
+                g.SelectedIndex = -1;
+            }
+            catch
+            {
+                // Some Avalonia versions throw if SelectionMode disallows -1
+                // mid-event; swallow because the visual is already neutered.
+            }
         }, DispatcherPriority.Background);
     }
 }

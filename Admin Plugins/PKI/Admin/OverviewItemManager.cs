@@ -60,13 +60,12 @@ namespace PKI.Admin
 
         public override void SetItemName(string name) { /* immutable */ }
 
-        // Gated on PKIDefinition.HasReadPermission() like every other
-        // PKI ItemManager - so the Overview node and its singleton item
-        // are also invisible to roles that have not been granted the
-        // PKI > Read right.
+        // The Overview node is visible if the role has read on at least
+        // ONE of the five folders. The Overview UI then filters the cert
+        // list per folder using the same per-folder action checks.
         public override List<Item> GetItems()
         {
-            if (!PKIDefinition.HasReadPermission()) return new List<Item>();
+            if (!PKIDefinition.HasAnyReadPermission()) return new List<Item>();
             var list = Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, _kind);
             if (list == null || list.Count == 0)
             {
@@ -80,7 +79,7 @@ namespace PKI.Admin
 
         public override Item GetItem(FQID fqid)
         {
-            if (!PKIDefinition.HasReadPermission()) return null;
+            if (!PKIDefinition.HasAnyReadPermission()) return null;
             return Configuration.Instance.GetItemConfiguration(PKIDefinition.PluginId, _kind, fqid.ObjectId);
         }
 

@@ -27,6 +27,12 @@ namespace PKI.Admin
         // tree (before drilling into an individual cert).
         protected abstract string HelpFileName { get; }
 
+        // Per-folder security action ID. Each subclass returns its own
+        // PKIDefinition.ActionRead* constant; HasReadPermission gates
+        // GetItems/GetItem with this action so e.g. the Root CA folder
+        // can be locked down independently of HTTPS leaf certs.
+        protected abstract string ReadActionId { get; }
+
         public override void Init() { }
         public override void Close() { ReleaseUserControl(); }
 
@@ -136,25 +142,28 @@ namespace PKI.Admin
             if (CurrentItem != null) CurrentItem.Name = name;
         }
 
-        // PKIDefinition.HasReadPermission() gates every read entry point.
-        // Without it the REST mipItems surface and the Mgmt Client tree
-        // would happily hand out base64-encoded PFX bytes (cert + private
-        // key) to any AD user who can reach the management server.
+        // PKIDefinition.HasReadPermission(ReadActionId) gates every read
+        // entry point. Without it the REST mipItems surface and the Mgmt
+        // Client tree would happily hand out base64-encoded PFX bytes
+        // (cert + private key) to any AD user who can reach the
+        // management server. Each ItemManager checks ITS folder's action
+        // (Root CA, Intermediate, HTTPS, 802.1X, Service) so admins can
+        // grant narrow, per-folder access.
         public override List<Item> GetItems()
         {
-            if (!PKIDefinition.HasReadPermission()) return new List<Item>();
+            if (!PKIDefinition.HasReadPermission(ReadActionId)) return new List<Item>();
             return Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, Kind);
         }
 
         public override List<Item> GetItems(Item parentItem)
         {
-            if (!PKIDefinition.HasReadPermission()) return new List<Item>();
+            if (!PKIDefinition.HasReadPermission(ReadActionId)) return new List<Item>();
             return Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, parentItem, Kind);
         }
 
         public override Item GetItem(FQID fqid)
         {
-            if (!PKIDefinition.HasReadPermission()) return null;
+            if (!PKIDefinition.HasReadPermission(ReadActionId)) return null;
             return Configuration.Instance.GetItemConfiguration(PKIDefinition.PluginId, Kind, fqid.ObjectId);
         }
 

@@ -114,6 +114,30 @@
     </div>
 
     <div class="card">
+        <h2>Role permissions</h2>
+        <p>
+            Each PKI folder has its own read permission that admins grant
+            per role under <strong>Security &gt; Roles &gt; [Role] &gt; MIP &gt; PKI</strong>.
+        </p>
+        <table>
+            <tr><th>Permission</th><th>Effect when granted</th></tr>
+            <tr><td>Read Root Certificates</td><td>See and read certs in the Root CA folder.</td></tr>
+            <tr><td>Read Intermediate Certificates</td><td>See and read certs in the Intermediate CA folder.</td></tr>
+            <tr><td>Read HTTPS Certificates</td><td>See and read certs in the HTTPS folder.</td></tr>
+            <tr><td>Read 802.1X Certificates</td><td>See and read certs in the 802.1X folder.</td></tr>
+            <tr><td>Read Service Certificates</td><td>See and read certs in the Service folder.</td></tr>
+        </table>
+        <p>
+            The <strong>Overview</strong> node is visible as long as the role
+            has read on <em>at least one</em> folder; the cert list in
+            Overview filters per-row by the same per-folder permissions.
+            The PKI Cert Installer EXE talks to the same REST surface, so
+            the same permissions decide which certs an installer operator
+            can deploy on a given XProtect server.
+        </p>
+    </div>
+
+    <div class="card">
         <h2>Storage and security notes</h2>
         <ul>
             <li>Cert and key bytes are stored as PKCS#12 (PFX) on the MIP item, base64-encoded.

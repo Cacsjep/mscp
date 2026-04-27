@@ -43,19 +43,31 @@ namespace PKI
 
         internal static readonly PluginLog Log = new PluginLog("PKI");
 
-        // Role-based security. The Mgmt Client surfaces this entry under
-        // Security > Roles > [Role] > MIP > PKI > Read. Any user / role
-        // that has not been explicitly granted GENERIC_READ is treated
-        // as denied - the ItemManagers below short-circuit GetItems /
-        // GetItem to an empty list, which simultaneously hides the certs
-        // in the tree AND stops the REST /api/rest/v1/mipKinds/{kindId}/
-        // mipItems endpoint from leaking PFX bytes. Without this gate,
-        // any read-anywhere AD user logged into the management server
-        // could pull base64-encoded PKCS#12 (cert + private key) over
-        // the REST surface.
+        // Role-based security, ONE entry per folder so admins can grant
+        // narrow access (e.g. give the camera-installer team read on
+        // 802.1X without exposing Root CA private keys). The Mgmt
+        // Client surfaces these under Security > Roles > [Role] > MIP
+        // > PKI > <Read Root CA, Read Intermediate, ...>. Any role that
+        // has not been explicitly granted the matching action is denied;
+        // the ItemManager short-circuits GetItems / GetItem to an empty
+        // list, which simultaneously hides the certs in the tree AND
+        // stops the REST /api/rest/v1/mipKinds/{kindId}/mipItems
+        // endpoint from leaking PFX bytes. The Overview pane filters
+        // per cert based on which folder the cert lives in, so a
+        // mixed-grant role sees exactly the certs it can access.
+        public const string ActionReadRoot         = "READ_ROOT_CA";
+        public const string ActionReadIntermediate = "READ_INTERMEDIATE_CA";
+        public const string ActionReadHttps        = "READ_HTTPS";
+        public const string ActionReadDot1x        = "READ_DOT1X";
+        public const string ActionReadService      = "READ_SERVICE";
+
         private readonly List<SecurityAction> _securityActions = new List<SecurityAction>
         {
-            new SecurityAction("GENERIC_READ", "Read"),
+            new SecurityAction(ActionReadRoot,         "Read Root Certificates"),
+            new SecurityAction(ActionReadIntermediate, "Read Intermediate Certificates"),
+            new SecurityAction(ActionReadHttps,        "Read HTTPS Certificates"),
+            new SecurityAction(ActionReadDot1x,        "Read 802.1X Certificates"),
+            new SecurityAction(ActionReadService,      "Read Service Certificates"),
         };
         public override List<SecurityAction> SecurityActions => _securityActions;
 
@@ -64,20 +76,41 @@ namespace PKI
         // signal); we translate them to a bool so callers can pick a
         // clean fall-through (return empty list / null) instead of
         // bubbling a stack trace into the Mgmt Client UI.
-        internal static bool HasReadPermission()
+        internal static bool HasReadPermission(string actionId)
         {
             try
             {
-                SecurityAccess.CheckPermission(PluginId, "GENERIC_READ");
+                SecurityAccess.CheckPermission(PluginId, actionId);
                 return true;
             }
             catch (NotAuthorizedMIPException) { return false; }
             catch (Exception ex)
             {
-                Log.Error("PKI security check failed: " + ex.Message);
+                Log.Error($"PKI security check ({actionId}) failed: " + ex.Message);
                 return false;
             }
         }
+
+        // Maps a folder/kind to its action ID. Used by the Overview
+        // pane to filter certs by per-folder permission.
+        internal static string ActionFor(Guid kind)
+        {
+            if (kind == PkiRootCertKindId)     return ActionReadRoot;
+            if (kind == PkiIntermediateKindId) return ActionReadIntermediate;
+            if (kind == PkiHttpsKindId)        return ActionReadHttps;
+            if (kind == PkiDot1xKindId)        return ActionReadDot1x;
+            if (kind == PkiServiceKindId)      return ActionReadService;
+            return null;
+        }
+
+        // True when the user can see at least one folder. Used by the
+        // Overview ItemManager to decide whether to surface the node.
+        internal static bool HasAnyReadPermission()
+            => HasReadPermission(ActionReadRoot)
+            || HasReadPermission(ActionReadIntermediate)
+            || HasReadPermission(ActionReadHttps)
+            || HasReadPermission(ActionReadDot1x)
+            || HasReadPermission(ActionReadService);
 
         public override Guid Id => PluginId;
         public override string Name => "PKI";

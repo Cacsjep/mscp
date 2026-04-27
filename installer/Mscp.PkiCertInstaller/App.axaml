@@ -38,80 +38,56 @@
       <Setter Property="Foreground" Value="White" />
     </Style>
 
-    <!-- Row-only selection. Avalonia's DataGrid theme draws a per-cell
-         "current cell" rectangle and a focus rectangle that float on
-         top of the row highlight, and the theme re-asserts IsVisible
-         under the :current pseudo-class - so plain IsVisible=False
-         loses the specificity fight. We instead make those Rectangles
-         draw nothing by zeroing both the stroke and the stroke
-         thickness; they remain in the visual tree but are invisible
-         in every state. The CellBorder gets the same treatment so
-         the cell never paints its own outline either. -->
+    <!-- ─────────────────── DataGrid: no selection visuals ───────────────────
+         Layered defenses to nuke every "selected" / "current" / "focus"
+         visual. Selection is driven entirely by the leftmost checkbox
+         column. Stylings alone weren't enough because the Fluent theme
+         re-asserts Stroke / Fill / Opacity on the per-cell CurrencyVisual
+         rectangle under the :current pseudo at the same specificity, so
+         a brief flash leaked through on click. We replace the cell
+         template entirely with a Border + ContentPresenter, dropping the
+         CurrencyVisual / FocusVisual rectangles outright. The row
+         BackgroundRectangle is also zeroed for :selected; hover keeps a
+         4% white tint as a feedback cue. -->
     <Style Selector="DataGridCell">
       <Setter Property="Focusable" Value="False" />
       <Setter Property="IsTabStop" Value="False" />
       <Setter Property="FocusAdorner" Value="{x:Null}" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="CellBorder"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}">
+            <ContentPresenter Name="PART_ContentPresenter"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Padding="{TemplateBinding Padding}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
     </Style>
-    <Style Selector="DataGridCell:focus, DataGridCell:focus-within, DataGridCell:current, DataGridCell:selected">
-      <Setter Property="BorderThickness" Value="0" />
+    <Style Selector="DataGridCell:focus, DataGridCell:focus-within, DataGridCell:current, DataGridCell:selected, DataGridCell:pressed, DataGridCell:pointerover">
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
-    </Style>
-    <Style Selector="DataGridCell /template/ Rectangle#CurrencyVisual">
-      <Setter Property="Stroke" Value="Transparent" />
-      <Setter Property="StrokeThickness" Value="0" />
-      <Setter Property="Opacity" Value="0" />
-    </Style>
-    <Style Selector="DataGridCell:current /template/ Rectangle#CurrencyVisual">
-      <Setter Property="Stroke" Value="Transparent" />
-      <Setter Property="StrokeThickness" Value="0" />
-      <Setter Property="Opacity" Value="0" />
-    </Style>
-    <Style Selector="DataGridCell /template/ Rectangle#FocusVisual">
-      <Setter Property="Stroke" Value="Transparent" />
-      <Setter Property="StrokeThickness" Value="0" />
-      <Setter Property="Opacity" Value="0" />
-    </Style>
-    <Style Selector="DataGridCell:focus /template/ Rectangle#FocusVisual">
-      <Setter Property="Stroke" Value="Transparent" />
-      <Setter Property="StrokeThickness" Value="0" />
-      <Setter Property="Opacity" Value="0" />
-    </Style>
-    <Style Selector="DataGridCell /template/ Border#CellBorder">
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
 
-    <!-- Cell background overrides for every focus/selection state the
-         theme paints. No Foreground setter here: a DynamicResource
-         lookup that misses (e.g. SystemControlForegroundBaseHighBrush
-         is a UWP key not present in Avalonia FluentTheme) crashes the
-         app on first cell click. We let cells inherit the row foreground
-         instead. -->
-    <Style Selector="DataGridCell:selected">
-      <Setter Property="Background" Value="Transparent" />
-    </Style>
-    <Style Selector="DataGridCell:current">
-      <Setter Property="Background" Value="Transparent" />
-    </Style>
-    <Style Selector="DataGridCell:focus">
-      <Setter Property="Background" Value="Transparent" />
-    </Style>
-    <Style Selector="DataGridCell:pressed">
-      <Setter Property="Background" Value="Transparent" />
-    </Style>
-
-    <!-- We rely on per-row checkboxes for selection, so kill the Fluent
-         theme's row-selection background. Hover still tints the row
-         (left intact via DataGridRow:pointerover). Selected and
-         pointer-pressed states paint the same background as the idle
-         row so clicking a row produces no visible "selection". -->
+    <!-- Row-level selection visual. -->
     <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
       <Setter Property="Fill" Value="Transparent" />
       <Setter Property="Opacity" Value="0" />
     </Style>
     <Style Selector="DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+      <Setter Property="Opacity" Value="0.04" />
+    </Style>
+    <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+      <Setter Property="Fill" Value="White" />
       <Setter Property="Opacity" Value="0.04" />
     </Style>
   </Application.Styles>
