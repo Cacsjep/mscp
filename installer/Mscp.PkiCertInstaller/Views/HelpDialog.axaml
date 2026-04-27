@@ -44,7 +44,7 @@
                 <TextBlock Text="Service" FontWeight="SemiBold" FontSize="11"
                            Foreground="{StaticResource ChipSrvFg}" />
               </Border>
-              <TextBlock Text="This is an XProtect service (Recording, Mgmt, Mobile, Event, Failover)"
+              <TextBlock Text="This is an XProtect™ service (Recording, Mgmt, Mobile, Event, Failover)"
                          FontSize="14" FontWeight="SemiBold"
                          Foreground="{StaticResource TextStrong}"
                          VerticalAlignment="Center" />

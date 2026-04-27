@@ -52,14 +52,14 @@
         <h2>What this plugin does</h2>
         <p>
             The PKI plugin lets you run a small internal certificate authority for your
-            XProtect site without leaving the Management Client. You can issue a Root CA
+            XProtect&trade; site without leaving the Management Client. You can issue a Root CA
             and Intermediate CAs, generate HTTPS / 802.1X / Service certificates signed by
             those CAs, import existing certificates (PEM, DER, PKCS#12), and export them
             back out for distribution.
         </p>
         <p>
             Every certificate (and its private key, where present) lives on the Management
-            Server as a MIP item, which means the entire vault travels with your XProtect
+            Server as a MIP item, which means the entire vault travels with your XProtect&trade;
             configuration backups.
         </p>
     </div>
@@ -84,7 +84,7 @@
         </p>
         <ul>
             <li>Generate a self-signed Root CA named <code>MSCP PKI (yyyy.MM) - Root CA</code> valid for 15 years (skipped if it already exists).</li>
-            <li>Discover every XProtect service registered on this site (Recording Server, Mobile, Event, Mgmt) and issue one Service certificate per service signed by the Root CA, valid for 15 years.</li>
+            <li>Discover every XProtect&trade; service registered on this site (Recording Server, Mobile, Event, Mgmt) and issue one Service certificate per service signed by the Root CA, valid for 15 years.</li>
             <li>Fill the SAN list of each service cert with the hostname, FQDN, and registered IPs of that service so the cert is immediately usable.</li>
         </ul>
         <p>
@@ -98,12 +98,12 @@
         <h2>Deploying issued certs</h2>
         <p>
             The Mgmt Client side only stores the certificates - it does not push them
-            into the Windows certificate store on each XProtect server. Two ways to deploy:
+            into the Windows certificate store on each XProtect&trade; server. Two ways to deploy:
         </p>
         <ul>
             <li><strong>PKI Cert Installer (recommended):</strong> the standalone single-file EXE
                 shipped next to <code>PKI.dll</code> (and downloadable from the local download page
-                at <code>http://&lt;mgmt-server&gt;/mscp/</code>). Run it on each XProtect server
+                at <code>http://&lt;mgmt-server&gt;/mscp/</code>). Run it on each XProtect&trade; server
                 with admin rights, sign in to the Mgmt Server, pick the certs that match the
                 machine, click Install. It places the cert in the right Windows store and grants
                 the service account the private-key ACL.</li>
@@ -133,7 +133,7 @@
             Overview filters per-row by the same per-folder permissions.
             The PKI Cert Installer EXE talks to the same REST surface, so
             the same permissions decide which certs an installer operator
-            can deploy on a given XProtect server.
+            can deploy on a given XProtect&trade; server.
         </p>
     </div>
 

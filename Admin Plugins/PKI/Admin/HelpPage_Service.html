@@ -26,21 +26,21 @@
 </head>
 <body>
     <div class="header-row">
-        TLS certificates for XProtect service-to-service traffic
+        TLS certificates for XProtect&trade; service-to-service traffic
         <div class="chips"><span class="chip-blue">Used by Server Configurator</span></div>
     </div>
 
     <div class="card">
         <h2>What lives here</h2>
         <p>
-            Service certificates secure server-to-server TLS within an XProtect site:
+            Service certificates secure server-to-server TLS within an XProtect&trade; site:
             Recording Server - Mgmt Server, Mobile Server - clients,
             Event Server, Data Collector, and so on. They are leaf certs signed by a CA
             from this vault.
         </p>
         <p>
             <strong>Auto setup</strong> on the Overview pane discovers every registered
-            XProtect service and issues one Service certificate per service automatically,
+            XProtect&trade; service and issues one Service certificate per service automatically,
             with hostname / FQDN / IPs filled into the SAN list. That's the recommended
             starting point; this folder is where you pre-stage extras or rotate one without
             re-running the full Auto setup.
@@ -65,7 +65,7 @@
     <div class="card">
         <h2>Deployment</h2>
         <p>
-            Run the PKI Cert Installer on the target XProtect server, sign in to the
+            Run the PKI Cert Installer on the target XProtect&trade; server, sign in to the
             Mgmt Server, pick the Service cert that matches the machine (the
             <em>Machine Match</em> column shows whether the SANs line up with the local
             host), click <strong>Install</strong>, then open the <strong>Server
