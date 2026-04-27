@@ -13,7 +13,28 @@
     <StreamGeometry x:Key="IconDelete">M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19V4Z</StreamGeometry>
     <StreamGeometry x:Key="IconOpenInNew">M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z</StreamGeometry>
     <StreamGeometry x:Key="IconSearch">M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z</StreamGeometry>
+    <StreamGeometry x:Key="IconHelp">M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z</StreamGeometry>
   </UserControl.Resources>
+
+  <!-- The DataGrid's own FontSize property doesn't cascade to the
+       cell or header content in Avalonia 11.3 - the Fluent theme sets
+       a FontSize on DataGridCell / DataGridColumnHeader templates that
+       wins over the inherited value. Force it here with element-level
+       selectors so headers and cells actually shrink. -->
+  <UserControl.Styles>
+    <Style Selector="DataGrid#Grid DataGridCell">
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="DataGrid#Grid DataGridCell TextBlock">
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="DataGrid#Grid DataGridColumnHeader">
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="DataGrid#Grid DataGridColumnHeader TextBlock">
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+  </UserControl.Styles>
 
   <!-- No card backgrounds: toolbar and grid render directly on the
        main window backdrop. Borders / fills only appear on hover. -->
@@ -23,10 +44,10 @@
          every primary action on the right. The brand/header row is
          gone - the title bar already has the app icon and name. -->
     <Grid Grid.Row="0" Margin="0,0,0,8"
-          ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"
+          ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto"
           VerticalAlignment="Center">
       <Grid Grid.Column="0" VerticalAlignment="Center">
-        <PathIcon Data="{StaticResource IconSearch}" Width="14" Height="14"
+        <PathIcon Data="{StaticResource IconSearch}" Width="11" Height="11"
                   Foreground="#8A93A6"
                   HorizontalAlignment="Left" VerticalAlignment="Center"
                   Margin="10,0,0,0" />
@@ -51,33 +72,42 @@
               IsEnabled="{Binding !IsBusy}"
               ToolTip.Tip="Refresh certificate list"
               Margin="0,0,8,0">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <PathIcon Data="{StaticResource IconRefresh}" Width="14" Height="14" Foreground="#E0E6F0" />
-          <TextBlock Text="Reload" />
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource IconRefresh}" Width="11" Height="11" VerticalAlignment="Center" Foreground="#E0E6F0" />
+          <TextBlock Text="Reload" VerticalAlignment="Center" />
         </StackPanel>
       </Button>
       <Button Grid.Column="6"
               Command="{Binding InstallCommand}"
               Classes="accent"
               Margin="0,0,8,0">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <PathIcon Data="{StaticResource IconDownload}" Width="14" Height="14" Foreground="White" />
-          <TextBlock Text="Install" />
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource IconDownload}" Width="11" Height="11" VerticalAlignment="Center" Foreground="White" />
+          <TextBlock Text="Install" VerticalAlignment="Center" />
         </StackPanel>
       </Button>
       <Button Grid.Column="7"
               Command="{Binding UninstallCommand}"
               Margin="0,0,8,0">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <PathIcon Data="{StaticResource IconDelete}" Width="14" Height="14" Foreground="#E0E6F0" />
-          <TextBlock Text="Uninstall" />
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource IconDelete}" Width="11" Height="11" VerticalAlignment="Center" Foreground="#E0E6F0" />
+          <TextBlock Text="Uninstall" VerticalAlignment="Center" />
         </StackPanel>
       </Button>
       <Button Grid.Column="8"
-              Command="{Binding OpenServerConfiguratorCommand}">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <PathIcon Data="{StaticResource IconOpenInNew}" Width="14" Height="14" Foreground="#E0E6F0" />
-          <TextBlock Text="Open Server Configurator" />
+              Command="{Binding OpenServerConfiguratorCommand}"
+              Margin="0,0,8,0">
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource IconOpenInNew}" Width="11" Height="11" VerticalAlignment="Center" Foreground="#E0E6F0" />
+          <TextBlock Text="Open Server Configurator" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="9"
+              Command="{Binding HelpCommand}"
+              ToolTip.Tip="Where do I install which certs?">
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource IconHelp}" Width="11" Height="11" VerticalAlignment="Center" Foreground="#E0E6F0" />
+          <TextBlock Text="Help" VerticalAlignment="Center" />
         </StackPanel>
       </Button>
     </Grid>
@@ -97,7 +127,6 @@
               CanUserResizeColumns="True"
               CanUserSortColumns="True"
               SelectionMode="Single"
-              FontSize="12"
               Background="Transparent"
               RowBackground="Transparent"
               HorizontalScrollBarVisibility="Disabled"
@@ -128,7 +157,7 @@
             <DataTemplate>
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="10,0"
                           VerticalAlignment="Center">
-                <Ellipse Width="10" Height="10" Fill="{Binding StatusBrush}" />
+                <Ellipse Width="7" Height="7" Fill="{Binding StatusBrush}" />
                 <TextBlock Text="{Binding StatusText}" />
               </StackPanel>
             </DataTemplate>
@@ -141,14 +170,33 @@
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="10,0"
                           VerticalAlignment="Center"
                           ToolTip.Tip="{Binding MachineMatchTooltip}">
-                <Ellipse Width="10" Height="10" Fill="{Binding MachineMatchBrush}" />
+                <Ellipse Width="7" Height="7" Fill="{Binding MachineMatchBrush}" />
                 <TextBlock Text="{Binding MachineMatchText}" />
               </StackPanel>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="Name"   Binding="{Binding Name}"      Width="*" MinWidth="180" />
-        <DataGridTextColumn Header="Folder" Binding="{Binding KindLabel}" Width="130" />
+        <DataGridTemplateColumn Header="Folder" Width="130"
+                                CanUserSort="True" SortMemberPath="KindLabel">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Border Background="Transparent"
+                      BorderBrush="{Binding KindChipForeground}"
+                      BorderThickness="1"
+                      CornerRadius="9"
+                      Padding="8,1"
+                      Margin="10,0"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Center">
+                <TextBlock Text="{Binding KindLabel}"
+                           Foreground="{Binding KindChipForeground}"
+                           FontWeight="SemiBold"
+                           FontSize="11" />
+              </Border>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
         <DataGridTemplateColumn Header="SANs" Width="2*" MinWidth="180"
                                 CanUserSort="True" SortMemberPath="SansShort">
           <DataGridTemplateColumn.CellTemplate>

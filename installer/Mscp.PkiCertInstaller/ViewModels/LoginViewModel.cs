@@ -53,6 +53,7 @@ public partial class LoginViewModel : ObservableObject
         MilestoneClient? client = null;
         try
         {
+            Log.Info($"Login attempt: server='{ServerUrl}', mode={Mode}, user='{(NeedsExplicitCreds ? Username : CurrentWindowsIdentity)}'");
             client = new MilestoneClient(ServerUrl);
             switch (Mode)
             {
@@ -66,11 +67,13 @@ public partial class LoginViewModel : ObservableObject
                     await client.LoginWindowsExplicitAsync(Username, Password);
                     break;
             }
+            Log.Info("Login succeeded.");
             LoginSucceeded?.Invoke(this, client);
             client = null; // ownership transferred
         }
         catch (Exception ex)
         {
+            Log.Error("Login failed", ex);
             ErrorMessage = Humanize(ex);
         }
         finally

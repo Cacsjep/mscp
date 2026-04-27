@@ -24,7 +24,16 @@ public partial class CertListView : UserControl
             vm.InstallRequested += OnInstallRequested;
             vm.ResultReady -= OnResultReady;
             vm.ResultReady += OnResultReady;
+            vm.HelpRequested -= OnHelpRequested;
+            vm.HelpRequested += OnHelpRequested;
         }
+    }
+
+    private async void OnHelpRequested(object? sender, System.EventArgs e)
+    {
+        if (VisualRoot is not Window owner) return;
+        var dlg = new HelpDialog();
+        await dlg.ShowDialog(owner);
     }
 
     private async void OnResultReady(object? sender, CertListViewModel.OpResult r)

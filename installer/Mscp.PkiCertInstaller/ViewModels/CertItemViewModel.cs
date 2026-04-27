@@ -31,6 +31,29 @@ public partial class CertItemViewModel : ObservableObject
 
     public string Name => Source.Name;
     public string KindLabel => Source.KindLabel;
+
+    // Folder chip palette - one mid-saturation pair per kind so the
+    // grid can render a coloured pill instead of plain text. Background
+    // is a deep tint that sits well on the #0F1115 window backdrop;
+    // foreground/border share a brighter shade of the same hue so the
+    // chip reads as a coherent unit. Order: bg, fg/border.
+    private static readonly System.Collections.Generic.Dictionary<string, (Color Bg, Color Fg)> KindPalette =
+        new(System.StringComparer.OrdinalIgnoreCase)
+        {
+            ["Root CA"]         = (Color.FromRgb(0x3D, 0x2A, 0x55), Color.FromRgb(0xC7, 0xA6, 0xF2)),
+            ["Intermediate CA"] = (Color.FromRgb(0x1F, 0x3A, 0x5F), Color.FromRgb(0x8A, 0xB5, 0xE5)),
+            ["HTTPS"]           = (Color.FromRgb(0x1F, 0x44, 0x38), Color.FromRgb(0x6E, 0xDD, 0xB1)),
+            ["802.1X"]          = (Color.FromRgb(0x4A, 0x2F, 0x1B), Color.FromRgb(0xF2, 0xA8, 0x64)),
+            ["Service"]         = (Color.FromRgb(0x2C, 0x33, 0x40), Color.FromRgb(0x9B, 0xA8, 0xBC)),
+        };
+
+    private (Color Bg, Color Fg) Palette =>
+        KindPalette.TryGetValue(KindLabel ?? "", out var p)
+            ? p
+            : (Color.FromRgb(0x2C, 0x33, 0x40), Color.FromRgb(0x9B, 0xA8, 0xBC));
+
+    public IBrush KindChipBackground => new SolidColorBrush(Palette.Bg);
+    public IBrush KindChipForeground => new SolidColorBrush(Palette.Fg);
     public string Subject => Source.Subject;
     public string Issuer => Source.Issuer;
     public string Thumbprint => Source.Thumbprint;

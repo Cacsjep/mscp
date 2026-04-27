@@ -77,7 +77,7 @@ public partial class MainWindow : Window
             case CertListViewModel:
                 SizeToContent = SizeToContent.Manual;
                 CanResize = true;
-                MinWidth = 1100; MinHeight = 700;
+                MinWidth = 1280; MinHeight = 720;
                 Width = 1400; Height = 900;   // restore size if un-maximized
                 // The cert list view earns the full screen - lots of
                 // columns plus a side detail panel. Maximize on entry

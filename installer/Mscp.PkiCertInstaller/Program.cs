@@ -1,5 +1,7 @@
 using Avalonia;
+using Mscp.PkiCertInstaller.Services;
 using System;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Mscp.PkiCertInstaller;
@@ -20,7 +22,26 @@ internal static class Program
     public static void Main(string[] args)
     {
         try { SetPreferredAppMode(APPMODE_FORCE_DARK); } catch { /* not Windows */ }
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+
+        var ver = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?";
+        Log.Info($"=== Cert Installer start (v{ver}, {Environment.OSVersion}, machine={Environment.MachineName}) ===");
+
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            Log.Error("Unhandled domain exception", e.ExceptionObject as Exception);
+
+        try
+        {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Avalonia lifetime crashed", ex);
+            throw;
+        }
+        finally
+        {
+            Log.Info("=== Cert Installer exit ===");
+        }
     }
 
     public static AppBuilder BuildAvaloniaApp()

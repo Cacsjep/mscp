@@ -1,0 +1,117 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Mscp.PkiCertInstaller.Views.HelpDialog"
+        Title="MSCP PKI Cert Installer - Help"
+        Width="780" Height="640"
+        MinWidth="640" MinHeight="480"
+        Background="#0F1115"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+
+  <Window.Resources>
+    <SolidColorBrush x:Key="CardBg"     Color="#161A22" />
+    <SolidColorBrush x:Key="CardBorder" Color="#272D3A" />
+    <SolidColorBrush x:Key="TextDim"    Color="#9BA8BC" />
+    <SolidColorBrush x:Key="TextStrong" Color="#E6ECF5" />
+    <SolidColorBrush x:Key="Accent"     Color="#0099DA" />
+    <SolidColorBrush x:Key="ChipSrv"    Color="#1F3A5F" />
+    <SolidColorBrush x:Key="ChipSrvFg"  Color="#8AB5E5" />
+    <SolidColorBrush x:Key="ChipSc"     Color="#3D2A55" />
+    <SolidColorBrush x:Key="ChipScFg"   Color="#C7A6F2" />
+  </Window.Resources>
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,12">
+      <TextBlock Text="What do I install on this machine?"
+                 FontSize="18" FontWeight="SemiBold"
+                 Foreground="{StaticResource TextStrong}" />
+      <TextBlock Text="Pick the row that matches this PC. The installer does the rest."
+                 FontSize="12"
+                 Foreground="{StaticResource TextDim}" Margin="0,2,0,0" />
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="14">
+
+        <!-- Card 1: XProtect server -->
+        <Border Background="{StaticResource CardBg}"
+                BorderBrush="{StaticResource CardBorder}" BorderThickness="1"
+                CornerRadius="8" Padding="18">
+          <StackPanel Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border BorderBrush="{StaticResource ChipSrvFg}" BorderThickness="1"
+                      CornerRadius="9" Padding="8,2" VerticalAlignment="Center">
+                <TextBlock Text="Service" FontWeight="SemiBold" FontSize="11"
+                           Foreground="{StaticResource ChipSrvFg}" />
+              </Border>
+              <TextBlock Text="This is an XProtect service (Recording, Mgmt, Mobile, Event, Failover)"
+                         FontSize="14" FontWeight="SemiBold"
+                         Foreground="{StaticResource TextStrong}"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Spacing="4" Margin="0,4,0,0">
+              <TextBlock Foreground="{StaticResource TextDim}" FontSize="13"
+                         Text="1. Set Folder filter to Service." />
+              <TextBlock Foreground="{StaticResource TextDim}" FontSize="13"
+                         Text="2. Tick the row where Machine Match shows 'Yes'." />
+              <TextBlock Foreground="{StaticResource TextDim}" FontSize="13"
+                         Text="3. Click Install." />
+              <TextBlock Foreground="{StaticResource TextDim}" FontSize="13"
+                         Text="4. Click Open Server Configurator and apply the new cert." />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Card 2: Smart Client -->
+        <Border Background="{StaticResource CardBg}"
+                BorderBrush="{StaticResource CardBorder}" BorderThickness="1"
+                CornerRadius="8" Padding="18">
+          <StackPanel Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border BorderBrush="{StaticResource ChipScFg}" BorderThickness="1"
+                      CornerRadius="9" Padding="8,2" VerticalAlignment="Center">
+                <TextBlock Text="Root CA" FontWeight="SemiBold" FontSize="11"
+                           Foreground="{StaticResource ChipScFg}" />
+              </Border>
+              <TextBlock Text="This is a Smart Client / Mgmt Client workstation"
+                         FontSize="14" FontWeight="SemiBold"
+                         Foreground="{StaticResource TextStrong}"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Spacing="4" Margin="0,4,0,0">
+              <TextBlock Foreground="{StaticResource TextDim}" FontSize="13"
+                         Text="1. Set Folder filter to Root CA." />
+              <TextBlock Foreground="{StaticResource TextDim}" FontSize="13"
+                         Text="2. Choose the Root CA that you created or use the default one that is created with auto setup." />
+              <TextBlock Foreground="{StaticResource TextDim}" FontSize="13"
+                         Text="3. Click Install." />
+              <TextBlock Foreground="{StaticResource TextDim}" FontSize="11"
+                         Text="(Intermediate CAs, if any, will be installed automatically.)"
+                         Margin="0,4,0,0" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Logs hint -->
+        <Border Background="{StaticResource CardBg}"
+                BorderBrush="{StaticResource CardBorder}" BorderThickness="1"
+                CornerRadius="8" Padding="14">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Something went wrong?" FontWeight="SemiBold" FontSize="13"
+                       Foreground="{StaticResource TextStrong}" />
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextDim}" FontSize="12">
+              Open the log folder and attach installer.log to your GitHub issue.
+            </TextBlock>
+            <Button Content="Open log folder" HorizontalAlignment="Left"
+                    Margin="0,4,0,0" Click="OnOpenLogFolderClick" />
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button Content="Close" Classes="accent" Click="OnCloseClick" />
+    </StackPanel>
+  </Grid>
+</Window>

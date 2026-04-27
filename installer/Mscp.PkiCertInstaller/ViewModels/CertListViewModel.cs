@@ -53,6 +53,9 @@ public partial class CertListViewModel : ObservableObject, IDisposable
     // Asks the View to show a result dialog (success/error) instead
     // of stuffing text into a status bar.
     public event EventHandler<OpResult>? ResultReady;
+    // Asks the View to open the help window. The View handles dialog
+    // plumbing - the VM stays UI-agnostic.
+    public event EventHandler? HelpRequested;
 
     public sealed record InstallRequest(IReadOnlyList<CertItemViewModel> Items, string DefaultAccountsCsv);
     public sealed record OpResult(bool Success, string Title, string Summary, IReadOnlyList<OpResultEntry> Entries);
@@ -70,9 +73,15 @@ public partial class CertListViewModel : ObservableObject, IDisposable
         try
         {
             IReadOnlyList<CertItem> certs;
-            try { certs = await _client.ListPkiCertsAsync(); }
+            try
+            {
+                Log.Info($"Reloading cert list from {_client.BaseUri}");
+                certs = await _client.ListPkiCertsAsync();
+                Log.Info($"Reload returned {certs.Count} certs.");
+            }
             catch (Exception ex)
             {
+                Log.Error("Reload failed", ex);
                 ResultReady?.Invoke(this, new OpResult(false,
                     "Reload failed",
                     "Couldn't pull the certificate list from the management server.",
@@ -215,6 +224,7 @@ public partial class CertListViewModel : ObservableObject, IDisposable
     // log if anyone needs them.
     public void PerformInstall(IReadOnlyList<CertItemViewModel> items, IReadOnlyList<string> accounts)
     {
+        Log.Info($"Install requested: {items.Count} cert(s), grantAccounts=[{string.Join(", ", accounts)}]");
         var entries = new List<OpResultEntry>();
         var ok = 0;
         foreach (var picked in items)
@@ -223,6 +233,7 @@ public partial class CertListViewModel : ObservableObject, IDisposable
             string? error = null;
             try
             {
+                Log.Info($"Installing '{picked.Name}' [{picked.KindLabel}] chain depth={chain.Count}, store={picked.TargetStore}");
                 for (int i = chain.Count - 1; i >= 0; i--)
                 {
                     var node = chain[i];
@@ -253,10 +264,12 @@ public partial class CertListViewModel : ObservableObject, IDisposable
             if (error == null)
             {
                 ok++;
+                Log.Info($"Install OK: '{picked.Name}'");
                 entries.Add(new OpResultEntry(true, picked.Name, "Successful"));
             }
             else
             {
+                Log.Warn($"Install FAIL: '{picked.Name}' - {error}");
                 entries.Add(new OpResultEntry(false, picked.Name, error));
             }
         }
@@ -280,6 +293,7 @@ public partial class CertListViewModel : ObservableObject, IDisposable
                 Array.Empty<OpResultEntry>()));
             return;
         }
+        Log.Info($"Uninstall requested: {SelectedItems.Count} cert(s)");
         var entries = new List<OpResultEntry>();
         var ok = 0;
         foreach (var vm in SelectedItems.ToList())
@@ -289,16 +303,19 @@ public partial class CertListViewModel : ObservableObject, IDisposable
                 if (CertInstaller.RemoveByThumbprint(vm.Source.Thumbprint, vm.TargetStore))
                 {
                     ok++;
+                    Log.Info($"Uninstall OK: '{vm.Name}' [{vm.Thumbprint}]");
                     entries.Add(new OpResultEntry(true, vm.Name, "Removed"));
                 }
                 else
                 {
+                    Log.Info($"Uninstall skipped (not present): '{vm.Name}'");
                     entries.Add(new OpResultEntry(true, vm.Name, "Not installed (skipped)"));
                 }
                 vm.Refresh();
             }
             catch (Exception ex)
             {
+                Log.Error($"Uninstall failed for '{vm.Name}'", ex);
                 entries.Add(new OpResultEntry(false, vm.Name, ex.Message));
             }
         }
@@ -310,10 +327,17 @@ public partial class CertListViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenServerConfigurator()
     {
+        Log.Info("Launching Server Configurator");
         if (!ServerConfiguratorLauncher.TryLaunch(out var err))
+        {
+            Log.Warn($"ServerConfigurator launch failed: {err}");
             ResultReady?.Invoke(this, new OpResult(false,
                 "Could not launch Server Configurator", err, Array.Empty<OpResultEntry>()));
+        }
     }
+
+    [RelayCommand]
+    private void Help() => HelpRequested?.Invoke(this, EventArgs.Empty);
 
     public void Dispose() => _client.Dispose();
 }
