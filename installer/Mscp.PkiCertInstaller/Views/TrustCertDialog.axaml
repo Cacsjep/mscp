@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Mscp.PkiCertInstaller.Views.TrustCertDialog"
+        Title="Untrusted server certificate"
+        Width="560" Height="520"
+        Background="#0F1115"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+  <Window.Resources>
+    <SolidColorBrush x:Key="CardBg"     Color="#161A22" />
+    <SolidColorBrush x:Key="CardBorder" Color="#272D3A" />
+    <SolidColorBrush x:Key="TextDim"    Color="#9BA8BC" />
+    <SolidColorBrush x:Key="TextStrong" Color="#E6ECF5" />
+    <SolidColorBrush x:Key="Warn"       Color="#F2A864" />
+  </Window.Resources>
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+
+    <!-- Header -->
+    <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,14">
+      <TextBlock Text="Untrusted server certificate"
+                 FontSize="17" FontWeight="SemiBold"
+                 Foreground="{StaticResource Warn}" />
+      <TextBlock Foreground="{StaticResource TextDim}" FontSize="12.5"
+                 TextWrapping="Wrap"
+                 Text="The Management Server presented a certificate Windows does not trust. Verify the SHA-1 thumbprint with whoever set up the server before clicking Trust." />
+    </StackPanel>
+
+    <!-- Cert details -->
+    <Border Grid.Row="1"
+            Background="{StaticResource CardBg}"
+            BorderBrush="{StaticResource CardBorder}" BorderThickness="1"
+            CornerRadius="8" Padding="16">
+      <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+            VerticalAlignment="Top">
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Server"
+                   Foreground="{StaticResource TextDim}" Margin="0,0,8,8" />
+        <TextBlock Grid.Row="0" Grid.Column="1" Name="HostText"
+                   Foreground="{StaticResource TextStrong}" Margin="0,0,0,8"
+                   TextWrapping="Wrap" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Reason"
+                   Foreground="{StaticResource TextDim}" Margin="0,0,8,8" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Name="ReasonText"
+                   Foreground="{StaticResource Warn}" Margin="0,0,0,8"
+                   TextWrapping="Wrap" />
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Subject"
+                   Foreground="{StaticResource TextDim}" Margin="0,0,8,8" />
+        <TextBlock Grid.Row="2" Grid.Column="1" Name="SubjectText"
+                   Foreground="{StaticResource TextStrong}" Margin="0,0,0,8"
+                   TextWrapping="Wrap" />
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Issuer"
+                   Foreground="{StaticResource TextDim}" Margin="0,0,8,8" />
+        <TextBlock Grid.Row="3" Grid.Column="1" Name="IssuerText"
+                   Foreground="{StaticResource TextStrong}" Margin="0,0,0,8"
+                   TextWrapping="Wrap" />
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Valid from"
+                   Foreground="{StaticResource TextDim}" Margin="0,0,8,8" />
+        <TextBlock Grid.Row="4" Grid.Column="1" Name="NotBeforeText"
+                   Foreground="{StaticResource TextStrong}" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="Valid until"
+                   Foreground="{StaticResource TextDim}" Margin="0,0,8,8" />
+        <TextBlock Grid.Row="5" Grid.Column="1" Name="NotAfterText"
+                   Foreground="{StaticResource TextStrong}" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="SHA-1 thumbprint"
+                   Foreground="{StaticResource TextDim}" Margin="0,0,8,0" />
+        <SelectableTextBlock Grid.Row="6" Grid.Column="1" Name="ThumbprintText"
+                             FontFamily="Consolas, monospace"
+                             Foreground="{StaticResource TextStrong}"
+                             TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+    <!-- Buttons -->
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,16,0,0">
+      <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                 Foreground="{StaticResource TextDim}" FontSize="11"
+                 Text="Trust is remembered for this server only." />
+      <Button Grid.Column="1" Content="Cancel" Click="OnCancelClick" Margin="0,0,8,0" />
+      <Button Grid.Column="2" Content="Trust this server" Classes="accent"
+              Click="OnTrustClick" />
+    </Grid>
+  </Grid>
+</Window>

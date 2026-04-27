@@ -22,6 +22,20 @@ public partial class LoginViewModel : ObservableObject
     public bool IsWindowsOther     => Mode == AuthMode.WindowsOtherUser;
     public bool NeedsExplicitCreds => Mode != AuthMode.WindowsCurrentUser;
 
+    // The login flow asks the View to show a TLS-trust prompt when the
+    // Mgmt Server's cert isn't trusted. The View resolves the bool
+    // ("did the admin click Trust?") and the VM either retries the
+    // login or reports cancellation back to the user.
+    public event EventHandler<TrustPromptArgs>? TrustPromptRequested;
+    public sealed class TrustPromptArgs : EventArgs
+    {
+        public UntrustedServerCertException Exception { get; }
+        public TaskCompletionSource<bool> Result { get; } = new();
+        public TrustPromptArgs(UntrustedServerCertException ex) { Exception = ex; }
+    }
+
+    private static readonly TrustStore _trustStore = new();
+
     partial void OnModeChanged(AuthMode value)
     {
         OnPropertyChanged(nameof(IsBasic));
@@ -50,11 +64,29 @@ public partial class LoginViewModel : ObservableObject
 
         ErrorMessage = null;
         IsBusy = true;
-        MilestoneClient? client = null;
         try
         {
             Log.Info($"Login attempt: server='{ServerUrl}', mode={Mode}, user='{(NeedsExplicitCreds ? Username : CurrentWindowsIdentity)}'");
-            client = new MilestoneClient(ServerUrl);
+            // The first attempt may throw UntrustedServerCertException
+            // from inside the TLS validator. On accept the admin pins
+            // the thumbprint and we retry exactly once.
+            if (await TryLoginAsync()) return;
+
+            // Retried login (after pinning) failed - already reported
+            // via ErrorMessage in TryLoginAsync; nothing else to do.
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task<bool> TryLoginAsync()
+    {
+        MilestoneClient? client = null;
+        try
+        {
+            client = new MilestoneClient(ServerUrl, _trustStore);
             switch (Mode)
             {
                 case AuthMode.Basic:
@@ -70,16 +102,39 @@ public partial class LoginViewModel : ObservableObject
             Log.Info("Login succeeded.");
             LoginSucceeded?.Invoke(this, client);
             client = null; // ownership transferred
+            return true;
         }
         catch (Exception ex)
         {
+            var trustEx = MilestoneClient.FindTrustException(ex);
+            if (trustEx != null && TrustPromptRequested != null)
+            {
+                client?.Dispose();
+                client = null;
+                Log.Warn($"Untrusted TLS cert from {trustEx.Host}:{trustEx.Port} ({trustEx.Reason}); thumbprint {trustEx.Thumbprint}");
+                var args = new TrustPromptArgs(trustEx);
+                TrustPromptRequested.Invoke(this, args);
+                var accepted = await args.Result.Task.ConfigureAwait(true);
+                if (!accepted)
+                {
+                    ErrorMessage = "Server certificate was not trusted.";
+                    Log.Info("Admin declined to trust the server certificate.");
+                    return false;
+                }
+                _trustStore.Trust(trustEx.Host, trustEx.Port, trustEx.Thumbprint);
+                Log.Info($"Admin pinned thumbprint {trustEx.Thumbprint} for {trustEx.Host}:{trustEx.Port}; retrying.");
+                // Recurse exactly once - the pinned thumbprint is now
+                // in the store so the validator will accept on retry.
+                // If it fails again it falls into the normal error path.
+                return await TryLoginAsync();
+            }
             Log.Error("Login failed", ex);
             ErrorMessage = Humanize(ex);
+            return false;
         }
         finally
         {
             client?.Dispose();
-            IsBusy = false;
         }
     }
 

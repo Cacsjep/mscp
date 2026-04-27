@@ -81,7 +81,14 @@ public static class CertInstaller
         // copies its name from the in-memory cert.
         if (!string.IsNullOrWhiteSpace(friendlyName))
         {
-            try { toAdd.FriendlyName = friendlyName; } catch { /* not supported on non-Windows */ }
+            try { toAdd.FriendlyName = friendlyName; }
+            catch (Exception ex)
+            {
+                // FriendlyName is a Windows-only nicety; skipping it
+                // doesn't affect cert function. Logged so we know if a
+                // platform/runtime ever stops supporting it.
+                Log.Warn($"Couldn't set FriendlyName='{friendlyName}': {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         using var store = new X509Store(targetStore, StoreLocation.LocalMachine);
@@ -99,7 +106,11 @@ public static class CertInstaller
                 .OfType<X509Certificate2>().FirstOrDefault();
             if (persistedForName != null)
             {
-                try { persistedForName.FriendlyName = friendlyName; } catch { }
+                try { persistedForName.FriendlyName = friendlyName; }
+                catch (Exception ex)
+                {
+                    Log.Warn($"Couldn't re-assert FriendlyName on persisted cert: {ex.GetType().Name}: {ex.Message}");
+                }
             }
         }
 
@@ -145,6 +156,12 @@ public static class CertInstaller
         return true;
     }
 
+    // Three probes in order: RSA-CNG, ECDSA-CNG, legacy RSA-CSP. Each
+    // probe can throw if the cert's key handle isn't of the expected
+    // shape - that's expected, NOT an error, since we're trying every
+    // possible storage backend. The catches log at INFO level only so
+    // an admin with a unfamiliar cert layout can correlate "ACL grant
+    // skipped" with the underlying handle-resolution failure.
     private static string? LocateKeyFile(X509Certificate2 cert)
     {
         try
@@ -157,7 +174,10 @@ public static class CertInstaller
                     return FindOnDisk("Microsoft\\Crypto\\Keys", unique);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log.Info($"LocateKeyFile (RSA-CNG) probe failed: {ex.GetType().Name}: {ex.Message}");
+        }
 
         try
         {
@@ -169,7 +189,10 @@ public static class CertInstaller
                     return FindOnDisk("Microsoft\\Crypto\\Keys", unique);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log.Info($"LocateKeyFile (ECDSA-CNG) probe failed: {ex.GetType().Name}: {ex.Message}");
+        }
 
         try
         {
@@ -183,8 +206,12 @@ public static class CertInstaller
             }
 #pragma warning restore SYSLIB0028
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log.Info($"LocateKeyFile (legacy CSP) probe failed: {ex.GetType().Name}: {ex.Message}");
+        }
 
+        Log.Warn($"LocateKeyFile returned null for {cert.Thumbprint} - private-key ACL grant will be skipped, the service may not be able to read the key.");
         return null;
     }
 
@@ -226,12 +253,25 @@ public static class CertInstaller
                     ident, FileSystemRights.FullControl, AccessControlType.Allow));
                 success.Add(acct);
             }
-            catch
+            catch (Exception ex)
             {
-                // Skip unresolved account; continue with the rest.
+                // Per-account failures are non-fatal (typo, deleted user,
+                // domain unreachable) - skip and continue. Logged so an
+                // admin can see which accounts didn't get granted.
+                Log.Warn($"GrantFullControl skipped account '{acct}': {ex.GetType().Name}: {ex.Message}");
             }
         }
-        info.SetAccessControl(sec);
+        try
+        {
+            info.SetAccessControl(sec);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"SetAccessControl on '{keyPath}' failed - service account may not be able to read the private key.", ex);
+            throw;
+        }
+        if (success.Count == 0 && grantAccounts != null && grantAccounts.Length > 0)
+            Log.Warn("GrantFullControl: 0 of " + grantAccounts.Length + " requested accounts succeeded; review the warnings above.");
         return success.ToArray();
     }
 }

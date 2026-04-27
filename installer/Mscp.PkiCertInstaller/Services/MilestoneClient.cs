@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -11,6 +13,31 @@ using System.Threading.Tasks;
 using Mscp.PkiCertInstaller.Models;
 
 namespace Mscp.PkiCertInstaller.Services;
+
+// Thrown from the TLS validator when the server's certificate is not
+// trusted by the OS chain AND not present in our per-user TrustStore.
+// Carries the cert details so the UI can show a meaningful prompt.
+public sealed class UntrustedServerCertException : Exception
+{
+    public string Host { get; }
+    public int    Port { get; }
+    public string Thumbprint { get; }
+    public string Subject { get; }
+    public string Issuer { get; }
+    public DateTime NotBefore { get; }
+    public DateTime NotAfter  { get; }
+    public string Reason { get; }
+
+    public UntrustedServerCertException(
+        string host, int port, string thumbprint, string subject, string issuer,
+        DateTime notBefore, DateTime notAfter, string reason)
+        : base($"Server certificate not trusted ({reason})")
+    {
+        Host = host; Port = port; Thumbprint = thumbprint;
+        Subject = subject; Issuer = issuer;
+        NotBefore = notBefore; NotAfter = notAfter; Reason = reason;
+    }
+}
 
 // Talks to the Milestone Mgmt Server's REST + IDP token endpoints.
 // Two surfaces:
@@ -40,25 +67,54 @@ public sealed class MilestoneClient : IDisposable
 
     private HttpClient _http;
     private readonly Uri _baseUri;
+    private readonly TrustStore _trustStore;
     private string? _token;
 
-    public MilestoneClient(string serverUrl)
+    public MilestoneClient(string serverUrl, TrustStore trustStore)
     {
         _baseUri = NormalizeBase(serverUrl);
+        _trustStore = trustStore ?? throw new ArgumentNullException(nameof(trustStore));
         _http = BuildHttpClient(useDefaultCreds: false);
     }
 
     public Uri BaseUri => _baseUri;
 
-    private static HttpClient BuildHttpClient(bool useDefaultCreds)
+    private HttpClient BuildHttpClient(bool useDefaultCreds)
     {
-        // Self-signed certs are normal on Milestone Mgmt Servers, so we
-        // accept anything during the bearer-token exchange. The token
-        // itself is signed by the Milestone IDP (RS256) so transport-
-        // level verification is not what's gating trust here.
         var handler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
+            // Strict TLS validation by default. On chain failure we
+            // consult the per-user TrustStore for a thumbprint pin
+            // matching this host:port; if that's a hit the connection
+            // proceeds, otherwise we throw a typed exception that the
+            // UI catches to prompt the admin.
+            ServerCertificateCustomValidationCallback = (request, cert, chain, errors) =>
+            {
+                if (errors == SslPolicyErrors.None) return true;
+
+                var host = request?.RequestUri?.Host ?? _baseUri.Host;
+                var port = request?.RequestUri?.Port > 0
+                    ? request!.RequestUri!.Port : _baseUri.Port;
+                var thumb = cert?.Thumbprint ?? "";
+
+                if (!string.IsNullOrEmpty(thumb) && _trustStore.IsTrusted(host, port, thumb))
+                    return true;
+
+                var reason = errors switch
+                {
+                    SslPolicyErrors.RemoteCertificateNotAvailable => "no certificate presented",
+                    SslPolicyErrors.RemoteCertificateNameMismatch => "hostname does not match certificate",
+                    SslPolicyErrors.RemoteCertificateChainErrors  => "certificate chain not trusted",
+                    _ => errors.ToString(),
+                };
+                throw new UntrustedServerCertException(
+                    host, port, thumb,
+                    cert?.Subject ?? "",
+                    cert?.Issuer  ?? "",
+                    cert?.NotBefore ?? DateTime.MinValue,
+                    cert?.NotAfter  ?? DateTime.MinValue,
+                    reason);
+            },
             AutomaticDecompression = DecompressionMethods.All,
             UseDefaultCredentials  = useDefaultCreds,
         };
@@ -70,6 +126,17 @@ public sealed class MilestoneClient : IDisposable
         var http = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return http;
+    }
+
+    // Walks an exception chain to find an UntrustedServerCertException.
+    // The validator throws this; HttpClient wraps it (typically as the
+    // inner of an HttpRequestException). The UI uses this to decide
+    // whether to show the trust prompt or the generic error path.
+    public static UntrustedServerCertException? FindTrustException(Exception? ex)
+    {
+        for (var e = ex; e != null; e = e.InnerException)
+            if (e is UntrustedServerCertException u) return u;
+        return null;
     }
 
     public async Task LoginBasicAsync(string username, string password, CancellationToken ct = default)
@@ -140,56 +207,98 @@ public sealed class MilestoneClient : IDisposable
             if (!resp.IsSuccessStatusCode)
                 throw new InvalidOperationException(
                     $"GET {kind.Label} mipItems {(int)resp.StatusCode}: {Trim(text)}");
-            using var doc = JsonDocument.Parse(text);
-            if (!doc.RootElement.TryGetProperty("array", out var arr) ||
-                arr.ValueKind != JsonValueKind.Array) continue;
-            foreach (var el in arr.EnumerateArray())
-                result.Add(MapItem(el, kind));
+            MipItemsResponse? response;
+            try
+            {
+                response = JsonSerializer.Deserialize<MipItemsResponse>(text, _jsonOpts);
+            }
+            catch (JsonException jex)
+            {
+                throw new InvalidOperationException(
+                    $"Couldn't parse {kind.Label} mipItems response: {jex.Message}", jex);
+            }
+            if (response?.Array == null) continue;
+            foreach (var dto in response.Array)
+            {
+                if (dto == null) continue;
+                if (string.IsNullOrEmpty(dto.Thumbprint))
+                {
+                    Log.Warn($"Skipping {kind.Label} item '{dto.Name}' - no Thumbprint field on the server response.");
+                    continue;
+                }
+                result.Add(MapItem(dto, kind));
+            }
         }
         return result;
     }
 
-    // Project a single REST item shape onto our CertItem record. The
-    // properties bag comes back flattened into the same JSON object as
-    // the framework keys (Id, Name, FQID, etc.), so we just probe each
-    // key by name.
-    private static CertItem MapItem(JsonElement el, CertKind kind)
+    // Strict JSON shape for the mipItems REST response. Marking known
+    // fields with [JsonRequired] would crash on every legacy server
+    // that omits a field, so we instead VALIDATE in code (Thumbprint
+    // is mandatory, others are best-effort) and log when something
+    // unexpected is missing. That keeps the installer working against
+    // older servers without silently dropping rows.
+    private static readonly JsonSerializerOptions _jsonOpts = new()
     {
-        string Get(string k) =>
-            el.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String
-                ? v.GetString() ?? "" : "";
-        DateTime? GetDate(string k)
-            => DateTime.TryParse(Get(k), null,
+        PropertyNameCaseInsensitive = true,
+    };
+
+    private sealed class MipItemsResponse
+    {
+        [JsonPropertyName("array")]
+        public List<MipItemDto>? Array { get; set; }
+    }
+
+    private sealed class MipItemDto
+    {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Subject { get; set; }
+        public string? Issuer { get; set; }
+        public string? Thumbprint { get; set; }
+        public string? IssuerThumbprint { get; set; }
+        public string? SerialNumber { get; set; }
+        public string? NotBefore { get; set; }
+        public string? NotAfter { get; set; }
+        public string? KeyAlgorithm { get; set; }
+        public string? HasPrivateKey { get; set; }
+        public string? Pfx { get; set; }
+        public string? Der { get; set; }
+        public string? SubjectAlternativeNames { get; set; }
+
+        // Legacy server keys (pre-rename). Read-only mapping so older
+        // Mgmt Servers keep working until they're upgraded.
+        public string? EncryptedPfx { get; set; }
+        public string? EncryptedDer { get; set; }
+    }
+
+    private static CertItem MapItem(MipItemDto dto, CertKind kind)
+    {
+        DateTime? ParseDate(string? s)
+            => DateTime.TryParse(s, null,
                 System.Globalization.DateTimeStyles.RoundtripKind, out var d) ? d : null;
 
-        // Backwards-compat: read both the new "Pfx"/"Der" keys and the
-        // legacy "EncryptedPfx"/"EncryptedDer" keys. Encrypted blobs
-        // can't be opened by us (DPAPI machine scope on the mgmt
-        // server), but we still surface the row so the admin sees it.
-        var pfx = Get("Pfx");
-        if (pfx.Length == 0) pfx = Get("EncryptedPfx");
-        var der = Get("Der");
-        if (der.Length == 0) der = Get("EncryptedDer");
+        var pfx = !string.IsNullOrEmpty(dto.Pfx) ? dto.Pfx : (dto.EncryptedPfx ?? "");
+        var der = !string.IsNullOrEmpty(dto.Der) ? dto.Der : (dto.EncryptedDer ?? "");
 
         return new CertItem
         {
-            Id = el.TryGetProperty("Id", out var idEl) && Guid.TryParse(idEl.GetString(), out var g)
-                ? g : Guid.Empty,
+            Id = Guid.TryParse(dto.Id, out var g) ? g : Guid.Empty,
             Kind = kind.Id,
             KindLabel = kind.Label,
-            Name = Get("Name"),
-            Subject = Get("Subject"),
-            Issuer = Get("Issuer"),
-            Thumbprint = Get("Thumbprint"),
-            IssuerThumbprint = Get("IssuerThumbprint"),
-            SerialNumber = Get("SerialNumber"),
-            NotBefore = GetDate("NotBefore"),
-            NotAfter  = GetDate("NotAfter"),
-            KeyAlgorithm = Get("KeyAlgorithm"),
-            HasPrivateKey = string.Equals(Get("HasPrivateKey"), "True", StringComparison.OrdinalIgnoreCase),
+            Name = dto.Name ?? "",
+            Subject = dto.Subject ?? "",
+            Issuer = dto.Issuer ?? "",
+            Thumbprint = dto.Thumbprint ?? "",
+            IssuerThumbprint = dto.IssuerThumbprint ?? "",
+            SerialNumber = dto.SerialNumber ?? "",
+            NotBefore = ParseDate(dto.NotBefore),
+            NotAfter  = ParseDate(dto.NotAfter),
+            KeyAlgorithm = dto.KeyAlgorithm ?? "",
+            HasPrivateKey = string.Equals(dto.HasPrivateKey, "True", StringComparison.OrdinalIgnoreCase),
             PfxBase64 = pfx,
             DerBase64 = der,
-            SubjectAlternativeNames = Get("SubjectAlternativeNames"),
+            SubjectAlternativeNames = dto.SubjectAlternativeNames ?? "",
         };
     }
 

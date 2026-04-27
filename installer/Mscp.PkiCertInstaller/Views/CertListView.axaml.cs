@@ -9,6 +9,8 @@ namespace Mscp.PkiCertInstaller.Views;
 
 public partial class CertListView : UserControl
 {
+    private CertListViewModel? _bound;
+
     public CertListView()
     {
         InitializeComponent();
@@ -16,16 +18,24 @@ public partial class CertListView : UserControl
         Hook();
     }
 
+    // Bind to the active VM, but unsubscribe from the previous one
+    // first so a view swap (or repeated DataContext re-assignment)
+    // doesn't accumulate handler chains that root old VM instances.
     private void Hook()
     {
-        if (DataContext is CertListViewModel vm)
+        if (ReferenceEquals(_bound, DataContext)) return;
+        if (_bound != null)
         {
-            vm.InstallRequested -= OnInstallRequested;
-            vm.InstallRequested += OnInstallRequested;
-            vm.ResultReady -= OnResultReady;
-            vm.ResultReady += OnResultReady;
-            vm.HelpRequested -= OnHelpRequested;
-            vm.HelpRequested += OnHelpRequested;
+            _bound.InstallRequested -= OnInstallRequested;
+            _bound.ResultReady      -= OnResultReady;
+            _bound.HelpRequested    -= OnHelpRequested;
+        }
+        _bound = DataContext as CertListViewModel;
+        if (_bound != null)
+        {
+            _bound.InstallRequested += OnInstallRequested;
+            _bound.ResultReady      += OnResultReady;
+            _bound.HelpRequested    += OnHelpRequested;
         }
     }
 

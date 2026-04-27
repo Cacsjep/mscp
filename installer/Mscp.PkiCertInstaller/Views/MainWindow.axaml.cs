@@ -9,6 +9,8 @@ namespace Mscp.PkiCertInstaller.Views;
 
 public partial class MainWindow : Window
 {
+    private MainWindowViewModel? _bound;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -17,16 +19,21 @@ public partial class MainWindow : Window
         WindowChromeHelper.HookDarkTitleBar(this);
     }
 
+    // Bind to the active VM, but unsubscribe from the previous one
+    // first so a DataContext swap doesn't leak the old VM through
+    // the PropertyChanged handler chain.
     private void Hook()
     {
-        if (DataContext is MainWindowViewModel vm)
+        if (ReferenceEquals(_bound, DataContext)) return;
+        if (_bound != null) _bound.PropertyChanged -= OnVmChanged;
+        _bound = DataContext as MainWindowViewModel;
+        if (_bound != null)
         {
-            vm.PropertyChanged -= OnVmChanged;
-            vm.PropertyChanged += OnVmChanged;
+            _bound.PropertyChanged += OnVmChanged;
             // Initial state: apply size first, then assign content so
             // the first measure of the inner view sees the correct
             // window dimensions.
-            ApplyAndSwap(vm);
+            ApplyAndSwap(_bound);
         }
     }
 
