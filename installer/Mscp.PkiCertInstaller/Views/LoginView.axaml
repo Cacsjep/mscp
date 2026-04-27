@@ -22,15 +22,15 @@
       </StackPanel>
 
       <StackPanel Spacing="4">
-        <TextBlock Text="Management server" Foreground="#8A93A6" FontSize="11" />
+        <TextBlock Text="Management server" Foreground="#8A93A6" FontSize="12" />
         <TextBox Text="{Binding ServerUrl}"
                  Watermark="mgmt.example.local or 10.0.0.5:8443" />
         <TextBlock Text="Hostname or IP, optional :port. https:// is added automatically."
-                   Foreground="#5F6878" FontSize="10" TextWrapping="Wrap" />
+                   Foreground="#5F6878" FontSize="11" TextWrapping="Wrap" />
       </StackPanel>
 
       <StackPanel Spacing="4">
-        <TextBlock Text="Authentication" Foreground="#8A93A6" FontSize="11" />
+        <TextBlock Text="Authentication" Foreground="#8A93A6" FontSize="12" />
         <StackPanel Spacing="2">
           <RadioButton GroupName="auth"
                        Content="Basic user"

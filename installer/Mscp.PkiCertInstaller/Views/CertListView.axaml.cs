@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Mscp.PkiCertInstaller.ViewModels;
 
@@ -66,15 +67,20 @@ public partial class CertListView : UserControl
             await CertDetailsDialog.ShowFor(owner, vm);
     }
 
-    // Selection is driven by the per-row checkbox column; the DataGrid's
-    // own row/cell selection is purely cosmetic noise here. We clear it
-    // every time the framework tries to apply one. SelectedItems is also
-    // cleared so :selected can never re-appear via keyboard navigation.
-    private void OnGridSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    // First Loaded fires before the DataGrid has its final width, so
+    // the * columns can settle to their MinWidth instead of consuming
+    // the leftover space - the grid only "snaps right" once the user
+    // resizes the window. Posting an InvalidateMeasure() at Background
+    // priority forces a second layout pass with the actual width and
+    // the * columns claim their fair share immediately.
+    private void OnGridLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (sender is not DataGrid g) return;
-        if (g.SelectedItem is null && g.SelectedItems.Count == 0) return;
-        g.SelectedItem = null;
-        g.SelectedItems.Clear();
+        Dispatcher.UIThread.Post(() =>
+        {
+            g.InvalidateMeasure();
+            g.InvalidateArrange();
+            g.UpdateLayout();
+        }, DispatcherPriority.Background);
     }
 }

@@ -1,3 +1,6 @@
+made a full code review about all this code in that branch eg commits we have done, about security fishi things,
+event handler leaks, futhure booletproof code.
 
-also we need secrity on the pki nodes look at mip sdk and other plugins how this is made, otherwsie normal user may can obtain the
-cert or private key that we dont want, Security read flags in nodes item manager (GENERIC_READ)
+whats the name of the installed pki installer and pleas ack that this is also the visible on the local download page,
+should we give the user also the option to download it via the over view in client, i am right that its always gona
+be installed when we select PKI plugin right ? 

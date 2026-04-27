@@ -106,7 +106,7 @@
               HorizontalScrollBarVisibility="Disabled"
               HorizontalAlignment="Stretch"
               DoubleTapped="OnRowDoubleTapped"
-              SelectionChanged="OnGridSelectionChanged">
+              Loaded="OnGridLoaded">
       <DataGrid.Columns>
         <DataGridTemplateColumn Width="44" MinWidth="44"
                                 CanUserSort="False" CanUserReorder="False" CanUserResize="False">

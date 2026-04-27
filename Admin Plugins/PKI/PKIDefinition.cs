@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using VideoOS.Platform;
 using VideoOS.Platform.Admin;
 using VideoOS.Platform.Background;
+using VideoOS.Platform.Util;
 
 namespace PKI
 {
@@ -41,6 +42,42 @@ namespace PKI
         private Image _clientFolderIcon = PluginIcon.FallbackIcon;
 
         internal static readonly PluginLog Log = new PluginLog("PKI");
+
+        // Role-based security. The Mgmt Client surfaces this entry under
+        // Security > Roles > [Role] > MIP > PKI > Read. Any user / role
+        // that has not been explicitly granted GENERIC_READ is treated
+        // as denied - the ItemManagers below short-circuit GetItems /
+        // GetItem to an empty list, which simultaneously hides the certs
+        // in the tree AND stops the REST /api/rest/v1/mipKinds/{kindId}/
+        // mipItems endpoint from leaking PFX bytes. Without this gate,
+        // any read-anywhere AD user logged into the management server
+        // could pull base64-encoded PKCS#12 (cert + private key) over
+        // the REST surface.
+        private readonly List<SecurityAction> _securityActions = new List<SecurityAction>
+        {
+            new SecurityAction("GENERIC_READ", "Read"),
+        };
+        public override List<SecurityAction> SecurityActions => _securityActions;
+
+        // Helper used by every ItemManager in this plugin. Throws are
+        // expected (NotAuthorizedMIPException is the framework's "no"
+        // signal); we translate them to a bool so callers can pick a
+        // clean fall-through (return empty list / null) instead of
+        // bubbling a stack trace into the Mgmt Client UI.
+        internal static bool HasReadPermission()
+        {
+            try
+            {
+                SecurityAccess.CheckPermission(PluginId, "GENERIC_READ");
+                return true;
+            }
+            catch (NotAuthorizedMIPException) { return false; }
+            catch (Exception ex)
+            {
+                Log.Error("PKI security check failed: " + ex.Message);
+                return false;
+            }
+        }
 
         public override Guid Id => PluginId;
         public override string Name => "PKI";

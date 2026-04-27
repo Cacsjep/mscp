@@ -136,14 +136,27 @@ namespace PKI.Admin
             if (CurrentItem != null) CurrentItem.Name = name;
         }
 
+        // PKIDefinition.HasReadPermission() gates every read entry point.
+        // Without it the REST mipItems surface and the Mgmt Client tree
+        // would happily hand out base64-encoded PFX bytes (cert + private
+        // key) to any AD user who can reach the management server.
         public override List<Item> GetItems()
-            => Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, Kind);
+        {
+            if (!PKIDefinition.HasReadPermission()) return new List<Item>();
+            return Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, Kind);
+        }
 
         public override List<Item> GetItems(Item parentItem)
-            => Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, parentItem, Kind);
+        {
+            if (!PKIDefinition.HasReadPermission()) return new List<Item>();
+            return Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, parentItem, Kind);
+        }
 
         public override Item GetItem(FQID fqid)
-            => Configuration.Instance.GetItemConfiguration(PKIDefinition.PluginId, Kind, fqid.ObjectId);
+        {
+            if (!PKIDefinition.HasReadPermission()) return null;
+            return Configuration.Instance.GetItemConfiguration(PKIDefinition.PluginId, Kind, fqid.ObjectId);
+        }
 
         public override Item CreateItem(Item parentItem, FQID suggestedFQID)
         {

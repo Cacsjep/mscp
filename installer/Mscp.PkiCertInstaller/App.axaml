@@ -84,12 +84,13 @@
     </Style>
 
     <!-- Cell background overrides for every focus/selection state the
-         theme paints. Combined with the SelectionChanged handler in
-         CertListView.axaml.cs (which clears the selection right after
-         it lands), this guarantees no cell ever shows as "picked". -->
+         theme paints. No Foreground setter here: a DynamicResource
+         lookup that misses (e.g. SystemControlForegroundBaseHighBrush
+         is a UWP key not present in Avalonia FluentTheme) crashes the
+         app on first cell click. We let cells inherit the row foreground
+         instead. -->
     <Style Selector="DataGridCell:selected">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
     </Style>
     <Style Selector="DataGridCell:current">
       <Setter Property="Background" Value="Transparent" />

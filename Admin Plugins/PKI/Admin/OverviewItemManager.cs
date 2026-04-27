@@ -60,8 +60,13 @@ namespace PKI.Admin
 
         public override void SetItemName(string name) { /* immutable */ }
 
+        // Gated on PKIDefinition.HasReadPermission() like every other
+        // PKI ItemManager - so the Overview node and its singleton item
+        // are also invisible to roles that have not been granted the
+        // PKI > Read right.
         public override List<Item> GetItems()
         {
+            if (!PKIDefinition.HasReadPermission()) return new List<Item>();
             var list = Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, _kind);
             if (list == null || list.Count == 0)
             {
@@ -74,7 +79,10 @@ namespace PKI.Admin
         public override List<Item> GetItems(Item parentItem) => GetItems();
 
         public override Item GetItem(FQID fqid)
-            => Configuration.Instance.GetItemConfiguration(PKIDefinition.PluginId, _kind, fqid.ObjectId);
+        {
+            if (!PKIDefinition.HasReadPermission()) return null;
+            return Configuration.Instance.GetItemConfiguration(PKIDefinition.PluginId, _kind, fqid.ObjectId);
+        }
 
         public override Item CreateItem(Item parentItem, FQID suggestedFQID)
         {
