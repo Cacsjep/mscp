@@ -84,12 +84,9 @@
 
     <!-- Grid sits directly on the window background. Double-tap on a
          row opens the cert details dialog (handled in code-behind).
-         HorizontalScrollBarVisibility=Disabled forces the * columns to
-         consume all leftover width on the very first layout pass; with
-         Auto the grid sometimes settled at minimum width until the user
-         resized the window. SelectionChanged in code-behind clears the
-         selection so cell focus / row highlight never sticks - selection
-         is driven solely by the leftmost checkbox column. -->
+         SelectionChanged in code-behind clears the selection so cell
+         focus / row highlight never sticks - selection is driven solely
+         by the leftmost checkbox column. -->
     <DataGrid Grid.Row="1"
               Name="Grid"
               ItemsSource="{Binding Items}"
@@ -106,7 +103,6 @@
               HorizontalScrollBarVisibility="Disabled"
               HorizontalAlignment="Stretch"
               DoubleTapped="OnRowDoubleTapped"
-              Loaded="OnGridLoaded"
               SelectionChanged="OnGridSelectionChanged">
       <DataGrid.Columns>
         <DataGridTemplateColumn Width="44" MinWidth="44"
