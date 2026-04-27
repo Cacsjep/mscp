@@ -577,6 +577,10 @@ namespace PKI.Admin
                     if (!string.IsNullOrEmpty(svc.Fqdn)
                         && !svc.Fqdn.Equals(svc.Hostname, StringComparison.OrdinalIgnoreCase))
                         dnsNames.Add(svc.Fqdn);
+                    foreach (var extra in svc.ExtraDnsNames ?? new List<string>())
+                        if (!string.IsNullOrEmpty(extra)
+                            && !dnsNames.Contains(extra, StringComparer.OrdinalIgnoreCase))
+                            dnsNames.Add(extra);
 
                     var req = new ServiceCertRequest
                     {

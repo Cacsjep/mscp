@@ -302,6 +302,10 @@ namespace PKI.Admin
                         if (!dnsNames.Contains(shortName, StringComparer.OrdinalIgnoreCase))
                             dnsNames.Add(shortName);
                     }
+                    foreach (var extra in svc.ExtraDnsNames ?? new List<string>())
+                        if (!string.IsNullOrEmpty(extra)
+                            && !dnsNames.Contains(extra, StringComparer.OrdinalIgnoreCase))
+                            dnsNames.Add(extra);
 
                     var req = new ServiceCertRequest
                     {

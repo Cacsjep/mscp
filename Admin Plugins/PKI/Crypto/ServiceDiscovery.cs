@@ -23,6 +23,10 @@ namespace PKI.Crypto
         public string Hostname;                // Hostname pulled from configuration
         public string Fqdn;                    // FQDN if reverse-resolution found one
         public List<string> IpAddresses = new List<string>();
+        // Extra DNS names admins typically want covered (e.g. "localhost"
+        // on the Mgmt Server so the Mgmt Client / API browser hitting
+        // https://localhost from the same box doesn't trip a name mismatch).
+        public List<string> ExtraDnsNames = new List<string>();
 
         // Two-letter prefix matches what admins typically write into cert names:
         // RS = recording server, MS = management, FS = failover, EVS = event,
@@ -105,11 +109,18 @@ namespace PKI.Crypto
             var host = sid?.ServerHostname;
             if (string.IsNullOrEmpty(host)) return;
             if (!seen.Add(key(ServiceCategory.ManagementServer, host))) return;
+            // Mgmt Server gets localhost + 127.0.0.1 for free so admins
+            // can hit https://localhost on the box itself (Mgmt Client,
+            // API Gateway tests, browsing the REST API) without a name
+            // mismatch warning. Other roles don't get this - their certs
+            // are checked from remote machines.
             result.Add(new DiscoveredService
             {
                 Category = ServiceCategory.ManagementServer,
                 DisplayName = host,
                 Hostname = host,
+                ExtraDnsNames = new List<string> { "localhost" },
+                IpAddresses = new List<string> { "127.0.0.1" },
             });
         }
 
@@ -271,6 +282,9 @@ namespace PKI.Crypto
                 }
                 foreach (var addr in (entry?.AddressList ?? new IPAddress[0]))
                 {
+                    // Loopback addresses are pre-seeded only for the Mgmt
+                    // Server (see DiscoverManagementServer); skipping them
+                    // here keeps every other role's SAN list remote-only.
                     if (IPAddress.IsLoopback(addr)) continue;
                     if (addr.IsIPv6LinkLocal || addr.IsIPv6SiteLocal || addr.IsIPv6Multicast) continue;
                     var s = addr.ToString();
