@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Client Certificates</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif; font-size: 13px;
+               color: #222; padding: 0 28px; line-height: 1.55; }
+        h2 { font-size: 14px; font-weight: 600; margin: -4px 0 8px; color: #333; }
+        h3 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; color: #444; }
+        ul, ol { margin: 0 0 0 20px; padding: 0; }
+        li { margin-bottom: 4px; }
+        p { margin-bottom: 10px; }
+        .card { background: #fff; border: 1px solid #dde0e4; border-radius: 6px;
+                padding: 16px 20px; margin-bottom: 14px; }
+        .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+        .chip-blue { display: inline-block; background: #eef4fb; border: 1px solid #a3c4e4;
+                     border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500;
+                     color: #2a5a96; white-space: nowrap; }
+        code { font-family: Consolas, monospace; font-size: 12px;
+               background: #f4f5f7; border: 1px solid #e1e3e6; padding: 1px 5px; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+        th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+        th { font-weight: 600; color: #444; background: #fafafa; }
+    </style>
+</head>
+<body>
+    <div class="header-row">
+        Container for leaf certificates (HTTPS, 802.1X, generic Service)
+        <div class="chips"><span class="chip-blue">All issued by a CA above</span></div>
+    </div>
+
+    <div class="card">
+        <h2>What lives here</h2>
+        <p>
+            This is a grouping node. It contains the three folders below, each holding
+            leaf certificates signed by a Root or Intermediate from the
+            <strong>CA Certificates</strong> branch.
+        </p>
+        <table>
+            <tr><th>Sub-folder</th><th>Use it for</th></tr>
+            <tr><td>HTTPS Certificates</td><td>Browser-facing TLS endpoints (Mobile Server, API Gateway, custom IIS sites). Validity capped at 397 days for browser trust.</td></tr>
+            <tr><td>802.1X Certificates</td><td>Client identity certs presented by cameras / NVRs / servers to a managed switch RADIUS for port authentication.</td></tr>
+            <tr><td>Service Certificates</td><td>Internal service-to-service TLS (Recording Server, Mgmt Server, Event Server, Mobile Server). Not bound by browser validity rules.</td></tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Generation pattern</h2>
+        <ol>
+            <li>Drill into one of the folders above and right-click to add a new cert, or run <strong>Generate service certificates</strong> from the Overview pane to bulk-issue a batch.</li>
+            <li>Pick an existing CA from the <strong>Sign with</strong> dropdown. Only CAs whose private key is still on this server are listed.</li>
+            <li>Fill in Subject Alternative Names. The <strong>Add this machine's hostname and IPs</strong> button populates the SAN list from the local machine.</li>
+            <li>Save. The PFX is generated and persisted to MIP item config.</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>Deployment</h2>
+        <p>
+            Run the PKI Cert Installer EXE on the target XProtect server, sign in to the
+            management server, tick the certs you want, and click <strong>Install</strong>.
+            The EXE routes each cert to the correct Windows store (Root certs to <em>Root</em>,
+            Intermediates to <em>CA</em>, leaves to <em>My</em>) and grants the chosen
+            service account Full Control on the private-key file.
+        </p>
+    </div>
+</body>
+</html>

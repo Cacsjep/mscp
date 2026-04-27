@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -33,7 +33,7 @@
     <div class="card">
         <h2>What lives here</h2>
         <p>
-            HTTPS certificates are leaf certs used by browser-facing HTTPS endpoints &mdash;
+            HTTPS certificates are leaf certs used by browser-facing HTTPS endpoints -
             typically the Mobile Server's web client, the API Gateway, or any custom IIS
             site fronting Milestone APIs. They are signed by a Root or Intermediate CA from
             this vault.
@@ -47,13 +47,13 @@
     <div class="card">
         <h2>Required fields</h2>
         <ul>
-            <li><strong>Sign with</strong> &mdash; an existing CA (Root or Intermediate)
+            <li><strong>Sign with</strong> - an existing CA (Root or Intermediate)
                 whose key still lives here.</li>
-            <li><strong>Display name</strong> &mdash; the label in the tree and in
+            <li><strong>Display name</strong> - the label in the tree and in
                 <code>certlm.msc</code>.</li>
-            <li><strong>Validity</strong> &mdash; modern browsers reject certs longer than
+            <li><strong>Validity</strong> - modern browsers reject certs longer than
                 397 days. Pick 365 days for safety.</li>
-            <li><strong>Subject Alternative Names</strong> &mdash; <em>required.</em> Add
+            <li><strong>Subject Alternative Names</strong> - <em>required.</em> Add
                 every hostname clients will use plus any direct-IP access. Click
                 <em>Add this machine's hostname and IPs</em> to populate from the local
                 machine.</li>

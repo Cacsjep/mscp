@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -34,7 +34,7 @@
         <h2>What lives here</h2>
         <p>
             Root certificates are the trust anchor for everything else in this vault.
-            They are <strong>self-signed</strong> &mdash; their issuer is themselves &mdash; and
+            They are <strong>self-signed</strong> - their issuer is themselves - and
             they sign Intermediate CAs and (optionally) leaf certs directly.
         </p>
         <p>
@@ -47,13 +47,13 @@
     <div class="card">
         <h2>Required fields</h2>
         <ul>
-            <li><strong>Display name</strong> &mdash; the label shown in the tree, in
+            <li><strong>Display name</strong> - the label shown in the tree, in
                 Issuer dropdowns, and inside <code>certlm.msc</code> after the Cert Installer
                 deploys it. Auto setup uses <code>MSCP PKI (yyyy.MM) - Root CA</code>.</li>
-            <li><strong>Validity</strong> &mdash; recommended 10 to 20 years. The Root is
+            <li><strong>Validity</strong> - recommended 10 to 20 years. The Root is
                 expensive to rotate (every dependent cert needs to be re-issued), so don't
                 pick too short.</li>
-            <li><strong>Key algorithm</strong> &mdash; RSA-3072 or ECDSA-P256 are sound
+            <li><strong>Key algorithm</strong> - RSA-3072 or ECDSA-P256 are sound
                 defaults. Keep the algorithm consistent with what your client devices
                 (cameras, NVRs) accept for 802.1X if applicable.</li>
         </ul>

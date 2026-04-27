@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>CA Certificates</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif; font-size: 13px;
+               color: #222; padding: 0 28px; line-height: 1.55; }
+        h2 { font-size: 14px; font-weight: 600; margin: -4px 0 8px; color: #333; }
+        h3 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; color: #444; }
+        ul, ol { margin: 0 0 0 20px; padding: 0; }
+        li { margin-bottom: 4px; }
+        p { margin-bottom: 10px; }
+        .card { background: #fff; border: 1px solid #dde0e4; border-radius: 6px;
+                padding: 16px 20px; margin-bottom: 14px; }
+        .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+        .chip-blue { display: inline-block; background: #eef4fb; border: 1px solid #a3c4e4;
+                     border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500;
+                     color: #2a5a96; white-space: nowrap; }
+        code { font-family: Consolas, monospace; font-size: 12px;
+               background: #f4f5f7; border: 1px solid #e1e3e6; padding: 1px 5px; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+        th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+        th { font-weight: 600; color: #444; background: #fafafa; }
+    </style>
+</head>
+<body>
+    <div class="header-row">
+        Container for the certificate authorities that anchor your internal trust
+        <div class="chips"><span class="chip-blue">Two sub-folders inside</span></div>
+    </div>
+
+    <div class="card">
+        <h2>What lives here</h2>
+        <p>
+            This is a grouping node, not a folder you place certs in directly.
+            It contains the two CA folders below.
+        </p>
+        <table>
+            <tr><th>Sub-folder</th><th>Purpose</th></tr>
+            <tr><td>Root Certificates</td><td>Self-signed top-of-trust CAs. Sign Intermediates and (optionally) leaf certs.</td></tr>
+            <tr><td>Intermediate Certificates</td><td>CAs signed by a Root, used as the day-to-day issuer for HTTPS / Service / 802.1X leaf certs.</td></tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Recommended structure</h2>
+        <ol>
+            <li>Issue one Root with a long validity (10 to 20 years) and keep its private key around for emergencies only.</li>
+            <li>Issue one or more Intermediate CAs (5 to 10 years) and use those for everything in the Client Certificates branch.</li>
+            <li>Distribute the Root to the Windows <em>Trusted Root Certification Authorities</em> store on every machine that needs to validate the chain. The PKI Cert Installer EXE handles this routing automatically.</li>
+        </ol>
+        <p>
+            That two-level chain lets you rotate the Intermediate without redistributing
+            the Root, and limits blast radius if a key is ever lost.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Quick start</h2>
+        <p>
+            Skip the manual work and click <strong>Auto setup</strong> on the
+            <strong>Overview</strong> node: it issues a self-signed Root for 15 years and
+            one Service certificate per registered XProtect service signed by that Root,
+            stamped with the current year and month so re-runs sort cleanly.
+        </p>
+    </div>
+</body>
+</html>

@@ -54,6 +54,20 @@ public partial class CertItemViewModel : ObservableObject
     public bool HasPrivateKey => Source.HasPrivateKey && !string.IsNullOrEmpty(Source.PfxBase64);
     public string Sans => Source.SubjectAlternativeNames;
 
+    // Pipe-separated SAN entries split into a list for the details
+    // dialog. Empty entries are dropped; "DNS:"/"IP:" prefixes are
+    // preserved so the admin can see the entry type at a glance.
+    public System.Collections.Generic.IReadOnlyList<string> SansList
+    {
+        get
+        {
+            var raw = Source.SubjectAlternativeNames ?? "";
+            if (raw.Length == 0) return System.Array.Empty<string>();
+            return raw.Split('|', StringSplitOptions.RemoveEmptyEntries
+                                | StringSplitOptions.TrimEntries);
+        }
+    }
+
     // Where this cert lands when installed. Used by the install dialog
     // and the Refresh() state probe so the "Installed" column reflects
     // the actual store the cert belongs in (Root / CA / My).

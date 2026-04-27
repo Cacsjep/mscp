@@ -21,37 +21,34 @@
                    HorizontalAlignment="Center" />
       </StackPanel>
 
-      <TextBlock Text="Server URL" Margin="0,8,0,0" Foreground="#8A93A6" FontSize="11" />
-      <TextBox Text="{Binding ServerUrl}" Watermark="https://mgmt.example.local" />
-
-      <TextBlock Text="Authentication" Margin="0,10,0,0" Foreground="#8A93A6" FontSize="11" />
-      <StackPanel Spacing="2">
-        <RadioButton GroupName="auth"
-                     Content="Basic user"
-                     IsChecked="{Binding Mode, Mode=TwoWay,
-                                 Converter={x:Static vm:EnumToBoolConverter.Instance},
-                                 ConverterParameter=Basic}" />
-        <RadioButton GroupName="auth"
-                     Content="Windows authentication (current user)"
-                     IsChecked="{Binding Mode, Mode=TwoWay,
-                                 Converter={x:Static vm:EnumToBoolConverter.Instance},
-                                 ConverterParameter=WindowsCurrentUser}" />
-        <RadioButton GroupName="auth"
-                     Content="Windows authentication (other user)"
-                     IsChecked="{Binding Mode, Mode=TwoWay,
-                                 Converter={x:Static vm:EnumToBoolConverter.Instance},
-                                 ConverterParameter=WindowsOtherUser}" />
+      <StackPanel Spacing="4">
+        <TextBlock Text="Management server" Foreground="#8A93A6" FontSize="11" />
+        <TextBox Text="{Binding ServerUrl}"
+                 Watermark="mgmt.example.local or 10.0.0.5:8443" />
+        <TextBlock Text="Hostname or IP, optional :port. https:// is added automatically."
+                   Foreground="#5F6878" FontSize="10" TextWrapping="Wrap" />
       </StackPanel>
 
-      <!-- Static line shown when "current user" is picked. -->
-      <Border Background="#22262E" CornerRadius="4" Padding="10,6"
-              IsVisible="{Binding IsWindowsCurrent}">
-        <TextBlock Foreground="#B6C0D6" FontSize="11">
-          <Run Text="Signing in as " />
-          <Run Text="{Binding CurrentWindowsIdentity}" FontWeight="SemiBold" />
-          <Run Text=" via Windows Negotiate (no password needed)." />
-        </TextBlock>
-      </Border>
+      <StackPanel Spacing="4">
+        <TextBlock Text="Authentication" Foreground="#8A93A6" FontSize="11" />
+        <StackPanel Spacing="2">
+          <RadioButton GroupName="auth"
+                       Content="Basic user"
+                       IsChecked="{Binding Mode, Mode=TwoWay,
+                                   Converter={x:Static vm:EnumToBoolConverter.Instance},
+                                   ConverterParameter=Basic}" />
+          <RadioButton GroupName="auth"
+                       Content="Windows authentication (current user)"
+                       IsChecked="{Binding Mode, Mode=TwoWay,
+                                   Converter={x:Static vm:EnumToBoolConverter.Instance},
+                                   ConverterParameter=WindowsCurrentUser}" />
+          <RadioButton GroupName="auth"
+                       Content="Windows authentication (other user)"
+                       IsChecked="{Binding Mode, Mode=TwoWay,
+                                   Converter={x:Static vm:EnumToBoolConverter.Instance},
+                                   ConverterParameter=WindowsOtherUser}" />
+        </StackPanel>
+      </StackPanel>
 
       <!-- Username + password are hidden for current-user mode. -->
       <StackPanel Spacing="6" IsVisible="{Binding NeedsExplicitCreds}">
@@ -61,13 +58,24 @@
         <TextBox Text="{Binding Password}" PasswordChar="*" Watermark="•••" />
       </StackPanel>
 
-      <Button Content="{Binding IsBusy, Converter={x:Static vm:BusyConverter.Instance}}"
-              Command="{Binding ConnectCommand}"
+      <!-- Connect button doubles as the busy indicator. The ProgressRing
+           hides when idle; the label flips to "Connecting..." while the
+           IDP token exchange is in flight. -->
+      <Button Command="{Binding ConnectCommand}"
               IsEnabled="{Binding !IsBusy}"
               HorizontalAlignment="Stretch"
               Height="38"
               Margin="0,12,0,0"
-              Classes="accent" />
+              Classes="accent">
+        <StackPanel Orientation="Horizontal" Spacing="8"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+          <fa:ProgressRing IsActive="True" Width="16" Height="16"
+                           Foreground="White"
+                           IsVisible="{Binding IsBusy}" />
+          <TextBlock Text="{Binding IsBusy, Converter={x:Static vm:BusyConverter.Instance}}"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
 
       <TextBlock Text="{Binding ErrorMessage}"
                  Foreground="#E06363"

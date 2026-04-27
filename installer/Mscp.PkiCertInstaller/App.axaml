@@ -82,5 +82,37 @@
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
+
+    <!-- Cell background overrides for every focus/selection state the
+         theme paints. Combined with the SelectionChanged handler in
+         CertListView.axaml.cs (which clears the selection right after
+         it lands), this guarantees no cell ever shows as "picked". -->
+    <Style Selector="DataGridCell:selected">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    </Style>
+    <Style Selector="DataGridCell:current">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="DataGridCell:focus">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="DataGridCell:pressed">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!-- We rely on per-row checkboxes for selection, so kill the Fluent
+         theme's row-selection background. Hover still tints the row
+         (left intact via DataGridRow:pointerover). Selected and
+         pointer-pressed states paint the same background as the idle
+         row so clicking a row produces no visible "selection". -->
+    <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+      <Setter Property="Fill" Value="Transparent" />
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+      <Setter Property="Opacity" Value="0.04" />
+    </Style>
   </Application.Styles>
 </Application>
+

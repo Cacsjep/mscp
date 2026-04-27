@@ -1,0 +1,130 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Mscp.PkiCertInstaller.ViewModels"
+        xmlns:mi="using:Material.Icons.Avalonia"
+        x:Class="Mscp.PkiCertInstaller.Views.CertDetailsDialog"
+        x:DataType="vm:CertItemViewModel"
+        Title="Certificate"
+        Width="640" Height="640"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner"
+        Background="#0F1115">
+
+  <Window.Resources>
+    <!-- Re-usable bits so the body stays readable. -->
+  </Window.Resources>
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="0">
+
+    <!-- Heading band: shield icon + display name + cert kind chip. -->
+    <Border Grid.Row="0" Padding="20,18,20,16">
+      <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+        <mi:MaterialIcon Kind="CertificateOutline" Width="32" Height="32" Foreground="#0099DA" />
+        <StackPanel>
+          <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding KindLabel}" Foreground="#8A93A6" FontSize="12" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- Detail rows. Two-column layout: muted label | mono value. -->
+    <ScrollViewer Grid.Row="1" Padding="20,4,20,16"
+                  HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="14">
+
+        <Border CornerRadius="6" Padding="16,14" Background="#1A1D24">
+          <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                RowSpacing="8">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Subject"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Subject}"
+                       FontSize="12" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Issuer"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Issuer}"
+                       FontSize="12" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Serial number"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Source.SerialNumber}"
+                       FontFamily="Cascadia Code,Consolas,monospace" FontSize="11" />
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Thumbprint (SHA-1)"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Thumbprint}"
+                       FontFamily="Cascadia Code,Consolas,monospace" FontSize="11"
+                       TextWrapping="Wrap" />
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="Key algorithm"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding KeyAlgorithm}"
+                       FontSize="12" />
+            <TextBlock Grid.Row="5" Grid.Column="0" Text="Private key"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="5" Grid.Column="1"
+                       Text="{Binding HasPrivateKey, Converter={x:Static vm:HasKeyConverter.Instance}}"
+                       FontSize="12" />
+          </Grid>
+        </Border>
+
+        <Border CornerRadius="6" Padding="16,14" Background="#1A1D24">
+          <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Valid from"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="0" Grid.Column="1"
+                       Text="{Binding Source.NotBefore, StringFormat=yyyy-MM-dd HH:mm}"
+                       FontSize="12" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Valid until"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="1" Grid.Column="1"
+                       Text="{Binding Source.NotAfter, StringFormat=yyyy-MM-dd HH:mm}"
+                       FontSize="12" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Remaining"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Remaining}" FontSize="12" />
+          </Grid>
+        </Border>
+
+        <Border CornerRadius="6" Padding="16,14" Background="#1A1D24"
+                IsVisible="{Binding Sans, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Subject Alternative Names" Foreground="#8A93A6" FontSize="12" />
+            <ItemsControl ItemsSource="{Binding SansList}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding}" FontSize="12"
+                             FontFamily="Cascadia Code,Consolas,monospace"
+                             Margin="0,1,0,1" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border CornerRadius="6" Padding="16,14" Background="#1A1D24">
+          <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Target store"
+                       Foreground="#8A93A6" FontSize="12" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TargetStoreDisplay}"
+                       FontSize="12" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Match this machine"
+                       Foreground="#8A93A6" FontSize="12" />
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                        ToolTip.Tip="{Binding MachineMatchTooltip}">
+              <Ellipse Width="10" Height="10" Fill="{Binding MachineMatchBrush}"
+                       VerticalAlignment="Center" />
+              <TextBlock Text="{Binding MachineMatchText}" FontSize="12" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Footer: close only. -->
+    <Border Grid.Row="2" Padding="20,12">
+      <Grid ColumnDefinitions="*,Auto">
+        <Button Grid.Column="1" Content="Close" Click="OnClose"
+                Classes="accent" MinWidth="100" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

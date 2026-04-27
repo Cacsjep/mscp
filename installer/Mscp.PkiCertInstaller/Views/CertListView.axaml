@@ -15,159 +15,157 @@
     <StreamGeometry x:Key="IconSearch">M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z</StreamGeometry>
   </UserControl.Resources>
 
+  <!-- No card backgrounds: toolbar and grid render directly on the
+       main window backdrop. Borders / fills only appear on hover. -->
   <Grid RowDefinitions="Auto,*" Margin="20">
 
     <!-- Single consolidated toolbar: search + filter on the left,
          every primary action on the right. The brand/header row is
          gone - the title bar already has the app icon and name. -->
-    <Border Grid.Row="0" Background="#1A1D24" CornerRadius="6" Padding="12,8" Margin="0,0,0,8">
-      <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" VerticalAlignment="Center">
-        <Grid Grid.Column="0" VerticalAlignment="Center">
-          <PathIcon Data="{StaticResource IconSearch}" Width="14" Height="14"
-                    Foreground="#8A93A6"
-                    HorizontalAlignment="Left" VerticalAlignment="Center"
-                    Margin="10,0,0,0" />
-          <TextBox Text="{Binding SearchText}" Width="320"
-                   Padding="30,4,8,4" />
-        </Grid>
-        <TextBlock Grid.Column="1" Text="Folder:" VerticalAlignment="Center"
-                   Foreground="#8A93A6" Margin="14,0,8,0" />
-        <ComboBox Grid.Column="2"
-                  ItemsSource="{Binding FolderOptions}"
-                  SelectedItem="{Binding FolderFilter, Mode=TwoWay}"
-                  Width="170" />
-        <TextBlock Grid.Column="3"
-                   Text="{Binding Items.Count, StringFormat='{}{0} match(es)'}"
-                   VerticalAlignment="Center" Foreground="#8A93A6"
-                   Margin="12,0,0,0" />
-
-        <!-- Spacer -->
-
-        <Button Grid.Column="5"
-                Command="{Binding ReloadCommand}"
-                IsEnabled="{Binding !IsBusy}"
-                ToolTip.Tip="Refresh certificate list"
-                Margin="0,0,8,0">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <PathIcon Data="{StaticResource IconRefresh}" Width="14" Height="14" Foreground="#E0E6F0" />
-            <TextBlock Text="Reload" />
-          </StackPanel>
-        </Button>
-        <Button Grid.Column="6"
-                Command="{Binding InstallCommand}"
-                Classes="accent"
-                Margin="0,0,8,0">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <PathIcon Data="{StaticResource IconDownload}" Width="14" Height="14" Foreground="White" />
-            <TextBlock Text="Install" />
-          </StackPanel>
-        </Button>
-        <Button Grid.Column="7"
-                Command="{Binding UninstallCommand}"
-                Margin="0,0,8,0">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <PathIcon Data="{StaticResource IconDelete}" Width="14" Height="14" Foreground="#E0E6F0" />
-            <TextBlock Text="Uninstall" />
-          </StackPanel>
-        </Button>
-        <Button Grid.Column="8"
-                Command="{Binding OpenServerConfiguratorCommand}">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <PathIcon Data="{StaticResource IconOpenInNew}" Width="14" Height="14" Foreground="#E0E6F0" />
-            <TextBlock Text="Open Server Configurator" />
-          </StackPanel>
-        </Button>
+    <Grid Grid.Row="0" Margin="0,0,0,8"
+          ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"
+          VerticalAlignment="Center">
+      <Grid Grid.Column="0" VerticalAlignment="Center">
+        <PathIcon Data="{StaticResource IconSearch}" Width="14" Height="14"
+                  Foreground="#8A93A6"
+                  HorizontalAlignment="Left" VerticalAlignment="Center"
+                  Margin="10,0,0,0" />
+        <TextBox Text="{Binding SearchText}" Width="320"
+                 Padding="30,4,8,4" />
       </Grid>
-    </Border>
+      <TextBlock Grid.Column="1" Text="Folder:" VerticalAlignment="Center"
+                 Foreground="#8A93A6" Margin="14,0,8,0" />
+      <ComboBox Grid.Column="2"
+                ItemsSource="{Binding FolderOptions}"
+                SelectedItem="{Binding FolderFilter, Mode=TwoWay}"
+                Width="170" />
+      <TextBlock Grid.Column="3"
+                 Text="{Binding Items.Count, StringFormat='{}{0} match(es)'}"
+                 VerticalAlignment="Center" Foreground="#8A93A6"
+                 Margin="12,0,0,0" />
 
-    <!-- Cert grid takes the full remaining space. Auto-sized columns
-         shrink to their content; Name and SANs stretch to share the
-         leftover. -->
-    <Border Grid.Row="1" Background="#1A1D24" CornerRadius="6" Padding="0">
-      <DataGrid Name="Grid"
-                ItemsSource="{Binding Items}"
-                AutoGenerateColumns="False"
-                GridLinesVisibility="Horizontal"
-                HeadersVisibility="Column"
-                IsReadOnly="True"
-                CanUserResizeColumns="True"
-                CanUserSortColumns="True"
-                SelectionMode="Single"
-                HorizontalScrollBarVisibility="Disabled"
-                HorizontalAlignment="Stretch">
-        <DataGrid.Columns>
-          <DataGridTemplateColumn Width="44" MinWidth="44"
-                                  CanUserSort="False" CanUserReorder="False" CanUserResize="False">
-            <DataGridTemplateColumn.Header>
-              <CheckBox IsThreeState="True"
+      <!-- Spacer -->
+
+      <Button Grid.Column="5"
+              Command="{Binding ReloadCommand}"
+              IsEnabled="{Binding !IsBusy}"
+              ToolTip.Tip="Refresh certificate list"
+              Margin="0,0,8,0">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Data="{StaticResource IconRefresh}" Width="14" Height="14" Foreground="#E0E6F0" />
+          <TextBlock Text="Reload" />
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="6"
+              Command="{Binding InstallCommand}"
+              Classes="accent"
+              Margin="0,0,8,0">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Data="{StaticResource IconDownload}" Width="14" Height="14" Foreground="White" />
+          <TextBlock Text="Install" />
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="7"
+              Command="{Binding UninstallCommand}"
+              Margin="0,0,8,0">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Data="{StaticResource IconDelete}" Width="14" Height="14" Foreground="#E0E6F0" />
+          <TextBlock Text="Uninstall" />
+        </StackPanel>
+      </Button>
+      <Button Grid.Column="8"
+              Command="{Binding OpenServerConfiguratorCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Data="{StaticResource IconOpenInNew}" Width="14" Height="14" Foreground="#E0E6F0" />
+          <TextBlock Text="Open Server Configurator" />
+        </StackPanel>
+      </Button>
+    </Grid>
+
+    <!-- Grid sits directly on the window background. Double-tap on a
+         row opens the cert details dialog (handled in code-behind).
+         HorizontalScrollBarVisibility=Disabled forces the * columns to
+         consume all leftover width on the very first layout pass; with
+         Auto the grid sometimes settled at minimum width until the user
+         resized the window. SelectionChanged in code-behind clears the
+         selection so cell focus / row highlight never sticks - selection
+         is driven solely by the leftmost checkbox column. -->
+    <DataGrid Grid.Row="1"
+              Name="Grid"
+              ItemsSource="{Binding Items}"
+              AutoGenerateColumns="False"
+              GridLinesVisibility="Horizontal"
+              HeadersVisibility="Column"
+              IsReadOnly="True"
+              CanUserResizeColumns="True"
+              CanUserSortColumns="True"
+              SelectionMode="Single"
+              FontSize="12"
+              Background="Transparent"
+              RowBackground="Transparent"
+              HorizontalScrollBarVisibility="Disabled"
+              HorizontalAlignment="Stretch"
+              DoubleTapped="OnRowDoubleTapped"
+              SelectionChanged="OnGridSelectionChanged">
+      <DataGrid.Columns>
+        <DataGridTemplateColumn Width="44" MinWidth="44"
+                                CanUserSort="False" CanUserReorder="False" CanUserResize="False">
+          <DataGridTemplateColumn.Header>
+            <CheckBox IsThreeState="True"
+                      MinWidth="0" Padding="0" Margin="0"
+                      IsChecked="{Binding $parent[DataGrid].((vm:CertListViewModel)DataContext).AllChecked, Mode=TwoWay}"
+                      ToolTip.Tip="Select all visible" />
+          </DataGridTemplateColumn.Header>
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
                         MinWidth="0" Padding="0" Margin="0"
-                        IsChecked="{Binding $parent[DataGrid].((vm:CertListViewModel)DataContext).AllChecked, Mode=TwoWay}"
-                        ToolTip.Tip="Select all visible" />
-            </DataGridTemplateColumn.Header>
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                          MinWidth="0" Padding="0" Margin="0"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Installed" Width="120"
-                                  CanUserSort="True" SortMemberPath="StatusText">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="10,0"
-                            VerticalAlignment="Center">
-                  <Ellipse Width="10" Height="10" Fill="{Binding StatusBrush}" />
-                  <TextBlock Text="{Binding StatusText}" />
-                </StackPanel>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Machine Match" Width="140"
-                                  CanUserSort="True" SortMemberPath="MachineMatchText">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="10,0"
-                            VerticalAlignment="Center"
-                            ToolTip.Tip="{Binding MachineMatchTooltip}">
-                  <Ellipse Width="10" Height="10" Fill="{Binding MachineMatchBrush}" />
-                  <TextBlock Text="{Binding MachineMatchText}" />
-                </StackPanel>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTextColumn Header="Name"   Binding="{Binding Name}"      Width="*" />
-          <DataGridTextColumn Header="Folder" Binding="{Binding KindLabel}" Width="130" />
-          <DataGridTemplateColumn Header="SANs" Width="2*"
-                                  CanUserSort="True" SortMemberPath="SansShort">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding SansShort}"
-                           ToolTip.Tip="{Binding Sans}"
-                           VerticalAlignment="Center"
-                           Margin="10,0"
-                           TextTrimming="CharacterEllipsis" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Thumbprint" Width="200"
-                                  CanUserSort="True" SortMemberPath="Thumbprint">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding ShortThumbprint}"
-                           ToolTip.Tip="{Binding Thumbprint}"
-                           FontFamily="Cascadia Code,Consolas,monospace"
-                           FontSize="11"
-                           VerticalAlignment="Center"
-                           Margin="10,0" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTextColumn Header="Remaining" Binding="{Binding Remaining}" Width="110" />
-        </DataGrid.Columns>
-      </DataGrid>
-    </Border>
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="Installed" Width="120"
+                                CanUserSort="True" SortMemberPath="StatusText">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="10,0"
+                          VerticalAlignment="Center">
+                <Ellipse Width="10" Height="10" Fill="{Binding StatusBrush}" />
+                <TextBlock Text="{Binding StatusText}" />
+              </StackPanel>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="Machine Match" Width="140"
+                                CanUserSort="True" SortMemberPath="MachineMatchText">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="10,0"
+                          VerticalAlignment="Center"
+                          ToolTip.Tip="{Binding MachineMatchTooltip}">
+                <Ellipse Width="10" Height="10" Fill="{Binding MachineMatchBrush}" />
+                <TextBlock Text="{Binding MachineMatchText}" />
+              </StackPanel>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="Name"   Binding="{Binding Name}"      Width="*" MinWidth="180" />
+        <DataGridTextColumn Header="Folder" Binding="{Binding KindLabel}" Width="130" />
+        <DataGridTemplateColumn Header="SANs" Width="2*" MinWidth="180"
+                                CanUserSort="True" SortMemberPath="SansShort">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding SansShort}"
+                         ToolTip.Tip="{Binding Sans}"
+                         VerticalAlignment="Center"
+                         Margin="10,0"
+                         TextTrimming="CharacterEllipsis" />
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="Remaining" Binding="{Binding Remaining}" Width="110" />
+      </DataGrid.Columns>
+    </DataGrid>
   </Grid>
 </UserControl>

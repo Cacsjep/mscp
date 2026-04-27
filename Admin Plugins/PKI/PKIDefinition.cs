@@ -110,7 +110,8 @@ namespace PKI
                     "CA Certificates", _caFolderIcon,
                     "CA Certificates", _caFolderIcon,
                     Category.Text, false, ItemsAllowed.None,
-                    null, new List<ItemNode> { rootCertNode, intermediateNode });
+                    new HelpOnlyItemManager("HelpPage_CA.html"),
+                    new List<ItemNode> { rootCertNode, intermediateNode });
 
                 var httpsNode = new ItemNode(
                     PkiHttpsKindId, PkiClientFolderKindId,
@@ -138,7 +139,8 @@ namespace PKI
                     "Client Certificates", _clientFolderIcon,
                     "Client Certificates", _clientFolderIcon,
                     Category.Text, false, ItemsAllowed.None,
-                    null, new List<ItemNode> { httpsNode, dot1xNode, serviceNode });
+                    new HelpOnlyItemManager("HelpPage_Client.html"),
+                    new List<ItemNode> { httpsNode, dot1xNode, serviceNode });
 
                 var overviewNode = new ItemNode(
                     PkiOverviewKindId, Guid.Empty,

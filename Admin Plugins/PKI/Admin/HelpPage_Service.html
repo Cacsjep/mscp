@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -50,12 +50,12 @@
     <div class="card">
         <h2>Required fields</h2>
         <ul>
-            <li><strong>Sign with</strong> &mdash; a CA in this vault.</li>
-            <li><strong>Display name</strong> &mdash; e.g. <code>MSCP PKI (yyyy.MM) - Recording Server srv-01</code>.
+            <li><strong>Sign with</strong> - a CA in this vault.</li>
+            <li><strong>Display name</strong> - e.g. <code>MSCP PKI (yyyy.MM) - Recording Server srv-01</code>.
                 The Auto setup convention is <code>MSCP PKI (yyyy.MM) - &lt;Category&gt; &lt;Hostname&gt;</code>.</li>
-            <li><strong>Validity</strong> &mdash; commonly 1 to 5 years for service certs.
+            <li><strong>Validity</strong> - commonly 1 to 5 years for service certs.
                 Internal services aren't subject to the 397-day browser ceiling.</li>
-            <li><strong>Subject Alternative Names</strong> &mdash; the hostname, FQDN, and
+            <li><strong>Subject Alternative Names</strong> - the hostname, FQDN, and
                 every IP the service is reachable on. <em>Add this machine's hostname and IPs</em>
                 pre-fills these from the local machine; on the management server you'll
                 often need to add the SANs of the remote target manually.</li>

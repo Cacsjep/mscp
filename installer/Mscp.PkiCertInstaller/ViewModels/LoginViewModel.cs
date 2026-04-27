@@ -8,7 +8,7 @@ namespace Mscp.PkiCertInstaller.ViewModels;
 
 public partial class LoginViewModel : ObservableObject
 {
-    [ObservableProperty] private string serverUrl = "https://localhost";
+    [ObservableProperty] private string serverUrl = "localhost";
     [ObservableProperty] private AuthMode mode = AuthMode.WindowsCurrentUser;
     [ObservableProperty] private string username = "";
     [ObservableProperty] private string password = "";

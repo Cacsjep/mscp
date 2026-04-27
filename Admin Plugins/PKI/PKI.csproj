@@ -43,6 +43,12 @@
     <Content Include="Admin\HelpPage.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Admin\HelpPage_CA.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage_Client.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Admin\HelpPage_RootCA.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

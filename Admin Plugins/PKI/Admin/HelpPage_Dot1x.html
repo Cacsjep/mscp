@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -48,14 +48,14 @@
     <div class="card">
         <h2>Required fields</h2>
         <ul>
-            <li><strong>Sign with</strong> &mdash; a CA already trusted by your RADIUS / NPS
+            <li><strong>Sign with</strong> - a CA already trusted by your RADIUS / NPS
                 server.</li>
-            <li><strong>Display name</strong> &mdash; identifies the device or user.</li>
-            <li><strong>Common Name</strong> &mdash; e.g. <code>camera-01.example.local</code>
+            <li><strong>Display name</strong> - identifies the device or user.</li>
+            <li><strong>Common Name</strong> - e.g. <code>camera-01.example.local</code>
                 or <code>alice@example.com</code>. Many RADIUS policies key on this value.</li>
-            <li><strong>Validity</strong> &mdash; commonly 1-2 years. Schedule renewals before
+            <li><strong>Validity</strong> - commonly 1-2 years. Schedule renewals before
                 expiry; a stale 802.1X cert means devices stop authenticating onto the network.</li>
-            <li><strong>Key algorithm</strong> &mdash; check what your endpoint device
+            <li><strong>Key algorithm</strong> - check what your endpoint device
                 actually accepts. Many older cameras require RSA.</li>
         </ul>
     </div>
