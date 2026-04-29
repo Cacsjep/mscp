@@ -139,6 +139,10 @@ hide:
     <div class="pi ap"><i class="mdi mdi-certificate"></i></div>
     <div class="pt"><span class="pn">Certificate Watchdog</span><span class="pd">Monitor SSL certificate expiry for all HTTPS endpoints</span></div>
   </a>
+  <a class="pr" href="admin/colored-timeline/">
+    <div class="pi ap"><i class="mdi mdi-timeline-text"></i></div>
+    <div class="pt"><span class="pn">Colored Timeline</span><span class="pd">Render any pair of camera events (edge motion, line crossings, access control) as colored ribbons or per-event markers on the Smart Client playback timeline</span></div>
+  </a>
   <a class="pr" href="admin/http-requests/">
     <div class="pi ap"><i class="mdi mdi-send"></i></div>
     <div class="pt"><span class="pn">HTTP Requests</span><span class="pd">HTTP requests actions that are more powerful and flexible.</span></div>
