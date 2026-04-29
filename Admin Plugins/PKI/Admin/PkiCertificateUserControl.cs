@@ -69,6 +69,9 @@ namespace PKI.Admin
         private readonly Button _exportPemKey  = new Button { Text = "Export PEM key PKCS#8..." };
         private readonly Button _exportPemRsa  = new Button { Text = "Export PEM RSA key PKCS#1..." };
         private readonly Button _exportBundle  = new Button { Text = "Export PEM cert + key bundle..." };
+        // Only shown for Root CA / Intermediate CA roles. Lets the admin
+        // sign an externally-supplied CSR with this CA's private key.
+        private readonly Button _signCsr       = new Button { Text = "Sign CSR..." };
 
         public PkiCertificateUserControl(RolePreset role, PkiCertItemManager owner)
         {
@@ -157,6 +160,7 @@ namespace PKI.Admin
             _exportPemKey.Click  += (s, e) => DoExport("pem-key-pkcs8");
             _exportPemRsa.Click  += (s, e) => DoExport("pem-key-pkcs1");
             _exportBundle.Click  += (s, e) => DoExport("pem-bundle");
+            _signCsr.Click       += (s, e) => DoSignCsr();
 
             EventHandler change = (s, e) => Fire();
             _o.TextChanged += change;
@@ -500,6 +504,28 @@ namespace PKI.Admin
             });
             grid.RowCount++;
 
+            // Sign-CSR section. The button is added unconditionally to the
+            // form layout but only made visible when the role is a CA
+            // (FillContent decides). Saves us from rebuilding the form
+            // when the role check would change.
+            if (_role == RolePreset.RootCA || _role == RolePreset.IntermediateCA)
+            {
+                Section("Sign external CSR");
+                var rowSign = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = true };
+                _signCsr.Width = 200; _signCsr.Height = 30; _signCsr.Margin = new Padding(0, 0, 8, 6);
+                rowSign.Controls.Add(_signCsr);
+                grid.Controls.Add(rowSign);
+                grid.RowCount++;
+                grid.Controls.Add(new Label
+                {
+                    Text = "Sign a CSR submitted by another server or admin. The signed certificate is written to a file - the CSR submitter pairs it with their own private key.",
+                    AutoSize = true, ForeColor = Color.Gray, Font = new Font(Font.FontFamily, 8F),
+                    MaximumSize = new Size(700, 0),
+                    Margin = new Padding(0, 0, 0, 0),
+                });
+                grid.RowCount++;
+            }
+
             _viewForm = grid;
         }
 
@@ -824,6 +850,45 @@ namespace PKI.Admin
         // ── Export ────────────────────────────────────────────────────────
 
         private void DoExport(string format) => CertExporter.ExportInteractive(_item, format, this);
+
+        // ── Sign external CSR ────────────────────────────────────────────
+        // Loads this CA's cert + private key from its MIP item, then opens
+        // the dialog. Keys live in the PFX blob; we unwrap with an empty
+        // password (the cert vault stores them DPAPI-protected, not
+        // PKCS#12-encrypted, so the inner PKCS#12 is plaintext).
+        private void DoSignCsr()
+        {
+            if (_item == null) return;
+            try
+            {
+                var pfxB64 = Get(_item, "Pfx");
+                if (string.IsNullOrEmpty(pfxB64))
+                {
+                    MessageBox.Show(this,
+                        "This CA has no private key on this server. Only CAs that hold their key can sign CSRs.",
+                        "Sign CSR", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                var pfx = CertVault.FromBase64(pfxB64);
+                var loaded = Pkcs12Bundle.Load(pfx, "");
+                if (loaded.Certificate == null || loaded.PrivateKey == null)
+                {
+                    MessageBox.Show(this,
+                        "Could not unwrap the CA's certificate and private key.",
+                        "Sign CSR", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                using (var dlg = new PkiSignCsrDialog(_item, loaded.Certificate, loaded.PrivateKey))
+                {
+                    dlg.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Could not open Sign CSR dialog:\n\n" + ex.Message,
+                    "PKI", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
         // ── Helpers ───────────────────────────────────────────────────────
 

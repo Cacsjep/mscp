@@ -70,6 +70,16 @@ namespace PKI.Crypto
             return "SHA256WITHRSA";
         }
 
+        // Same heuristic as the keypair overload, but works when only the
+        // private key is in hand (CSR signing path - we have the CA's
+        // private key and the CSR's public key, never the CA keypair).
+        public static string DeriveSigAlgo(AsymmetricKeyParameter privateKey)
+        {
+            if (privateKey is ECPrivateKeyParameters ec)
+                return ec.Parameters.Curve.FieldSize >= 384 ? "SHA384WITHECDSA" : "SHA256WITHECDSA";
+            return "SHA256WITHRSA";
+        }
+
         private static AsymmetricCipherKeyPair Rsa(int bits)
         {
             var gen = new RsaKeyPairGenerator();
