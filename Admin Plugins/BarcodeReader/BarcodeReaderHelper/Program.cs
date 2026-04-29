@@ -135,8 +135,11 @@ namespace BarcodeReaderHelper
                 }
 
                 _log.Info($"Camera resolved: {cameraItem.Name}");
+                _log.Info("Run: pre-DecodeLoop ctor");
                 loop = new DecodeLoop(cameraItem, cfg, _log);
+                _log.Info("Run: pre-DecodeLoop.Start");
                 loop.Start();
+                _log.Info("Run: post-DecodeLoop.Start, entering wait");
                 // DecodeLoop.OpenSource already publishes "Running" / "Error:Connect" and
                 // will keep the admin UI in sync through reconnects. No manual WriteStatus
                 // here  the watchdog owns the Running state from now on.
