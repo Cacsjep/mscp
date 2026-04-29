@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>ColoredTimeline</RootNamespace>
+    <AssemblyName>ColoredTimeline</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <PluginName>ColoredTimeline</PluginName>
+    <StopSmartClient>true</StopSmartClient>
+    <StopAdminClient>true</StopAdminClient>
+    <StopEventServer>false</StopEventServer>
+    <StartEventServer>false</StartEventServer>
+    <LaunchAdminClient>false</LaunchAdminClient>
+    <LaunchSmartClient>false</LaunchSmartClient>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

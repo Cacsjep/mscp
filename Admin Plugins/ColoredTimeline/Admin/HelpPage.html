@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Colored Timeline Plugin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #222;
+            padding: 0px 28px;
+            line-height: 1.55;
+        }
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #1a1a1a;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: -4px 0 8px;
+            color: #333;
+        }
+        h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin: 12px 0 6px;
+            color: #444;
+        }
+        ul {
+            margin: 0 0 0 20px;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        p {
+            margin-bottom: 10px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #dde0e4;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+        }
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            margin-left: 0;
+        }
+        .steps li {
+            counter-increment: step;
+            padding-left: 28px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        .steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2868b8;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 20px;
+        }
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .header-row h1 {
+            margin-bottom: 0;
+        }
+        .chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        .chip-amber {
+            display: inline-block;
+            background: #fdf6ec;
+            border: 1px solid #e0b96a;
+            border-radius: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #7a5a1a;
+            white-space: nowrap;
+            margin-right: 3px;
+        }
+        .chip-blue {
+            display: inline-block;
+            background: #eef4fb;
+            border: 1px solid #a3c4e4;
+            border-radius: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #2a5a96;
+            white-space: nowrap;
+            margin-right: 3px;
+        }
+        .diagram {
+            font-family: Consolas, Courier New, monospace;
+            font-size: 11px;
+            background: #f0f2f5;
+            border: 1px solid #dde0e4;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 8px 0 10px;
+            line-height: 1.6;
+            white-space: pre;
+            overflow-x: auto;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-row">
+        Render any pair of camera events as colored ribbons on the Smart Client timeline
+        <div class="chips">
+            <span class="chip-amber" title="This is an independent open-source project provided as-is under the MIT License, with no warranty. Not affiliated with Milestone Systems. Use at your own risk.">Open source - no warranty, use at own risk</span>
+            <span class="chip-blue" title="Each rule pairs a start event with a stop event for a list of cameras and renders the interval as a colored ribbon.">Per-camera selectable events</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>How It Works</h2>
+        <p>
+            XProtect's built-in timeline only shows motion sequences detected by the
+            <strong>Recording Server's</strong> built-in motion detection. Edge motion
+            (motion detected by the camera firmware) and other camera-fired events do
+            <strong>not</strong> appear on the playback timeline.
+        </p>
+        <p>
+            This plugin closes that gap. Each <strong>Timeline Rule</strong> pairs a
+            <strong>start event</strong> with a <strong>stop event</strong> for a
+            specific list of cameras and a chosen color. Whenever the user pans or
+            zooms the timeline in Smart Client, the plugin queries the event log for
+            paired start / stop events on each camera and paints the resulting
+            intervals as a ribbon in the configured color.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Prerequisites</h2>
+        <h3>Device-event retention</h3>
+        <p>
+            In Management Client open <strong>Tools &gt; Options &gt; Alarms and
+            Events</strong> and set device-event retention to at least as many days
+            as your video retention. Ribbons are rendered from historical event-log
+            queries; events that have aged out will not appear even if the recording
+            still exists.
+        </p>
+        <h3>Smart Client setting</h3>
+        <p>
+            In Smart Client open <strong>Settings &gt; Timeline</strong> and set
+            <strong>Additional data</strong> to <strong>Show</strong>. Without this,
+            plugin-provided ribbons are silently suppressed.
+        </p>
+        <h3>Unblock files (manual install only)</h3>
+        <p>
+            When installing by copy instead of the MSI, Windows may flag DLLs from
+            internet downloads. Right-click each DLL &gt; Properties &gt;
+            <strong>Unblock</strong>, or install via the MSI to avoid this.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Getting Started</h2>
+        <ol class="steps">
+            <li>Click on the <strong>Timeline Rules</strong> node in the tree on the left.</li>
+            <li>Right-click and select <strong>Create New</strong> to add a rule.</li>
+            <li>Give the rule a name and pick a ribbon color.</li>
+            <li>Click <strong>Add Camera...</strong> and select the cameras this rule should apply to.</li>
+            <li>Pick the <strong>Start event</strong> and <strong>Stop event</strong> from the dropdowns. The dropdowns are populated automatically from the trigger events of the cameras you added.</li>
+            <li>Click <strong>Save</strong>. Smart Client picks up the change within a few seconds.</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>Camera Selection</h2>
+        <p>
+            Each rule applies only to the cameras listed under <strong>Cameras</strong>.
+            A camera not in any rule's list gets no ribbon. The same camera can appear
+            in multiple rules, in which case multiple ribbons are stacked on its
+            timeline (one per matching rule).
+        </p>
+        <ul>
+            <li>Use <strong>Add Camera...</strong> to open the Milestone camera picker.</li>
+            <li>Use <strong>Remove</strong> to drop a camera from the list.</li>
+            <li>The Start / Stop event dropdowns refresh automatically from the trigger events exposed by the cameras you have selected.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Picking the Right Event</h2>
+        <p>
+            The <strong>Start event</strong> and <strong>Stop event</strong> dropdowns
+            list every trigger event that the selected cameras expose, so for typical
+            edge-motion setups you will find entries like
+            <em>Motion Started Driver</em> / <em>Motion Stopped Driver</em>, or
+            vendor-specific names for object analytics, line crossings, etc.
+        </p>
+        <p>
+            The dropdown is populated automatically when you add or remove cameras.
+            It merges two sources: the configured trigger events on each camera, and
+            the messages of events that have actually fired in the last 7 days
+            (queried from the Event Server's event log). That second source is what
+            surfaces driver-fired events like <em>Motion Started Driver</em> which
+            otherwise have no configuration item.
+        </p>
+        <p>
+            Free-text is also accepted in the Start / Stop fields, in case an event
+            hasn't been observed yet or has aged out of the event log.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>How a Ribbon Is Drawn</h2>
+        <p>
+            When the user pans or zooms the Smart Client timeline, Smart Client asks
+            every registered <code>TimelineSequenceSource</code> for sequences in the
+            visible time window. For each rule that applies to the camera in that
+            view item, the plugin runs two parallel event-log queries (start and stop)
+            scoped to the camera and the configured message text, then pairs them
+            into intervals.
+        </p>
+        <ul>
+            <li>Each <strong>start</strong> is paired with the next <strong>stop</strong> at or after its timestamp.</li>
+            <li>An open interval (start without a matching stop) is extended to the end of the visible window.</li>
+            <li>Overlapping starts (a second start before the previous stop) are skipped.</li>
+            <li>The interval is drawn as a colored ribbon in the configured <strong>Ribbon color</strong>.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Architecture</h2>
+        <p>The plugin runs in two environments:</p>
+
+        <h3>Management Client (Admin UI)</h3>
+        <p>
+            Provides the configuration interface you are using now. Lets you create,
+            edit, and delete timeline rules. Each rule pairs an event start / stop
+            with a list of cameras and a ribbon color, stored as a MIP item.
+        </p>
+
+        <h3>Smart Client (Background Plugin)</h3>
+        <p>
+            Runs invisibly in the Smart Client. For every camera view item that opens,
+            it walks the configured rules and registers one
+            <code>TimelineSequenceSource</code> per rule whose camera list includes
+            that view item's camera. Each source listens for timeline range requests
+            and answers with paired start / stop intervals queried from the event log.
+        </p>
+
+        <div class="diagram">Management Client                Smart Client
+       (Admin UI)                (Background Plugin)
+            |                              |
+            |--- Save Rule --------------->|
+            |                              |
+            |                              | --- new camera view ---.
+            |                              |                        |
+            |                              |<-- pan / zoom timeline-|
+            |                              |--- GetEventLines ------> Event log
+            |                              |<-- start + stop events --|
+            |                              |
+            |                              |--- pair into intervals
+            |                              |--- paint ribbon -------> camera timeline</div>
+    </div>
+
+    <div class="card">
+        <h2>Limitations</h2>
+        <ul>
+            <li><strong>Historical events only.</strong> Live ribbon updates require a pan / zoom or seek to refresh the visible range.</li>
+            <li><strong>One color per rule.</strong> To stack ribbons of different colors on the same camera, create multiple rules.</li>
+            <li><strong>Events must be retained.</strong> See <em>Prerequisites</em> - device-event retention must cover the playback range you want to colorize.</li>
+            <li><strong>Smart Client toggle required.</strong> "Additional data" must be set to <em>Show</em> in the timeline settings, otherwise plugin ribbons are not rendered.</li>
+        </ul>
+    </div>
+
+    <div class="card" style="font-size:12px; line-height:1.5;">
+        <h2>Legal</h2>
+        <p>
+            This is an independent open-source project and is not affiliated with,
+            endorsed by, or supported by Milestone Systems.
+            XProtect&reg; is a registered trademark of Milestone Systems A/S.
+        </p>
+        <p>
+            This software is provided "as is", without warranty of any kind,
+            express or implied, including but not limited to the warranties of
+            merchantability, fitness for a particular purpose, and noninfringement.
+            In no event shall the authors or copyright holders be liable for any claim,
+            damages, or other liability, whether in an action of contract, tort, or
+            otherwise, arising from, out of, or in connection with the software or the
+            use or other dealings in the software.
+        </p>
+        <p>
+            Use at your own risk. Always test in a non-production environment first.
+            This project is licensed under the MIT License.
+        </p>
+    </div>
+</body>
+</html>

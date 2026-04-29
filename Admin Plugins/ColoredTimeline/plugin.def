@@ -1,0 +1,4 @@
+<plugin>
+   <file name="ColoredTimeline.dll"/>
+   <load env="Administration, SmartClient"/>
+</plugin>
