@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="FFmpeg.AutoGen" Version="8.0.0.1" />
-    <PackageReference Include="FFmpeg.GPL" Version="20260312.1.0" />
+    <PackageReference Include="FFmpeg.GPL" Version="20260429.1.0" />
     <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
   </ItemGroup>
