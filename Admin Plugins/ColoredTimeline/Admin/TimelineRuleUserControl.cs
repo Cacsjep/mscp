@@ -3,8 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using VideoOS.Platform;
+using VideoOS.Platform.Proxy.Alarm;
+using VideoOS.Platform.Proxy.AlarmClient;
 using VideoOS.Platform.UI;
 
 namespace ColoredTimeline.Admin
@@ -36,9 +40,16 @@ namespace ColoredTimeline.Admin
         private Button _btnPickStop;
         private Button _btnClearStop;
 
+        private CheckBox _chkAutoClose;
+        private NumericUpDown _numAutoCloseSeconds;
+        private Label _lblAutoCloseSuffix;
+
         private Label _lblEventsTable;
+        private CheckBox _chkOnlySelectedCameras;
+        private Button _btnRefreshEvents;
         private ListView _lvEvents;
         private ToolTip _tip;
+        private CancellationTokenSource _eventsCts;
 
         private readonly List<(Guid Id, string Name)> _selectedCameras = new List<(Guid, string)>();
         private string _ribbonColor = DefaultColor;
@@ -64,15 +75,26 @@ namespace ColoredTimeline.Admin
             _txtStart.DoubleClick += (s, e) => OnPickEvent(_txtStart);
             _txtStop.DoubleClick += (s, e) => OnPickEvent(_txtStop);
             _lvEvents.MouseDoubleClick += OnEventsTableDoubleClick;
+            _btnRefreshEvents.Click += (s, e) => RefreshEventsTable();
             ApplyColorToSwatch();
 
             if (!EventTypeCache.IsLoaded)
                 EventTypeCache.Loaded += OnEventTypesLoaded;
+
+            // Initial population once the handle is created (need it for BeginInvoke).
+            HandleCreated += (s, e) => RefreshEventsTable();
         }
 
         private void OnEventTypesLoaded(object sender, EventArgs e)
         {
             EventTypeCache.Loaded -= OnEventTypesLoaded;
+            // Re-render the Start/Stop labels: their display now depends on the cache's
+            // DisplayName lookup, which wasn't available the first time SetEventField ran.
+            BeginInvokeSafe(() =>
+            {
+                SetEventField(_txtStart, _txtStart.Tag as string);
+                SetEventField(_txtStop, _txtStop.Tag as string);
+            });
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
@@ -113,55 +135,111 @@ namespace ColoredTimeline.Admin
             };
             _btnPickColor = new Button { Text = "Pick...", Location = new Point(168, 60), Size = new Size(75, 23) };
 
-            _grpCameras = new GroupBox { Text = "Cameras", Location = new Point(12, 95), Size = new Size(736, 175) };
-            _lstCameras = new ListBox { Location = new Point(10, 22), Size = new Size(716, 110) };
+            _grpCameras = new GroupBox { Text = "Cameras", Location = new Point(12, 95), Size = new Size(936, 175) };
+            _lstCameras = new ListBox { Location = new Point(10, 22), Size = new Size(916, 110) };
             _btnAddCamera = new Button { Text = "Add Camera...", Location = new Point(10, 138), Size = new Size(110, 23) };
             _btnRemoveCamera = new Button { Text = "Remove", Location = new Point(126, 138), Size = new Size(80, 23) };
             _grpCameras.Controls.AddRange(new Control[] { _lstCameras, _btnAddCamera, _btnRemoveCamera });
 
             // Two side-by-side GroupBoxes for Start / Stop event
-            _grpStart = new GroupBox { Text = "Start event", Location = new Point(12, 280), Size = new Size(362, 92) };
+            _grpStart = new GroupBox { Text = "Start event", Location = new Point(12, 280), Size = new Size(462, 92) };
             _txtStart = new Label
             {
                 Location = new Point(10, 22),
-                Size = new Size(342, 32),
+                Size = new Size(442, 32),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = SystemColors.Window,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(4, 0, 4, 0),
                 AutoEllipsis = true
             };
-            _btnPickStart = new Button { Text = "Pick...", Location = new Point(196, 60), Size = new Size(75, 23) };
-            _btnClearStart = new Button { Text = "Clear", Location = new Point(277, 60), Size = new Size(75, 23) };
+            _btnPickStart = new Button { Text = "Pick...", Location = new Point(298, 60), Size = new Size(75, 23) };
+            _btnClearStart = new Button { Text = "Clear", Location = new Point(379, 60), Size = new Size(75, 23) };
             _grpStart.Controls.AddRange(new Control[] { _txtStart, _btnPickStart, _btnClearStart });
 
-            _grpStop = new GroupBox { Text = "Stop event", Location = new Point(386, 280), Size = new Size(362, 92) };
+            _grpStop = new GroupBox { Text = "Stop event", Location = new Point(486, 280), Size = new Size(462, 92) };
             _txtStop = new Label
             {
                 Location = new Point(10, 22),
-                Size = new Size(342, 32),
+                Size = new Size(442, 32),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = SystemColors.Window,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(4, 0, 4, 0),
                 AutoEllipsis = true
             };
-            _btnPickStop = new Button { Text = "Pick...", Location = new Point(196, 60), Size = new Size(75, 23) };
-            _btnClearStop = new Button { Text = "Clear", Location = new Point(277, 60), Size = new Size(75, 23) };
+            _btnPickStop = new Button { Text = "Pick...", Location = new Point(298, 60), Size = new Size(75, 23) };
+            _btnClearStop = new Button { Text = "Clear", Location = new Point(379, 60), Size = new Size(75, 23) };
             _grpStop.Controls.AddRange(new Control[] { _txtStop, _btnPickStop, _btnClearStop });
 
-            _lblEventsTable = new Label
+            // "Close pair if no stop event after N seconds" - per-rule cap for unmatched Starts.
+            _chkAutoClose = new CheckBox
             {
-                Text = "Events available on the selected camera(s) (double-click to use as Start, Shift+double-click for Stop):",
-                Location = new Point(12, 382),
+                Text = "Close pair if no stop event after",
+                Location = new Point(12, 384),
+                AutoSize = true,
+                Checked = false
+            };
+            _numAutoCloseSeconds = new NumericUpDown
+            {
+                Location = new Point(220, 382),
+                Size = new Size(70, 22),
+                Minimum = 1,
+                Maximum = 3600,
+                Value = 10,
+                Enabled = false
+            };
+            _lblAutoCloseSuffix = new Label
+            {
+                Text = "seconds. When enabled, the Stop event is optional.",
+                Location = new Point(296, 384),
                 AutoSize = true,
                 ForeColor = SystemColors.ControlDarkDark
             };
+            _chkAutoClose.CheckedChanged += (s, e) =>
+            {
+                _numAutoCloseSeconds.Enabled = _chkAutoClose.Checked;
+                OnUserChange(s, e);
+            };
+            _numAutoCloseSeconds.ValueChanged += OnUserChange;
+
+            _lblEventsTable = new Label
+            {
+                Text = "Events from the last 24 h (double-click to use as Start, Shift+double-click for Stop):",
+                Location = new Point(12, 414),
+                AutoSize = true,
+                ForeColor = SystemColors.ControlDarkDark
+            };
+            _chkOnlySelectedCameras = new CheckBox
+            {
+                Text = "Show only events from selected cameras",
+                AutoSize = true,
+                Checked = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            _chkOnlySelectedCameras.CheckedChanged += (s, e) => RefreshEventsTable();
+            _btnRefreshEvents = new Button
+            {
+                Text = "Refresh",
+                Location = new Point(873, 410),
+                Size = new Size(75, 22),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            // Place checkbox 5 px to the left of Refresh. PreferredSize at construction time
+            // is unreliable (font may not be inherited yet), so reposition after layout.
+            void RepositionShowOnly()
+            {
+                var w = _chkOnlySelectedCameras.PreferredSize.Width;
+                _chkOnlySelectedCameras.Location = new Point(_btnRefreshEvents.Left - w - 5, 412);
+            }
+            HandleCreated += (s, e) => RepositionShowOnly();
+            FontChanged += (s, e) => RepositionShowOnly();
+            _chkOnlySelectedCameras.TextChanged += (s, e) => RepositionShowOnly();
 
             _lvEvents = new ListView
             {
-                Location = new Point(12, 402),
-                Size = new Size(736, 200),
+                Location = new Point(12, 434),
+                Size = new Size(936, 200),
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true,
@@ -169,8 +247,13 @@ namespace ColoredTimeline.Admin
                 HideSelection = false,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
             };
-            _lvEvents.Columns.Add("Camera", 180);
-            _lvEvents.Columns.Add("Event", 540);
+            _lvEvents.Columns.Add("Time", 140);
+            _lvEvents.Columns.Add("Camera", 250);
+            _lvEvents.Columns.Add("Name", 540);
+            // Time stays fixed; Camera/Name share the remaining width 30/70.
+            // ListView doesn't auto-fill, so we resize the last two columns whenever the
+            // grid is resized (anchor stretches the control across the form's width).
+            _lvEvents.SizeChanged += (s, e) => AutoSizeEventColumns();
 
             Controls.AddRange(new Control[]
             {
@@ -178,11 +261,12 @@ namespace ColoredTimeline.Admin
                 _lblColor, _colorSwatch, _btnPickColor,
                 _grpCameras,
                 _grpStart, _grpStop,
-                _lblEventsTable, _lvEvents
+                _chkAutoClose, _numAutoCloseSeconds, _lblAutoCloseSuffix,
+                _lblEventsTable, _chkOnlySelectedCameras, _btnRefreshEvents, _lvEvents
             });
 
             Name = "TimelineRuleUserControl";
-            Size = new Size(760, 615);
+            Size = new Size(960, 647);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -244,10 +328,27 @@ namespace ColoredTimeline.Admin
         private void SetEventField(Label target, string fullName)
         {
             target.Tag = fullName ?? "";
-            target.Text = FormatEventForDisplay(fullName);
+            target.Text = LookupDisplayName(fullName);
             // Show the raw event name in a tooltip so the user can always verify what was saved.
             try { _tip.SetToolTip(target, string.IsNullOrEmpty(fullName) ? null : fullName); }
             catch { }
+        }
+
+        // Returns the friendly DisplayName for a raw event name (the same string Mgmt Client's
+        // Alarm Definition picker shows). Falls back to the namespace-stripped/Falling-Rising
+        // formatted form if the cache hasn't loaded yet or the name isn't a known EventType.
+        private static string LookupDisplayName(string fullName)
+        {
+            if (string.IsNullOrEmpty(fullName)) return "";
+            if (EventTypeCache.IsLoaded)
+            {
+                foreach (var et in EventTypeCache.Items)
+                {
+                    if (string.Equals(et.Name, fullName, StringComparison.OrdinalIgnoreCase))
+                        return string.IsNullOrEmpty(et.DisplayName) ? FormatEventForDisplay(fullName) : et.DisplayName;
+                }
+            }
+            return FormatEventForDisplay(fullName);
         }
 
         // Strip tns1:/tnsaxis:/other-namespace prefix and convert trailing -0/-1 to (Falling)/(Rising).
@@ -264,13 +365,17 @@ namespace ColoredTimeline.Admin
                 int colon = s.IndexOf(':');
                 if (colon > 0) s = s.Substring(colon + 1);
             }
-            if (s.EndsWith("-1", StringComparison.Ordinal))
+            // Milestone's Alarm Definition picker maps "Rising" to the -0 suffix and "Falling"
+            // to -1 for vendor-namespaced ONVIF topics (verified 2026-04-29 against the Axis
+            // ObjectAnalytics ScenarioANY topic). The suffix is a Source-Index, not the
+            // `active` flag, so the polarity is opposite to the literal ONVIF convention.
+            if (s.EndsWith("-0", StringComparison.Ordinal))
                 s = s.Substring(0, s.Length - 2) + " (Rising)";
-            else if (s.EndsWith("-0", StringComparison.Ordinal))
+            else if (s.EndsWith("-1", StringComparison.Ordinal))
                 s = s.Substring(0, s.Length - 2) + " (Falling)";
-            else if (s.EndsWith("/1", StringComparison.Ordinal))
-                s = s.Substring(0, s.Length - 2) + " (Rising)";
             else if (s.EndsWith("/0", StringComparison.Ordinal))
+                s = s.Substring(0, s.Length - 2) + " (Rising)";
+            else if (s.EndsWith("/1", StringComparison.Ordinal))
                 s = s.Substring(0, s.Length - 2) + " (Falling)";
             return s;
         }
@@ -293,7 +398,6 @@ namespace ColoredTimeline.Admin
                     {
                         _selectedCameras.Add((id, cam.Name));
                         _lstCameras.Items.Add(cam.Name);
-                        RefreshEventsTable();
                         OnUserChange(sender, e);
                     }
                 }
@@ -313,73 +417,182 @@ namespace ColoredTimeline.Admin
             {
                 _selectedCameras.RemoveAt(idx);
                 _lstCameras.Items.RemoveAt(idx);
-                RefreshEventsTable();
                 OnUserChange(sender, e);
             }
         }
 
-        // Walks each selected camera and lists every TriggerEvent leaf under it.
-        // Names like "tnsaxis:CameraApplicationPlatform/ObjectAnalytics/Device1ScenarioANY-0"
-        // appear here exactly as they do in EventLog, so the user can pick the precise
-        // string our filter will match against.
+        // Pulls the last 24 h of EventLog rows from the master site (no camera filter, so
+        // we see every device's events) and lists each distinct (camera, message) pair.
+        // Same data source as the timeline filter, so the strings here are exactly what
+        // ColoredTimelineSequenceSource will match against at runtime.
         private void RefreshEventsTable()
         {
+            try { _eventsCts?.Cancel(); } catch { }
+            _eventsCts = new CancellationTokenSource();
+            var ct = _eventsCts.Token;
+
+            // Snapshot UI state on the UI thread before launching the background query.
+            bool onlySelected = _chkOnlySelectedCameras != null && _chkOnlySelectedCameras.Checked;
+            var selectedSnapshot = _selectedCameras.Select(c => c.Id).ToList();
+
             _lvEvents.BeginUpdate();
             try
             {
                 _lvEvents.Items.Clear();
-                foreach (var cam in _selectedCameras)
-                {
-                    Item camItem = null;
-                    try { camItem = Configuration.Instance.GetItem(cam.Id, Kind.Camera); }
-                    catch (Exception ex) { _log.Error($"GetItem(camera {cam.Id}) failed: {ex.Message}"); }
-                    if (camItem == null) continue;
-
-                    var leaves = new List<string>();
-                    try { CollectTriggerEventLeaves(camItem, leaves); }
-                    catch (Exception ex) { _log.Error($"Enumerate events for '{cam.Name}' failed: {ex.Message}"); }
-
-                    foreach (var name in leaves.Distinct(StringComparer.OrdinalIgnoreCase)
-                                                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
-                    {
-                        var row = new ListViewItem(cam.Name);
-                        row.SubItems.Add(name);
-                        row.Tag = name;
-                        _lvEvents.Items.Add(row);
-                    }
-                }
+                var loading = new ListViewItem("");
+                loading.SubItems.Add("");
+                loading.SubItems.Add("Loading EventLog...");
+                _lvEvents.Items.Add(loading);
             }
-            finally
+            finally { _lvEvents.EndUpdate(); }
+
+            Task.Run(() =>
             {
-                _lvEvents.EndUpdate();
-            }
+                IAlarmClient alarmClient = null;
+                try
+                {
+                    var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
+                    alarmClient = new AlarmClientManager().GetAlarmClient(serverId);
+                    if (alarmClient == null)
+                    {
+                        ShowEventsError("Could not connect to AlarmClient.");
+                        return;
+                    }
+
+                    var filter = new EventFilter
+                    {
+                        Conditions = new[]
+                        {
+                            new Condition { Target = Target.Timestamp, Operator = Operator.GreaterThan, Value = DateTime.UtcNow.AddHours(-24) },
+                            new Condition { Target = Target.Timestamp, Operator = Operator.LessThan,    Value = DateTime.UtcNow.AddMinutes(1) }
+                        },
+                        Orders = new[] { new OrderBy { Target = Target.Timestamp, Order = Order.Descending } }
+                    };
+
+                    if (ct.IsCancellationRequested) return;
+                    var rows = alarmClient.GetEventLines(0, int.MaxValue, filter) ?? Array.Empty<EventLine>();
+                    if (ct.IsCancellationRequested) return;
+
+                    // Optional client-side filter for "Show only events from selected cameras".
+                    // EventFilter Conditions are AND-combined, so multiple cameras can't be expressed
+                    // server-side without N round-trips - the dataset is already capped at 24 h, so
+                    // post-filtering is fine.
+                    HashSet<Guid> selectedSet = onlySelected ? new HashSet<Guid>(selectedSnapshot) : null;
+
+                    // No dedup - one row per EventLog entry. Cap at MaxRows newest-first so the
+                    // grid stays responsive on busy systems.
+                    const int MaxRows = 500;
+                    var ordered = rows
+                        .Where(r => !string.IsNullOrEmpty(r.Message))
+                        .Where(r => selectedSet == null || selectedSet.Contains(r.CameraId))
+                        .OrderByDescending(r => r.Timestamp)
+                        .Take(MaxRows)
+                        .ToList();
+
+                    var camNameCache = new Dictionary<Guid, string>();
+                    var data = new List<(DateTime Time, string CamName, string Message)>(ordered.Count);
+                    foreach (var r in ordered)
+                    {
+                        if (ct.IsCancellationRequested) return;
+                        data.Add((r.Timestamp, ResolveCameraName(r.CameraId, camNameCache), r.Message));
+                    }
+
+                    if (ct.IsCancellationRequested) return;
+                    int totalAfterFilter = rows.Count(r => !string.IsNullOrEmpty(r.Message));
+                    BeginInvokeSafe(() =>
+                    {
+                        _lvEvents.BeginUpdate();
+                        try
+                        {
+                            _lvEvents.Items.Clear();
+                            if (data.Count == 0)
+                            {
+                                var empty = new ListViewItem("");
+                                empty.SubItems.Add("");
+                                empty.SubItems.Add("No events in EventLog over the last 24 h.");
+                                _lvEvents.Items.Add(empty);
+                                return;
+                            }
+                            foreach (var d in data)
+                            {
+                                var row = new ListViewItem(d.Time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                                row.SubItems.Add(d.CamName);
+                                row.SubItems.Add(LookupDisplayName(d.Message));
+                                row.Tag = d.Message;
+                                _lvEvents.Items.Add(row);
+                            }
+                            _lblEventsTable.Text = totalAfterFilter > MaxRows
+                                ? $"Events from the last 24 h - showing newest {MaxRows} of {totalAfterFilter} (double-click to use as Start, Shift+double-click for Stop):"
+                                : $"Events from the last 24 h - {totalAfterFilter} row(s) (double-click to use as Start, Shift+double-click for Stop):";
+                        }
+                        finally { _lvEvents.EndUpdate(); }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    var msg = (ex is AggregateException ag)
+                        ? string.Join("; ", ag.Flatten().InnerExceptions.Select(e => e.Message))
+                        : ex.Message;
+                    _log.Error($"RefreshEventsTable failed: {msg}");
+                    ShowEventsError("EventLog query failed: " + msg);
+                }
+            }, ct);
         }
 
-        private static void CollectTriggerEventLeaves(Item parent, List<string> leaves)
+        private void AutoSizeEventColumns()
         {
-            foreach (var child in parent.GetChildren())
-            {
-                if (child == null) continue;
-                if (child.FQID != null && child.FQID.Kind == Kind.TriggerEvent)
-                {
-                    if (child.FQID.FolderType == FolderType.No)
-                    {
-                        if (!string.IsNullOrEmpty(child.Name)) leaves.Add(child.Name);
-                    }
-                    else
-                    {
-                        CollectTriggerEventLeaves(child, leaves);
-                    }
-                }
-                else
-                {
-                    // Camera children include other kinds (Microphone, Speaker, Output, ...). Recurse
-                    // only into folders to find TriggerEvent subtrees attached deeper.
-                    if (child.FQID != null && child.FQID.FolderType != FolderType.No)
-                        CollectTriggerEventLeaves(child, leaves);
-                }
-            }
+            if (_lvEvents == null || _lvEvents.Columns.Count < 3) return;
+            var time = _lvEvents.Columns[0];
+            var cam = _lvEvents.Columns[1];
+            var name = _lvEvents.Columns[2];
+            // Reserve a little for vertical scrollbar + border.
+            int remaining = _lvEvents.ClientSize.Width - time.Width - 4;
+            if (remaining < 200) remaining = 200;
+            cam.Width = (int)(remaining * 0.30);
+            name.Width = remaining - cam.Width;
         }
+
+        private void ShowEventsError(string text)
+        {
+            BeginInvokeSafe(() =>
+            {
+                _lvEvents.BeginUpdate();
+                try
+                {
+                    _lvEvents.Items.Clear();
+                    var row = new ListViewItem("");
+                    row.SubItems.Add("");
+                    row.SubItems.Add(text);
+                    _lvEvents.Items.Add(row);
+                }
+                finally { _lvEvents.EndUpdate(); }
+            });
+        }
+
+        private void BeginInvokeSafe(Action action)
+        {
+            try
+            {
+                if (IsDisposed || !IsHandleCreated) return;
+                BeginInvoke(action);
+            }
+            catch { }
+        }
+
+        private static string ResolveCameraName(Guid cameraId, Dictionary<Guid, string> cache)
+        {
+            if (cache.TryGetValue(cameraId, out var cached)) return cached;
+            string name = cameraId == Guid.Empty ? "(no camera)" : cameraId.ToString();
+            try
+            {
+                var item = Configuration.Instance.GetItem(cameraId, Kind.Camera);
+                if (item != null && !string.IsNullOrEmpty(item.Name)) name = item.Name;
+            }
+            catch { }
+            cache[cameraId] = name;
+            return name;
+        }
+
 
         private void OnEventsTableDoubleClick(object sender, MouseEventArgs e)
         {
@@ -428,12 +641,22 @@ namespace ColoredTimeline.Admin
 
                 SetEventField(_txtStart, item.Properties.ContainsKey("StartEvent") ? item.Properties["StartEvent"] : "");
                 SetEventField(_txtStop, item.Properties.ContainsKey("StopEvent") ? item.Properties["StopEvent"] : "");
-                RefreshEventsTable();
+
+                _chkAutoClose.Checked = item.Properties.ContainsKey("AutoCloseEnabled")
+                    && item.Properties["AutoCloseEnabled"] == "Yes";
+                int seconds = 10;
+                if (item.Properties.ContainsKey("AutoCloseSeconds"))
+                    int.TryParse(item.Properties["AutoCloseSeconds"], out seconds);
+                if (seconds < 1) seconds = 1;
+                if (seconds > 3600) seconds = 3600;
+                _numAutoCloseSeconds.Value = seconds;
+                _numAutoCloseSeconds.Enabled = _chkAutoClose.Checked;
             }
             finally
             {
                 _filling = false;
             }
+            RefreshEventsTable();
         }
 
         public void ClearContent()
@@ -449,12 +672,15 @@ namespace ColoredTimeline.Admin
                 _lstCameras.Items.Clear();
                 SetEventField(_txtStart, "");
                 SetEventField(_txtStop, "");
-                _lvEvents.Items.Clear();
+                _chkAutoClose.Checked = false;
+                _numAutoCloseSeconds.Value = 10;
+                _numAutoCloseSeconds.Enabled = false;
             }
             finally
             {
                 _filling = false;
             }
+            RefreshEventsTable();
         }
 
         public string ValidateInput()
@@ -465,8 +691,10 @@ namespace ColoredTimeline.Admin
                 return "At least one camera must be selected.";
             if (string.IsNullOrWhiteSpace(_txtStart.Tag as string))
                 return "Start event is required.";
-            if (string.IsNullOrWhiteSpace(_txtStop.Tag as string))
-                return "Stop event is required.";
+            // Stop is required only when auto-close is OFF; with auto-close on, every Start
+            // is closed by the configured timeout so the Stop event is optional.
+            if (!_chkAutoClose.Checked && string.IsNullOrWhiteSpace(_txtStop.Tag as string))
+                return "Stop event is required (or enable auto-close to allow an empty Stop).";
             try { ColorTranslator.FromHtml(_ribbonColor); }
             catch { return "Ribbon color is invalid."; }
             return null;
@@ -482,6 +710,8 @@ namespace ColoredTimeline.Admin
             item.Properties["StopEvent"] = (_txtStop.Tag as string) ?? "";
             item.Properties["CameraIds"] = string.Join(";", _selectedCameras.Select(c => c.Id.ToString()));
             item.Properties["CameraNames"] = string.Join(";", _selectedCameras.Select(c => c.Name));
+            item.Properties["AutoCloseEnabled"] = _chkAutoClose.Checked ? "Yes" : "No";
+            item.Properties["AutoCloseSeconds"] = ((int)_numAutoCloseSeconds.Value).ToString();
         }
     }
 }

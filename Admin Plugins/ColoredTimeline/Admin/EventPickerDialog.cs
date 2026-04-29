@@ -140,7 +140,8 @@ namespace ColoredTimeline.Admin
             public string Label;
             public SortedDictionary<string, Node> Children =
                 new SortedDictionary<string, Node>(StringComparer.OrdinalIgnoreCase);
-            public string FullName; // non-null on leaves
+            public string FullName;    // non-null on leaves
+            public string DisplayName; // friendly name (Mgmt Client convention) on leaves
             public int LeafCount;
         }
 
@@ -158,7 +159,9 @@ namespace ColoredTimeline.Admin
 
                 foreach (var item in _items)
                 {
-                    if (!string.IsNullOrEmpty(f) && item.Name.IndexOf(f, StringComparison.OrdinalIgnoreCase) < 0)
+                    if (!string.IsNullOrEmpty(f) &&
+                        item.Name.IndexOf(f, StringComparison.OrdinalIgnoreCase) < 0 &&
+                        (item.DisplayName ?? "").IndexOf(f, StringComparison.OrdinalIgnoreCase) < 0)
                         continue;
 
                     if (!roots.TryGetValue(item.Group, out var rootNode))
@@ -169,7 +172,7 @@ namespace ColoredTimeline.Admin
                     rootNode.LeafCount++;
                     total++;
 
-                    Insert(rootNode, item.Name);
+                    Insert(rootNode, item.Name, item.DisplayName);
                 }
 
                 foreach (var rootNode in roots.Values)
@@ -213,7 +216,7 @@ namespace ColoredTimeline.Admin
             return parts.Length > 0 ? parts : new[] { bare };
         }
 
-        private static void Insert(Node root, string fullName)
+        private static void Insert(Node root, string fullName, string displayName)
         {
             var parts = BuildPath(fullName);
             var current = root;
@@ -227,16 +230,18 @@ namespace ColoredTimeline.Admin
                 current = child;
             }
 
-            // ONVIF boolean-state suffix: trailing "-0"/"/0" = Falling, "-1"/"/1" = Rising.
-            // Milestone renders it as "Name Falling/Rising" in Mgmt Client; mirror that.
+            // Milestone Alarm Definition convention (verified 2026-04-29 against Axis
+            // ObjectAnalytics ScenarioANY): -0/0 = Rising, -1/1 = Falling. The suffix is the
+            // ONVIF Source-Index, NOT the `active` flag, so polarity is inverted relative to
+            // the literal ONVIF convention.
             var leafRaw = parts[parts.Length - 1];
             var leafLabel = leafRaw;
-            if (leafRaw == "0") leafLabel = "Falling";
-            else if (leafRaw == "1") leafLabel = "Rising";
+            if (leafRaw == "0") leafLabel = "Rising";
+            else if (leafRaw == "1") leafLabel = "Falling";
             else if (leafRaw.EndsWith("-0", StringComparison.Ordinal))
-                leafLabel = leafRaw.Substring(0, leafRaw.Length - 2) + " (Falling)";
-            else if (leafRaw.EndsWith("-1", StringComparison.Ordinal))
                 leafLabel = leafRaw.Substring(0, leafRaw.Length - 2) + " (Rising)";
+            else if (leafRaw.EndsWith("-1", StringComparison.Ordinal))
+                leafLabel = leafRaw.Substring(0, leafRaw.Length - 2) + " (Falling)";
 
             // Disambiguate identical leaf labels under the same parent (rare, but
             // possible if two different prefixes produced the same suffix).
@@ -245,7 +250,12 @@ namespace ColoredTimeline.Admin
             while (current.Children.ContainsKey(key))
                 key = leafLabel + " #" + (++dupe);
 
-            current.Children[key] = new Node { Label = leafLabel, FullName = fullName };
+            current.Children[key] = new Node
+            {
+                Label = leafLabel,
+                FullName = fullName,
+                DisplayName = displayName
+            };
         }
 
         private static void AppendChildren(TreeNode uiParent, Node modelParent)
@@ -254,15 +264,47 @@ namespace ColoredTimeline.Admin
             foreach (var kv in modelParent.Children.Where(c => c.Value.FullName == null))
             {
                 var branch = kv.Value;
-                var ui = new TreeNode(branch.Label);
+                var ui = new TreeNode(SplitCamelCase(branch.Label));
                 AppendChildren(ui, branch);
                 uiParent.Nodes.Add(ui);
             }
             foreach (var kv in modelParent.Children.Where(c => c.Value.FullName != null))
             {
                 var leaf = kv.Value;
-                uiParent.Nodes.Add(new TreeNode(leaf.Label) { Tag = leaf.FullName });
+                // Prefer DisplayName (already includes Rising/Falling for predefined Milestone
+                // events and is space-separated). Fall back to the namespace-stripped/path-leaf
+                // form with our own Rising/Falling decoration when DisplayName is missing.
+                var label = !string.IsNullOrEmpty(leaf.DisplayName)
+                    && !string.Equals(leaf.DisplayName, leaf.FullName, StringComparison.OrdinalIgnoreCase)
+                    ? leaf.DisplayName
+                    : SplitCamelCase(leaf.Label);
+                uiParent.Nodes.Add(new TreeNode(label) { Tag = leaf.FullName });
             }
+        }
+
+        // Inserts a space before each uppercase letter that follows a lowercase letter or
+        // digit, and at the boundary of an acronym followed by a normal word. So
+        // "CameraApplicationPlatform" -> "Camera Application Platform",
+        // "Device1ScenarioANY" -> "Device1 Scenario ANY",
+        // "ABCTest" -> "ABC Test". Punctuation, suffixes like " (Falling)" pass through.
+        private static string SplitCamelCase(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            var sb = new System.Text.StringBuilder(s.Length + 8);
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                if (i > 0 && char.IsUpper(c))
+                {
+                    char prev = s[i - 1];
+                    bool prevIsLowerOrDigit = char.IsLower(prev) || char.IsDigit(prev);
+                    bool acronymBoundary = char.IsUpper(prev) && i + 1 < s.Length && char.IsLower(s[i + 1]);
+                    if (prevIsLowerOrDigit || acronymBoundary)
+                        sb.Append(' ');
+                }
+                sb.Append(c);
+            }
+            return sb.ToString();
         }
 
         private void SelectInitial()

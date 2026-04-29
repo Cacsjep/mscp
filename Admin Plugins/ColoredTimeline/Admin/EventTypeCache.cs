@@ -16,8 +16,9 @@ namespace ColoredTimeline.Admin
         public struct Entry
         {
             public string Group;
-            public string Name;
-            public Entry(string g, string n) { Group = g; Name = n; }
+            public string Name;        // raw EventLog message (matched by filter)
+            public string DisplayName; // localized friendly form (Mgmt Client convention)
+            public Entry(string g, string n, string dn) { Group = g; Name = n; DisplayName = dn; }
         }
 
         private static readonly object _lock = new object();
@@ -70,9 +71,12 @@ namespace ColoredTimeline.Admin
                                 if (et == null) continue;
                                 var name = !string.IsNullOrEmpty(et.Name) ? et.Name : et.GeneratorName;
                                 if (string.IsNullOrEmpty(name)) continue;
+                                string displayName = null;
+                                try { displayName = et.DisplayName; } catch { }
+                                if (string.IsNullOrEmpty(displayName)) displayName = name;
                                 var key = grpName + "|" + name;
                                 if (!seen.Add(key)) continue;
-                                found.Add(new Entry(grpName, name));
+                                found.Add(new Entry(grpName, name, displayName));
                             }
                         }
                     }

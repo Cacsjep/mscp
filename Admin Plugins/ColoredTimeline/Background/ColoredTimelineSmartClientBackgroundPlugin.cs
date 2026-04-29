@@ -195,6 +195,8 @@ namespace ColoredTimeline.Background
             public string StopEvent { get; private set; }
             public System.Drawing.Color Color { get; private set; }
             public HashSet<Guid> Cameras { get; private set; }
+            public bool AutoCloseEnabled { get; private set; }
+            public TimeSpan AutoCloseAfter { get; private set; }
 
             public bool AppliesTo(Guid cameraId) => Cameras.Contains(cameraId);
 
@@ -208,6 +210,13 @@ namespace ColoredTimeline.Background
                     var stop = item.Properties.ContainsKey("StopEvent") ? item.Properties["StopEvent"] : "";
                     var colorHex = item.Properties.ContainsKey("RibbonColor") ? item.Properties["RibbonColor"] : "#1E88E5";
                     var camIds = item.Properties.ContainsKey("CameraIds") ? item.Properties["CameraIds"] : "";
+                    var autoCloseEnabled = item.Properties.ContainsKey("AutoCloseEnabled")
+                        && item.Properties["AutoCloseEnabled"] == "Yes";
+                    int autoCloseSecs = 10;
+                    if (item.Properties.ContainsKey("AutoCloseSeconds"))
+                        int.TryParse(item.Properties["AutoCloseSeconds"], out autoCloseSecs);
+                    if (autoCloseSecs < 1) autoCloseSecs = 1;
+                    if (autoCloseSecs > 3600) autoCloseSecs = 3600;
 
                     var cams = new HashSet<Guid>();
                     foreach (var s in camIds.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
@@ -224,7 +233,9 @@ namespace ColoredTimeline.Background
                         StartEvent = start,
                         StopEvent = stop,
                         Color = color,
-                        Cameras = cams
+                        Cameras = cams,
+                        AutoCloseEnabled = autoCloseEnabled,
+                        AutoCloseAfter = TimeSpan.FromSeconds(autoCloseSecs)
                     };
                 }
                 catch

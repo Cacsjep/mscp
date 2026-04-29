@@ -24,6 +24,8 @@ namespace ColoredTimeline.Background
         public FQID CameraFqid { get; }
         public string StartEvent { get; }
         public string StopEvent { get; }
+        public bool AutoCloseEnabled { get; }
+        public TimeSpan AutoCloseAfter { get; }
 
         public override Guid Id { get; }
         public override string Title { get; }
@@ -37,6 +39,8 @@ namespace ColoredTimeline.Background
             CameraFqid = cameraFqid;
             StartEvent = rule.StartEvent ?? "";
             StopEvent = rule.StopEvent ?? "";
+            AutoCloseEnabled = rule.AutoCloseEnabled;
+            AutoCloseAfter = rule.AutoCloseAfter;
             RibbonContentColorBrush = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(rule.Color.A, rule.Color.R, rule.Color.G, rule.Color.B));
             RibbonContentColorBrush.Freeze();
@@ -44,8 +48,11 @@ namespace ColoredTimeline.Background
 
         public override void StartGetSequences(IEnumerable<TimeInterval> intervals)
         {
-            if (string.IsNullOrEmpty(StartEvent) || string.IsNullOrEmpty(StopEvent))
-                return;
+            if (string.IsNullOrEmpty(StartEvent)) return;
+            // Stop event is optional only when AutoClose is on (the rule's timeout closes
+            // every unmatched Start). Without a Stop and without AutoClose there's nothing
+            // to paint, so bail.
+            if (string.IsNullOrEmpty(StopEvent) && !AutoCloseEnabled) return;
 
             foreach (var interval in intervals)
             {
@@ -67,10 +74,11 @@ namespace ColoredTimeline.Background
                 if (_alarmClient == null) return;
 
                 var startFilter = BuildFilter(StartEvent, interval);
-                var stopFilter = BuildFilter(StopEvent, interval);
+                var hasStopEvent = !string.IsNullOrEmpty(StopEvent);
+                var stopFilter = hasStopEvent ? BuildFilter(StopEvent, interval) : null;
 
                 _log.Info($"Query '{Title}' cam={CameraFqid.ObjectId} " +
-                          $"start='{StartEvent}' stop='{StopEvent}' " +
+                          $"start='{StartEvent}' stop='{(hasStopEvent ? StopEvent : "<auto-close>")}' " +
                           $"window={interval.StartTime.ToLocalTime():yyyy-MM-dd HH:mm:ss}..{interval.EndTime.ToLocalTime():HH:mm:ss}");
 
                 if (_cts.IsCancellationRequested) return;
@@ -80,7 +88,9 @@ namespace ColoredTimeline.Background
                 try
                 {
                     var startTask = Task.Run(() => _alarmClient.GetEventLines(0, int.MaxValue, startFilter), _cts.Token);
-                    var stopTask = Task.Run(() => _alarmClient.GetEventLines(0, int.MaxValue, stopFilter), _cts.Token);
+                    var stopTask = hasStopEvent
+                        ? Task.Run(() => _alarmClient.GetEventLines(0, int.MaxValue, stopFilter), _cts.Token)
+                        : Task.FromResult(Array.Empty<EventLine>());
                     Task.WaitAll(new Task[] { startTask, stopTask }, _cts.Token);
                     startEvents = startTask.Result;
                     stopEvents = stopTask.Result;
@@ -141,12 +151,10 @@ namespace ColoredTimeline.Background
             }
         }
 
-        // When a Start has no matching Stop in the queried window, cap the painted segment
-        // at this duration instead of extending to the window edge. ONVIF analytics events
-        // sometimes only fire a Rising edge (no Falling counterpart) or the Falling event
-        // hasn't been logged yet when the user pans the timeline - capping keeps the visual
-        // honest as a short marker at the trigger moment.
-        private static readonly TimeSpan UnmatchedStartCap = TimeSpan.FromSeconds(10);
+        // When a Start has no matching Stop in the queried window, the rule's AutoClose
+        // settings decide whether to paint a short capped segment or skip it entirely.
+        // ONVIF analytics events sometimes only fire a Rising edge (no Falling counterpart)
+        // or the Falling event hasn't been logged yet when the user pans the timeline.
 
         private List<TimelineDataArea> PairStartStop(EventLine[] startEvents, EventLine[] stopEvents,
                                                      TimeInterval interval, out List<string> pairLog)
@@ -185,9 +193,15 @@ namespace ColoredTimeline.Background
                 }
                 else
                 {
-                    // No matching stop - cap segment at startTs + UnmatchedStartCap, but never
-                    // past the queried window or the present moment.
-                    var cap = startTs + UnmatchedStartCap;
+                    // No matching stop. If the rule has AutoClose disabled, drop this start
+                    // entirely (no segment painted). Otherwise cap at startTs + AutoCloseAfter,
+                    // never past the queried window or the present moment.
+                    if (!AutoCloseEnabled)
+                    {
+                        pairLog.Add($"SKIP unmatched start [{startTs.ToLocalTime():HH:mm:ss.fff}] (auto-close disabled)");
+                        continue;
+                    }
+                    var cap = startTs + AutoCloseAfter;
                     var now = DateTime.UtcNow;
                     endTs = cap;
                     if (endTs > interval.EndTime) endTs = interval.EndTime;
@@ -199,7 +213,7 @@ namespace ColoredTimeline.Background
                 if (endTs <= startTs) continue;
                 sequences.Add(new TimelineDataArea(new TimeInterval(startTs, endTs)));
                 pairLog.Add(open
-                    ? $"PAIR  [{startTs.ToLocalTime():HH:mm:ss.fff}] -> [{endTs.ToLocalTime():HH:mm:ss.fff}] (no stop, capped at {UnmatchedStartCap.TotalSeconds:N0}s)"
+                    ? $"PAIR  [{startTs.ToLocalTime():HH:mm:ss.fff}] -> [{endTs.ToLocalTime():HH:mm:ss.fff}] (no stop, capped at {AutoCloseAfter.TotalSeconds:N0}s)"
                     : $"PAIR  [{startTs.ToLocalTime():HH:mm:ss.fff}] -> [{endTs.ToLocalTime():HH:mm:ss.fff}]");
             }
             return sequences;
