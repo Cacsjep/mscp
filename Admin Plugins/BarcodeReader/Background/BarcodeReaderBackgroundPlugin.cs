@@ -411,7 +411,23 @@ namespace BarcodeReader.Background
                     {
                         var exitCode = helper.Process?.ExitCode ?? -1;
                         var restartCount = helper.RestartCount + 1;
-                        _log.Info($"Helper died (exit={exitCode}): {helper.Config.Name}, restart #{restartCount}");
+                        var reason = MapExitCode(exitCode);
+                        _log.Error($"Helper died (exit={exitCode} {reason}): {helper.Config.Name}, restart #{restartCount}");
+
+                        // Surface the last few stderr lines so MIPLog explains *what* the
+                        // helper was doing right before it went away. Without this you only
+                        // see "exit=255" in MIPLog and the cause is invisible. We also dump
+                        // the on-disk helper log path so support can grab the full trail.
+                        var tail = helper.GetLogSnapshot();
+                        if (tail.Count > 0)
+                        {
+                            _log.Error($"Helper last {tail.Count} stderr line(s) for {helper.Config.Name}:");
+                            foreach (var ln in tail) _log.Error($"  | {ln}");
+                        }
+                        var helperLogPath = TryGetHelperLogPath(helper.Config.ItemId);
+                        if (!string.IsNullOrEmpty(helperLogPath))
+                            _log.Error($"Helper on-disk log: {helperLogPath}");
+
                         _sysLog.HelperCrashed(helper.Config.Name, restartCount);
 
                         // Remove and dispose BEFORE LaunchHelper runs. Otherwise LaunchHelper's
@@ -537,6 +553,38 @@ namespace BarcodeReader.Background
             }
             catch (Exception ex) { _log.Error($"Failed to send status response: {ex.Message}"); }
             return null;
+        }
+
+        // Mirror of the exit-code constants in BarcodeReaderHelper.Program. Keep in sync.
+        // Values outside this range are produced by the OS terminating the process from
+        // outside our managed try/catch  almost always a native delay-load failure
+        // (SEH 0xc06d007e, surfaces as exit code 255) or a stack/AV. When you see
+        // "NativeCrash" here, follow up with Process Monitor to find the missing DLL.
+        private static string MapExitCode(int code)
+        {
+            switch (code)
+            {
+                case 0:  return "Stopped";
+                case 1:  return "BadArgs";
+                case 2:  return "InvalidCameraId";
+                case 3:  return "CameraNotFound";
+                case 4:  return "ManagedException";
+                case 5:  return "EnvironmentMissing";
+                case -1: return "NoExitCode";
+                case 255: return "NativeCrash";
+                default: return $"Unknown({code})";
+            }
+        }
+
+        private static string TryGetHelperLogPath(Guid itemId)
+        {
+            try
+            {
+                return Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "Milestone", "BarcodeReader", $"helper-{itemId}.log");
+            }
+            catch { return null; }
         }
 
         private static void ParseStats(HelperProcess helper, string line)

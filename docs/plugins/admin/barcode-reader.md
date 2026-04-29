@@ -105,6 +105,7 @@ The decoded text is attached to the event via `CustomTag` (bare text). Use these
 
 - **Bookmarks** - each detection becomes a Milestone bookmark on the camera timeline. Header = decoded text (truncated to ~60 chars). Description = `Format: {FORMAT} / Channel: {channel name}`. Searchable in Smart Client's **Search** workspace via the **Bookmarks** filter.
 - **Event Server log** - per-channel `DETECT` / `STATS` / `STATUS` lines in `C:\ProgramData\Milestone\XProtect Event Server\Logs\`
+- **Helper log** - per-channel stderr trail mirrored to `C:\ProgramData\Milestone\BarcodeReader\helper-{channelId}.log` (5 MB rotating). Survives helper crashes and contains assembly-resolve hits/misses, unhandled exceptions, and process info (PID, arch, CLR, OS). Attach this file when reporting issues.
 - **Milestone System Log** - one entry per channel start / error / stop / helper crash
 
 ## Troubleshooting
@@ -116,6 +117,8 @@ The decoded text is attached to the event via `CustomTag` (bare text). Use these
 | Status stuck on `Error:Connect` | Camera or Recording Server unreachable. Helper auto-retries |
 | Status stuck on `Error:NoFrames` | Stall watchdog tripped. Check camera health; reconnect is automatic |
 | `Helper exe not found` | Ensure `BarcodeReaderHelper.exe` lives next to `BarcodeReader.dll` in `MIPPlugins\BarcodeReader` |
+| `Helper died (exit=255 NativeCrash)` in the Event Server log | Native dependency missing (typically a Media SDK / VC++ runtime DLL). Check the per-channel helper log under `C:\ProgramData\Milestone\BarcodeReader\` for the last stderr lines, then run Process Monitor on `BarcodeReaderHelper.exe` filtering `Result = NAME NOT FOUND` to find the missing DLL. Common cause: Recording Server not co-located with Event Server |
+| `Helper died (exit=4 ManagedException)` | A managed exception escaped the helper. Full stack trace is in the per-channel helper log |
 | Bookmarks not appearing | Verify **Create bookmarks for detections** is checked; check the Event Server log for `BookmarkCreate failed` |
 | QR Code Matched not firing | Remember match is exact + case-sensitive. Compare the `DETECT` log line payload against the stored QR Code item |
 
