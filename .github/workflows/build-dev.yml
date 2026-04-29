@@ -74,7 +74,7 @@ jobs:
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Setup NuGet
-        uses: NuGet/setup-nuget@12c57947e9458a5b976961b08ea0706a17dd71ae # v3.0.0
+        uses: NuGet/setup-nuget@b26b823c478ee115be5c9403e62c90b0bf943843 # v3.1.0
 
       - name: Restore NuGet packages
         run: nuget restore MSCPlugins.sln
@@ -135,7 +135,7 @@ jobs:
         shell: pwsh
 
       - name: Upload artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}.zip
@@ -260,7 +260,7 @@ jobs:
             -o "MSCPlugins-dev-Setup.msi"
 
       - name: Upload MSI installer
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MSI-Installer
           path: MSCPlugins-dev-Setup.msi

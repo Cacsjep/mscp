@@ -317,7 +317,7 @@
     <SetProperty Id="CA_StopManagementClient"
                  Before="CA_StopManagementClient"
                  Sequence="execute"
-                 Value="&quot;[SystemFolder]cmd.exe&quot; /c taskkill /F /IM &quot;VideoOS.Platform.Administration.exe&quot; 2&gt;nul &amp; exit /b 0" />
+                 Value="&quot;[SystemFolder]cmd.exe&quot; /c taskkill /F /IM &quot;VideoOS.Administration.exe&quot; 2&gt;nul &amp; taskkill /F /IM &quot;VideoOS.Platform.Administration.exe&quot; 2&gt;nul &amp; exit /b 0" />
     <CustomAction Id="CA_StopManagementClient"
                   DllEntry="WixQuietExec64"
                   BinaryRef="Wix4UtilCA_X86"

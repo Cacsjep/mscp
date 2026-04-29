@@ -125,6 +125,14 @@ namespace InstallerCustomActions
                 }
                 Directory.CreateDirectory(dest);
 
+                // Resolve the destination once so we can validate every entry's
+                // final path is contained within it (Zip Slip / CVE-2018-1002200).
+                // Trailing separator is required so StartsWith doesn't match a
+                // sibling dir that shares a prefix (e.g. "C:\dest" vs "C:\dest2").
+                var fullDestDir = Path.GetFullPath(dest);
+                if (!fullDestDir.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
+                    fullDestDir += Path.DirectorySeparatorChar;
+
                 using (var archive = ZipFile.OpenRead(source))
                 {
                     foreach (var entry in archive.Entries)
@@ -143,7 +151,13 @@ namespace InstallerCustomActions
                         if (idx >= 0) rel = rel.Substring(idx + 1);
                         if (string.IsNullOrWhiteSpace(rel)) continue;
 
-                        var outPath = Path.Combine(dest, rel.Replace('/', Path.DirectorySeparatorChar));
+                        var outPath = Path.GetFullPath(Path.Combine(fullDestDir, rel.Replace('/', Path.DirectorySeparatorChar)));
+                        if (!outPath.StartsWith(fullDestDir, StringComparison.Ordinal))
+                        {
+                            session.Log($"[IisActions] Skipping zip entry outside destination: '{entry.FullName}' -> '{outPath}'");
+                            continue;
+                        }
+
                         var outDir = Path.GetDirectoryName(outPath);
                         if (!string.IsNullOrEmpty(outDir)) Directory.CreateDirectory(outDir);
 

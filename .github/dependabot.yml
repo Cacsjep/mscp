@@ -3,8 +3,26 @@ updates:
   - package-ecosystem: nuget
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 5
+    # Skip major version bumps (often breaking) and only ship minor / patch
+    # updates plus anything Dependabot flags as a security fix. The
+    # security-only allow rule supersedes the version-update ignore for CVEs,
+    # so we still get prompt patches for vulnerabilities.
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+      # FFmpeg.GPL ships a fresh weekly build that bumps the calendar-version
+      # on every release. Pin to security updates only so we don't get a PR
+      # every week from a routine rebuild.
+      - dependency-name: "FFmpeg.GPL"
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"

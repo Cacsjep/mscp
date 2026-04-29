@@ -1,0 +1,1296 @@
+﻿Level,Date and Time,Source,Event ID,Task Category
+Information,4/28/2026 10:30:54 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WEREA88.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_a31f325b-aff5-42a8-aab2-a0c5f93f1310
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 86106cff-20c0-4758-9507-b5c7a1672fbe
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:30:53 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_a31f325b-aff5-42a8-aab2-a0c5f93f1310
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 86106cff-20c0-4758-9507-b5c7a1672fbe
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:30:52 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x428c
+Faulting application start time: 0x01dcd723fd952de2
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 86106cff-20c0-4758-9507-b5c7a1672fbe
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:30:44 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WERC33A.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_843267c9-b4d9-4244-886d-b08e874cac44
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 54a7de1f-da42-4e28-b38a-794040a8c655
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:30:43 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_843267c9-b4d9-4244-886d-b08e874cac44
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 54a7de1f-da42-4e28-b38a-794040a8c655
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:30:42 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x23f0
+Faulting application start time: 0x01dcd723f79ec9ff
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 54a7de1f-da42-4e28-b38a-794040a8c655
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:30:33 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER9B7E.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_68f19b7a-ddc5-42ea-9c8a-446b86e01c75
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: eabc4006-6189-4ceb-9438-6bd8f6b85ccd
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:30:33 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_68f19b7a-ddc5-42ea-9c8a-446b86e01c75
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: eabc4006-6189-4ceb-9438-6bd8f6b85ccd
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:30:32 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x1300
+Faulting application start time: 0x01dcd723f1a6275b
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: eabc4006-6189-4ceb-9438-6bd8f6b85ccd
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:30:24 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER74AC.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_499f32cc-3746-48f1-bc0e-f89144cc8732
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 308e6e16-58a3-494d-88d3-e8c251edfc23
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:30:23 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_499f32cc-3746-48f1-bc0e-f89144cc8732
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 308e6e16-58a3-494d-88d3-e8c251edfc23
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:30:22 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x9cc
+Faulting application start time: 0x01dcd723ebafc9c5
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 308e6e16-58a3-494d-88d3-e8c251edfc23
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:30:13 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER4D10.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_1ce0e489-41ba-4cc0-97d4-254fe941610c
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: c6d93ed5-b55c-4460-bb11-e01b5e89caba
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:30:13 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_1ce0e489-41ba-4cc0-97d4-254fe941610c
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: c6d93ed5-b55c-4460-bb11-e01b5e89caba
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:30:12 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x4650
+Faulting application start time: 0x01dcd723e5b86ba3
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: c6d93ed5-b55c-4460-bb11-e01b5e89caba
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:30:03 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER24B8.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_cb705180-29e2-4f30-ad3d-c73b81020226
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: ae09f296-ab3f-401b-90be-85c807b1b0ca
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:30:02 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_cb705180-29e2-4f30-ad3d-c73b81020226
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: ae09f296-ab3f-401b-90be-85c807b1b0ca
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:30:01 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x1be8
+Faulting application start time: 0x01dcd723df2844a5
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: ae09f296-ab3f-401b-90be-85c807b1b0ca
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:29:23 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER8933.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_9dde0980-4c45-493a-af46-08edc7200fce
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: c90da710-2bf1-495f-ba08-b5376aa8dade
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:29:23 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_9dde0980-4c45-493a-af46-08edc7200fce
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: c90da710-2bf1-495f-ba08-b5376aa8dade
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:29:22 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x3e34
+Faulting application start time: 0x01dcd723c7e29071
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: c90da710-2bf1-495f-ba08-b5376aa8dade
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:29:13 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER609C.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_e9347f31-44fa-41a5-bba6-17455ee3adfc
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 25b5cace-9728-4cdb-a271-82b0f7dc8a57
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:29:12 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_e9347f31-44fa-41a5-bba6-17455ee3adfc
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 25b5cace-9728-4cdb-a271-82b0f7dc8a57
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:29:11 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x2ca4
+Faulting application start time: 0x01dcd723c1ead9cd
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 25b5cace-9728-4cdb-a271-82b0f7dc8a57
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:29:03 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER3A29.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_f578799a-dca8-454b-8aa6-2a4eb341a9af
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: e85ab260-3429-486b-be5e-dda468833631
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:29:02 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_f578799a-dca8-454b-8aa6-2a4eb341a9af
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: e85ab260-3429-486b-be5e-dda468833631
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:29:01 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x36f0
+Faulting application start time: 0x01dcd723bbf3bfec
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: e85ab260-3429-486b-be5e-dda468833631
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:28:53 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER12CB.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_93215edd-2fc7-4b69-83ee-0454e4e6a3a6
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 0101ef64-1211-4e57-9fa4-e756b2687568
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:28:52 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_93215edd-2fc7-4b69-83ee-0454e4e6a3a6
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 0101ef64-1211-4e57-9fa4-e756b2687568
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:28:51 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x30a4
+Faulting application start time: 0x01dcd723b5fc880e
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 0101ef64-1211-4e57-9fa4-e756b2687568
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:28:43 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WEREB4D.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_3f9f14c5-0bf0-4d46-aa35-6dad02271586
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 9e508d46-33ee-4e5a-8370-28bfb8edffe6
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:28:42 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_3f9f14c5-0bf0-4d46-aa35-6dad02271586
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 9e508d46-33ee-4e5a-8370-28bfb8edffe6
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:28:41 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x3784
+Faulting application start time: 0x01dcd723b003daf7
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 9e508d46-33ee-4e5a-8370-28bfb8edffe6
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:28:33 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WERC44D.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_38fd6818-7533-4758-9b06-7564d9f197c9
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 41afafa5-4def-401a-8a0d-f3953f9e0bb3
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:28:32 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_38fd6818-7533-4758-9b06-7564d9f197c9
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 41afafa5-4def-401a-8a0d-f3953f9e0bb3
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:28:31 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x1240
+Faulting application start time: 0x01dcd723aa0bb013
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 41afafa5-4def-401a-8a0d-f3953f9e0bb3
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:28:23 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER9CFE.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_c23eb870-c7d7-4208-8a85-bd71f0e62598
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 2894ba9f-9934-41a1-85d5-1a03de7bce12
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:28:22 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_c23eb870-c7d7-4208-8a85-bd71f0e62598
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 2894ba9f-9934-41a1-85d5-1a03de7bce12
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:28:21 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x2030
+Faulting application start time: 0x01dcd723a4147b3d
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 2894ba9f-9934-41a1-85d5-1a03de7bce12
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:28:13 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER7542.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_0b0eb355-4551-4f9c-9c50-71c6c9a93af6
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 2645d43f-1c8b-4828-a243-4f7ee4e229f4
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:28:12 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_0b0eb355-4551-4f9c-9c50-71c6c9a93af6
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 2645d43f-1c8b-4828-a243-4f7ee4e229f4
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:28:11 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x3cc8
+Faulting application start time: 0x01dcd7239e1bdeeb
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 2645d43f-1c8b-4828-a243-4f7ee4e229f4
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:28:03 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER4E42.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_a6c42a88-8603-4b02-aef8-d18f04ef78b0
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: debfb96f-9fde-406d-ba54-e08429c6ccce
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:28:02 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_a6c42a88-8603-4b02-aef8-d18f04ef78b0
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: debfb96f-9fde-406d-ba54-e08429c6ccce
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:28:01 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x3f3c
+Faulting application start time: 0x01dcd7239823a36a
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: debfb96f-9fde-406d-ba54-e08429c6ccce
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:27:53 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WER2780.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_c8a6b8af-07d5-4f91-8ef3-2f2a2af0654d
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: e8c2c9e5-fb94-443e-ac93-2c166d5cd9ff
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:27:52 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_c8a6b8af-07d5-4f91-8ef3-2f2a2af0654d
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: e8c2c9e5-fb94-443e-ac93-2c166d5cd9ff
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:27:51 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x151c
+Faulting application start time: 0x01dcd723922b24ba
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: e8c2c9e5-fb94-443e-ac93-2c166d5cd9ff
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:27:43 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WERFFC4.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_ce8fdc79-7cbe-43d5-bd51-d0e17375fe4e
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 9c839b96-d322-4b57-b014-df18b9a82e26
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:27:42 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_ce8fdc79-7cbe-43d5-bd51-d0e17375fe4e
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: 9c839b96-d322-4b57-b014-df18b9a82e26
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:27:41 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x4d94
+Faulting application start time: 0x01dcd7238c3313d5
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: 9c839b96-d322-4b57-b014-df18b9a82e26
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:27:32 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WERD912.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_65b84b97-7b20-4f8c-aa98-be60ac72e89a
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: ce9d1284-ddff-4315-be08-5caf4a335166
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:27:32 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_65b84b97-7b20-4f8c-aa98-be60ac72e89a
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: ce9d1284-ddff-4315-be08-5caf4a335166
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:27:31 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x2470
+Faulting application start time: 0x01dcd723863affb1
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: ce9d1284-ddff-4315-be08-5caf4a335166
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:27:24 AM,Windows Error Reporting,1001,None,"Fault bucket 2165015242600625355, type 4
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+\\?\C:\ProgramData\Microsoft\Windows\WER\Temp\WERB8B9.tmp.WERInternalMetadata.xml
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportArchive\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_690c00f7-229c-4db5-a0a1-46a0723c9507
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: e574ac31-629d-4ce1-adf9-34ae5fe698c9
+Report Status: 268435456
+Hashed bucket: 531fc4708de04b6e0e0bade4748434cb
+Cab Guid: 0"
+Information,4/28/2026 10:27:24 AM,Windows Error Reporting,1001,None,"Fault bucket , type 0
+Event Name: APPCRASH
+Response: Not available
+Cab Id: 0
+
+Problem signature:
+P1: BarcodeReaderHelper.exe
+P2: 1.0.0.0
+P3: ad514a8b
+P4: KERNELBASE.dll
+P5: 10.0.19041.6280
+P6: 56511854
+P7: c06d007e
+P8: 0000000000025369
+P9: 
+P10: 
+
+Attached files:
+
+These files may be available here:
+\\?\C:\ProgramData\Microsoft\Windows\WER\ReportQueue\AppCrash_BarcodeReaderHel_7cb6fc442d1a0db5f601484acb4b4bcaba3153_db5819d2_690c00f7-229c-4db5-a0a1-46a0723c9507
+
+Analysis symbol: 
+Rechecking for solution: 0
+Report Id: e574ac31-629d-4ce1-adf9-34ae5fe698c9
+Report Status: 4
+Hashed bucket: 
+Cab Guid: 0"
+Error,4/28/2026 10:27:22 AM,Application Error,1000,(100),"Faulting application name: BarcodeReaderHelper.exe, version: 1.0.0.0, time stamp: 0xad514a8b
+Faulting module name: KERNELBASE.dll, version: 10.0.19041.6280, time stamp: 0x56511854
+Exception code: 0xc06d007e
+Fault offset: 0x0000000000025369
+Faulting process id: 0x810
+Faulting application start time: 0x01dcd72380f542cb
+Faulting application path: C:\Program Files\Milestone\MIPPlugins\BarcodeReader\BarcodeReaderHelper.exe
+Faulting module path: C:\WINDOWS\System32\KERNELBASE.dll
+Report Id: e574ac31-629d-4ce1-adf9-34ae5fe698c9
+Faulting package full name: 
+Faulting package-relative application ID: "
+Information,4/28/2026 10:25:45 AM,MSSQLSERVER,49930,Server,Parallel redo is shutdown for database 'SurveillanceLogServerV2' with worker pool size [2].
+Information,4/28/2026 10:25:45 AM,MSSQLSERVER,49930,Server,Parallel redo is started for database 'SurveillanceLogServerV2' with worker pool size [2].
+Information,4/28/2026 10:25:44 AM,MSSQLSERVER,17137,Server,Starting up database 'SurveillanceLogServerV2'.

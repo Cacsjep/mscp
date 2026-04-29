@@ -145,6 +145,13 @@
     "description": "Subscribe to a metadata channel in the Management Client and view the live XML stream"
   },
   {
+    "name": "ColoredTimeline",
+    "displayName": "Colored Timeline Plugin",
+    "path": "Admin Plugins/ColoredTimeline",
+    "category": "AdminPlugin",
+    "description": "Render any pair of camera events (e.g. edge motion start/stop) as colored ribbons on the Smart Client playback timeline"
+  },
+  {
     "name": "PKI",
     "displayName": "PKI Plugin",
     "path": "Admin Plugins/PKI",

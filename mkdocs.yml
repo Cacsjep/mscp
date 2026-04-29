@@ -42,6 +42,7 @@ nav:
       - Auditor: plugins/admin/auditor.md
       - Barcode Reader: plugins/admin/barcode-reader.md
       - Certificate Watchdog: plugins/admin/cert-watchdog.md
+      - Colored Timeline: plugins/admin/colored-timeline.md
       - HTTP Requests: plugins/admin/http-requests.md
       - Metadata Viewer: plugins/admin/metadata-viewer.md
       - RTMP Streamer: plugins/admin/rtmp-streamer.md
