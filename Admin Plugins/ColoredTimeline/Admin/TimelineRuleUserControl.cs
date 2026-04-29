@@ -24,6 +24,7 @@ namespace ColoredTimeline.Admin
         private Label _lblName;
         private TextBox _txtName;
         private CheckBox _chkEnabled;
+        private CheckBox _chkMarkerOnly;
 
         private Label _lblColor;
         private Panel _colorSwatch;
@@ -44,6 +45,7 @@ namespace ColoredTimeline.Admin
         private Button _btnPickStop;
         private Button _btnClearStop;
 
+        private GroupBox _grpAutoClose;
         private CheckBox _chkAutoClose;
         private NumericUpDown _numAutoCloseSeconds;
         private Label _lblAutoCloseSuffix;
@@ -147,6 +149,9 @@ namespace ColoredTimeline.Admin
             _lblName = new Label { Text = "Name:", Location = new Point(12, 15), AutoSize = true };
             _txtName = new TextBox { Location = new Point(120, 12), Size = new Size(360, 20) };
             _chkEnabled = new CheckBox { Text = "Enabled", Location = new Point(120, 38), AutoSize = true, Checked = true };
+            // Markers-only mode: only Start/Stop markers are drawn, no ribbon. Hides the
+            // ribbon-color section and force-checks both per-event Marker boxes when turned on.
+            _chkMarkerOnly = new CheckBox { Text = "Markers only (no ribbon)", Location = new Point(220, 38), AutoSize = true, Checked = false };
 
             _lblColor = new Label { Text = "Ribbon color:", Location = new Point(12, 65), AutoSize = true };
             _colorSwatch = new Panel
@@ -158,32 +163,36 @@ namespace ColoredTimeline.Admin
             };
             _btnPickColor = new Button { Text = "Pick...", Location = new Point(168, 60), Size = new Size(75, 23) };
 
-            _grpCameras = new GroupBox { Text = "Cameras", Location = new Point(12, 95), Size = new Size(936, 175) };
-            _lstCameras = new ListBox { Location = new Point(10, 22), Size = new Size(916, 110) };
-            _btnAddCamera = new Button { Text = "Add Camera...", Location = new Point(10, 138), Size = new Size(110, 23) };
-            _btnRemoveCamera = new Button { Text = "Remove", Location = new Point(126, 138), Size = new Size(80, 23) };
+            _grpCameras = new GroupBox { Text = "Cameras", Location = new Point(12, 95), Size = new Size(628, 140) };
+            _lstCameras = new ListBox { Location = new Point(10, 22), Size = new Size(608, 80) };
+            _btnAddCamera = new Button { Text = "Add Camera...", Location = new Point(10, 105), Size = new Size(110, 23) };
+            _btnRemoveCamera = new Button { Text = "Remove", Location = new Point(126, 105), Size = new Size(80, 23) };
             _grpCameras.Controls.AddRange(new Control[] { _lstCameras, _btnAddCamera, _btnRemoveCamera });
 
-            // Two side-by-side GroupBoxes for Start / Stop event. Each box hosts:
-            // (1) the event display label, (2) a per-event "Marker" row (checkbox +
-            // glyph + Icon... + color swatch + Color...), (3) Pick/Clear at the bottom.
-            _grpStart = new GroupBox { Text = "Start event", Location = new Point(12, 280), Size = new Size(462, 116) };
+            // Two-column layout: left column (x=12, w=628 - 50% of the form) holds all
+            // rule-config controls stacked vertically (Name, Color, Cameras, Start, Stop,
+            // AutoClose). Right column (x=652, fills to right) holds the events log ListView,
+            // anchored so it grows with the window.
+            // Each event GroupBox stacks: event label -> Pick/Clear row -> Marker row.
+            _grpStart = new GroupBox { Text = "Start event", Location = new Point(12, 245), Size = new Size(628, 130) };
             _txtStart = new Label
             {
                 Location = new Point(10, 22),
-                Size = new Size(442, 22),
+                Size = new Size(608, 22),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = SystemColors.Window,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(4, 0, 4, 0),
                 AutoEllipsis = true
             };
-            // All controls in this row use the same Y (48) and Height (24) so they share
-            // a single horizontal centerline (Y=60) regardless of font/glyph metrics.
+            _btnPickStart = new Button { Text = "Pick...", Location = new Point(464, 50), Size = new Size(75, 23) };
+            _btnClearStart = new Button { Text = "Clear", Location = new Point(545, 50), Size = new Size(75, 23) };
+            // Marker row is the third row inside the GroupBox (under Pick/Clear). All
+            // controls share Y=84 and Height=24 so they sit on a single centerline.
             _chkStartUseMarker = new CheckBox
             {
                 Text = "Marker",
-                Location = new Point(10, 48),
+                Location = new Point(10, 84),
                 Size = new Size(72, 24),
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -191,23 +200,21 @@ namespace ColoredTimeline.Admin
             };
             _icoStartGlyph = new PictureBox
             {
-                Location = new Point(86, 48),
+                Location = new Point(86, 84),
                 Size = new Size(24, 24),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = SystemColors.Window,
                 SizeMode = PictureBoxSizeMode.CenterImage
             };
-            _btnPickStartIcon = new Button { Text = "Icon...", Location = new Point(114, 48), Size = new Size(64, 24) };
+            _btnPickStartIcon = new Button { Text = "Icon...", Location = new Point(114, 84), Size = new Size(64, 24) };
             _swatchStartIconColor = new Panel
             {
-                Location = new Point(184, 48),
+                Location = new Point(184, 84),
                 Size = new Size(24, 24),
                 BorderStyle = BorderStyle.FixedSingle,
                 Cursor = Cursors.Hand
             };
-            _btnPickStartIconColor = new Button { Text = "Color...", Location = new Point(212, 48), Size = new Size(64, 24) };
-            _btnPickStart = new Button { Text = "Pick...", Location = new Point(298, 84), Size = new Size(75, 23) };
-            _btnClearStart = new Button { Text = "Clear", Location = new Point(379, 84), Size = new Size(75, 23) };
+            _btnPickStartIconColor = new Button { Text = "Color...", Location = new Point(212, 84), Size = new Size(64, 24) };
             _grpStart.Controls.AddRange(new Control[]
             {
                 _txtStart,
@@ -215,21 +222,23 @@ namespace ColoredTimeline.Admin
                 _btnPickStart, _btnClearStart
             });
 
-            _grpStop = new GroupBox { Text = "Stop event", Location = new Point(486, 280), Size = new Size(462, 116) };
+            _grpStop = new GroupBox { Text = "Stop event", Location = new Point(12, 385), Size = new Size(628, 130) };
             _txtStop = new Label
             {
                 Location = new Point(10, 22),
-                Size = new Size(442, 22),
+                Size = new Size(608, 22),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = SystemColors.Window,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(4, 0, 4, 0),
                 AutoEllipsis = true
             };
+            _btnPickStop = new Button { Text = "Pick...", Location = new Point(464, 50), Size = new Size(75, 23) };
+            _btnClearStop = new Button { Text = "Clear", Location = new Point(545, 50), Size = new Size(75, 23) };
             _chkStopUseMarker = new CheckBox
             {
                 Text = "Marker",
-                Location = new Point(10, 48),
+                Location = new Point(10, 84),
                 Size = new Size(72, 24),
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -237,23 +246,21 @@ namespace ColoredTimeline.Admin
             };
             _icoStopGlyph = new PictureBox
             {
-                Location = new Point(86, 48),
+                Location = new Point(86, 84),
                 Size = new Size(24, 24),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = SystemColors.Window,
                 SizeMode = PictureBoxSizeMode.CenterImage
             };
-            _btnPickStopIcon = new Button { Text = "Icon...", Location = new Point(114, 48), Size = new Size(64, 24) };
+            _btnPickStopIcon = new Button { Text = "Icon...", Location = new Point(114, 84), Size = new Size(64, 24) };
             _swatchStopIconColor = new Panel
             {
-                Location = new Point(184, 48),
+                Location = new Point(184, 84),
                 Size = new Size(24, 24),
                 BorderStyle = BorderStyle.FixedSingle,
                 Cursor = Cursors.Hand
             };
-            _btnPickStopIconColor = new Button { Text = "Color...", Location = new Point(212, 48), Size = new Size(64, 24) };
-            _btnPickStop = new Button { Text = "Pick...", Location = new Point(298, 84), Size = new Size(75, 23) };
-            _btnClearStop = new Button { Text = "Clear", Location = new Point(379, 84), Size = new Size(75, 23) };
+            _btnPickStopIconColor = new Button { Text = "Color...", Location = new Point(212, 84), Size = new Size(64, 24) };
             _grpStop.Controls.AddRange(new Control[]
             {
                 _txtStop,
@@ -261,17 +268,19 @@ namespace ColoredTimeline.Admin
                 _btnPickStop, _btnClearStop
             });
 
-            // "Close pair if no stop event after N seconds" - per-rule cap for unmatched Starts.
+            // Auto-close GroupBox - per-rule cap for unmatched Starts. Stacks vertically:
+            // the Enabled checkbox sits on row 1, the numeric + suffix on row 2.
+            _grpAutoClose = new GroupBox { Text = "Auto-close", Location = new Point(12, 525), Size = new Size(628, 70) };
             _chkAutoClose = new CheckBox
             {
-                Text = "Close pair if no stop event after",
-                Location = new Point(12, 408),
+                Text = "Close pair if no stop event after a configured timeout",
+                Location = new Point(10, 18),
                 AutoSize = true,
                 Checked = false
             };
             _numAutoCloseSeconds = new NumericUpDown
             {
-                Location = new Point(220, 406),
+                Location = new Point(10, 40),
                 Size = new Size(70, 22),
                 Minimum = 1,
                 Maximum = 3600,
@@ -281,10 +290,11 @@ namespace ColoredTimeline.Admin
             _lblAutoCloseSuffix = new Label
             {
                 Text = "seconds. When enabled, the Stop event is optional.",
-                Location = new Point(296, 408),
+                Location = new Point(86, 42),
                 AutoSize = true,
                 ForeColor = SystemColors.ControlDarkDark
             };
+            _grpAutoClose.Controls.AddRange(new Control[] { _chkAutoClose, _numAutoCloseSeconds, _lblAutoCloseSuffix });
             _chkAutoClose.CheckedChanged += (s, e) =>
             {
                 _numAutoCloseSeconds.Enabled = _chkAutoClose.Checked;
@@ -306,10 +316,11 @@ namespace ColoredTimeline.Admin
             _swatchStartIconColor.Click += (s, e) => OnPickIconColor(true);
             _swatchStopIconColor.Click  += (s, e) => OnPickIconColor(false);
 
+            // Right column: events log table fills from x=652 to the right edge.
             _lblEventsTable = new Label
             {
                 Text = "Events from the last 24 h (double-click to use as Start, Shift+double-click for Stop):",
-                Location = new Point(12, 438),
+                Location = new Point(652, 14),
                 AutoSize = true,
                 ForeColor = SystemColors.ControlDarkDark
             };
@@ -324,7 +335,7 @@ namespace ColoredTimeline.Admin
             _btnRefreshEvents = new Button
             {
                 Text = "Refresh",
-                Location = new Point(873, 434),
+                Location = new Point(1193, 10),
                 Size = new Size(75, 22),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
@@ -333,7 +344,7 @@ namespace ColoredTimeline.Admin
             void RepositionShowOnly()
             {
                 var w = _chkOnlySelectedCameras.PreferredSize.Width;
-                _chkOnlySelectedCameras.Location = new Point(_btnRefreshEvents.Left - w - 5, 436);
+                _chkOnlySelectedCameras.Location = new Point(_btnRefreshEvents.Left - w - 5, 12);
             }
             HandleCreated += (s, e) => RepositionShowOnly();
             FontChanged += (s, e) => RepositionShowOnly();
@@ -341,8 +352,8 @@ namespace ColoredTimeline.Admin
 
             _lvEvents = new ListView
             {
-                Location = new Point(12, 458),
-                Size = new Size(936, 200),
+                Location = new Point(652, 35),
+                Size = new Size(616, 555),
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true,
@@ -360,18 +371,40 @@ namespace ColoredTimeline.Admin
 
             Controls.AddRange(new Control[]
             {
-                _lblName, _txtName, _chkEnabled,
+                _lblName, _txtName, _chkEnabled, _chkMarkerOnly,
                 _lblColor, _colorSwatch, _btnPickColor,
                 _grpCameras,
                 _grpStart, _grpStop,
-                _chkAutoClose, _numAutoCloseSeconds, _lblAutoCloseSuffix,
+                _grpAutoClose,
                 _lblEventsTable, _chkOnlySelectedCameras, _btnRefreshEvents, _lvEvents
             });
 
+            // Markers-only: hide ribbon-color UI and force-check both Marker boxes when on,
+            // restore them when off. The "force-check" is intentional - in marker-only mode
+            // the rule paints nothing if both Marker boxes are unchecked.
+            _chkMarkerOnly.CheckedChanged += (s, e) =>
+            {
+                ApplyMarkerOnlyState();
+                if (_chkMarkerOnly.Checked)
+                {
+                    _chkStartUseMarker.Checked = true;
+                    _chkStopUseMarker.Checked = true;
+                }
+                OnUserChange(s, e);
+            };
+
             Name = "TimelineRuleUserControl";
-            Size = new Size(960, 671);
+            Size = new Size(1280, 605);
             ResumeLayout(false);
             PerformLayout();
+        }
+
+        private void ApplyMarkerOnlyState()
+        {
+            bool markerOnly = _chkMarkerOnly != null && _chkMarkerOnly.Checked;
+            _lblColor.Visible = !markerOnly;
+            _colorSwatch.Visible = !markerOnly;
+            _btnPickColor.Visible = !markerOnly;
         }
 
         private void ApplyColorToSwatch()
@@ -857,6 +890,9 @@ namespace ColoredTimeline.Admin
                     ? item.Properties["StartIconColor"] : _ribbonColor;
                 _stopIconColorHex = item.Properties.ContainsKey("StopIconColor") && !string.IsNullOrEmpty(item.Properties["StopIconColor"])
                     ? item.Properties["StopIconColor"] : _ribbonColor;
+                _chkMarkerOnly.Checked = item.Properties.ContainsKey("MarkerOnly")
+                    && item.Properties["MarkerOnly"] == "Yes";
+                ApplyMarkerOnlyState();
                 RefreshIconPreviews();
                 ApplyMarkersEnabledState();
             }
@@ -889,6 +925,8 @@ namespace ColoredTimeline.Admin
                 _stopIconName = "Solid_Stop";
                 _startIconColorHex = _ribbonColor;
                 _stopIconColorHex = _ribbonColor;
+                _chkMarkerOnly.Checked = false;
+                ApplyMarkerOnlyState();
                 RefreshIconPreviews();
                 ApplyMarkersEnabledState();
             }
@@ -907,10 +945,11 @@ namespace ColoredTimeline.Admin
                 return "At least one camera must be selected.";
             if (string.IsNullOrWhiteSpace(_txtStart.Tag as string))
                 return "Start event is required.";
-            // Stop is required only when auto-close is OFF; with auto-close on, every Start
-            // is closed by the configured timeout so the Stop event is optional.
-            if (!_chkAutoClose.Checked && string.IsNullOrWhiteSpace(_txtStop.Tag as string))
-                return "Stop event is required (or enable auto-close to allow an empty Stop).";
+            // Stop is required only when ribbons are drawn AND auto-close is OFF. Marker-only
+            // mode has no ribbon to close, and auto-close itself caps unmatched Starts, so in
+            // either case the Stop event is optional.
+            if (!_chkMarkerOnly.Checked && !_chkAutoClose.Checked && string.IsNullOrWhiteSpace(_txtStop.Tag as string))
+                return "Stop event is required (or enable auto-close / markers-only to allow an empty Stop).";
             try { ColorTranslator.FromHtml(_ribbonColor); }
             catch { return "Ribbon color is invalid."; }
             return null;
@@ -936,6 +975,7 @@ namespace ColoredTimeline.Admin
             item.Properties["StopIcon"] = _stopIconName ?? "";
             item.Properties["StartIconColor"] = _startIconColorHex ?? "";
             item.Properties["StopIconColor"] = _stopIconColorHex ?? "";
+            item.Properties["MarkerOnly"] = _chkMarkerOnly.Checked ? "Yes" : "No";
         }
     }
 }

@@ -146,7 +146,7 @@
         <p>
             XProtect's built-in timeline only shows motion sequences detected by the
             <strong>Recording Server's</strong> built-in motion detection. Edge motion
-            (motion detected by the camera firmware) and other camera-fired events do
+            and other camera-fired events do
             <strong>not</strong> appear on the playback timeline.
         </p>
         <p>
@@ -165,15 +165,25 @@
         <p>
             In Management Client open <strong>Tools &gt; Options &gt; Alarms and
             Events</strong> and set device-event retention to at least as many days
-            as your video retention. Ribbons are rendered from historical event-log
-            queries; events that have aged out will not appear even if the recording
-            still exists.
+            as your video retention. Ribbons and markers are rendered from historical
+            event-log queries; events that have aged out will not appear even if the
+            recording still exists.
         </p>
-        <h3>Smart Client setting</h3>
+        <h3>Smart Client timeline settings</h3>
         <p>
             In Smart Client open <strong>Settings &gt; Timeline</strong> and set
-            <strong>Additional data</strong> to <strong>Show</strong>. Without this,
-            plugin-provided ribbons are silently suppressed.
+            <strong>both</strong> of:
+        </p>
+        <ul>
+            <li><strong>Additional data</strong> &rarr; <strong>Show</strong> (required for ribbon rendering)</li>
+            <li><strong>Additional markers</strong> &rarr; <strong>Show</strong> (required for marker rendering)</li>
+        </ul>
+        <p>
+            Without these, the plugin's ribbons / markers are silently suppressed by
+            Smart Client. To enforce them across an installation, configure the same
+            two values in <strong>Management Client &gt; Smart Client Profiles &gt;
+            (your profile) &gt; Timeline</strong>. Profile values take effect once the
+            operator's Smart Client reconnects.
         </p>
         <h3>Unblock files (manual install only)</h3>
         <p>
@@ -188,9 +198,11 @@
         <ol class="steps">
             <li>Click on the <strong>Timeline Rules</strong> node in the tree on the left.</li>
             <li>Right-click and select <strong>Create New</strong> to add a rule.</li>
-            <li>Give the rule a name and pick a ribbon color.</li>
+            <li>Give the rule a name and pick a ribbon color (skip the color if you tick <em>Markers only</em>).</li>
             <li>Click <strong>Add Camera...</strong> and select the cameras this rule should apply to.</li>
-            <li>Pick the <strong>Start event</strong> and <strong>Stop event</strong> from the dropdowns. The dropdowns are populated automatically from the trigger events of the cameras you added.</li>
+            <li>Pick the <strong>Start event</strong> (and <strong>Stop event</strong> if you want a paired ribbon). You can also double-click any row in the <em>Events from the last 24 h</em> table to use it as the Start event - Shift+double-click sets the Stop event.</li>
+            <li>Optionally tick <strong>Marker</strong> under either side and choose an icon and color for marker rendering, or tick <strong>Markers only</strong> for a marker-only rule.</li>
+            <li>Optionally tick <strong>Auto-close</strong> if you want unmatched Starts capped at a fixed duration (and the Stop event becomes optional).</li>
             <li>Click <strong>Save</strong>. Smart Client picks up the change within a few seconds.</li>
         </ol>
     </div>
@@ -216,7 +228,7 @@
             The <strong>Start event</strong> and <strong>Stop event</strong> dropdowns
             list every trigger event that the selected cameras expose, so for typical
             edge-motion setups you will find entries like
-            <em>Motion Started Driver</em> / <em>Motion Stopped Driver</em>, or
+            <em>Motion Started (HW)</em> / <em>Motion Stopped (HW)</em>, or
             vendor-specific names for object analytics, line crossings, etc.
         </p>
         <p>
@@ -224,7 +236,7 @@
             It merges two sources: the configured trigger events on each camera, and
             the messages of events that have actually fired in the last 7 days
             (queried from the Event Server's event log). That second source is what
-            surfaces driver-fired events like <em>Motion Started Driver</em> which
+            surfaces driver-fired events like <em>Motion Started (HW)</em> which
             otherwise have no configuration item.
         </p>
         <p>
@@ -248,6 +260,54 @@
             <li>An open interval (start without a matching stop) is extended to the end of the visible window.</li>
             <li>Overlapping starts (a second start before the previous stop) are skipped.</li>
             <li>The interval is drawn as a colored ribbon in the configured <strong>Ribbon color</strong>.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Markers</h2>
+        <p>
+            In addition to (or instead of) a ribbon, each rule can place a
+            <strong>marker</strong> on the timeline at every individual Start and / or
+            Stop event. A marker is a small FontAwesome glyph in a chosen color, and
+            hovering it shows a preview with the rule name, event name, camera, and
+            timestamp.
+        </p>
+        <p>
+            Tick the <strong>Marker</strong> checkbox under the Start event and / or
+            Stop event sections. Each side has its own <strong>Icon...</strong> picker
+            (~250 surveillance-relevant glyphs) and <strong>Color...</strong> picker.
+            Common pairings: a green <em>Play</em> at the Start and a red <em>Stop</em>
+            at the Stop, or a single bell at the Start of an alarm.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Markers-only Mode</h2>
+        <p>
+            Tick <strong>Markers only (no ribbon)</strong> at the top of the rule to
+            paint <em>only</em> the per-event markers and skip the colored ribbon
+            entirely. This is useful for instantaneous events (button presses, alarm
+            triggers, license-plate hits) where a span doesn't make sense.
+        </p>
+        <ul>
+            <li>The <strong>Ribbon color</strong> field is hidden because no ribbon is drawn.</li>
+            <li>Both <strong>Marker</strong> checkboxes are turned on automatically when this mode is enabled.</li>
+            <li>The Stop event becomes optional, so you can configure only what you want to mark.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Auto-close</h2>
+        <p>
+            When a rule pairs Start / Stop events, an unmatched Start (no Stop event
+            ever fires for it) would draw a ribbon that runs to the end of the visible
+            window. Tick <strong>Close pair if no stop event after</strong> and choose
+            a number of seconds to cap unmatched Starts at that duration.
+        </p>
+        <ul>
+            <li>Default: <em>off</em>. With Auto-close off, unmatched Starts are skipped entirely.</li>
+            <li>Range: 1 - 3600 seconds.</li>
+            <li>With Auto-close on, the <strong>Stop event</strong> field is optional, because every Start is closed by the timeout.</li>
         </ul>
     </div>
 
@@ -289,10 +349,10 @@
     <div class="card">
         <h2>Limitations</h2>
         <ul>
-            <li><strong>Historical events only.</strong> Live ribbon updates require a pan / zoom or seek to refresh the visible range.</li>
+            <li><strong>Historical events only.</strong> Live ribbon / marker updates require a pan / zoom or seek to refresh the visible range.</li>
             <li><strong>One color per rule.</strong> To stack ribbons of different colors on the same camera, create multiple rules.</li>
             <li><strong>Events must be retained.</strong> See <em>Prerequisites</em> - device-event retention must cover the playback range you want to colorize.</li>
-            <li><strong>Smart Client toggle required.</strong> "Additional data" must be set to <em>Show</em> in the timeline settings, otherwise plugin ribbons are not rendered.</li>
+            <li><strong>Smart Client toggles required.</strong> Both <em>Additional data</em> and <em>Additional markers</em> must be set to <em>Show</em> in Smart Client &gt; Settings &gt; Timeline (or in the Smart Client Profile), otherwise plugin ribbons / markers are not rendered.</li>
         </ul>
     </div>
 

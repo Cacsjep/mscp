@@ -179,9 +179,14 @@ namespace ColoredTimeline.Background
                     if (!rule.AppliesTo(cameraId)) continue;
                     try
                     {
-                        var src = new ColoredTimelineSequenceSource(addon.CameraFQID, rule);
-                        addon.RegisterTimelineSequenceSource(src);
-                        existing.Add(src);
+                        // MarkerOnly rules skip the ribbon source entirely - only the
+                        // per-event marker sources below get registered.
+                        if (!rule.MarkerOnly)
+                        {
+                            var src = new ColoredTimelineSequenceSource(addon.CameraFQID, rule);
+                            addon.RegisterTimelineSequenceSource(src);
+                            existing.Add(src);
+                        }
                         matched++;
 
                         if (rule.StartUseMarker && !string.IsNullOrEmpty(rule.StartEvent))
@@ -238,6 +243,7 @@ namespace ColoredTimeline.Background
             public string StopIcon { get; private set; }
             public string StartIconColor { get; private set; }
             public string StopIconColor { get; private set; }
+            public bool MarkerOnly { get; private set; }
 
             public bool AppliesTo(Guid cameraId) => Cameras.Contains(cameraId);
 
@@ -272,6 +278,7 @@ namespace ColoredTimeline.Background
                     var stopIcon = item.Properties.ContainsKey("StopIcon") ? item.Properties["StopIcon"] : "";
                     var startIconColor = item.Properties.ContainsKey("StartIconColor") ? item.Properties["StartIconColor"] : "";
                     var stopIconColor = item.Properties.ContainsKey("StopIconColor") ? item.Properties["StopIconColor"] : "";
+                    var markerOnly = item.Properties.ContainsKey("MarkerOnly") && item.Properties["MarkerOnly"] == "Yes";
 
                     var cams = new HashSet<Guid>();
                     foreach (var s in camIds.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
@@ -296,7 +303,8 @@ namespace ColoredTimeline.Background
                         StartIcon = startIcon,
                         StopIcon = stopIcon,
                         StartIconColor = startIconColor,
-                        StopIconColor = stopIconColor
+                        StopIconColor = stopIconColor,
+                        MarkerOnly = markerOnly
                     };
                 }
                 catch
