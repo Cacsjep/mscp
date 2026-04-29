@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="MilestoneSystems.VideoOS.Platform.DriverFramework" Version="*" />
-    <PackageReference Include="FFmpeg.AutoGen" Version="8.0.0.1" />
+    <PackageReference Include="FFmpeg.AutoGen" Version="8.1.0" />
     <PackageReference Include="FFmpeg.GPL" Version="20260325.1.0" />
   </ItemGroup>
 
