@@ -21,6 +21,10 @@ Built-in timeline only paints sequences in RED for motion or event/permanent rec
 8. Optionally tick **Auto-close** to cap unmatched Starts at a fixed timeout (the Stop event becomes optional)
 9. Save. Smart Client picks up the change within a few seconds
 
+<video controls width="100%">
+  <source src="../vids/timeline.mp4" type="video/mp4">
+</video>
+
 ## Prerequisites
 
 ### Device-event retention
