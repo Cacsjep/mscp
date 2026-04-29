@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform.SDK" Version="*-*" />
-    <PackageReference Include="ZXing.Net" Version="0.16.9" />
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
   </ItemGroup>
 
   <ItemGroup>
