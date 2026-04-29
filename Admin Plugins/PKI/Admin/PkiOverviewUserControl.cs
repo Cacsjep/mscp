@@ -611,16 +611,11 @@ namespace PKI.Admin
                     }
                 }
 
-                MessageBox.Show(
-                    "Auto setup complete.\n\n" +
-                    "Root CA: " + (rootCreated ? "created" : "reused") + " (\"" + rootName + "\")\n" +
-                    "Service certificates created: " + created + "\n" +
-                    "Skipped (already existed):    " + skipped + "\n" +
-                    "Failed:                       " + failed + "\n\n" +
-                    "Details:\n" + details,
-                    "Auto setup",
-                    MessageBoxButtons.OK,
-                    failed == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                PKIDefinition.Log.Info(
+                    "Auto setup complete. Root CA " + (rootCreated ? "created" : "reused") +
+                    " (\"" + rootName + "\"). Service certs created=" + created +
+                    ", skipped=" + skipped + ", failed=" + failed +
+                    Environment.NewLine + details);
 
                 Refresh();
             }

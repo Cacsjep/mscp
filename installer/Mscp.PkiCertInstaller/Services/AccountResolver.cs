@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management;
 using System.Runtime.Versioning;
 using System.Security.Principal;
@@ -90,6 +91,59 @@ public static class AccountResolver
         });
 
         return list;
+    }
+
+    // Best-effort lookup of the Windows accounts the installed Milestone
+    // XProtect™ services run under. Lets the install dialog pre-fill the
+    // grant list with the *actual* service identity instead of the
+    // hard-coded "NETWORK SERVICE" default - matters on installs where
+    // the admin chose a domain service account, or on OEM rebrands where
+    // the SCM StartName isn't the built-in. Returns an empty list if
+    // nothing matches; caller should fall back to its hard-coded default
+    // (and the user can still edit manually in the dialog).
+    public static IReadOnlyList<string> DetectMilestoneServiceAccounts()
+    {
+        var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // DisplayName scan covers all the official Milestone service
+        // names ("Milestone XProtect Recording Server", "... Management
+        // Server", "... Event Server", "... Mobile Server", "... Log
+        // Server", "... Data Collector Server"). PathName scan catches
+        // OEM rebrands that kept the binary path but renamed the service.
+        TryQuery(
+            "SELECT Name, DisplayName, StartName, PathName FROM Win32_Service " +
+            "WHERE DisplayName LIKE 'Milestone%' OR PathName LIKE '%Milestone%' " +
+            "OR PathName LIKE '%XProtect%'",
+            mo =>
+            {
+                var startName = mo["StartName"]?.ToString();
+                var disp      = mo["DisplayName"]?.ToString() ?? "";
+                var name      = mo["Name"]?.ToString() ?? "";
+                var normalized = NormalizeAccount(startName);
+                if (!string.IsNullOrEmpty(normalized))
+                {
+                    Log.Info($"Detected Milestone service '{name}' ({disp}) runs as '{startName}' -> '{normalized}'");
+                    found.Add(normalized);
+                }
+            });
+        return found.ToList();
+    }
+
+    // Maps SCM StartName forms to the friendly built-in names the
+    // existing AccountRow / ACL code already understands. Domain
+    // accounts (DOMAIN\user) and managed-service accounts (DOMAIN\svc$)
+    // are returned as-is.
+    private static string? NormalizeAccount(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        var t = s.Trim();
+        if (t.Equals("LocalSystem", StringComparison.OrdinalIgnoreCase))            return "SYSTEM";
+        if (t.Equals(".\\LocalSystem", StringComparison.OrdinalIgnoreCase))         return "SYSTEM";
+        if (t.Equals("NT AUTHORITY\\NetworkService", StringComparison.OrdinalIgnoreCase)) return "NETWORK SERVICE";
+        if (t.Equals("NT AUTHORITY\\LocalService", StringComparison.OrdinalIgnoreCase))  return "LOCAL SERVICE";
+        if (t.Equals("NT AUTHORITY\\System", StringComparison.OrdinalIgnoreCase))        return "SYSTEM";
+        if (t.Equals("NetworkService", StringComparison.OrdinalIgnoreCase))         return "NETWORK SERVICE";
+        if (t.Equals("LocalService", StringComparison.OrdinalIgnoreCase))           return "LOCAL SERVICE";
+        return t;
     }
 
     private static void TryQuery(string wql, Action<ManagementObject> visit)

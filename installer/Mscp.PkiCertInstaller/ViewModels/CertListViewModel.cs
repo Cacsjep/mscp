@@ -27,13 +27,17 @@ public partial class CertListViewModel : ObservableObject, IDisposable
 
     public string ServerLabel => _client.BaseUri.ToString();
 
-    // Default service identity the cert keys get ACL'd for. Per the
-    // Milestone Certificates Guide (p.104, p.127): "By default,
-    // XProtect software uses the NETWORK SERVICE account." Anything
-    // else (domain service accounts, NT SERVICE\<svc> virtual
-    // accounts) is install-specific and the admin adds it via the
-    // picker.
-    public string DefaultGrantAccountsCsv { get; } = "NETWORK SERVICE";
+    // Default service identity the cert keys get ACL'd for. We try to
+    // auto-detect by reading the StartName of every installed Milestone
+    // XProtect™ service on this box - that's the account that will
+    // actually open the .pfx at runtime. Per the Milestone Certificates
+    // Guide (p.104, p.127): "By default, XProtect software uses the
+    // NETWORK SERVICE account." So when detection finds nothing (no
+    // Milestone services installed yet, or an OEM rebrand the WMI
+    // filter didn't catch), we fall back to NETWORK SERVICE and let the
+    // admin add domain accounts / NT SERVICE\<svc> entries manually in
+    // the install dialog.
+    public string DefaultGrantAccountsCsv { get; }
 
     // Filter dropdown source. We deliberately omit HTTPS and 802.1X
     // here: the installer's primary use case is deploying Root /
@@ -61,7 +65,15 @@ public partial class CertListViewModel : ObservableObject, IDisposable
     public sealed record OpResult(bool Success, string Title, string Summary, IReadOnlyList<OpResultEntry> Entries);
     public sealed record OpResultEntry(bool Success, string Name, string Status);
 
-    public CertListViewModel(MilestoneClient client) { _client = client; }
+    public CertListViewModel(MilestoneClient client)
+    {
+        _client = client;
+        var detected = AccountResolver.DetectMilestoneServiceAccounts();
+        DefaultGrantAccountsCsv = detected.Count > 0
+            ? string.Join(", ", detected)
+            : "NETWORK SERVICE";
+        Log.Info($"Default grant accounts: '{DefaultGrantAccountsCsv}' (auto-detected={detected.Count})");
+    }
 
     partial void OnSearchTextChanged(string value)  => Refilter();
     partial void OnFolderFilterChanged(string value) => Refilter();
