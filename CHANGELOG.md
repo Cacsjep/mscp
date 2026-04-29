@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-04-29
+- Add Colored Timeline: New per-camera selectable-event ribbon plugin (successor to EdgeMotionTimeline). Includes icon picker, marker support, display-name aware rule UI with reduced table footprint, and demo video in the docs.
+- Fix BarcodeReader (#84): Structured diagnostics for helper failures. Last-chance `UnhandledException` and `UnobservedTaskException` handlers, chatty `OnAssemblyResolve` (logs hits, load failures, and our-dep misses plus the full search-dir list), per-channel on-disk helper log mirrored to `C:\ProgramData\Milestone\BarcodeReader\helper-{itemId}.log` with 5 MB rotation, and typed exit codes (`BackgroundPlugin.MapExitCode` decodes 255 as `NativeCrash`, dumps the last stderr lines and the on-disk log path on death).
+- Fix Installer: Management Client process kill targets the actual EXE name. Old image name `VideoOS.Platform.Administration.exe` does not match modern Milestone builds where Management Client runs as `VideoOS.Administration.exe`, so the kill silently no-opped and left the client holding plugin DLLs. Both names are now killed.
+- Fix Installer (CodeQL #3, `cs/zipslip`, CWE-22 high): `ExtractZipToFolder` now resolves each entry path via `Path.GetFullPath` and validates it is contained within the resolved destination directory (with trailing separator) before extracting. Entries that escape are skipped and logged.
+- Improve Dependabot: Monthly cadence with major-version bumps ignored, reducing churn from breaking upgrades.
+- Bump ZXing.Net 0.16.9 to 0.16.11 (#93).
+- Bump GitHub Actions: `softprops/action-gh-release` 2.6.1 to 2.6.2 (#95), `actions/upload-artifact` 7.0.0 to 7.0.1 (#66), `NuGet/setup-nuget` 3.0.0 to 3.1.0 (#65).
+
 ## [2.2.3] - 2026-04-26
 - Fix FlexView: Saving an opened view no longer clears camera assignments. Smart Client rejects `ViewAndLayoutItem.Layout` mutation on an existing view; FlexView now recreates the view and re-attaches each slot's built-in content (Camera, Hotspot, Carousel, Matrix, HTML) via `InsertBuiltinViewItem`.
 - Fix FlexView: A `Save` with no edits is now a no-op (was destructively recreating the view).
