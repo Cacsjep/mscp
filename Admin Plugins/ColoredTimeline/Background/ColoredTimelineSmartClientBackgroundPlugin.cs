@@ -11,8 +11,11 @@ namespace ColoredTimeline.Background
 {
     public class ColoredTimelineSmartClientBackgroundPlugin : BackgroundPlugin
     {
-        private readonly Dictionary<ImageViewerAddOn, List<ColoredTimelineSequenceSource>> _sources
-            = new Dictionary<ImageViewerAddOn, List<ColoredTimelineSequenceSource>>();
+        // We may register multiple sources per pane: one Ribbon per rule, plus optional
+        // Marker sources (Start + Stop) when the rule has UseMarkers turned on. Mixed list,
+        // each source carries its own Dispose/UnregisterTimelineSequenceSource handling.
+        private readonly Dictionary<ImageViewerAddOn, List<TimelineSequenceSource>> _sources
+            = new Dictionary<ImageViewerAddOn, List<TimelineSequenceSource>>();
 
         private readonly object _lock = new object();
         private readonly PluginLog _log = new PluginLog("ColoredTimeline - SC BG");
@@ -53,7 +56,7 @@ namespace ColoredTimeline.Background
                     foreach (var src in kv.Value)
                     {
                         try { kv.Key.UnregisterTimelineSequenceSource(src); } catch { }
-                        try { src.Dispose(); } catch { }
+                        try { (src as IDisposable)?.Dispose(); } catch { }
                     }
                 }
                 _sources.Clear();
@@ -138,7 +141,7 @@ namespace ColoredTimeline.Background
                     foreach (var src in list)
                     {
                         try { addon.UnregisterTimelineSequenceSource(src); } catch { }
-                        try { src.Dispose(); } catch { }
+                        try { (src as IDisposable)?.Dispose(); } catch { }
                     }
                     _sources.Remove(addon);
                 }
@@ -154,18 +157,21 @@ namespace ColoredTimeline.Background
                     foreach (var src in existing)
                     {
                         try { addon.UnregisterTimelineSequenceSource(src); } catch { }
-                        try { src.Dispose(); } catch { }
+                        try { (src as IDisposable)?.Dispose(); } catch { }
                     }
                     existing.Clear();
                 }
                 else
                 {
-                    existing = new List<ColoredTimelineSequenceSource>();
+                    existing = new List<TimelineSequenceSource>();
                     _sources[addon] = existing;
                 }
 
                 if (addon.CameraFQID == null) return;
                 var cameraId = addon.CameraFQID.ObjectId;
+                string cameraName = null;
+                try { cameraName = Configuration.Instance.GetItem(cameraId, Kind.Camera)?.Name; }
+                catch { }
 
                 int matched = 0;
                 foreach (var rule in _rules)
@@ -177,6 +183,35 @@ namespace ColoredTimeline.Background
                         addon.RegisterTimelineSequenceSource(src);
                         existing.Add(src);
                         matched++;
+
+                        if (rule.StartUseMarker && !string.IsNullOrEmpty(rule.StartEvent))
+                        {
+                            try
+                            {
+                                var startMarker = new ColoredTimelineMarkerSource(
+                                    addon.CameraFQID, cameraName, rule, MarkerKind.Start, rule.StartEvent);
+                                addon.RegisterTimelineSequenceSource(startMarker);
+                                existing.Add(startMarker);
+                            }
+                            catch (Exception ex)
+                            {
+                                _log.Error($"Failed to register Start marker for rule '{rule.Name}': {ex.GetType().FullName}: {ex.Message}");
+                            }
+                        }
+                        if (rule.StopUseMarker && !string.IsNullOrEmpty(rule.StopEvent))
+                        {
+                            try
+                            {
+                                var stopMarker = new ColoredTimelineMarkerSource(
+                                    addon.CameraFQID, cameraName, rule, MarkerKind.Stop, rule.StopEvent);
+                                addon.RegisterTimelineSequenceSource(stopMarker);
+                                existing.Add(stopMarker);
+                            }
+                            catch (Exception ex)
+                            {
+                                _log.Error($"Failed to register Stop marker for rule '{rule.Name}': {ex.GetType().FullName}: {ex.Message}");
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -197,6 +232,12 @@ namespace ColoredTimeline.Background
             public HashSet<Guid> Cameras { get; private set; }
             public bool AutoCloseEnabled { get; private set; }
             public TimeSpan AutoCloseAfter { get; private set; }
+            public bool StartUseMarker { get; private set; }
+            public bool StopUseMarker { get; private set; }
+            public string StartIcon { get; private set; }
+            public string StopIcon { get; private set; }
+            public string StartIconColor { get; private set; }
+            public string StopIconColor { get; private set; }
 
             public bool AppliesTo(Guid cameraId) => Cameras.Contains(cameraId);
 
@@ -218,6 +259,20 @@ namespace ColoredTimeline.Background
                     if (autoCloseSecs < 1) autoCloseSecs = 1;
                     if (autoCloseSecs > 3600) autoCloseSecs = 3600;
 
+                    // Per-event marker flags (StartUseMarker/StopUseMarker). Fall back to
+                    // legacy single "UseMarkers" key for rules saved before per-event support.
+                    var legacyUseMarkers = item.Properties.ContainsKey("UseMarkers") && item.Properties["UseMarkers"] == "Yes";
+                    var startUseMarker = item.Properties.ContainsKey("StartUseMarker")
+                        ? item.Properties["StartUseMarker"] == "Yes"
+                        : legacyUseMarkers;
+                    var stopUseMarker = item.Properties.ContainsKey("StopUseMarker")
+                        ? item.Properties["StopUseMarker"] == "Yes"
+                        : legacyUseMarkers;
+                    var startIcon = item.Properties.ContainsKey("StartIcon") ? item.Properties["StartIcon"] : "";
+                    var stopIcon = item.Properties.ContainsKey("StopIcon") ? item.Properties["StopIcon"] : "";
+                    var startIconColor = item.Properties.ContainsKey("StartIconColor") ? item.Properties["StartIconColor"] : "";
+                    var stopIconColor = item.Properties.ContainsKey("StopIconColor") ? item.Properties["StopIconColor"] : "";
+
                     var cams = new HashSet<Guid>();
                     foreach (var s in camIds.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
                         if (Guid.TryParse(s.Trim(), out var g)) cams.Add(g);
@@ -235,7 +290,13 @@ namespace ColoredTimeline.Background
                         Color = color,
                         Cameras = cams,
                         AutoCloseEnabled = autoCloseEnabled,
-                        AutoCloseAfter = TimeSpan.FromSeconds(autoCloseSecs)
+                        AutoCloseAfter = TimeSpan.FromSeconds(autoCloseSecs),
+                        StartUseMarker = startUseMarker,
+                        StopUseMarker = stopUseMarker,
+                        StartIcon = startIcon,
+                        StopIcon = stopIcon,
+                        StartIconColor = startIconColor,
+                        StopIconColor = stopIconColor
                     };
                 }
                 catch

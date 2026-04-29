@@ -1,11 +1,15 @@
+using ColoredTimeline.Background;
 using CommunitySDK;
+using FontAwesome5;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Media.Imaging;
 using VideoOS.Platform;
 using VideoOS.Platform.Proxy.Alarm;
 using VideoOS.Platform.Proxy.AlarmClient;
@@ -43,6 +47,23 @@ namespace ColoredTimeline.Admin
         private CheckBox _chkAutoClose;
         private NumericUpDown _numAutoCloseSeconds;
         private Label _lblAutoCloseSuffix;
+
+        private CheckBox _chkStartUseMarker;
+        private PictureBox _icoStartGlyph;
+        private Button _btnPickStartIcon;
+        private Panel _swatchStartIconColor;
+        private Button _btnPickStartIconColor;
+
+        private CheckBox _chkStopUseMarker;
+        private PictureBox _icoStopGlyph;
+        private Button _btnPickStopIcon;
+        private Panel _swatchStopIconColor;
+        private Button _btnPickStopIconColor;
+
+        private string _startIconName = "Solid_Play";
+        private string _stopIconName = "Solid_Stop";
+        private string _startIconColorHex = DefaultColor;
+        private string _stopIconColorHex = DefaultColor;
 
         private Label _lblEventsTable;
         private CheckBox _chkOnlySelectedCameras;
@@ -82,7 +103,9 @@ namespace ColoredTimeline.Admin
                 EventTypeCache.Loaded += OnEventTypesLoaded;
 
             // Initial population once the handle is created (need it for BeginInvoke).
-            HandleCreated += (s, e) => RefreshEventsTable();
+            // Also paint the marker glyph previews from their default values so the boxes
+            // aren't empty before the first FillContent/ClearContent call.
+            HandleCreated += (s, e) => { RefreshEventsTable(); RefreshIconPreviews(); };
         }
 
         private void OnEventTypesLoaded(object sender, EventArgs e)
@@ -141,48 +164,114 @@ namespace ColoredTimeline.Admin
             _btnRemoveCamera = new Button { Text = "Remove", Location = new Point(126, 138), Size = new Size(80, 23) };
             _grpCameras.Controls.AddRange(new Control[] { _lstCameras, _btnAddCamera, _btnRemoveCamera });
 
-            // Two side-by-side GroupBoxes for Start / Stop event
-            _grpStart = new GroupBox { Text = "Start event", Location = new Point(12, 280), Size = new Size(462, 92) };
+            // Two side-by-side GroupBoxes for Start / Stop event. Each box hosts:
+            // (1) the event display label, (2) a per-event "Marker" row (checkbox +
+            // glyph + Icon... + color swatch + Color...), (3) Pick/Clear at the bottom.
+            _grpStart = new GroupBox { Text = "Start event", Location = new Point(12, 280), Size = new Size(462, 116) };
             _txtStart = new Label
             {
                 Location = new Point(10, 22),
-                Size = new Size(442, 32),
+                Size = new Size(442, 22),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = SystemColors.Window,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(4, 0, 4, 0),
                 AutoEllipsis = true
             };
-            _btnPickStart = new Button { Text = "Pick...", Location = new Point(298, 60), Size = new Size(75, 23) };
-            _btnClearStart = new Button { Text = "Clear", Location = new Point(379, 60), Size = new Size(75, 23) };
-            _grpStart.Controls.AddRange(new Control[] { _txtStart, _btnPickStart, _btnClearStart });
+            // All controls in this row use the same Y (48) and Height (24) so they share
+            // a single horizontal centerline (Y=60) regardless of font/glyph metrics.
+            _chkStartUseMarker = new CheckBox
+            {
+                Text = "Marker",
+                Location = new Point(10, 48),
+                Size = new Size(72, 24),
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Checked = false
+            };
+            _icoStartGlyph = new PictureBox
+            {
+                Location = new Point(86, 48),
+                Size = new Size(24, 24),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = SystemColors.Window,
+                SizeMode = PictureBoxSizeMode.CenterImage
+            };
+            _btnPickStartIcon = new Button { Text = "Icon...", Location = new Point(114, 48), Size = new Size(64, 24) };
+            _swatchStartIconColor = new Panel
+            {
+                Location = new Point(184, 48),
+                Size = new Size(24, 24),
+                BorderStyle = BorderStyle.FixedSingle,
+                Cursor = Cursors.Hand
+            };
+            _btnPickStartIconColor = new Button { Text = "Color...", Location = new Point(212, 48), Size = new Size(64, 24) };
+            _btnPickStart = new Button { Text = "Pick...", Location = new Point(298, 84), Size = new Size(75, 23) };
+            _btnClearStart = new Button { Text = "Clear", Location = new Point(379, 84), Size = new Size(75, 23) };
+            _grpStart.Controls.AddRange(new Control[]
+            {
+                _txtStart,
+                _chkStartUseMarker, _icoStartGlyph, _btnPickStartIcon, _swatchStartIconColor, _btnPickStartIconColor,
+                _btnPickStart, _btnClearStart
+            });
 
-            _grpStop = new GroupBox { Text = "Stop event", Location = new Point(486, 280), Size = new Size(462, 92) };
+            _grpStop = new GroupBox { Text = "Stop event", Location = new Point(486, 280), Size = new Size(462, 116) };
             _txtStop = new Label
             {
                 Location = new Point(10, 22),
-                Size = new Size(442, 32),
+                Size = new Size(442, 22),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = SystemColors.Window,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(4, 0, 4, 0),
                 AutoEllipsis = true
             };
-            _btnPickStop = new Button { Text = "Pick...", Location = new Point(298, 60), Size = new Size(75, 23) };
-            _btnClearStop = new Button { Text = "Clear", Location = new Point(379, 60), Size = new Size(75, 23) };
-            _grpStop.Controls.AddRange(new Control[] { _txtStop, _btnPickStop, _btnClearStop });
+            _chkStopUseMarker = new CheckBox
+            {
+                Text = "Marker",
+                Location = new Point(10, 48),
+                Size = new Size(72, 24),
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Checked = false
+            };
+            _icoStopGlyph = new PictureBox
+            {
+                Location = new Point(86, 48),
+                Size = new Size(24, 24),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = SystemColors.Window,
+                SizeMode = PictureBoxSizeMode.CenterImage
+            };
+            _btnPickStopIcon = new Button { Text = "Icon...", Location = new Point(114, 48), Size = new Size(64, 24) };
+            _swatchStopIconColor = new Panel
+            {
+                Location = new Point(184, 48),
+                Size = new Size(24, 24),
+                BorderStyle = BorderStyle.FixedSingle,
+                Cursor = Cursors.Hand
+            };
+            _btnPickStopIconColor = new Button { Text = "Color...", Location = new Point(212, 48), Size = new Size(64, 24) };
+            _btnPickStop = new Button { Text = "Pick...", Location = new Point(298, 84), Size = new Size(75, 23) };
+            _btnClearStop = new Button { Text = "Clear", Location = new Point(379, 84), Size = new Size(75, 23) };
+            _grpStop.Controls.AddRange(new Control[]
+            {
+                _txtStop,
+                _chkStopUseMarker, _icoStopGlyph, _btnPickStopIcon, _swatchStopIconColor, _btnPickStopIconColor,
+                _btnPickStop, _btnClearStop
+            });
 
             // "Close pair if no stop event after N seconds" - per-rule cap for unmatched Starts.
             _chkAutoClose = new CheckBox
             {
                 Text = "Close pair if no stop event after",
-                Location = new Point(12, 384),
+                Location = new Point(12, 408),
                 AutoSize = true,
                 Checked = false
             };
             _numAutoCloseSeconds = new NumericUpDown
             {
-                Location = new Point(220, 382),
+                Location = new Point(220, 406),
                 Size = new Size(70, 22),
                 Minimum = 1,
                 Maximum = 3600,
@@ -192,7 +281,7 @@ namespace ColoredTimeline.Admin
             _lblAutoCloseSuffix = new Label
             {
                 Text = "seconds. When enabled, the Stop event is optional.",
-                Location = new Point(296, 384),
+                Location = new Point(296, 408),
                 AutoSize = true,
                 ForeColor = SystemColors.ControlDarkDark
             };
@@ -203,10 +292,24 @@ namespace ColoredTimeline.Admin
             };
             _numAutoCloseSeconds.ValueChanged += OnUserChange;
 
+            // Per-event marker wiring. Each side has its own UseMarker checkbox + icon +
+            // color picker, so a rule can paint a Start marker only, a Stop marker only,
+            // or both.
+            _chkStartUseMarker.CheckedChanged += (s, e) => { ApplyMarkersEnabledState(); OnUserChange(s, e); };
+            _chkStopUseMarker.CheckedChanged  += (s, e) => { ApplyMarkersEnabledState(); OnUserChange(s, e); };
+            _btnPickStartIcon.Click += (s, e) => OnPickIcon(true);
+            _btnPickStopIcon.Click  += (s, e) => OnPickIcon(false);
+            _icoStartGlyph.Click += (s, e) => OnPickIcon(true);
+            _icoStopGlyph.Click  += (s, e) => OnPickIcon(false);
+            _btnPickStartIconColor.Click += (s, e) => OnPickIconColor(true);
+            _btnPickStopIconColor.Click  += (s, e) => OnPickIconColor(false);
+            _swatchStartIconColor.Click += (s, e) => OnPickIconColor(true);
+            _swatchStopIconColor.Click  += (s, e) => OnPickIconColor(false);
+
             _lblEventsTable = new Label
             {
                 Text = "Events from the last 24 h (double-click to use as Start, Shift+double-click for Stop):",
-                Location = new Point(12, 414),
+                Location = new Point(12, 438),
                 AutoSize = true,
                 ForeColor = SystemColors.ControlDarkDark
             };
@@ -221,7 +324,7 @@ namespace ColoredTimeline.Admin
             _btnRefreshEvents = new Button
             {
                 Text = "Refresh",
-                Location = new Point(873, 410),
+                Location = new Point(873, 434),
                 Size = new Size(75, 22),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
@@ -230,7 +333,7 @@ namespace ColoredTimeline.Admin
             void RepositionShowOnly()
             {
                 var w = _chkOnlySelectedCameras.PreferredSize.Width;
-                _chkOnlySelectedCameras.Location = new Point(_btnRefreshEvents.Left - w - 5, 412);
+                _chkOnlySelectedCameras.Location = new Point(_btnRefreshEvents.Left - w - 5, 436);
             }
             HandleCreated += (s, e) => RepositionShowOnly();
             FontChanged += (s, e) => RepositionShowOnly();
@@ -238,7 +341,7 @@ namespace ColoredTimeline.Admin
 
             _lvEvents = new ListView
             {
-                Location = new Point(12, 434),
+                Location = new Point(12, 458),
                 Size = new Size(936, 200),
                 View = View.Details,
                 FullRowSelect = true,
@@ -266,7 +369,7 @@ namespace ColoredTimeline.Admin
             });
 
             Name = "TimelineRuleUserControl";
-            Size = new Size(960, 647);
+            Size = new Size(960, 671);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -281,6 +384,90 @@ namespace ColoredTimeline.Admin
             {
                 _ribbonColor = DefaultColor;
                 _colorSwatch.BackColor = ColorTranslator.FromHtml(DefaultColor);
+            }
+        }
+
+        private void ApplyMarkersEnabledState()
+        {
+            bool startOn = _chkStartUseMarker.Checked;
+            _icoStartGlyph.Enabled = startOn;
+            _btnPickStartIcon.Enabled = startOn;
+            _swatchStartIconColor.Enabled = startOn;
+            _btnPickStartIconColor.Enabled = startOn;
+
+            bool stopOn = _chkStopUseMarker.Checked;
+            _icoStopGlyph.Enabled = stopOn;
+            _btnPickStopIcon.Enabled = stopOn;
+            _swatchStopIconColor.Enabled = stopOn;
+            _btnPickStopIconColor.Enabled = stopOn;
+        }
+
+        private void RefreshIconPreviews()
+        {
+            _icoStartGlyph.Image = RenderIconPreview(_startIconName, _startIconColorHex);
+            _icoStopGlyph.Image = RenderIconPreview(_stopIconName, _stopIconColorHex);
+            try { _swatchStartIconColor.BackColor = ColorTranslator.FromHtml(_startIconColorHex); }
+            catch { _swatchStartIconColor.BackColor = ColorTranslator.FromHtml(DefaultColor); }
+            try { _swatchStopIconColor.BackColor = ColorTranslator.FromHtml(_stopIconColorHex); }
+            catch { _swatchStopIconColor.BackColor = ColorTranslator.FromHtml(DefaultColor); }
+        }
+
+        private static System.Drawing.Image RenderIconPreview(string iconName, string colorHex)
+        {
+            EFontAwesomeIcon icon;
+            if (!MarkerIconRenderer.TryParseIcon(iconName, out icon))
+                icon = EFontAwesomeIcon.Solid_Bell;
+            var color = MarkerIconRenderer.ParseColor(colorHex,
+                System.Windows.Media.Color.FromRgb(0x1E, 0x88, 0xE5));
+            var bs = MarkerIconRenderer.Render(icon, color, 18);
+            var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(bs));
+            // Bitmap requires the source MemoryStream to remain alive. Disposing the stream
+            // (e.g. via using { }) leaves the Bitmap painting blank until something forces
+            // a re-render. Same gotcha called out in CommunitySDK/PluginIcon.cs.
+            var ms = new MemoryStream();
+            enc.Save(ms);
+            ms.Position = 0;
+            return new System.Drawing.Bitmap(ms);
+        }
+
+        private void OnPickIcon(bool isStart)
+        {
+            EFontAwesomeIcon current;
+            MarkerIconRenderer.TryParseIcon(isStart ? _startIconName : _stopIconName, out current);
+            using (var dlg = new IconPickerDialog(current, isStart ? _startIconColorHex : _stopIconColorHex))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    var name = dlg.SelectedIcon.ToString();
+                    if (isStart) _startIconName = name; else _stopIconName = name;
+                    RefreshIconPreviews();
+                    OnUserChange(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        private void OnPickIconColor(bool isStart)
+        {
+            Color start;
+            try { start = ColorTranslator.FromHtml(isStart ? _startIconColorHex : _stopIconColorHex); }
+            catch { start = ColorTranslator.FromHtml(DefaultColor); }
+
+            using (var dlg = new ColorDialog
+            {
+                AllowFullOpen = true,
+                AnyColor = true,
+                FullOpen = true,
+                Color = start
+            })
+            {
+                if (dlg.ShowDialog() == DialogResult.OK)
+                {
+                    var hex = ColorTranslator.ToHtml(dlg.Color);
+                    if (isStart) _startIconColorHex = hex; else _stopIconColorHex = hex;
+                    RefreshIconPreviews();
+                    if (!_filling) OnUserChange(this, EventArgs.Empty);
+                }
             }
         }
 
@@ -651,6 +838,27 @@ namespace ColoredTimeline.Admin
                 if (seconds > 3600) seconds = 3600;
                 _numAutoCloseSeconds.Value = seconds;
                 _numAutoCloseSeconds.Enabled = _chkAutoClose.Checked;
+
+                // Per-event marker enable. Fall back to legacy "UseMarkers" (single global
+                // flag) so rules saved before per-event support keep working.
+                bool legacyUseMarkers = item.Properties.ContainsKey("UseMarkers")
+                    && item.Properties["UseMarkers"] == "Yes";
+                _chkStartUseMarker.Checked = item.Properties.ContainsKey("StartUseMarker")
+                    ? item.Properties["StartUseMarker"] == "Yes"
+                    : legacyUseMarkers;
+                _chkStopUseMarker.Checked = item.Properties.ContainsKey("StopUseMarker")
+                    ? item.Properties["StopUseMarker"] == "Yes"
+                    : legacyUseMarkers;
+                _startIconName = item.Properties.ContainsKey("StartIcon") && !string.IsNullOrEmpty(item.Properties["StartIcon"])
+                    ? item.Properties["StartIcon"] : "Solid_Play";
+                _stopIconName = item.Properties.ContainsKey("StopIcon") && !string.IsNullOrEmpty(item.Properties["StopIcon"])
+                    ? item.Properties["StopIcon"] : "Solid_Stop";
+                _startIconColorHex = item.Properties.ContainsKey("StartIconColor") && !string.IsNullOrEmpty(item.Properties["StartIconColor"])
+                    ? item.Properties["StartIconColor"] : _ribbonColor;
+                _stopIconColorHex = item.Properties.ContainsKey("StopIconColor") && !string.IsNullOrEmpty(item.Properties["StopIconColor"])
+                    ? item.Properties["StopIconColor"] : _ribbonColor;
+                RefreshIconPreviews();
+                ApplyMarkersEnabledState();
             }
             finally
             {
@@ -675,6 +883,14 @@ namespace ColoredTimeline.Admin
                 _chkAutoClose.Checked = false;
                 _numAutoCloseSeconds.Value = 10;
                 _numAutoCloseSeconds.Enabled = false;
+                _chkStartUseMarker.Checked = false;
+                _chkStopUseMarker.Checked = false;
+                _startIconName = "Solid_Play";
+                _stopIconName = "Solid_Stop";
+                _startIconColorHex = _ribbonColor;
+                _stopIconColorHex = _ribbonColor;
+                RefreshIconPreviews();
+                ApplyMarkersEnabledState();
             }
             finally
             {
@@ -712,6 +928,14 @@ namespace ColoredTimeline.Admin
             item.Properties["CameraNames"] = string.Join(";", _selectedCameras.Select(c => c.Name));
             item.Properties["AutoCloseEnabled"] = _chkAutoClose.Checked ? "Yes" : "No";
             item.Properties["AutoCloseSeconds"] = ((int)_numAutoCloseSeconds.Value).ToString();
+            item.Properties["StartUseMarker"] = _chkStartUseMarker.Checked ? "Yes" : "No";
+            item.Properties["StopUseMarker"] = _chkStopUseMarker.Checked ? "Yes" : "No";
+            // Drop the legacy global UseMarkers key on save so old/new state can't disagree.
+            item.Properties["UseMarkers"] = (_chkStartUseMarker.Checked || _chkStopUseMarker.Checked) ? "Yes" : "No";
+            item.Properties["StartIcon"] = _startIconName ?? "";
+            item.Properties["StopIcon"] = _stopIconName ?? "";
+            item.Properties["StartIconColor"] = _startIconColorHex ?? "";
+            item.Properties["StopIconColor"] = _stopIconColorHex ?? "";
         }
     }
 }

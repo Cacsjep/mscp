@@ -11,8 +11,8 @@
     <StopAdminClient>true</StopAdminClient>
     <StopEventServer>false</StopEventServer>
     <StartEventServer>false</StartEventServer>
-    <LaunchAdminClient>false</LaunchAdminClient>
-    <LaunchSmartClient>false</LaunchSmartClient>
+    <LaunchAdminClient>true</LaunchAdminClient>
+    <LaunchSmartClient>true</LaunchSmartClient>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
