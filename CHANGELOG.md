@@ -2,9 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.4.1] - 2026-04-30
+## [2.4.2] - 2026-04-30
 - Fix RTMP Driver: Stuttering / dropped recording when the publisher's RTMP timestamps drift ahead of wall-clock.
-## [2.4.0] - 2026-04-30
 - Add Timelapse: **Apply time window per day** option restricts frames to a daily time-of-day window across the full date range. Use for daylight-only timelapses (e.g. 2 weeks, 08:00 to 17:00 each day) or night-only timelapses with wrap-around windows (e.g. 22:00 to 06:00). Segments are clipped in memory after the server query, so the Recording Sequences card and Output Estimate update without extra round-trips.
 
 ## [2.3.1] - 2026-04-29
