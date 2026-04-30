@@ -7,7 +7,7 @@ description: "Notepad plugin for Milestone XProtect Smart Client — simple text
 
 # Notepad
 
-Simple text editor for operator notes directly in XProtect Smart Client view items. Notes persist across Smart Client restarts.
+Simple text editor for operator notes directly in XProtect Smart Client. Notes persist across Smart Client restarts.
 
 ## Quick Start
 
