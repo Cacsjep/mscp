@@ -2,7 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.3.0] - 2026-04-29
+## [2.4.0] - 2026-04-30
+- Add Timelapse: **Apply time window per day** option restricts frames to a daily time-of-day window across the full date range. Use for daylight-only timelapses (e.g. 2 weeks, 08:00 to 17:00 each day) or night-only timelapses with wrap-around windows (e.g. 22:00 to 06:00). Segments are clipped in memory after the server query, so the Recording Sequences card and Output Estimate update without extra round-trips.
+
+## [2.3.1] - 2026-04-29
 - Add Colored Timeline: New per-camera selectable-event ribbon plugin (successor to EdgeMotionTimeline). Includes icon picker, marker support, display-name aware rule UI with reduced table footprint, and demo video in the docs.
 - Fix BarcodeReader (#84): Structured diagnostics for helper failures. Last-chance `UnhandledException` and `UnobservedTaskException` handlers, chatty `OnAssemblyResolve` (logs hits, load failures, and our-dep misses plus the full search-dir list), per-channel on-disk helper log mirrored to `C:\ProgramData\Milestone\BarcodeReader\helper-{itemId}.log` with 5 MB rotation, and typed exit codes (`BackgroundPlugin.MapExitCode` decodes 255 as `NativeCrash`, dumps the last stderr lines and the on-disk log path on death).
 - Fix Installer: Management Client process kill targets the actual EXE name. Old image name `VideoOS.Platform.Administration.exe` does not match modern Milestone builds where Management Client runs as `VideoOS.Administration.exe`, so the kill silently no-opped and left the client holding plugin DLLs. Both names are now killed.
