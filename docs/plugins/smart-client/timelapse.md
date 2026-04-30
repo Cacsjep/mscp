@@ -57,6 +57,16 @@ Selecting a preset automatically fills in the start/end date and time fields.
 
 Set the start and end date/time manually using the date pickers and hour/minute dropdowns. Start and end are shown side by side for easy comparison.
 
+### Daily Window (time-of-day filter)
+
+Tick **Apply time window per day** to restrict frames to a time-of-day window that repeats every day across the selected date range. The full range still bounds the outer span (start date to end date), but only segments whose wall-clock time falls inside **Daily Start** to **Daily End** contribute frames.
+
+Typical uses:
+
+- **Daylight-only timelapse over weeks**: 2026-04-15 to 2026-04-29, Daily Start 08:00, Daily End 17:00. The plugin samples 9 hours per day across 14 days and skips nights entirely. The frame estimate, recorded total, and coverage all reflect the clipped windows.
+- **Night-only timelapse**: Daily Start 22:00, Daily End 06:00. When the end is at or before the start, the window wraps midnight, so each "day" runs from 22:00 to 06:00 the next morning.
+- **Working-hours-only review**: Daily Start 09:00, Daily End 18:00 across a month, to skim everything that happened during business hours.
+
 ## Modes
 
 Both modes use Milestone's native `RecordingSequence` data source as the ground truth. Only time ranges that actually contain recorded video on disk are sampled, so gaps never produce wasted frames.
