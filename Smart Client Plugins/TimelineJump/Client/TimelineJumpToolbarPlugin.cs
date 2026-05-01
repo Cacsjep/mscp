@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
+using VideoOS.Platform.Messaging;
 
 namespace TimelineJump.Client
 {
@@ -9,6 +10,7 @@ namespace TimelineJump.Client
     {
         private static JumpFlyoutWindow _openFlyout;
         private bool _subscribed;
+        private object _modeChangedReceiver;
 
         public override void Init(Item window)
         {
@@ -24,6 +26,13 @@ namespace TimelineJump.Client
             // per-tile independent-playback button on the camera.
             ImageViewerHelper.IndependentPlaybackStateChanged += OnIndependentPlaybackStateChanged;
             _subscribed = true;
+
+            // Close the flyout when the operator leaves Playback (Live/Setup), otherwise
+            // it sits orphaned over a workspace where it cannot do anything useful.
+            _modeChangedReceiver = EnvironmentManager.Instance.RegisterReceiver(
+                new MessageReceiver(OnModeChanged),
+                new MessageIdFilter(MessageId.System.ModeChangedIndication));
+
             UpdateEnabled();
         }
 
@@ -68,6 +77,11 @@ namespace TimelineJump.Client
                 ImageViewerHelper.IndependentPlaybackStateChanged -= OnIndependentPlaybackStateChanged;
                 _subscribed = false;
             }
+            if (_modeChangedReceiver != null)
+            {
+                try { EnvironmentManager.Instance.UnRegisterReceiver(_modeChangedReceiver); } catch { }
+                _modeChangedReceiver = null;
+            }
         }
 
         private void OnIndependentPlaybackStateChanged(object sender, EventArgs e)
@@ -76,6 +90,28 @@ namespace TimelineJump.Client
             // is observed by the Smart Client toolbar host and is safe to set from any
             // thread, but we still want to keep the work tiny here.
             UpdateEnabled();
+        }
+
+        private object OnModeChanged(Message message, FQID destination, FQID sender)
+        {
+            // Fired on a non-UI thread; route the close to the flyout's Dispatcher.
+            if (message.Data is Mode newMode && newMode != Mode.ClientPlayback)
+            {
+                var flyout = _openFlyout;
+                if (flyout != null)
+                {
+                    try
+                    {
+                        flyout.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            try { flyout.Close(); } catch { }
+                        }));
+                    }
+                    catch { /* dispatcher may already be shut down */ }
+                }
+            }
+            UpdateEnabled();
+            return null;
         }
 
         private void UpdateEnabled()

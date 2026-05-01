@@ -9,7 +9,6 @@ namespace TimelineJump.Client
     {
         MasterPlayback,
         IndependentPlayback,
-        SwitchedToIndependent,
         NoSelection,
         Failed,
     }
@@ -18,36 +17,58 @@ namespace TimelineJump.Client
     {
         /// <summary>
         /// Jump the timeline by the given offset.
-        /// - In Playback mode: moves the master timeline (entire view) via PlaybackCommand.Goto.
-        /// - In Live mode (or when a tile is already in independent playback): moves the
-        ///   selected tile's independent playback time. If live, switches the tile to
-        ///   independent playback first (mirrors the SDK Rewind15Seconds sample).
+        /// - When the selected tile (or any tracked tile) is in independent playback:
+        ///   moves only that tile, snapped to its nearest recording.
+        /// - Otherwise in Playback workspace: moves the master timeline, snapped to
+        ///   the selected tile's nearest recording when possible.
+        /// - Otherwise: returns NoSelection - the toolbar should already be disabled.
         /// </summary>
         public static JumpResult JumpBy(TimeSpan delta, out string detail)
         {
             detail = null;
             try
             {
-                var addon = ImageViewerHelper.GetGlobalSelectedImageViewer();
+                // Prefer the globally-selected tile, but fall back to the first tile
+                // already in independent playback. Opening the WPF flyout can clear
+                // the Smart Client global selection on a tile, in which case
+                // GetGlobalSelectedImageViewer() returns null even though the
+                // operator clearly meant to act on the independent-playback tile.
+                var addon = ImageViewerHelper.GetGlobalSelectedImageViewer()
+                            ?? ImageViewerHelper.GetFirstIndependentPlayback();
 
                 // Case 1: tile is already in independent playback - just shift its time.
                 if (addon != null && addon.IndependentPlaybackEnabled
                     && addon.IndependentPlaybackController != null)
                 {
                     var current = addon.IndependentPlaybackController.PlaybackTime;
-                    var target = current.Add(delta);
+                    var rawTarget = current.Add(delta);
+                    var cameraItem = addon.CameraFQID != null
+                        ? Configuration.Instance.GetItem(addon.CameraFQID)
+                        : null;
+                    var target = RecordingSnap.SnapToRecording(cameraItem, rawTarget, delta);
                     addon.IndependentPlaybackController.PlaybackTime = target;
-                    detail = $"Independent: {target.ToLocalTime():HH:mm:ss.fff}";
+                    var snapNote = target == rawTarget ? "" : " (snapped)";
+                    detail = $"Independent: {target.ToLocalTime():HH:mm:ss.fff}{snapNote}";
                     return JumpResult.IndependentPlayback;
                 }
 
                 var mode = EnvironmentManager.Instance.Mode;
 
                 // Case 2: master playback mode - shift the entire view's timeline.
+                // If we have a selected tile, snap to its recording so an empty-region
+                // chip click moves visibly. With no selection we send the raw target;
+                // master timeline can't be snapped per-camera since each tile has its
+                // own coverage.
                 if (mode == Mode.ClientPlayback)
                 {
                     var current = GetCurrentMasterPlaybackTime();
-                    var target = current.Add(delta);
+                    var rawTarget = current.Add(delta);
+                    var target = rawTarget;
+                    if (addon != null && addon.CameraFQID != null)
+                    {
+                        var cameraItem = Configuration.Instance.GetItem(addon.CameraFQID);
+                        target = RecordingSnap.SnapToRecording(cameraItem, rawTarget, delta);
+                    }
                     EnvironmentManager.Instance.PostMessage(new Message(
                         MessageId.SmartClient.PlaybackCommand,
                         new PlaybackCommandData
@@ -55,67 +76,22 @@ namespace TimelineJump.Client
                             Command = PlaybackData.Goto,
                             DateTime = target
                         }));
-                    detail = $"Master: {target.ToLocalTime():HH:mm:ss.fff}";
+                    var snapNote = target == rawTarget ? "" : " (snapped)";
+                    detail = $"Master: {target.ToLocalTime():HH:mm:ss.fff}{snapNote}";
                     return JumpResult.MasterPlayback;
                 }
 
-                // Case 3: live mode - switch the selected tile to independent playback
-                // anchored at (now + delta). Same approach the SDK Rewind15Seconds sample uses.
-                if (addon == null)
-                {
-                    detail = "Select a camera tile first.";
-                    return JumpResult.NoSelection;
-                }
-
-                var liveAnchor = DateTime.UtcNow.Add(delta);
-                addon.IndependentPlaybackEnabled = true;
-                if (addon.IndependentPlaybackController != null)
-                    addon.IndependentPlaybackController.PlaybackTime = liveAnchor;
-                detail = $"Switched to independent playback: {liveAnchor.ToLocalTime():HH:mm:ss.fff}";
-                return JumpResult.SwitchedToIndependent;
+                // Case 3: live mode without any independent-playback tile. The toolbar
+                // button should already be disabled in this state, so this is a
+                // belt-and-suspenders branch.
+                detail = "Put a camera into independent playback first.";
+                return JumpResult.NoSelection;
             }
             catch (Exception ex)
             {
                 TimelineJumpDefinition.Log.Error("JumpBy failed", ex);
                 detail = ex.Message;
                 return JumpResult.Failed;
-            }
-        }
-
-        public static DateTime? TryGetCurrentTime()
-        {
-            try
-            {
-                var addon = ImageViewerHelper.GetGlobalSelectedImageViewer();
-                if (addon != null && addon.IndependentPlaybackEnabled
-                    && addon.IndependentPlaybackController != null)
-                {
-                    return addon.IndependentPlaybackController.PlaybackTime;
-                }
-
-                if (EnvironmentManager.Instance.Mode == Mode.ClientPlayback)
-                    return GetCurrentMasterPlaybackTime();
-
-                return null; // Live - no meaningful "current time"
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public static string GetSelectedCameraName()
-        {
-            try
-            {
-                var addon = ImageViewerHelper.GetGlobalSelectedImageViewer();
-                if (addon?.CameraFQID == null) return null;
-                var item = Configuration.Instance.GetItem(addon.CameraFQID);
-                return item?.Name;
-            }
-            catch
-            {
-                return null;
             }
         }
 

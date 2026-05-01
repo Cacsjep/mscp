@@ -21,8 +21,6 @@ Useful for verifying analytics pipelines, debugging ONVIF event schemas during c
 6. Newest packets appear on top. Click any row to see its XML formatted below
 7. Click **Stop** when finished, or **Clear** to empty the table
 
-![Metadata Viewer preview](img/m_preview.png)
-
 ## Columns
 
 | Column | Description |
