@@ -55,6 +55,7 @@ nav:
       - Smart Bar: plugins/smart-client/smartbar.md
       - Snapshot Report: plugins/smart-client/snapreport.md
       - Timelapse: plugins/smart-client/timelapse.md
+      - Timeline Jump: plugins/smart-client/timeline-jump.md
       - View Carousel: plugins/smart-client/view-carousel.md
       - Weather: plugins/smart-client/weather.md
   - Device Drivers:

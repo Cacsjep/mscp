@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.0] - 2026-05-01
+- Add Timeline Jump: New Smart Client toolbar plugin (partner request) for jumping the playback timeline backward or forward by a chosen increment without dragging or scrubbing. Quick chips for `10s`/`30s`/`1m`/`10m` in both directions plus a custom Value/Unit picker (Seconds/Minutes/Hours/Days). The toolbar button opens a movable, dark-themed Smart Client styled flyout (drag the header, Esc to close). Routing is automatic: in Playback the master timeline moves via `MessageId.SmartClient.PlaybackCommand` (`PlaybackData.Goto`), and if the selected tile is in independent playback only that tile's timeline shifts via `IndependentPlaybackController.PlaybackTime`. Visible in Live and Playback workspaces; the button stays disabled in Live until at least one tile enters independent playback (tracked via `IndependentPlaybackModeChangedEvent`). Built against MIP SDK 22.3 (XProtect 2022 R3) for forward compatibility.
+
 ## [2.4.2] - 2026-04-30
 - Fix RTMP Driver: Stuttering / dropped recording when the publisher's RTMP timestamps drift ahead of wall-clock.
 - Add Timelapse: **Apply time window per day** option restricts frames to a daily time-of-day window across the full date range. Use for daylight-only timelapses (e.g. 2 weeks, 08:00 to 17:00 each day) or night-only timelapses with wrap-around windows (e.g. 22:00 to 06:00). Segments are clipped in memory after the server query, so the Recording Sequences card and Output Estimate update without extra round-trips.

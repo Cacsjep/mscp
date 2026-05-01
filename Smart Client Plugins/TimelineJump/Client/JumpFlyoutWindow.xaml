@@ -31,9 +31,9 @@
             <Setter Property="BorderBrush"     Value="{StaticResource ScBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize"        Value="12"/>
-            <Setter Property="Padding"         Value="14,7"/>
+            <Setter Property="Padding"         Value="3,7"/>
             <Setter Property="Margin"          Value="3"/>
-            <Setter Property="MinWidth"        Value="64"/>
+            <Setter Property="MinWidth"        Value="40"/>
             <Setter Property="MinHeight"       Value="30"/>
             <Setter Property="Cursor"          Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -206,6 +206,36 @@
             </Setter>
         </Style>
 
+        <!-- Close button (header X) -->
+        <Style x:Key="CloseButton" TargetType="Button">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="{StaticResource ScSubtle}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize"    Value="14"/>
+            <Setter Property="Cursor"      Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScSurfaceHi}"/>
+                                <Setter Property="Foreground" Value="{StaticResource ScText}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScBorder}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="HeaderText" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource ScText}"/>
             <Setter Property="FontSize"   Value="14"/>
@@ -253,23 +283,28 @@
                             Padding="0"
                             DockPanel.Dock="Right"
                             HorizontalAlignment="Right"
-                            Background="Transparent"
-                            Foreground="{StaticResource ScSubtle}"
-                            BorderThickness="0"
-                            FontSize="14"
-                            Cursor="Hand"
+                            Style="{StaticResource CloseButton}"
                             Click="OnCloseClick"
                             ToolTip="Close (Esc)"/>
                 </DockPanel>
             </Border>
 
-            <!-- Quick - backward -->
-            <TextBlock Text="QUICK BACKWARD" Style="{StaticResource LabelText}"/>
-            <WrapPanel x:Name="quickPanelBack" Margin="-3,0,-3,8"/>
-
-            <!-- Quick - forward -->
-            <TextBlock Text="QUICK FORWARD" Style="{StaticResource LabelText}"/>
-            <WrapPanel x:Name="quickPanelFwd" Margin="-3,0,-3,14"/>
+            <!-- Quick jumps: two columns (left = backward, right = forward) -->
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="BACKWARD" Style="{StaticResource LabelText}"/>
+                    <UniformGrid x:Name="quickPanelBack" Rows="1" Columns="4" Margin="-3,0,-3,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="FORWARD" Style="{StaticResource LabelText}"/>
+                    <UniformGrid x:Name="quickPanelFwd" Rows="1" Columns="4" Margin="-3,0,-3,0"/>
+                </StackPanel>
+            </Grid>
 
             <!-- Custom -->
             <TextBlock Text="CUSTOM" Style="{StaticResource LabelText}"/>

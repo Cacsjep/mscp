@@ -155,14 +155,11 @@ namespace TimelineJump.Client
 
         private static string FormatLabel(TimeSpan ts, bool isBack)
         {
-            // Use absolute value for the label, and a chevron for direction.
             var abs = ts.Duration();
-            string n;
-            if (abs.TotalSeconds < 60) n = $"{(int)abs.TotalSeconds}s";
-            else if (abs.TotalMinutes < 60) n = $"{(int)abs.TotalMinutes}m";
-            else if (abs.TotalHours < 24) n = $"{(int)abs.TotalHours}h";
-            else n = $"{(int)abs.TotalDays}d";
-            return isBack ? $"◀ {n}" : $"{n} ▶";
+            if (abs.TotalSeconds < 60) return $"{(int)abs.TotalSeconds}s";
+            if (abs.TotalMinutes < 60) return $"{(int)abs.TotalMinutes}m";
+            if (abs.TotalHours < 24) return $"{(int)abs.TotalHours}h";
+            return $"{(int)abs.TotalDays}d";
         }
 
         private void OnQuickChipClick(object sender, RoutedEventArgs e)
