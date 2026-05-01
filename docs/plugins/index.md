@@ -101,6 +101,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-timelapse"></i></div>
     <div class="pt"><span class="pn">Timelapse</span><span class="pd">Generate timelapse videos from recorded cameras with multi-camera stitch support</span></div>
   </a>
+  <a class="pr" href="smart-client/timeline-jump/">
+    <div class="pi sc"><i class="mdi mdi-skip-forward"></i></div>
+    <div class="pt"><span class="pn">Timeline Jump</span><span class="pd">Toolbar flyout to jump the playback timeline backward or forward by configurable increments (seconds, minutes, hours, days)</span></div>
+  </a>
   <a class="pr" href="smart-client/view-carousel/">
     <div class="pi sc"><i class="mdi mdi-view-carousel"></i></div>
     <div class="pt"><span class="pn">View Carousel</span><span class="pd">Cycle through Smart Client views inside a single view item slot</span></div>

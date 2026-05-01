@@ -150,5 +150,12 @@
     "path": "Admin Plugins/ColoredTimeline",
     "category": "AdminPlugin",
     "description": "Render any pair of camera events (e.g. edge motion start/stop) as colored ribbons on the Smart Client playback timeline"
+  },
+  {
+    "name": "TimelineJump",
+    "displayName": "Timeline Jump",
+    "path": "Smart Client Plugins/TimelineJump",
+    "category": "SmartClient",
+    "description": "Toolbar flyout to jump the playback timeline backward or forward by configurable increments (seconds, minutes, hours, days)"
   }
 ]
