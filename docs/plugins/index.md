@@ -73,6 +73,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-grid"></i></div>
     <div class="pt"><span class="pn">Flex View</span><span class="pd">Design custom view layouts beyond the standard view templates.</span></div>
   </a>
+  <a class="pr" href="smart-client/metadata-display/">
+    <div class="pi sc"><i class="mdi mdi-gauge"></i></div>
+    <div class="pt"><span class="pn">Metadata Display</span><span class="pd">Render any value from a metadata channel as a dashboard widget - lamp, number, gauge, or text.</span></div>
+  </a>
   <a class="pr" href="smart-client/monitor-rtmp-streamer/">
     <div class="pi sc"><i class="mdi mdi-monitor-share"></i></div>
     <div class="pt"><span class="pn">Monitor RTMP Streamer</span><span class="pd">Capture desktop monitors and stream via RTMP</span></div>
