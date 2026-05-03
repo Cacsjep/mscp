@@ -16,6 +16,9 @@ namespace MetadataDisplay.Client.Renderers
         public GaugeStyle Style;
         public bool ShowValue;
         public double ValueFontSize;
+        public bool ShowTicks;
+        public int TickCount;
+        public double TrackThickness;
         public NumericConfig Numeric; // reuses Min/Max thresholds + colors + unit
 
         public static GaugeConfig FromManager(MetadataDisplayViewItemManager m)
@@ -30,6 +33,10 @@ namespace MetadataDisplay.Client.Renderers
             else if (string.Equals(m.GaugeStyle, "Modern180", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Modern180;
             else if (string.Equals(m.GaugeStyle, "Modern270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Modern270;
 
+            int tickCount = 10;
+            if (int.TryParse(m.GaugeTickCount, NumberStyles.Integer, CultureInfo.InvariantCulture, out var tc) && tc >= 0)
+                tickCount = tc;
+
             return new GaugeConfig
             {
                 RangeMin = rmin,
@@ -37,6 +44,9 @@ namespace MetadataDisplay.Client.Renderers
                 Style = style,
                 ShowValue = !string.Equals(m.GaugeShowValue, "false", StringComparison.OrdinalIgnoreCase),
                 ValueFontSize = ParseDouble(m.GaugeValueFontSize, 34),
+                ShowTicks = string.Equals(m.GaugeShowTicks, "true", StringComparison.OrdinalIgnoreCase),
+                TickCount = tickCount,
+                TrackThickness = ParseDouble(m.GaugeTrackThickness, 14),
                 Numeric = NumericConfig.FromManager(m),
             };
         }
@@ -117,30 +127,35 @@ namespace MetadataDisplay.Client.Renderers
             switch (cfg.Style)
             {
                 case GaugeStyle.Bar:
+                    _canvas.Height = 135;
                     DrawBar(v, cfg);
                     Canvas.SetLeft(_labelStack, 0);
                     Canvas.SetTop(_labelStack, 8);
                     break;
                 case GaugeStyle.Arc270:
+                    _canvas.Height = 195;
                     DrawArc(v, cfg, sweepDegrees: 270);
                     Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 130);
+                    Canvas.SetTop(_labelStack, 80);
                     break;
                 case GaugeStyle.Modern270:
+                    _canvas.Height = 180;
                     DrawModernArc(v, cfg, sweepDegrees: 270);
                     Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 75);
+                    Canvas.SetTop(_labelStack, 65);
                     break;
                 case GaugeStyle.Modern180:
+                    _canvas.Height = 150;
                     DrawModernArc(v, cfg, sweepDegrees: 180);
                     Canvas.SetLeft(_labelStack, 0);
                     Canvas.SetTop(_labelStack, 100);
                     break;
                 case GaugeStyle.Arc180:
                 default:
+                    _canvas.Height = 165;
                     DrawArc(v, cfg, sweepDegrees: 180);
                     Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 130);
+                    Canvas.SetTop(_labelStack, 105);
                     break;
             }
         }
@@ -164,9 +179,9 @@ namespace MetadataDisplay.Client.Renderers
             // Arc180 sweeps from 180° (left) to 360° (right) — top half.
             // Arc270 sweeps from 135° to 405° — leaves a 90° opening at the bottom.
             double cx = LogicalW / 2.0;
-            double cy = sweepDegrees >= 270 ? 95 : 110;
-            double radius = sweepDegrees >= 270 ? 70 : 88;
-            double thickness = 16;
+            double cy = sweepDegrees >= 270 ? 80 : 92;
+            double radius = sweepDegrees >= 270 ? 70 : 85;
+            double thickness = cfg.TrackThickness > 0 ? cfg.TrackThickness : 14;
 
             double startAngle = sweepDegrees >= 270 ? 135 : 180;
             double endAngle = startAngle + sweepDegrees;
@@ -196,6 +211,9 @@ namespace MetadataDisplay.Client.Renderers
 
             DrawScaleLabel(cx, cy, radius + thickness, startAngle, FormatNumber(rmin));
             DrawScaleLabel(cx, cy, radius + thickness, endAngle, FormatNumber(rmax));
+
+            if (cfg.ShowTicks && cfg.TickCount > 0)
+                DrawArcTicks(cx, cy, radius, thickness, startAngle, endAngle, cfg.TickCount);
 
             // Needle + hub
             if (value.HasValue)
@@ -237,10 +255,10 @@ namespace MetadataDisplay.Client.Renderers
         private void DrawModernArc(double? value, GaugeConfig cfg, double sweepDegrees)
         {
             double cx = LogicalW / 2.0;
-            double cy = sweepDegrees >= 270 ? 105 : 120;
-            double radius = sweepDegrees >= 270 ? 78 : 92;
-            double trackThickness = 14;
-            double progressThickness = 14;
+            double cy = sweepDegrees >= 270 ? 78 : 92;
+            double radius = sweepDegrees >= 270 ? 68 : 82;
+            double trackThickness = cfg.TrackThickness > 0 ? cfg.TrackThickness : 14;
+            double progressThickness = trackThickness;
 
             double startAngle = sweepDegrees >= 270 ? 135 : 180;
             double endAngle = startAngle + sweepDegrees;
@@ -269,6 +287,38 @@ namespace MetadataDisplay.Client.Renderers
             // Tick labels at min/max — small + subtle.
             DrawScaleLabel(cx, cy, radius + progressThickness + 2, startAngle, FormatNumber(rmin));
             DrawScaleLabel(cx, cy, radius + progressThickness + 2, endAngle, FormatNumber(rmax));
+
+            if (cfg.ShowTicks && cfg.TickCount > 0)
+                DrawArcTicks(cx, cy, radius, progressThickness, startAngle, endAngle, cfg.TickCount);
+        }
+
+        // Small radial tick marks across the arc, evenly spaced. Drawn INSIDE the
+        // arc (closer to center). Skip the very first and last tick — they share an
+        // angle with the min/max scale labels and would collide with them.
+        private void DrawArcTicks(double cx, double cy, double r, double thickness,
+                                  double startAngle, double endAngle, int tickCount)
+        {
+            double outer = r - thickness / 2 - 3;
+            double inner = outer - 6;
+            if (inner < 0) inner = 0;
+            for (int i = 1; i < tickCount; i++)
+            {
+                double f = (double)i / tickCount;
+                double ang = startAngle + (endAngle - startAngle) * f;
+                double rad = ang * Math.PI / 180.0;
+                double x1 = cx + Math.Cos(rad) * inner;
+                double y1 = cy + Math.Sin(rad) * inner;
+                double x2 = cx + Math.Cos(rad) * outer;
+                double y2 = cy + Math.Sin(rad) * outer;
+                _canvas.Children.Add(new Line
+                {
+                    X1 = x1, Y1 = y1, X2 = x2, Y2 = y2,
+                    Stroke = new SolidColorBrush(Color.FromRgb(0xA9, 0xB5, 0xBB)),
+                    StrokeThickness = 1.4,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round,
+                });
+            }
         }
 
         private void DrawArcSegment(double cx, double cy, double r, double thickness, double a1, double a2, Color color)
@@ -336,7 +386,8 @@ namespace MetadataDisplay.Client.Renderers
         private void DrawBar(double? value, GaugeConfig cfg)
         {
             // Bar in lower half of canvas; value/unit labels sit at the top (y=8).
-            double left = 20, top = 90, width = LogicalW - 40, height = 36;
+            double left = 20, top = 70, width = LogicalW - 40;
+            double height = cfg.TrackThickness > 0 ? cfg.TrackThickness * 2.5 : 36;
 
             double rmin = cfg.RangeMin;
             double rmax = cfg.RangeMax;
@@ -359,6 +410,26 @@ namespace MetadataDisplay.Client.Renderers
 
             DrawBarScaleLabel(left, top + height + 4, FormatNumber(rmin), TextAlignment.Left);
             DrawBarScaleLabel(left + width, top + height + 4, FormatNumber(rmax), TextAlignment.Right);
+
+            if (cfg.ShowTicks && cfg.TickCount > 0)
+            {
+                // Ticks above the bar so they don't collide with the scale labels.
+                double tickY2 = top - 2;
+                double tickY1 = tickY2 - 5;
+                for (int i = 1; i < cfg.TickCount; i++)
+                {
+                    double f = (double)i / cfg.TickCount;
+                    double x = left + width * f;
+                    _canvas.Children.Add(new Line
+                    {
+                        X1 = x, Y1 = tickY1, X2 = x, Y2 = tickY2,
+                        Stroke = new SolidColorBrush(Color.FromRgb(0xA9, 0xB5, 0xBB)),
+                        StrokeThickness = 1.4,
+                        StrokeStartLineCap = PenLineCap.Round,
+                        StrokeEndLineCap = PenLineCap.Round,
+                    });
+                }
+            }
 
             // Outer outline
             var outline = new System.Windows.Shapes.Rectangle

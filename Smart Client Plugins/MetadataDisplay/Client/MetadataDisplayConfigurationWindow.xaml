@@ -449,6 +449,29 @@
                                             <TextBox x:Name="gaugeValueFontSizeBox" Width="80" Tag="positiveNumber"/>
                                         </StackPanel>
                                     </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Track" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="Thickness" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="gaugeTrackThicknessBox" Width="80" Margin="0,0,16,0" Tag="positiveNumber"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Ticks" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <CheckBox x:Name="gaugeShowTicksCheck" Content="Show ticks" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Count" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="gaugeTickCountBox" Width="80" Tag="nonNegativeInteger"/>
+                                        </StackPanel>
+                                    </Grid>
                                     <TextBlock Margin="0,8,0,6" FontWeight="SemiBold" Text="Threshold colors"/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -535,7 +558,7 @@
                         <Grid Width="320" Background="Transparent">
                             <Grid.RowDefinitions>
                                 <RowDefinition x:Name="previewTitleRow" Height="Auto"/>
-                                <RowDefinition Height="200"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0"
                                        x:Name="previewTitleText"

@@ -10,7 +10,7 @@
             <Grid x:Name="rootGrid" Width="320" Background="Transparent">
                 <Grid.RowDefinitions>
                     <RowDefinition x:Name="titleRow" Height="Auto"/>
-                    <RowDefinition Height="200"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock x:Name="titleText"
                            Grid.Row="0"

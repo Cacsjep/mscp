@@ -134,7 +134,10 @@ namespace MetadataDisplay.Client
             _gaugeColorBad.HexValue = _colorBad.HexValue;
             unitBoxGauge.Text = _vim.Unit ?? "";
             gaugeShowValueCheck.IsChecked = !string.Equals(_vim.GaugeShowValue, "false", StringComparison.OrdinalIgnoreCase);
-            gaugeValueFontSizeBox.Text = _vim.GaugeValueFontSize ?? "26";
+            gaugeValueFontSizeBox.Text = _vim.GaugeValueFontSize ?? "34";
+            gaugeShowTicksCheck.IsChecked = string.Equals(_vim.GaugeShowTicks, "true", StringComparison.OrdinalIgnoreCase);
+            gaugeTickCountBox.Text = _vim.GaugeTickCount ?? "10";
+            gaugeTrackThicknessBox.Text = _vim.GaugeTrackThickness ?? "14";
 
             staleSecondsBox.Text = _vim.StaleSeconds ?? "0";
 
@@ -324,11 +327,6 @@ namespace MetadataDisplay.Client
                 _previewLamp.Clear();
             }
 
-            if (visual is FrameworkElement fe)
-            {
-                fe.HorizontalAlignment = HorizontalAlignment.Stretch;
-                fe.VerticalAlignment = VerticalAlignment.Stretch;
-            }
             previewHost.Children.Add(visual);
         }
 
@@ -361,6 +359,10 @@ namespace MetadataDisplay.Client
             gaugeShowValueCheck.Checked += (s, e) => ReRenderPreview();
             gaugeShowValueCheck.Unchecked += (s, e) => ReRenderPreview();
             gaugeValueFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
+            gaugeShowTicksCheck.Checked += (s, e) => ReRenderPreview();
+            gaugeShowTicksCheck.Unchecked += (s, e) => ReRenderPreview();
+            gaugeTickCountBox.TextChanged += (s, e) => ReRenderPreview();
+            gaugeTrackThicknessBox.TextChanged += (s, e) => ReRenderPreview();
             lampIconSizeBox.TextChanged += (s, e) => ReRenderPreview();
             textFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
 
@@ -956,13 +958,20 @@ namespace MetadataDisplay.Client
             else if (string.Equals(styleText, "Bar", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Bar;
             else if (string.Equals(styleText, "Modern270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Modern270;
 
+            int tc = 10;
+            if (int.TryParse(gaugeTickCountBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ptc) && ptc >= 0)
+                tc = ptc;
+
             return new GaugeConfig
             {
                 RangeMin = rmin,
                 RangeMax = rmax,
                 Style = style,
                 ShowValue = gaugeShowValueCheck.IsChecked == true,
-                ValueFontSize = TryParseDouble(gaugeValueFontSizeBox.Text) ?? 26,
+                ValueFontSize = TryParseDouble(gaugeValueFontSizeBox.Text) ?? 34,
+                ShowTicks = gaugeShowTicksCheck.IsChecked == true,
+                TickCount = tc,
+                TrackThickness = TryParseDouble(gaugeTrackThicknessBox.Text) ?? 14,
                 Numeric = BuildNumericConfigFromUi(true),
             };
         }
@@ -1068,6 +1077,8 @@ namespace MetadataDisplay.Client
             yield return gaugeNumMaxBox;
             yield return titleFontSizeBox;
             yield return gaugeValueFontSizeBox;
+            yield return gaugeTickCountBox;
+            yield return gaugeTrackThicknessBox;
             yield return lampIconSizeBox;
             yield return textFontSizeBox;
             yield return staleSecondsBox;
@@ -1164,7 +1175,11 @@ namespace MetadataDisplay.Client
             }
 
             string pretty;
-            try { pretty = XDocument.Parse(xml).ToString(SaveOptions.None); }
+            try
+            {
+                var filtered = MetadataExtractor.FilterHiddenTopics(xml);
+                pretty = XDocument.Parse(filtered).ToString(SaveOptions.None);
+            }
             catch { pretty = xml; }
 
             var win = new Window
@@ -1345,7 +1360,10 @@ namespace MetadataDisplay.Client
             _vim.GaugeRangeMax = NormalizeNumberText(gaugeRangeMaxBox.Text, "100");
             _vim.GaugeStyle = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Modern180";
             _vim.GaugeShowValue = (gaugeShowValueCheck.IsChecked == true) ? "true" : "false";
-            _vim.GaugeValueFontSize = NormalizeNumberText(gaugeValueFontSizeBox.Text, "26");
+            _vim.GaugeValueFontSize = NormalizeNumberText(gaugeValueFontSizeBox.Text, "34");
+            _vim.GaugeShowTicks = (gaugeShowTicksCheck.IsChecked == true) ? "true" : "false";
+            _vim.GaugeTickCount = NormalizeNumberText(gaugeTickCountBox.Text, "10");
+            _vim.GaugeTrackThickness = NormalizeNumberText(gaugeTrackThicknessBox.Text, "14");
 
             _vim.StaleSeconds = NormalizeNumberText(staleSecondsBox.Text, "0");
         }

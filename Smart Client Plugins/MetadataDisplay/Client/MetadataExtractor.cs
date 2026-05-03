@@ -59,6 +59,43 @@ namespace MetadataDisplay.Client
         private static readonly XNamespace NsTt = "http://www.onvif.org/ver10/schema";
         private static readonly XNamespace NsWsnt = "http://docs.oasis-open.org/wsn/b-2";
 
+        // Topics that should never be surfaced to the user: vendor-internal payloads
+        // (e.g. Axis xinternal_data carries a giant SVG that's not meant for
+        // operator-facing widgets and would just clutter Learn/Inspect dropdowns).
+        private static readonly string[] HiddenTopicSubstrings = new[]
+        {
+            "xinternal_data",
+        };
+
+        public static bool IsHiddenTopic(string topic)
+        {
+            if (string.IsNullOrEmpty(topic)) return false;
+            foreach (var s in HiddenTopicSubstrings)
+            {
+                if (topic.IndexOf(s, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+            return false;
+        }
+
+        // Returns the same XML with any NotificationMessage whose Topic is hidden
+        // stripped out. If the document doesn't parse, returns the original string.
+        public static string FilterHiddenTopics(string xml)
+        {
+            if (string.IsNullOrEmpty(xml)) return xml;
+            XDocument doc;
+            try { doc = XDocument.Parse(xml); }
+            catch { return xml; }
+
+            var toRemove = new List<XElement>();
+            foreach (var nm in doc.Descendants(NsWsnt + "NotificationMessage"))
+            {
+                var topic = ((string)nm.Element(NsWsnt + "Topic") ?? "").Trim();
+                if (IsHiddenTopic(topic)) toRemove.Add(nm);
+            }
+            foreach (var nm in toRemove) nm.Remove();
+            return doc.ToString(SaveOptions.None);
+        }
+
         // Returns the latest matching extraction in the document, or null.
         public static ExtractedValue TryExtract(string xml, ExtractorConfig cfg)
         {
@@ -164,6 +201,7 @@ namespace MetadataDisplay.Client
             foreach (var nm in doc.Descendants(NsWsnt + "NotificationMessage"))
             {
                 var topic = ((string)nm.Element(NsWsnt + "Topic") ?? "").Trim();
+                if (IsHiddenTopic(topic)) continue;
                 var ttMessage = nm.Element(NsWsnt + "Message")?.Element(NsTt + "Message");
                 if (ttMessage == null) continue;
 

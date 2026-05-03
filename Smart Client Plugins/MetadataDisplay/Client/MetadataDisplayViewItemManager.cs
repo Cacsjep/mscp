@@ -44,6 +44,9 @@ namespace MetadataDisplay.Client
         private const string GaugeStyleKey = "GaugeStyle";
         private const string GaugeShowValueKey = "GaugeShowValue";
         private const string GaugeValueFontSizeKey = "GaugeValueFontSize";
+        private const string GaugeShowTicksKey = "GaugeShowTicks";
+        private const string GaugeTickCountKey = "GaugeTickCount";
+        private const string GaugeTrackThicknessKey = "GaugeTrackThickness";
 
         // Stale
         private const string StaleSecondsKey = "StaleSeconds";
@@ -222,6 +225,25 @@ namespace MetadataDisplay.Client
         {
             get => GetProperty(GaugeValueFontSizeKey) ?? "34";
             set => SetProperty(GaugeValueFontSizeKey, value);
+        }
+
+        // "true" / "false"
+        public string GaugeShowTicks
+        {
+            get => GetProperty(GaugeShowTicksKey) ?? "false";
+            set => SetProperty(GaugeShowTicksKey, value);
+        }
+
+        public string GaugeTickCount
+        {
+            get => GetProperty(GaugeTickCountKey) ?? "10";
+            set => SetProperty(GaugeTickCountKey, value);
+        }
+
+        public string GaugeTrackThickness
+        {
+            get => GetProperty(GaugeTrackThicknessKey) ?? "14";
+            set => SetProperty(GaugeTrackThicknessKey, value);
         }
 
         public string StaleSeconds

@@ -327,11 +327,6 @@ namespace MetadataDisplay.Client
                     break;
             }
 
-            if (visual is FrameworkElement fe)
-            {
-                fe.HorizontalAlignment = HorizontalAlignment.Stretch;
-                fe.VerticalAlignment = VerticalAlignment.Stretch;
-            }
             renderHost.Children.Add(visual);
         }
 
