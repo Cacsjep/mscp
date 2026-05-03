@@ -9,7 +9,7 @@
     <LangVersion>latest</LangVersion>
     <PluginName>MetadataDisplay</PluginName>
     <StopSmartClient>true</StopSmartClient>
-    <LaunchSmartClient>false</LaunchSmartClient>
+    <LaunchSmartClient>true</LaunchSmartClient>
   </PropertyGroup>
 
   <ItemGroup>

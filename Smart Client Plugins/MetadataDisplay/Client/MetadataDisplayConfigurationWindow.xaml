@@ -500,10 +500,9 @@
             </ScrollViewer>
 
             <!-- Right column: live preview -->
-            <Border Grid.Column="2" Background="#FF252525" BorderBrush="#FF333333" BorderThickness="1" CornerRadius="4" Padding="14">
+            <Border Grid.Column="2" Background="Transparent" BorderBrush="#FF333333" BorderThickness="0" Padding="14">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="64"/>
@@ -513,15 +512,24 @@
                                FontSize="14" FontWeight="SemiBold"
                                Foreground="#FFE6EAEC"
                                Margin="0,0,0,8"/>
-                    <TextBlock Grid.Row="1"
-                               x:Name="previewTitleText"
-                               Foreground="#FFCFD7DA"
-                               Margin="0,0,0,4"
-                               Visibility="Collapsed"/>
-                    <Viewbox Grid.Row="2" Stretch="Uniform">
-                        <Grid x:Name="previewHost" Width="320" Height="200" Background="#FF1C2326"/>
+                    <Viewbox Grid.Row="1" Stretch="Uniform">
+                        <Grid Width="320" Background="Transparent">
+                            <Grid.RowDefinitions>
+                                <RowDefinition x:Name="previewTitleRow" Height="Auto"/>
+                                <RowDefinition Height="200"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0"
+                                       x:Name="previewTitleText"
+                                       Foreground="#FFCFD7DA"
+                                       FontSize="14"
+                                       Margin="0,0,0,2"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       Visibility="Collapsed"/>
+                            <Grid x:Name="previewHost" Grid.Row="1" Background="Transparent"/>
+                        </Grid>
                     </Viewbox>
-                    <StackPanel Grid.Row="3" Orientation="Vertical" VerticalAlignment="Bottom">
+                    <StackPanel Grid.Row="2" Orientation="Vertical" VerticalAlignment="Bottom">
                         <TextBlock x:Name="previewMetaText" Text="" Foreground="#FFA9B5BB" FontSize="12" TextTrimming="CharacterEllipsis"/>
                         <TextBlock x:Name="previewAgeText" Text="" Foreground="#FFA9B5BB" FontSize="12"/>
                         <TextBlock x:Name="previewStatusText"
