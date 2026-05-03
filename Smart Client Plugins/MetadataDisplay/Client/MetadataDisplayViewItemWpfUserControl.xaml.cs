@@ -34,6 +34,7 @@ namespace MetadataDisplay.Client
         private TextRenderer _textRenderer;
 
         private DateTime? _lastValueUtc;
+        private bool _hasReceivedValue;
         private DispatcherTimer _staleTicker;
         private int _staleSeconds;
 
@@ -90,15 +91,24 @@ namespace MetadataDisplay.Client
             string overlay = ResolveOverlayMessage(mode);
             if (overlay != null)
             {
-                setupHint.Text = overlay;
+                if (mode == Mode.ClientSetup)
+                    ApplySetupSummary();
+                else
+                    setupHint.Text = overlay;
                 openConfigButton.Visibility = mode == Mode.ClientSetup ? Visibility.Visible : Visibility.Collapsed;
                 setupPanel.Visibility = Visibility.Visible;
                 renderViewbox.Visibility = Visibility.Collapsed;
+                noDataPanel.Visibility = Visibility.Collapsed;
                 return;
             }
 
             setupPanel.Visibility = Visibility.Collapsed;
-            renderViewbox.Visibility = Visibility.Visible;
+            renderViewbox.Visibility = Visibility.Collapsed;
+            _hasReceivedValue = false;
+            noDataPanel.Visibility = Visibility.Visible;
+            noDataDetail.Text = mode == Mode.ClientPlayback
+                ? "Move the playback cursor to a time when this metadata was recorded."
+                : $"Subscribed to {_metadataItem?.Name ?? "channel"}. Waiting for first matching packet.";
 
             if (mode == Mode.ClientLive)
                 StartLive();
@@ -111,8 +121,10 @@ namespace MetadataDisplay.Client
         // null = no overlay (render the widget). Non-null = show this message instead.
         private string ResolveOverlayMessage(Mode mode)
         {
+            // Setup mode always shows a summary panel with the Open-configuration button,
+            // regardless of how complete the configuration is.
             if (mode == Mode.ClientSetup)
-                return "Click to configure this view item";
+                return "";
 
             bool hasChannelId = !string.IsNullOrEmpty(_viewItemManager.MetadataId)
                                 && Guid.TryParse(_viewItemManager.MetadataId, out var g)
@@ -437,14 +449,32 @@ namespace MetadataDisplay.Client
 
         private void RenderValue(string value)
         {
+            if (!_hasReceivedValue)
+            {
+                _hasReceivedValue = true;
+                noDataPanel.Visibility = Visibility.Collapsed;
+                renderViewbox.Visibility = Visibility.Visible;
+            }
+
             if (_lampRenderer != null)
+            {
+                _lampRenderer.IconSize = ParseDouble(_viewItemManager.LampIconSize, 96);
                 _lampRenderer.Update(value, LampMapParser.Parse(_viewItemManager.LampMap));
+            }
             else if (_numberRenderer != null)
                 _numberRenderer.Update(value, NumericConfig.FromManager(_viewItemManager));
             else if (_gaugeRenderer != null)
                 _gaugeRenderer.Update(value, GaugeConfig.FromManager(_viewItemManager));
             else if (_textRenderer != null)
+            {
+                _textRenderer.FontSize = ParseDouble(_viewItemManager.TextFontSize, 28);
                 _textRenderer.Update(value);
+            }
+        }
+
+        private static double ParseDouble(string s, double fallback)
+        {
+            return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : fallback;
         }
 
         private object OnModeChanged(Message message, FQID destination, FQID sender)
@@ -455,6 +485,35 @@ namespace MetadataDisplay.Client
 
         private void OnMouseLeftUp(object sender, MouseButtonEventArgs e) => FireClickEvent();
         private void OnMouseDoubleClick(object sender, MouseButtonEventArgs e) => FireDoubleClickEvent();
+
+        private void ApplySetupSummary()
+        {
+            string channel = !string.IsNullOrEmpty(_viewItemManager.MetadataName)
+                ? _viewItemManager.MetadataName
+                : (string.IsNullOrEmpty(_viewItemManager.MetadataId) ? "(not selected)" : "(channel missing)");
+            string render = string.IsNullOrEmpty(_viewItemManager.RenderType) ? "Lamp" : _viewItemManager.RenderType;
+            string topic = string.IsNullOrEmpty(_viewItemManager.Topic) ? "(any)" : _viewItemManager.Topic;
+            string key = string.IsNullOrEmpty(_viewItemManager.DataKey) ? "(not set)" : _viewItemManager.DataKey;
+
+            bool isComplete = !string.IsNullOrEmpty(_viewItemManager.MetadataId)
+                              && !string.IsNullOrEmpty(_viewItemManager.DataKey);
+
+            summaryChannel.Text = channel;
+            summaryRender.Text = render;
+            summaryTopic.Text = topic;
+            summaryDataKey.Text = key;
+
+            if (isComplete)
+            {
+                setupSubheader.Text = "Configured. Click to edit.";
+                setupSubheader.Foreground = new SolidColorBrush(Color.FromRgb(0x7A, 0x83, 0x88));
+            }
+            else
+            {
+                setupSubheader.Text = "Not fully configured.";
+                setupSubheader.Foreground = new SolidColorBrush(Color.FromRgb(0xE6, 0x95, 0x00));
+            }
+        }
 
         private void OnOpenConfigClick(object sender, MouseButtonEventArgs e)
         {

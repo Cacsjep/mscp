@@ -112,6 +112,8 @@ namespace MetadataDisplay.Client
             }
 
             RebuildLampRowsFromManager();
+            lampIconSizeBox.Text = _vim.LampIconSize ?? "96";
+            textFontSizeBox.Text = _vim.TextFontSize ?? "28";
 
             numMinBox.Text = _vim.NumMin ?? "";
             numMaxBox.Text = _vim.NumMax ?? "";
@@ -359,6 +361,8 @@ namespace MetadataDisplay.Client
             gaugeShowValueCheck.Checked += (s, e) => ReRenderPreview();
             gaugeShowValueCheck.Unchecked += (s, e) => ReRenderPreview();
             gaugeValueFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
+            lampIconSizeBox.TextChanged += (s, e) => ReRenderPreview();
+            textFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
 
             // Title section live preview
             showTitleCheck.Checked += (s, e) => { ApplyTitleEnabled(); UpdatePreviewTitle(); };
@@ -897,6 +901,7 @@ namespace MetadataDisplay.Client
             if (_previewLamp != null)
             {
                 var rows = LampMapParser.Parse(SerializeLampRows());
+                _previewLamp.IconSize = TryParseDouble(lampIconSizeBox.Text) ?? 96;
                 _previewLamp.Update(_lastPreviewValue, rows);
             }
             else if (_previewNumber != null)
@@ -909,6 +914,7 @@ namespace MetadataDisplay.Client
             }
             else if (_previewText != null)
             {
+                _previewText.FontSize = TryParseDouble(textFontSizeBox.Text) ?? 28;
                 _previewText.Update(_lastPreviewValue);
             }
 
@@ -943,10 +949,12 @@ namespace MetadataDisplay.Client
             var rmax = TryParseDouble(gaugeRangeMaxBox.Text) ?? 100;
             if (rmax <= rmin) rmax = rmin + 1;
 
-            var styleText = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Arc180";
-            var style = GaugeStyle.Arc180;
+            var styleText = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Modern180";
+            var style = GaugeStyle.Modern180;
             if (string.Equals(styleText, "Arc270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Arc270;
+            else if (string.Equals(styleText, "Arc180", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Arc180;
             else if (string.Equals(styleText, "Bar", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Bar;
+            else if (string.Equals(styleText, "Modern270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Modern270;
 
             return new GaugeConfig
             {
@@ -1060,6 +1068,8 @@ namespace MetadataDisplay.Client
             yield return gaugeNumMaxBox;
             yield return titleFontSizeBox;
             yield return gaugeValueFontSizeBox;
+            yield return lampIconSizeBox;
+            yield return textFontSizeBox;
             yield return staleSecondsBox;
         }
 
@@ -1307,6 +1317,8 @@ namespace MetadataDisplay.Client
             _vim.RenderType = rt;
 
             _vim.LampMap = SerializeLampRows();
+            _vim.LampIconSize = NormalizeNumberText(lampIconSizeBox.Text, "96");
+            _vim.TextFontSize = NormalizeNumberText(textFontSizeBox.Text, "28");
 
             if (rt == "Gauge")
             {
@@ -1331,7 +1343,7 @@ namespace MetadataDisplay.Client
 
             _vim.GaugeRangeMin = NormalizeNumberText(gaugeRangeMinBox.Text, "0");
             _vim.GaugeRangeMax = NormalizeNumberText(gaugeRangeMaxBox.Text, "100");
-            _vim.GaugeStyle = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Arc180";
+            _vim.GaugeStyle = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Modern180";
             _vim.GaugeShowValue = (gaugeShowValueCheck.IsChecked == true) ? "true" : "false";
             _vim.GaugeValueFontSize = NormalizeNumberText(gaugeValueFontSizeBox.Text, "26");
 
@@ -1359,7 +1371,9 @@ namespace MetadataDisplay.Client
             for (int i = 0; i < combo.Items.Count; i++)
             {
                 var item = combo.Items[i] as ComboBoxItem;
-                if (item != null && string.Equals(item.Content?.ToString(), text, StringComparison.Ordinal))
+                if (item == null) continue;
+                if (string.Equals(item.Tag?.ToString(), text, StringComparison.Ordinal)
+                    || string.Equals(item.Content?.ToString(), text, StringComparison.Ordinal))
                 {
                     combo.SelectedIndex = i;
                     return;

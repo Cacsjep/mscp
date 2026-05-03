@@ -4,8 +4,8 @@
     xmlns:local="clr-namespace:MetadataDisplay.Client"
     x:Class="MetadataDisplay.Client.MetadataDisplayConfigurationWindow"
     Title="Metadata Display - Configuration"
-    Width="1280" Height="900"
-    MinWidth="1100" MinHeight="720"
+    Width="1280" Height="1040"
+    MinWidth="1100" MinHeight="780"
     WindowStartupLocation="CenterOwner"
     Background="#FF1E1E1E"
     Foreground="#FFD0D0D0"
@@ -351,6 +351,15 @@
 
                             <Grid x:Name="lampPanel" Visibility="Visible">
                                 <StackPanel>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Icon size" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="lampIconSizeBox" Tag="positiveNumber"/>
+                                    </Grid>
                                     <TextBlock Text="Map raw values to a label, color and optional icon:" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
                                     <ItemsControl x:Name="lampRows"/>
                                     <Button x:Name="addLampRowButton" Content="+ Add row" HorizontalAlignment="Left" Margin="0,4,0,0" Click="OnAddLampRow"/>
@@ -421,9 +430,11 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Style" Style="{StaticResource FieldLabel}"/>
                                         <ComboBox Grid.Column="1" x:Name="gaugeStyleCombo" SelectedIndex="0">
-                                            <ComboBoxItem Content="Arc180"/>
-                                            <ComboBoxItem Content="Arc270"/>
-                                            <ComboBoxItem Content="Bar"/>
+                                            <ComboBoxItem Content="Modern - Half arc (180°)" Tag="Modern180"/>
+                                            <ComboBoxItem Content="Modern - Three-quarter arc (270°)" Tag="Modern270"/>
+                                            <ComboBoxItem Content="Classic - Half arc (180°)" Tag="Arc180"/>
+                                            <ComboBoxItem Content="Classic - Three-quarter arc (270°)" Tag="Arc270"/>
+                                            <ComboBoxItem Content="Bar" Tag="Bar"/>
                                         </ComboBox>
                                     </Grid>
                                     <Grid Margin="0,0,0,8">
@@ -479,7 +490,15 @@
                             </Grid>
 
                             <Grid x:Name="textPanel" Visibility="Collapsed">
-                                <TextBlock Style="{StaticResource HintText}" Text="Text mode shows the raw value as plain text. No additional configuration needed."/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Font size" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox  Grid.Column="1" x:Name="textFontSizeBox" Tag="positiveNumber"/>
+                                </Grid>
                             </Grid>
                         </StackPanel>
                     </Border>

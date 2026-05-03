@@ -25,6 +25,10 @@ namespace MetadataDisplay.Client
 
         // Lamp
         private const string LampMapKey = "LampMap";
+        private const string LampIconSizeKey = "LampIconSize";
+
+        // Text
+        private const string TextFontSizeKey = "TextFontSize";
 
         // Number / Gauge thresholds
         private const string NumMinKey = "NumMin";
@@ -139,6 +143,18 @@ namespace MetadataDisplay.Client
             set => SetProperty(LampMapKey, value);
         }
 
+        public string LampIconSize
+        {
+            get => GetProperty(LampIconSizeKey) ?? "96";
+            set => SetProperty(LampIconSizeKey, value);
+        }
+
+        public string TextFontSize
+        {
+            get => GetProperty(TextFontSizeKey) ?? "28";
+            set => SetProperty(TextFontSizeKey, value);
+        }
+
         public string NumMin
         {
             get => GetProperty(NumMinKey) ?? string.Empty;
@@ -188,10 +204,10 @@ namespace MetadataDisplay.Client
             set => SetProperty(GaugeRangeMaxKey, value);
         }
 
-        // Arc180 | Arc270 | Bar
+        // Modern180 | Modern270 | Arc180 | Arc270 | Bar
         public string GaugeStyle
         {
-            get => GetProperty(GaugeStyleKey) ?? "Arc180";
+            get => GetProperty(GaugeStyleKey) ?? "Modern180";
             set => SetProperty(GaugeStyleKey, value);
         }
 

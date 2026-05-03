@@ -7,7 +7,6 @@ namespace MetadataDisplay.Client.Renderers
     internal sealed class TextRenderer
     {
         private readonly TextBlock _text;
-        private readonly Border _border;
 
         public TextRenderer()
         {
@@ -21,18 +20,15 @@ namespace MetadataDisplay.Client.Renderers
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
             };
-            _border = new Border
-            {
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12, 6, 12, 6),
-                Background = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)),
-                Child = _text,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
         }
 
-        public UIElement Visual => _border;
+        public UIElement Visual => _text;
+
+        public double FontSize
+        {
+            get => _text.FontSize;
+            set { if (value > 0) _text.FontSize = value; }
+        }
 
         public void Update(string value)
         {

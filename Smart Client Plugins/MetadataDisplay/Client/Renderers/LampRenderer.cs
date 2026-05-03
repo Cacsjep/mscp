@@ -155,6 +155,19 @@ namespace MetadataDisplay.Client.Renderers
 
         public UIElement Visual => _root;
 
+        public double IconSize
+        {
+            get => _lamp.Width;
+            set
+            {
+                if (value <= 0) value = 96;
+                _lamp.Width = value;
+                _lamp.Height = value;
+                _icon.Width = value * 0.92;
+                _icon.Height = value * 0.92;
+            }
+        }
+
         public void Update(string value, IList<LampMapEntry> map)
         {
             LampMapEntry hit = null;

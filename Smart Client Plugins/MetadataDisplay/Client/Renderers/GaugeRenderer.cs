@@ -7,7 +7,7 @@ using System.Windows.Shapes;
 
 namespace MetadataDisplay.Client.Renderers
 {
-    internal enum GaugeStyle { Arc180, Arc270, Bar }
+    internal enum GaugeStyle { Arc180, Arc270, Bar, Modern180, Modern270 }
 
     internal sealed class GaugeConfig
     {
@@ -27,6 +27,8 @@ namespace MetadataDisplay.Client.Renderers
             var style = GaugeStyle.Arc180;
             if (string.Equals(m.GaugeStyle, "Arc270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Arc270;
             else if (string.Equals(m.GaugeStyle, "Bar", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Bar;
+            else if (string.Equals(m.GaugeStyle, "Modern180", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Modern180;
+            else if (string.Equals(m.GaugeStyle, "Modern270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Modern270;
 
             return new GaugeConfig
             {
@@ -124,6 +126,16 @@ namespace MetadataDisplay.Client.Renderers
                     Canvas.SetLeft(_labelStack, 0);
                     Canvas.SetTop(_labelStack, 130);
                     break;
+                case GaugeStyle.Modern270:
+                    DrawModernArc(v, cfg, sweepDegrees: 270);
+                    Canvas.SetLeft(_labelStack, 0);
+                    Canvas.SetTop(_labelStack, 75);
+                    break;
+                case GaugeStyle.Modern180:
+                    DrawModernArc(v, cfg, sweepDegrees: 180);
+                    Canvas.SetLeft(_labelStack, 0);
+                    Canvas.SetTop(_labelStack, 100);
+                    break;
                 case GaugeStyle.Arc180:
                 default:
                     DrawArc(v, cfg, sweepDegrees: 180);
@@ -218,7 +230,51 @@ namespace MetadataDisplay.Client.Renderers
             }
         }
 
+        // Modern progress-arc style: a thin gray background track plus a thicker
+        // progress arc that fills from the start angle to the current value's angle.
+        // The progress color picks from the threshold (Ok/Warn/Bad) so a single
+        // glance still tells the operator how healthy the value is.
+        private void DrawModernArc(double? value, GaugeConfig cfg, double sweepDegrees)
+        {
+            double cx = LogicalW / 2.0;
+            double cy = sweepDegrees >= 270 ? 105 : 120;
+            double radius = sweepDegrees >= 270 ? 78 : 92;
+            double trackThickness = 14;
+            double progressThickness = 14;
+
+            double startAngle = sweepDegrees >= 270 ? 135 : 180;
+            double endAngle = startAngle + sweepDegrees;
+
+            double rmin = cfg.RangeMin;
+            double rmax = cfg.RangeMax;
+
+            // Background track — full sweep, dim gray.
+            DrawArcSegment(cx, cy, radius, trackThickness,
+                startAngle, endAngle,
+                Color.FromRgb(0x33, 0x3B, 0x40), rounded: true);
+
+            // Progress fill — startAngle to value angle.
+            if (value.HasValue)
+            {
+                var v = Clamp(value.Value, rmin, rmax);
+                var ang = ValueToAngle(v, rmin, rmax, startAngle, endAngle);
+                if (Math.Abs(ang - startAngle) > 0.01)
+                {
+                    var progressColor = cfg.Numeric.PickColor(v);
+                    DrawArcSegment(cx, cy, radius, progressThickness,
+                        startAngle, ang, progressColor, rounded: true);
+                }
+            }
+
+            // Tick labels at min/max — small + subtle.
+            DrawScaleLabel(cx, cy, radius + progressThickness + 2, startAngle, FormatNumber(rmin));
+            DrawScaleLabel(cx, cy, radius + progressThickness + 2, endAngle, FormatNumber(rmax));
+        }
+
         private void DrawArcSegment(double cx, double cy, double r, double thickness, double a1, double a2, Color color)
+            => DrawArcSegment(cx, cy, r, thickness, a1, a2, color, rounded: false);
+
+        private void DrawArcSegment(double cx, double cy, double r, double thickness, double a1, double a2, Color color, bool rounded)
         {
             if (Math.Abs(a2 - a1) < 0.01) return;
             var rad1 = a1 * Math.PI / 180.0;
@@ -242,8 +298,8 @@ namespace MetadataDisplay.Client.Renderers
                 Data = pg,
                 Stroke = new SolidColorBrush(color),
                 StrokeThickness = thickness,
-                StrokeStartLineCap = PenLineCap.Flat,
-                StrokeEndLineCap = PenLineCap.Flat,
+                StrokeStartLineCap = rounded ? PenLineCap.Round : PenLineCap.Flat,
+                StrokeEndLineCap = rounded ? PenLineCap.Round : PenLineCap.Flat,
             };
             _canvas.Children.Add(path);
         }

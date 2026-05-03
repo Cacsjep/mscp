@@ -32,16 +32,79 @@
                 </Border>
             </Grid>
         </Viewbox>
+        <Grid x:Name="noDataPanel"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Visibility="Collapsed">
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                <Ellipse Width="14" Height="14"
+                         Fill="#FFE69500"
+                         Margin="0,0,0,6"
+                         HorizontalAlignment="Center">
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="Ellipse.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                     From="0.25" To="1.0" Duration="0:0:0.9" AutoReverse="True"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+                <TextBlock Text="Waiting for data..."
+                           Foreground="#FFA9B5BB"
+                           FontSize="13"
+                           HorizontalAlignment="Center"/>
+                <TextBlock x:Name="noDataDetail"
+                           Text=""
+                           Foreground="#FF7A8388"
+                           FontSize="11"
+                           HorizontalAlignment="Center"
+                           Margin="0,4,0,0"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="320"/>
+            </StackPanel>
+        </Grid>
         <StackPanel x:Name="setupPanel"
                     Orientation="Vertical"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
+                    MaxWidth="480"
                     Visibility="Collapsed">
-            <TextBlock x:Name="setupHint"
-                       Foreground="#FF7A8388"
+            <TextBlock x:Name="setupHeader"
+                       Foreground="#FFE6EAEC"
                        FontSize="14"
-                       TextAlignment="Center"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Left"
+                       Margin="0,0,0,4"
+                       Text="Metadata Display"/>
+            <TextBlock x:Name="setupSubheader"
+                       Foreground="#FF7A8388"
+                       FontSize="11"
+                       HorizontalAlignment="Left"
                        Margin="0,0,0,12"/>
+            <Grid x:Name="setupSummary" HorizontalAlignment="Left" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Channel"  Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,4"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="summaryChannel" Foreground="#FFCFD7DA" FontSize="12" Margin="0,0,0,4"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Render"   Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,4"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="summaryRender"  Foreground="#FFCFD7DA" FontSize="12" Margin="0,0,0,4"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Topic"    Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,4"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="summaryTopic"   Foreground="#FFCFD7DA" FontSize="12" Margin="0,0,0,4" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Data key" Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,0"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="summaryDataKey" Foreground="#FFCFD7DA" FontSize="12"/>
+            </Grid>
             <Border x:Name="openConfigButton"
                     Background="#FF2A2A2A"
                     BorderBrush="#FF555555"
@@ -49,13 +112,19 @@
                     CornerRadius="3"
                     Padding="16,8"
                     Cursor="Hand"
-                    HorizontalAlignment="Center"
+                    HorizontalAlignment="Left"
                     MouseLeftButtonUp="OnOpenConfigClick">
                 <TextBlock Text="Open configuration..."
                            Foreground="#FFD0D0D0"
-                           FontSize="13"
-                           HorizontalAlignment="Center"/>
+                           FontSize="13"/>
             </Border>
+            <TextBlock x:Name="setupHint"
+                       Foreground="#FF7A8388"
+                       FontSize="11"
+                       HorizontalAlignment="Left"
+                       Margin="0,8,0,0"
+                       Visibility="Collapsed"
+                       TextWrapping="Wrap"/>
         </StackPanel>
     </Grid>
 </external:ViewItemWpfUserControl>
