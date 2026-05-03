@@ -48,6 +48,9 @@ namespace MetadataDisplay.Client
         private const string GaugeTickCountKey = "GaugeTickCount";
         private const string GaugeTrackThicknessKey = "GaugeTrackThickness";
 
+        // Theme
+        private const string WidgetDensityKey = "WidgetDensity";
+
         // Stale
         private const string StaleSecondsKey = "StaleSeconds";
 
@@ -244,6 +247,13 @@ namespace MetadataDisplay.Client
         {
             get => GetProperty(GaugeTrackThicknessKey) ?? "14";
             set => SetProperty(GaugeTrackThicknessKey, value);
+        }
+
+        // Compact | Comfortable | Spacious
+        public string WidgetDensity
+        {
+            get => GetProperty(WidgetDensityKey) ?? "Comfortable";
+            set => SetProperty(WidgetDensityKey, value);
         }
 
         public string StaleSeconds

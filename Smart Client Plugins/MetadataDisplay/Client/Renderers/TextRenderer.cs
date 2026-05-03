@@ -13,8 +13,8 @@ namespace MetadataDisplay.Client.Renderers
             _text = new TextBlock
             {
                 Text = "—",
-                Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0xF7, 0xF8)),
-                FontSize = 28,
+                Foreground = new SolidColorBrush(WidgetTheme.ValueColor),
+                FontSize = WidgetTheme.FontText,
                 TextAlignment = TextAlignment.Center,
                 TextWrapping = TextWrapping.Wrap,
                 HorizontalAlignment = HorizontalAlignment.Center,
@@ -24,6 +24,7 @@ namespace MetadataDisplay.Client.Renderers
 
         public UIElement Visual => _text;
 
+        // User-configured size — taken as-is, density doesn't override.
         public double FontSize
         {
             get => _text.FontSize;

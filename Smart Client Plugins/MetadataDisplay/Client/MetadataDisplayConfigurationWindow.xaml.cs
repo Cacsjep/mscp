@@ -85,6 +85,7 @@ namespace MetadataDisplay.Client
             _titleColor = MountColorPicker(titleColorPickerHost);
 
             // Title section
+            SelectComboItem(densityCombo, _vim.WidgetDensity ?? "Comfortable");
             showTitleCheck.IsChecked = !string.Equals(_vim.ShowTitle, "false", StringComparison.OrdinalIgnoreCase);
             titleBox.Text = _vim.Title ?? "";
             SelectComboItem(titlePositionCombo, _vim.TitlePosition ?? "Left");
@@ -203,11 +204,12 @@ namespace MetadataDisplay.Client
                 case "Right":  previewTitleText.HorizontalAlignment = HorizontalAlignment.Right;  previewTitleText.TextAlignment = TextAlignment.Right;  break;
                 default:       previewTitleText.HorizontalAlignment = HorizontalAlignment.Left;   previewTitleText.TextAlignment = TextAlignment.Left;   break;
             }
-            // Font size
+            // Font size — density scales the title alongside the rest of the widget.
+            double baseFs = 14;
             if (double.TryParse(titleFontSizeBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var fs) && fs > 0)
-                previewTitleText.FontSize = fs;
-            else
-                previewTitleText.FontSize = 14;
+                baseFs = fs;
+            string density = (densityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Comfortable";
+            previewTitleText.FontSize = baseFs * Renderers.WidgetTheme.DensityScale(density);
             // Color
             try
             {
@@ -365,6 +367,7 @@ namespace MetadataDisplay.Client
             gaugeTrackThicknessBox.TextChanged += (s, e) => ReRenderPreview();
             lampIconSizeBox.TextChanged += (s, e) => ReRenderPreview();
             textFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
+            densityCombo.SelectionChanged += (s, e) => { UpdatePreviewTitle(); ReRenderPreview(); };
 
             // Title section live preview
             showTitleCheck.Checked += (s, e) => { ApplyTitleEnabled(); UpdatePreviewTitle(); };
@@ -900,18 +903,23 @@ namespace MetadataDisplay.Client
 
             previewMetaText.Text = $"key={dataKeyCombo.Text}  value={_lastPreviewValue}";
 
+            string density = (densityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Comfortable";
+
             if (_previewLamp != null)
             {
                 var rows = LampMapParser.Parse(SerializeLampRows());
+                _previewLamp.Density = density;
                 _previewLamp.IconSize = TryParseDouble(lampIconSizeBox.Text) ?? 96;
                 _previewLamp.Update(_lastPreviewValue, rows);
             }
             else if (_previewNumber != null)
             {
+                _previewNumber.Density = density;
                 _previewNumber.Update(_lastPreviewValue, BuildNumericConfigFromUi(false));
             }
             else if (_previewGauge != null)
             {
+                _previewGauge.Density = density;
                 _previewGauge.Update(_lastPreviewValue, BuildGaugeConfigFromUi());
             }
             else if (_previewText != null)
@@ -1366,6 +1374,8 @@ namespace MetadataDisplay.Client
             _vim.GaugeTrackThickness = NormalizeNumberText(gaugeTrackThicknessBox.Text, "14");
 
             _vim.StaleSeconds = NormalizeNumberText(staleSecondsBox.Text, "0");
+
+            _vim.WidgetDensity = (densityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Comfortable";
         }
 
         private static string NormalizeColor(string s)

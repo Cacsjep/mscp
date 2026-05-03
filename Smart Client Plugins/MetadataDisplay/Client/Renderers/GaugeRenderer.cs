@@ -84,16 +84,16 @@ namespace MetadataDisplay.Client.Renderers
             _valueText = new TextBlock
             {
                 Text = "—",
-                Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0xF7, 0xF8)),
-                FontSize = 34,
+                Foreground = new SolidColorBrush(WidgetTheme.ValueColor),
+                FontSize = WidgetTheme.FontValue,
                 FontWeight = FontWeights.SemiBold,
                 TextAlignment = TextAlignment.Center,
             };
             _unitText = new TextBlock
             {
                 Text = "",
-                Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
-                FontSize = 14,
+                Foreground = new SolidColorBrush(WidgetTheme.UnitColor),
+                FontSize = WidgetTheme.FontUnit,
                 TextAlignment = TextAlignment.Center,
             };
             _labelStack = new StackPanel { Orientation = Orientation.Vertical, Width = LogicalW };
@@ -109,6 +109,9 @@ namespace MetadataDisplay.Client.Renderers
 
         public UIElement Visual => _root;
 
+        // Density scales only the unit text — value font size is user-configured.
+        public string Density { get; set; } = "Comfortable";
+
         public void Update(string rawValue, GaugeConfig cfg)
         {
             // Clear all canvas children except the persistent label stack.
@@ -117,8 +120,10 @@ namespace MetadataDisplay.Client.Renderers
                 if (!ReferenceEquals(_canvas.Children[i], _labelStack))
                     _canvas.Children.RemoveAt(i);
             }
+            double scale = WidgetTheme.DensityScale(Density);
             _unitText.Text = cfg.Numeric.Unit ?? "";
-            _valueText.FontSize = cfg.ValueFontSize > 0 ? cfg.ValueFontSize : 26;
+            _unitText.FontSize = WidgetTheme.FontUnit * scale;
+            _valueText.FontSize = cfg.ValueFontSize > 0 ? cfg.ValueFontSize : WidgetTheme.FontValue;
             _labelStack.Visibility = cfg.ShowValue ? Visibility.Visible : Visibility.Collapsed;
 
             double? v = ParseValue(rawValue);
@@ -269,7 +274,7 @@ namespace MetadataDisplay.Client.Renderers
             // Background track — full sweep, dim gray.
             DrawArcSegment(cx, cy, radius, trackThickness,
                 startAngle, endAngle,
-                Color.FromRgb(0x33, 0x3B, 0x40), rounded: true);
+                WidgetTheme.TrackColor, rounded: true);
 
             // Progress fill — startAngle to value angle.
             if (value.HasValue)
@@ -313,7 +318,7 @@ namespace MetadataDisplay.Client.Renderers
                 _canvas.Children.Add(new Line
                 {
                     X1 = x1, Y1 = y1, X2 = x2, Y2 = y2,
-                    Stroke = new SolidColorBrush(Color.FromRgb(0xA9, 0xB5, 0xBB)),
+                    Stroke = new SolidColorBrush(WidgetTheme.SubtleColor),
                     StrokeThickness = 1.4,
                     StrokeStartLineCap = PenLineCap.Round,
                     StrokeEndLineCap = PenLineCap.Round,
@@ -362,8 +367,8 @@ namespace MetadataDisplay.Client.Renderers
             var tb = new TextBlock
             {
                 Text = text,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xA9, 0xB5, 0xBB)),
-                FontSize = 11,
+                Foreground = new SolidColorBrush(WidgetTheme.SubtleColor),
+                FontSize = WidgetTheme.FontTickLabel,
             };
             // Approximate centering — not measuring, fine for 1-3 char numbers.
             Canvas.SetLeft(_canvas, 0);
@@ -423,7 +428,7 @@ namespace MetadataDisplay.Client.Renderers
                     _canvas.Children.Add(new Line
                     {
                         X1 = x, Y1 = tickY1, X2 = x, Y2 = tickY2,
-                        Stroke = new SolidColorBrush(Color.FromRgb(0xA9, 0xB5, 0xBB)),
+                        Stroke = new SolidColorBrush(WidgetTheme.SubtleColor),
                         StrokeThickness = 1.4,
                         StrokeStartLineCap = PenLineCap.Round,
                         StrokeEndLineCap = PenLineCap.Round,
@@ -479,8 +484,8 @@ namespace MetadataDisplay.Client.Renderers
             var tb = new TextBlock
             {
                 Text = text,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xA9, 0xB5, 0xBB)),
-                FontSize = 11,
+                Foreground = new SolidColorBrush(WidgetTheme.SubtleColor),
+                FontSize = WidgetTheme.FontTickLabel,
             };
             tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             double left = anchorX;

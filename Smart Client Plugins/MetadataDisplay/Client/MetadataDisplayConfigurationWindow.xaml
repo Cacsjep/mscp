@@ -250,9 +250,22 @@
                         </Grid>
                     </Border>
 
-                    <TextBlock Text="Title" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Title and density" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Density" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="densityCombo" SelectedIndex="1"
+                                          ToolTip="Multiplier applied to non-user-set sizes so widgets line up across panes.">
+                                    <ComboBoxItem Content="Compact"/>
+                                    <ComboBoxItem Content="Comfortable"/>
+                                    <ComboBoxItem Content="Spacious"/>
+                                </ComboBox>
+                            </Grid>
                             <CheckBox x:Name="showTitleCheck" Content="Show title" IsChecked="True" Margin="0,0,0,10"/>
                             <Grid x:Name="titleConfigPanel">
                                 <StackPanel>
@@ -372,12 +385,12 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="1" x:Name="numMinBox" Margin="0,0,8,0" Tag="number"/>
-                                        <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="numMinBox" Margin="0,0,16,0" Tag="number"/>
+                                        <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
                                         <TextBox  Grid.Column="3" x:Name="numMaxBox" Tag="number"/>
                                     </Grid>
                                     <CheckBox x:Name="highIsBadCheck" Content="High value is bad (red above Max)" IsChecked="True" Margin="0,0,0,10"/>
@@ -415,12 +428,12 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Scale Min" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="1" x:Name="gaugeRangeMinBox" Margin="0,0,8,0" Tag="number"/>
-                                        <TextBlock Grid.Column="2" Text="Scale Max" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="gaugeRangeMinBox" Margin="0,0,16,0" Tag="number"/>
+                                        <TextBlock Grid.Column="2" Text="Scale Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
                                         <TextBox  Grid.Column="3" x:Name="gaugeRangeMaxBox" Tag="number"/>
                                     </Grid>
                                     <Grid Margin="0,0,0,8">
@@ -477,12 +490,12 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="1" x:Name="gaugeNumMinBox" Margin="0,0,8,0" Tag="number"/>
-                                        <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="gaugeNumMinBox" Margin="0,0,16,0" Tag="number"/>
+                                        <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
                                         <TextBox  Grid.Column="3" x:Name="gaugeNumMaxBox" Tag="number"/>
                                     </Grid>
                                     <CheckBox x:Name="gaugeHighIsBadCheck" Content="High value is bad" IsChecked="True" Margin="0,0,0,10"/>

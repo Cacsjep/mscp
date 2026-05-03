@@ -137,8 +137,8 @@ namespace MetadataDisplay.Client.Renderers
             _label = new TextBlock
             {
                 Text = "",
-                Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
-                FontSize = 16,
+                Foreground = new SolidColorBrush(WidgetTheme.LabelColor),
+                FontSize = WidgetTheme.FontLabel,
                 Margin = new Thickness(0, 8, 0, 0),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 TextAlignment = TextAlignment.Center,
@@ -155,6 +155,7 @@ namespace MetadataDisplay.Client.Renderers
 
         public UIElement Visual => _root;
 
+        // User-configured icon size — density doesn't override.
         public double IconSize
         {
             get => _lamp.Width;
@@ -167,6 +168,18 @@ namespace MetadataDisplay.Client.Renderers
                 _icon.Height = value * 0.92;
             }
         }
+
+        // Density scales only the secondary label font (the icon size is user-set).
+        public string Density
+        {
+            get => _density;
+            set
+            {
+                _density = value;
+                _label.FontSize = WidgetTheme.FontLabel * WidgetTheme.DensityScale(_density);
+            }
+        }
+        private string _density = "Comfortable";
 
         public void Update(string value, IList<LampMapEntry> map)
         {

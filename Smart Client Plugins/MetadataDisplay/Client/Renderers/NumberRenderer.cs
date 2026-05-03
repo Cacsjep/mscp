@@ -22,16 +22,16 @@ namespace MetadataDisplay.Client.Renderers
             _valueText = new TextBlock
             {
                 Text = "—",
-                Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0xF7, 0xF8)),
-                FontSize = 64,
+                Foreground = new SolidColorBrush(WidgetTheme.ValueColor),
+                FontSize = WidgetTheme.FontDisplay,
                 FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center,
             };
             _unitText = new TextBlock
             {
                 Text = "",
-                Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
-                FontSize = 22,
+                Foreground = new SolidColorBrush(WidgetTheme.UnitColor),
+                FontSize = WidgetTheme.FontUnitLarge,
                 Margin = new Thickness(6, 0, 0, 6),
                 VerticalAlignment = VerticalAlignment.Bottom,
             };
@@ -72,12 +72,12 @@ namespace MetadataDisplay.Client.Renderers
         {
             label = new TextBlock
             {
-                Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
-                FontSize = 11,
+                Foreground = new SolidColorBrush(WidgetTheme.SubtleColor),
+                FontSize = WidgetTheme.FontMeta,
             };
             return new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+                Background = new SolidColorBrush(WidgetTheme.ChipBackground),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(8, 2, 8, 2),
                 Child = label,
@@ -86,8 +86,14 @@ namespace MetadataDisplay.Client.Renderers
 
         public UIElement Visual => _root;
 
+        public string Density { get; set; } = "Comfortable";
+
         public void Update(string rawValue, NumericConfig cfg)
         {
+            double scale = WidgetTheme.DensityScale(Density);
+            _valueText.FontSize = WidgetTheme.FontDisplay * scale;
+            _unitText.FontSize = WidgetTheme.FontUnitLarge * scale;
+
             _unitText.Text = cfg.Unit ?? "";
 
             UpdateChips(cfg);
@@ -95,7 +101,7 @@ namespace MetadataDisplay.Client.Renderers
             if (rawValue == null || !double.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
             {
                 _valueText.Text = "—";
-                _valueText.Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0xF7, 0xF8));
+                _valueText.Foreground = new SolidColorBrush(WidgetTheme.ValueColor);
                 return;
             }
 
@@ -119,7 +125,7 @@ namespace MetadataDisplay.Client.Renderers
         public void Clear()
         {
             _valueText.Text = "—";
-            _valueText.Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0xF7, 0xF8));
+            _valueText.Foreground = new SolidColorBrush(WidgetTheme.ValueColor);
             _chipsRow.Visibility = Visibility.Collapsed;
         }
 

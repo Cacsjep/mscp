@@ -171,11 +171,11 @@ namespace MetadataDisplay.Client
                 default:       titleText.HorizontalAlignment = HorizontalAlignment.Left;   titleText.TextAlignment = TextAlignment.Left;   break;
             }
 
-            // Font size
+            // Font size — density scales the title alongside the rest of the widget.
+            double baseFs = 14;
             if (double.TryParse(_viewItemManager.TitleFontSize, NumberStyles.Float, CultureInfo.InvariantCulture, out var fs) && fs > 0)
-                titleText.FontSize = fs;
-            else
-                titleText.FontSize = 14;
+                baseFs = fs;
+            titleText.FontSize = baseFs * Renderers.WidgetTheme.DensityScale(_viewItemManager.WidgetDensity);
 
             // Color
             try
@@ -451,15 +451,24 @@ namespace MetadataDisplay.Client
                 renderViewbox.Visibility = Visibility.Visible;
             }
 
+            string density = _viewItemManager.WidgetDensity ?? "Comfortable";
+
             if (_lampRenderer != null)
             {
+                _lampRenderer.Density = density;
                 _lampRenderer.IconSize = ParseDouble(_viewItemManager.LampIconSize, 96);
                 _lampRenderer.Update(value, LampMapParser.Parse(_viewItemManager.LampMap));
             }
             else if (_numberRenderer != null)
+            {
+                _numberRenderer.Density = density;
                 _numberRenderer.Update(value, NumericConfig.FromManager(_viewItemManager));
+            }
             else if (_gaugeRenderer != null)
+            {
+                _gaugeRenderer.Density = density;
                 _gaugeRenderer.Update(value, GaugeConfig.FromManager(_viewItemManager));
+            }
             else if (_textRenderer != null)
             {
                 _textRenderer.FontSize = ParseDouble(_viewItemManager.TextFontSize, 28);
