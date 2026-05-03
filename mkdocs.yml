@@ -48,6 +48,7 @@ nav:
       - RTMP Streamer: plugins/admin/rtmp-streamer.md
     - Smart Client:
       - Flex Viewer: plugins/smart-client/flexview.md
+      - Metadata Display: plugins/smart-client/metadata-display.md
       - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
       - Notepad: plugins/smart-client/notepad.md
       - Remote Control: plugins/smart-client/sc-remote-control.md

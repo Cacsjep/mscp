@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.0] - 2026-05-02
+- Add Metadata Display: A new Smart Client plugin (View Item Plugin) to display metadata contained data in live and also recording mode.
+
 ## [2.5.0] - 2026-05-01
 - Add Timeline Jump: New Smart Client toolbar plugin (partner request) for jumping the playback timeline backward or forward by a chosen increment without dragging or scrubbing. 
 
