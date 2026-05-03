@@ -1,0 +1,504 @@
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:MetadataDisplay.Client"
+    x:Class="MetadataDisplay.Client.MetadataDisplayConfigurationWindow"
+    Title="Metadata Display - Configuration"
+    Width="1200" Height="900"
+    MinWidth="1000" MinHeight="700"
+    WindowStartupLocation="CenterOwner"
+    Background="#FF1E1E1E"
+    Foreground="#FFD0D0D0"
+    FontSize="13">
+    <Window.Resources>
+        <!-- Section heading -->
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FFE6EAEC"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="SectionContainer" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Margin" Value="0,0,0,18"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="HintText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Opacity" Value="0.55"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+
+        <!-- Inputs -->
+        <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CaretBrush" Value="#FFD0D0D0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource DarkTextBox}"/>
+
+        <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bd" Background="#FF2A2A2A"
+                                Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF3399FF"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <ControlTemplate x:Key="DarkComboBoxToggle" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="20"/>
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Border" Grid.ColumnSpan="2" Background="#FF2A2A2A"
+                        BorderBrush="#FF444444" BorderThickness="1" CornerRadius="0"/>
+                <Border Grid.Column="0" Background="#FF2A2A2A" Margin="1"/>
+                <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#FFD0D0D0"
+                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </ControlTemplate>
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItem}"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Template="{StaticResource DarkComboBoxToggle}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Focusable="False" ClickMode="Press"/>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="6,4,24,4" VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     Background="Transparent" Foreground="#FFD0D0D0"
+                                     BorderThickness="0" Margin="6,2,24,2" Padding="0"
+                                     CaretBrush="#FFD0D0D0"
+                                     Visibility="Collapsed"
+                                     IsReadOnly="{TemplateBinding IsReadOnly}"
+                                     VerticalContentAlignment="Center"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                                   Focusable="False" AllowsTransparency="True" PopupAnimation="Slide">
+                                <Grid MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                      SnapsToDevicePixels="True">
+                                    <Border Background="#FF2A2A2A" BorderBrush="#FF444444" BorderThickness="1">
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource DarkComboBox}"/>
+
+        <Style x:Key="SmallButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF363636"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF555555"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF404040"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Button" BasedOn="{StaticResource SmallButton}"/>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+        </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- Footer -->
+        <Border DockPanel.Dock="Bottom" Background="#FF252525" Padding="12,10" BorderBrush="#FF333333" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock x:Name="statusText" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#FFA9B5BB"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="cancelButton" Content="Cancel" MinWidth="90" Margin="0,0,8,0" Click="OnCancel"/>
+                    <Button x:Name="okButton" Content="Save" MinWidth="90" IsDefault="True" Click="OnSave"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="420"/>
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <!-- Metadata channel -->
+                    <TextBlock Text="Metadata channel" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="channelLabel" Grid.Column="0" Text="(none selected)" VerticalAlignment="Center"/>
+                            <Button x:Name="pickChannelButton" Grid.Column="1" Content="Select channel..."
+                                    Margin="8,0,0,0" Click="OnPickChannel"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Title -->
+                    <TextBlock Text="Title" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <CheckBox x:Name="showTitleCheck" Content="Show title" IsChecked="True" Margin="0,0,0,10"/>
+                            <Grid x:Name="titleConfigPanel">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Text" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="titleBox"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Position" Style="{StaticResource FieldLabel}"/>
+                                        <ComboBox Grid.Column="1" x:Name="titlePositionCombo" SelectedIndex="0" Margin="0,0,8,0">
+                                            <ComboBoxItem Content="Left"/>
+                                            <ComboBoxItem Content="Center"/>
+                                            <ComboBoxItem Content="Right"/>
+                                        </ComboBox>
+                                        <TextBlock Grid.Column="2" Text="Font size" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="3" x:Name="titleFontSizeBox"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Font color" Style="{StaticResource FieldLabel}"/>
+                                        <Grid Grid.Column="1" x:Name="titleColorPickerHost"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- What to read -->
+                    <TextBlock Text="What to read" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Topic match" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="topicCombo" IsEditable="True"/>
+                                <ComboBox Grid.Column="2" x:Name="topicMatchModeCombo" Width="100" Margin="6,0,0,0"
+                                          SelectedIndex="0">
+                                    <ComboBoxItem Content="Contains"/>
+                                    <ComboBoxItem Content="Exact"/>
+                                    <ComboBoxItem Content="EndsWith"/>
+                                </ComboBox>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Data key" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="dataKeyCombo" IsEditable="True"/>
+                            </Grid>
+                            <Expander x:Name="sourceFilterExpander" Header="Advanced - Source filter (per Source SimpleItem)" Foreground="#FFD0D0D0">
+                                <StackPanel Margin="0,8,0,0">
+                                    <TextBlock TextWrapping="Wrap" Style="{StaticResource HintText}" Margin="0,0,0,6"
+                                               Text="Restrict to Source/SimpleItem matches. Format: name1=value1;name2=value2"/>
+                                    <TextBox x:Name="sourceFilterBox" Margin="0,0,0,6"/>
+                                    <ItemsControl x:Name="learnedSourceList"/>
+                                </StackPanel>
+                            </Expander>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Learn -->
+                    <TextBlock Text="Learn from live data" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="learnStartButton" Content="Start Learn"
+                                    Margin="0,0,8,0" Click="OnStartLearn"/>
+                            <Button x:Name="learnStopButton" Content="Stop"
+                                    Margin="0,0,12,0" IsEnabled="False" Click="OnStopLearn"/>
+                            <TextBlock x:Name="learnStatus" VerticalAlignment="Center"
+                                       Style="{StaticResource HintText}"
+                                       Text="Idle. Pick a channel, then Start Learn to capture live messages and discover topics + keys."/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- How to display -->
+                    <TextBlock Text="How to display" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <RadioButton x:Name="rtLamp" Content="Lamp" GroupName="rt" IsChecked="True" Margin="0,0,16,0" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtNumber" Content="Number" GroupName="rt" Margin="0,0,16,0" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtGauge" Content="Gauge" GroupName="rt" Margin="0,0,16,0" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtText" Content="Text" GroupName="rt" Checked="OnRenderTypeChanged"/>
+                            </StackPanel>
+
+                            <Grid x:Name="lampPanel" Visibility="Visible">
+                                <StackPanel>
+                                    <TextBlock Text="Map raw values to a label and color:" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
+                                    <ItemsControl x:Name="lampRows"/>
+                                    <Button x:Name="addLampRowButton" Content="+ Add row" HorizontalAlignment="Left" Margin="0,4,0,0" Click="OnAddLampRow"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="numberPanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="numMinBox" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="3" x:Name="numMaxBox"/>
+                                    </Grid>
+                                    <CheckBox x:Name="highIsBadCheck" Content="High value is bad (red above Max)" IsChecked="True" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="OK color" Style="{StaticResource FieldLabel}"/>
+                                        <Grid Grid.Column="1" x:Name="colorOkPickerHost" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="2" Text="Warn color" Style="{StaticResource FieldLabel}"/>
+                                        <Grid Grid.Column="3" x:Name="colorWarnPickerHost"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Bad color" Style="{StaticResource FieldLabel}"/>
+                                        <Grid Grid.Column="1" x:Name="colorBadPickerHost"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Unit suffix" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox Grid.Column="1" x:Name="unitBoxNumber"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="gaugePanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8"
+                                               Text="Scale range = the gauge's left to right ends. Threshold colors split it into bands."/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Scale Min" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="gaugeRangeMinBox" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="2" Text="Scale Max" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="3" x:Name="gaugeRangeMaxBox"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Style" Style="{StaticResource FieldLabel}"/>
+                                        <ComboBox Grid.Column="1" x:Name="gaugeStyleCombo" SelectedIndex="0">
+                                            <ComboBoxItem Content="Arc180"/>
+                                            <ComboBoxItem Content="Arc270"/>
+                                            <ComboBoxItem Content="Bar"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <TextBlock Margin="0,8,0,6" FontWeight="SemiBold" Text="Threshold colors"/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="gaugeNumMinBox" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="3" x:Name="gaugeNumMaxBox"/>
+                                    </Grid>
+                                    <CheckBox x:Name="gaugeHighIsBadCheck" Content="High value is bad" IsChecked="True" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="OK color" Style="{StaticResource FieldLabel}"/>
+                                        <Grid Grid.Column="1" x:Name="gaugeColorOkPickerHost" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="2" Text="Warn color" Style="{StaticResource FieldLabel}"/>
+                                        <Grid Grid.Column="3" x:Name="gaugeColorWarnPickerHost"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Bad color" Style="{StaticResource FieldLabel}"/>
+                                        <Grid Grid.Column="1" x:Name="gaugeColorBadPickerHost"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Unit suffix" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox Grid.Column="1" x:Name="unitBoxGauge"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="textPanel" Visibility="Collapsed">
+                                <TextBlock Style="{StaticResource HintText}" Text="Text mode shows the raw value as plain text. No additional configuration needed."/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Stale -->
+                    <TextBlock Text="Stale handling (optional)" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="240"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Mark stale after (seconds, 0 = off)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox  Grid.Column="1" x:Name="staleSecondsBox"/>
+                        </Grid>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Right: live preview -->
+            <Border Grid.Column="2" Background="#FF252525" BorderBrush="#FF333333" BorderThickness="1" CornerRadius="4" Padding="14">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Live preview"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="#FFE6EAEC"
+                               Margin="0,0,0,10"/>
+                    <TextBlock DockPanel.Dock="Top"
+                               x:Name="previewTitleText"
+                               Foreground="#FFCFD7DA"
+                               Margin="0,0,0,4"
+                               Visibility="Collapsed"/>
+                    <TextBlock DockPanel.Dock="Bottom" x:Name="previewMetaText" Text=""
+                               Foreground="#FFA9B5BB" Margin="0,8,0,0" FontSize="12"/>
+                    <TextBlock DockPanel.Dock="Bottom" x:Name="previewAgeText"  Text=""
+                               Foreground="#FFA9B5BB" Margin="0,2,0,0" FontSize="12"/>
+                    <TextBlock DockPanel.Dock="Bottom" x:Name="previewStatusText"
+                               Foreground="#FFA9B5BB" Margin="0,8,0,0"
+                               TextWrapping="Wrap" FontSize="12"
+                               Text="(no data yet)"/>
+                    <Viewbox Stretch="Uniform" Margin="0,4,0,4">
+                        <Grid x:Name="previewHost" Width="320" Height="200" Background="#FF1C2326"/>
+                    </Viewbox>
+                </DockPanel>
+            </Border>
+
+        </Grid>
+    </DockPanel>
+</Window>

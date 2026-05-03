@@ -28,6 +28,7 @@ A collection of community-built plugins and drivers for Milestone XProtect™, m
 | [ViewCarousel](Smart%20Client%20Plugins/ViewCarousel) | Smart Client | Cycle through Smart Client views inside a single view item slot |
 | [Remote Control](Smart%20Client%20Plugins/SCRemoteControl) | Smart Client | Control Smart Client remotely via REST API with Swagger UI |
 | [MetadataViewer](Admin%20Plugins/MetadataViewer) | Admin Plugin | Subscribe to a metadata channel in the Management Client and inspect the live ONVIF event stream |
+| [MetadataDisplay](Smart%20Client%20Plugins/MetadataDisplay) | Smart Client | Display ONVIF metadata values as live and playback dashboard widgets (lamp, number with thresholds, gauge, text) in view items |
 
 ## Installation
 

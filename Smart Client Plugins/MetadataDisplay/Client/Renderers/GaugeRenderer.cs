@@ -1,0 +1,375 @@
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+namespace MetadataDisplay.Client.Renderers
+{
+    internal enum GaugeStyle { Arc180, Arc270, Bar }
+
+    internal sealed class GaugeConfig
+    {
+        public double RangeMin;
+        public double RangeMax;
+        public GaugeStyle Style;
+        public NumericConfig Numeric; // reuses Min/Max thresholds + colors + unit
+
+        public static GaugeConfig FromManager(MetadataDisplayViewItemManager m)
+        {
+            var rmin = ParseDouble(m.GaugeRangeMin, 0);
+            var rmax = ParseDouble(m.GaugeRangeMax, 100);
+            if (rmax <= rmin) rmax = rmin + 1;
+
+            var style = GaugeStyle.Arc180;
+            if (string.Equals(m.GaugeStyle, "Arc270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Arc270;
+            else if (string.Equals(m.GaugeStyle, "Bar", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Bar;
+
+            return new GaugeConfig
+            {
+                RangeMin = rmin,
+                RangeMax = rmax,
+                Style = style,
+                Numeric = NumericConfig.FromManager(m),
+            };
+        }
+
+        private static double ParseDouble(string s, double fallback)
+        {
+            if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) return v;
+            return fallback;
+        }
+    }
+
+    internal sealed class GaugeRenderer
+    {
+        private readonly Grid _root;
+        private readonly Canvas _canvas;
+        private readonly TextBlock _valueText;
+        private readonly TextBlock _unitText;
+
+        // Arc geometry constants (logical canvas size 320x200; outer Viewbox scales)
+        private const double LogicalW = 320;
+        private const double LogicalH = 200;
+
+        public GaugeRenderer()
+        {
+            _canvas = new Canvas
+            {
+                Width = LogicalW,
+                Height = LogicalH,
+                Background = Brushes.Transparent,
+                ClipToBounds = false,
+            };
+            _valueText = new TextBlock
+            {
+                Text = "—",
+                Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0xF7, 0xF8)),
+                FontSize = 38,
+                FontWeight = FontWeights.SemiBold,
+                TextAlignment = TextAlignment.Center,
+            };
+            _unitText = new TextBlock
+            {
+                Text = "",
+                Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
+                FontSize = 16,
+                TextAlignment = TextAlignment.Center,
+            };
+            var labelStack = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(0, 0, 0, 6),
+            };
+            labelStack.Children.Add(_valueText);
+            labelStack.Children.Add(_unitText);
+
+            _root = new Grid();
+            _root.Children.Add(_canvas);
+            _root.Children.Add(labelStack);
+        }
+
+        public UIElement Visual => _root;
+
+        public void Update(string rawValue, GaugeConfig cfg)
+        {
+            _canvas.Children.Clear();
+            _unitText.Text = cfg.Numeric.Unit ?? "";
+
+            double? v = ParseValue(rawValue);
+            _valueText.Text = v.HasValue ? FormatNumber(v.Value) : "—";
+
+            switch (cfg.Style)
+            {
+                case GaugeStyle.Bar:
+                    DrawBar(v, cfg);
+                    break;
+                case GaugeStyle.Arc270:
+                    DrawArc(v, cfg, sweepDegrees: 270);
+                    break;
+                case GaugeStyle.Arc180:
+                default:
+                    DrawArc(v, cfg, sweepDegrees: 180);
+                    break;
+            }
+        }
+
+        public void Clear()
+        {
+            _canvas.Children.Clear();
+            _valueText.Text = "—";
+            _unitText.Text = "";
+        }
+
+        // ───────── Arc drawing ─────────
+
+        private void DrawArc(double? value, GaugeConfig cfg, double sweepDegrees)
+        {
+            // Centered arc in the upper portion of the canvas.
+            // Arc180 sweeps from 180° (left) to 360° (right) — top half.
+            // Arc270 sweeps from 135° to 405° — leaves a 90° opening at the bottom.
+            double cx = LogicalW / 2.0;
+            double cy = sweepDegrees >= 270 ? 110 : 145;
+            double radius = sweepDegrees >= 270 ? 78 : 92;
+            double thickness = 18;
+
+            double startAngle = sweepDegrees >= 270 ? 135 : 180;
+            double endAngle = startAngle + sweepDegrees;
+
+            // Determine threshold breakpoints in the value domain.
+            double rmin = cfg.RangeMin;
+            double rmax = cfg.RangeMax;
+            double tMin = cfg.Numeric.Min ?? rmin;
+            double tMax = cfg.Numeric.Max ?? rmax;
+            tMin = Clamp(tMin, rmin, rmax);
+            tMax = Clamp(tMax, rmin, rmax);
+            if (tMax < tMin) tMax = tMin;
+
+            Color cOk = cfg.Numeric.ColorOk;
+            Color cWarn = cfg.Numeric.ColorWarn;
+            Color cBad = cfg.Numeric.ColorBad;
+
+            // Three bands per direction. With HighIsBad: [rmin..tMin]=Ok, [tMin..tMax]=Warn, [tMax..rmax]=Bad.
+            // With LowIsBad: [rmin..tMin]=Bad, [tMin..tMax]=Warn, [tMax..rmax]=Ok.
+            Color band1 = cfg.Numeric.HighIsBad ? cOk : cBad;
+            Color band2 = cWarn;
+            Color band3 = cfg.Numeric.HighIsBad ? cBad : cOk;
+
+            DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(rmin, rmin, rmax, startAngle, endAngle), ValueToAngle(tMin, rmin, rmax, startAngle, endAngle), band1);
+            DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(tMin, rmin, rmax, startAngle, endAngle), ValueToAngle(tMax, rmin, rmax, startAngle, endAngle), band2);
+            DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(tMax, rmin, rmax, startAngle, endAngle), ValueToAngle(rmax, rmin, rmax, startAngle, endAngle), band3);
+
+            DrawScaleLabel(cx, cy, radius + thickness, startAngle, FormatNumber(rmin));
+            DrawScaleLabel(cx, cy, radius + thickness, endAngle, FormatNumber(rmax));
+
+            // Needle + hub
+            if (value.HasValue)
+            {
+                var v = Clamp(value.Value, rmin, rmax);
+                var ang = ValueToAngle(v, rmin, rmax, startAngle, endAngle);
+                var rad = ang * Math.PI / 180.0;
+                var tipX = cx + Math.Cos(rad) * (radius - 4);
+                var tipY = cy + Math.Sin(rad) * (radius - 4);
+
+                var needleColor = cfg.Numeric.PickColor(v);
+                var needle = new Line
+                {
+                    X1 = cx, Y1 = cy, X2 = tipX, Y2 = tipY,
+                    Stroke = new SolidColorBrush(needleColor),
+                    StrokeThickness = 3,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round,
+                };
+                _canvas.Children.Add(needle);
+
+                var hub = new Ellipse
+                {
+                    Width = 12, Height = 12,
+                    Fill = new SolidColorBrush(needleColor),
+                    Stroke = new SolidColorBrush(Color.FromRgb(0x1C, 0x23, 0x26)),
+                    StrokeThickness = 2,
+                };
+                Canvas.SetLeft(hub, cx - 6);
+                Canvas.SetTop(hub, cy - 6);
+                _canvas.Children.Add(hub);
+            }
+        }
+
+        private void DrawArcSegment(double cx, double cy, double r, double thickness, double a1, double a2, Color color)
+        {
+            if (Math.Abs(a2 - a1) < 0.01) return;
+            var rad1 = a1 * Math.PI / 180.0;
+            var rad2 = a2 * Math.PI / 180.0;
+            var p1 = new Point(cx + Math.Cos(rad1) * r, cy + Math.Sin(rad1) * r);
+            var p2 = new Point(cx + Math.Cos(rad2) * r, cy + Math.Sin(rad2) * r);
+
+            var fig = new PathFigure { StartPoint = p1, IsClosed = false };
+            fig.Segments.Add(new ArcSegment
+            {
+                Point = p2,
+                Size = new Size(r, r),
+                IsLargeArc = Math.Abs(a2 - a1) > 180,
+                SweepDirection = a2 > a1 ? SweepDirection.Clockwise : SweepDirection.Counterclockwise,
+            });
+            var pg = new PathGeometry();
+            pg.Figures.Add(fig);
+
+            var path = new Path
+            {
+                Data = pg,
+                Stroke = new SolidColorBrush(color),
+                StrokeThickness = thickness,
+                StrokeStartLineCap = PenLineCap.Flat,
+                StrokeEndLineCap = PenLineCap.Flat,
+            };
+            _canvas.Children.Add(path);
+        }
+
+        private void DrawScaleLabel(double cx, double cy, double r, double angleDeg, string text)
+        {
+            var rad = angleDeg * Math.PI / 180.0;
+            var x = cx + Math.Cos(rad) * r;
+            var y = cy + Math.Sin(rad) * r;
+            var tb = new TextBlock
+            {
+                Text = text,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xA9, 0xB5, 0xBB)),
+                FontSize = 11,
+            };
+            // Approximate centering — not measuring, fine for 1-3 char numbers.
+            Canvas.SetLeft(_canvas, 0);
+            tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            Canvas.SetLeft(tb, x - tb.DesiredSize.Width / 2);
+            Canvas.SetTop(tb, y - tb.DesiredSize.Height / 2);
+            _canvas.Children.Add(tb);
+        }
+
+        private static double ValueToAngle(double value, double rmin, double rmax, double aStart, double aEnd)
+        {
+            if (rmax <= rmin) return aStart;
+            var f = (value - rmin) / (rmax - rmin);
+            f = Clamp(f, 0, 1);
+            return aStart + (aEnd - aStart) * f;
+        }
+
+        // ───────── Bar drawing ─────────
+
+        private void DrawBar(double? value, GaugeConfig cfg)
+        {
+            double left = 20, top = 70, width = LogicalW - 40, height = 36;
+
+            double rmin = cfg.RangeMin;
+            double rmax = cfg.RangeMax;
+            double tMin = cfg.Numeric.Min ?? rmin;
+            double tMax = cfg.Numeric.Max ?? rmax;
+            tMin = Clamp(tMin, rmin, rmax);
+            tMax = Clamp(tMax, rmin, rmax);
+            if (tMax < tMin) tMax = tMin;
+
+            Color cOk = cfg.Numeric.ColorOk;
+            Color cWarn = cfg.Numeric.ColorWarn;
+            Color cBad = cfg.Numeric.ColorBad;
+            Color band1 = cfg.Numeric.HighIsBad ? cOk : cBad;
+            Color band2 = cWarn;
+            Color band3 = cfg.Numeric.HighIsBad ? cBad : cOk;
+
+            DrawBarBand(left, top, ValueToX(rmin, rmin, rmax, left, width), ValueToX(tMin, rmin, rmax, left, width), height, band1);
+            DrawBarBand(left, top, ValueToX(tMin, rmin, rmax, left, width), ValueToX(tMax, rmin, rmax, left, width), height, band2);
+            DrawBarBand(left, top, ValueToX(tMax, rmin, rmax, left, width), ValueToX(rmax, rmin, rmax, left, width), height, band3);
+
+            DrawBarScaleLabel(left, top + height + 4, FormatNumber(rmin), TextAlignment.Left);
+            DrawBarScaleLabel(left + width, top + height + 4, FormatNumber(rmax), TextAlignment.Right);
+
+            // Outer outline
+            var outline = new System.Windows.Shapes.Rectangle
+            {
+                Width = width,
+                Height = height,
+                Stroke = new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)),
+                StrokeThickness = 1,
+                Fill = Brushes.Transparent,
+            };
+            Canvas.SetLeft(outline, left);
+            Canvas.SetTop(outline, top);
+            _canvas.Children.Add(outline);
+
+            if (value.HasValue)
+            {
+                var v = Clamp(value.Value, rmin, rmax);
+                var x = ValueToX(v, rmin, rmax, left, width);
+                var marker = new System.Windows.Shapes.Rectangle
+                {
+                    Width = 4,
+                    Height = height + 12,
+                    Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF)),
+                };
+                Canvas.SetLeft(marker, x - 2);
+                Canvas.SetTop(marker, top - 6);
+                _canvas.Children.Add(marker);
+            }
+        }
+
+        private void DrawBarBand(double clipLeft, double top, double x1, double x2, double height, Color color)
+        {
+            if (x2 <= x1) return;
+            var rect = new System.Windows.Shapes.Rectangle
+            {
+                Width = x2 - x1,
+                Height = height,
+                Fill = new SolidColorBrush(color),
+            };
+            Canvas.SetLeft(rect, x1);
+            Canvas.SetTop(rect, top);
+            _canvas.Children.Add(rect);
+        }
+
+        private void DrawBarScaleLabel(double anchorX, double y, string text, TextAlignment align)
+        {
+            var tb = new TextBlock
+            {
+                Text = text,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xA9, 0xB5, 0xBB)),
+                FontSize = 11,
+            };
+            tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double left = anchorX;
+            if (align == TextAlignment.Right) left = anchorX - tb.DesiredSize.Width;
+            else if (align == TextAlignment.Center) left = anchorX - tb.DesiredSize.Width / 2;
+            Canvas.SetLeft(tb, left);
+            Canvas.SetTop(tb, y);
+            _canvas.Children.Add(tb);
+        }
+
+        private static double ValueToX(double value, double rmin, double rmax, double left, double width)
+        {
+            if (rmax <= rmin) return left;
+            var f = (value - rmin) / (rmax - rmin);
+            f = Clamp(f, 0, 1);
+            return left + width * f;
+        }
+
+        // ───────── Helpers ─────────
+
+        private static double? ParseValue(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return null;
+            return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? (double?)v : null;
+        }
+
+        private static string FormatNumber(double v)
+        {
+            if (v == (long)v) return ((long)v).ToString(CultureInfo.InvariantCulture);
+            return v.ToString("0.##", CultureInfo.InvariantCulture);
+        }
+
+        private static double Clamp(double v, double min, double max)
+        {
+            if (v < min) return min;
+            if (v > max) return max;
+            return v;
+        }
+    }
+}
