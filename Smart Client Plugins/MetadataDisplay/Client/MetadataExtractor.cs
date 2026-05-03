@@ -90,7 +90,7 @@ namespace MetadataDisplay.Client
                 string value = null;
                 foreach (var si in data.Elements(NsTt + "SimpleItem"))
                 {
-                    if (string.Equals((string)si.Attribute("Name"), cfg.DataKey, StringComparison.Ordinal))
+                    if (string.Equals((string)si.Attribute("Name"), cfg.DataKey, StringComparison.OrdinalIgnoreCase))
                     {
                         value = (string)si.Attribute("Value");
                         break;
@@ -123,12 +123,12 @@ namespace MetadataDisplay.Client
             switch (mode)
             {
                 case "Exact":
-                    return string.Equals(actual, filter, StringComparison.Ordinal);
+                    return string.Equals(actual, filter, StringComparison.OrdinalIgnoreCase);
                 case "EndsWith":
-                    return actual.EndsWith(filter, StringComparison.Ordinal);
+                    return actual.EndsWith(filter, StringComparison.OrdinalIgnoreCase);
                 case "Contains":
                 default:
-                    return actual.IndexOf(filter, StringComparison.Ordinal) >= 0;
+                    return actual.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
 

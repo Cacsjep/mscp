@@ -335,10 +335,10 @@ namespace MetadataDisplay.Client
             // Re-render when values that affect colors/labels/thresholds change.
             // Topic/Source/DataKey changes also re-extract from the cached XML so
             // the preview reflects the new selection without waiting for a fresh packet.
-            topicCombo.SelectionChanged += (s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); };
+            topicCombo.SelectionChanged += (s, e) => { RebuildExtractorSnapshot(); RefreshDataKeyCombo(); RefreshLearnedSourceList(); ReExtractAndRender(); };
             topicCombo.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
-                new TextChangedEventHandler((s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); }));
-            topicMatchModeCombo.SelectionChanged += (s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); };
+                new TextChangedEventHandler((s, e) => { RebuildExtractorSnapshot(); RefreshDataKeyCombo(); RefreshLearnedSourceList(); ReExtractAndRender(); }));
+            topicMatchModeCombo.SelectionChanged += (s, e) => { RebuildExtractorSnapshot(); RefreshDataKeyCombo(); RefreshLearnedSourceList(); ReExtractAndRender(); };
             dataKeyCombo.SelectionChanged += (s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); };
             dataKeyCombo.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
                 new TextChangedEventHandler((s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); }));
@@ -641,9 +641,6 @@ namespace MetadataDisplay.Client
                 // Learn aggregation
                 if (_learn.IsActive) _learn.Observe(xml);
 
-                // Append to package log (UI thread).
-                Dispatcher.BeginInvoke(new Action(() => AppendPacketLog(xml)));
-
                 // Preview extraction — read the UI-thread-built snapshot, NOT the controls.
                 var cfg = _extractorSnapshot;
                 if (cfg == null || string.IsNullOrEmpty(cfg.DataKey))
@@ -656,6 +653,13 @@ namespace MetadataDisplay.Client
                 }
 
                 var hit = MetadataExtractor.TryExtract(xml, cfg);
+
+                if (hit == null && (_packetsSeen <= 3 || _packetsSeen % 50 == 0))
+                {
+                    var dump = DumpXmlContents(xml);
+                    _log.Info($"[ConfigWindow] No match for topic='{cfg.Topic}' mode={cfg.TopicMatchMode} key='{cfg.DataKey}'. Packet contains: {dump}");
+                }
+
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (hit != null)
@@ -717,8 +721,14 @@ namespace MetadataDisplay.Client
             Dispatcher.BeginInvoke(new Action(() => ApplyLearnSnapshot(snap)));
         }
 
+        // Last received learn snapshot — kept so we can re-filter the Data key dropdown
+        // whenever the user changes Topic / TopicMatchMode without needing a fresh packet.
+        private LearnSnapshot _lastSnapshot;
+
         private void ApplyLearnSnapshot(LearnSnapshot snap)
         {
+            _lastSnapshot = snap;
+
             int topicCount = snap.Topics.Count;
             int keyCount = 0;
             int srcCount = 0;
@@ -732,31 +742,61 @@ namespace MetadataDisplay.Client
 
             string currentTopicText = topicCombo.Text;
             topicCombo.Items.Clear();
-            foreach (var t in snap.Topics.OrderBy(x => x.Topic, StringComparer.Ordinal))
+            foreach (var t in snap.Topics.OrderBy(x => x.Topic, StringComparer.OrdinalIgnoreCase))
                 topicCombo.Items.Add(t.Topic);
             if (!string.IsNullOrEmpty(currentTopicText))
                 topicCombo.Text = currentTopicText;
 
-            var matchingKeys = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var t in snap.Topics)
-            {
-                if (TopicMatchesUi(t.Topic))
-                    foreach (var dk in t.DataKeyExamples.Keys) matchingKeys.Add(dk);
-            }
-            if (matchingKeys.Count == 0)
+            RefreshDataKeyCombo();
+            RefreshLearnedSourceList();
+        }
+
+        // Re-filters the Data key dropdown to keys observed for the currently chosen Topic.
+        // Clears the typed text when it doesn't belong to any of the matching topics, so a
+        // user can't keep a stale key from a previously selected topic.
+        private void RefreshDataKeyCombo()
+        {
+            var snap = _lastSnapshot;
+            var matchingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            bool topicSelected = !string.IsNullOrEmpty(topicCombo.Text);
+
+            if (snap != null)
             {
                 foreach (var t in snap.Topics)
-                    foreach (var dk in t.DataKeyExamples.Keys) matchingKeys.Add(dk);
+                {
+                    if (TopicMatchesUi(t.Topic))
+                        foreach (var dk in t.DataKeyExamples.Keys) matchingKeys.Add(dk);
+                }
+                // If no topic is chosen yet, fall back to the full pool so the user can browse.
+                if (!topicSelected)
+                {
+                    foreach (var t in snap.Topics)
+                        foreach (var dk in t.DataKeyExamples.Keys) matchingKeys.Add(dk);
+                }
             }
-            string currentKeyText = dataKeyCombo.Text;
-            dataKeyCombo.Items.Clear();
-            foreach (var k in matchingKeys.OrderBy(x => x, StringComparer.Ordinal))
-                dataKeyCombo.Items.Add(k);
-            if (!string.IsNullOrEmpty(currentKeyText))
-                dataKeyCombo.Text = currentKeyText;
 
+            string currentKeyText = dataKeyCombo.Text ?? "";
+            dataKeyCombo.Items.Clear();
+            foreach (var k in matchingKeys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                dataKeyCombo.Items.Add(k);
+
+            // Preserve the typed value only when it's actually one of the keys present for
+            // the currently selected topic. Otherwise drop it so the user re-picks.
+            if (!string.IsNullOrEmpty(currentKeyText) && matchingKeys.Contains(currentKeyText))
+                dataKeyCombo.Text = currentKeyText;
+            else if (topicSelected)
+                dataKeyCombo.Text = "";
+            else
+                dataKeyCombo.Text = currentKeyText;
+        }
+
+        private void RefreshLearnedSourceList()
+        {
+            var snap = _lastSnapshot;
             learnedSourceList.Items.Clear();
-            int distinctSourceValuesForChosenTopic = 0;
+            if (snap == null) return;
+
+            int distinct = 0;
             foreach (var t in snap.Topics)
             {
                 if (!TopicMatchesUi(t.Topic)) continue;
@@ -770,11 +810,11 @@ namespace MetadataDisplay.Client
                             Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
                             Margin = new Thickness(0, 1, 0, 1),
                         });
-                        distinctSourceValuesForChosenTopic++;
+                        distinct++;
                     }
                 }
             }
-            if (distinctSourceValuesForChosenTopic >= 2 && !sourceFilterExpander.IsExpanded)
+            if (distinct >= 2 && !sourceFilterExpander.IsExpanded)
                 sourceFilterExpander.IsExpanded = true;
         }
 
@@ -785,9 +825,9 @@ namespace MetadataDisplay.Client
             var mode = (topicMatchModeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Contains";
             switch (mode)
             {
-                case "Exact":     return string.Equals(topic, filter, StringComparison.Ordinal);
-                case "EndsWith":  return topic != null && topic.EndsWith(filter, StringComparison.Ordinal);
-                default:          return topic != null && topic.IndexOf(filter, StringComparison.Ordinal) >= 0;
+                case "Exact":     return string.Equals(topic, filter, StringComparison.OrdinalIgnoreCase);
+                case "EndsWith":  return topic != null && topic.EndsWith(filter, StringComparison.OrdinalIgnoreCase);
+                default:          return topic != null && topic.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
 
@@ -1097,111 +1137,88 @@ namespace MetadataDisplay.Client
             return true;
         }
 
-        // ───────── Package log ─────────
+        // ───────── Packet inspector ─────────
 
-        private const int MaxLoggedPackets = 200;
-
-        private sealed class PacketLogEntry
+        private void OnInspectPacket(object sender, RoutedEventArgs e)
         {
-            public DateTime Utc;
-            public string Xml;
-            public int Bytes;
-            public string Topic;
-        }
+            string xml = null;
+            if (_metadataItem != null && LastXmlCache.TryGet(_metadataItem.FQID.ObjectId, out var cached, out _))
+                xml = cached;
 
-        private readonly List<PacketLogEntry> _packetLog = new List<PacketLogEntry>();
-        private string _selectedPacketKey;
-
-        private void AppendPacketLog(string xml)
-        {
-            var entry = new PacketLogEntry
+            if (string.IsNullOrEmpty(xml))
             {
-                Utc = DateTime.UtcNow,
-                Xml = xml,
-                Bytes = xml?.Length ?? 0,
-                Topic = ExtractFirstTopic(xml),
-            };
-            _packetLog.Add(entry);
-            while (_packetLog.Count > MaxLoggedPackets) _packetLog.RemoveAt(0);
-
-            // Insert at top of list (newest first).
-            packetList.Items.Insert(0, BuildPacketListItem(entry));
-            while (packetList.Items.Count > MaxLoggedPackets)
-                packetList.Items.RemoveAt(packetList.Items.Count - 1);
-
-            packetLogStatus.Text = $"{_packetLog.Count} packet(s) captured (newest first).";
-        }
-
-        private static string ExtractFirstTopic(string xml)
-        {
-            if (string.IsNullOrEmpty(xml)) return "";
-            try
-            {
-                using (var reader = XmlReader.Create(new System.IO.StringReader(xml)))
-                {
-                    while (reader.Read())
-                    {
-                        if (reader.NodeType == XmlNodeType.Element &&
-                            reader.LocalName == "Topic")
-                        {
-                            return (reader.ReadElementContentAsString() ?? "").Trim();
-                        }
-                    }
-                }
+                MessageBox.Show(this,
+                    "No packet captured yet. Pick a metadata channel and wait for the first packet.",
+                    "Inspect packet", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
             }
-            catch { }
-            return "";
-        }
-
-        private ListBoxItem BuildPacketListItem(PacketLogEntry e)
-        {
-            var ts = e.Utc.ToLocalTime().ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture);
-            var topic = string.IsNullOrEmpty(e.Topic) ? "(no topic)" : e.Topic;
-            var item = new ListBoxItem
-            {
-                Content = $"{ts}  {e.Bytes,5}B  {topic}",
-                Tag = e,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0)),
-                Background = Brushes.Transparent,
-            };
-            return item;
-        }
-
-        private void OnPacketSelected(object sender, SelectionChangedEventArgs e)
-        {
-            if (!(packetList.SelectedItem is ListBoxItem item)) return;
-            if (!(item.Tag is PacketLogEntry entry)) return;
-            _selectedPacketKey = entry.Utc.Ticks.ToString();
-            RenderPacketXml(entry.Xml);
-        }
-
-        private void OnClearPacketLog(object sender, RoutedEventArgs e)
-        {
-            _packetLog.Clear();
-            packetList.Items.Clear();
-            packetView.Document.Blocks.Clear();
-            packetLogStatus.Text = "Cleared.";
-        }
-
-        private void RenderPacketXml(string xml)
-        {
-            packetView.Document.Blocks.Clear();
-            if (string.IsNullOrEmpty(xml)) return;
 
             string pretty;
-            try
-            {
-                var doc = XDocument.Parse(xml);
-                pretty = doc.ToString(SaveOptions.None);
-            }
-            catch
-            {
-                pretty = xml;
-            }
+            try { pretty = XDocument.Parse(xml).ToString(SaveOptions.None); }
+            catch { pretty = xml; }
 
+            var win = new Window
+            {
+                Title = "Latest packet (XML)",
+                Width = 900,
+                Height = 700,
+                Owner = this,
+                Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x1E)),
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            };
+            var rtb = new RichTextBox
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A)),
+                Foreground = new SolidColorBrush(Color.FromRgb(0xE6, 0xEA, 0xEC)),
+                BorderThickness = new Thickness(0),
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 12,
+                IsReadOnly = true,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            };
             var para = new Paragraph { Margin = new Thickness(0) };
             HighlightXmlInto(para, pretty);
-            packetView.Document.Blocks.Add(para);
+            rtb.Document = new System.Windows.Documents.FlowDocument(para)
+            {
+                PageWidth = 4000,
+            };
+            win.Content = rtb;
+            win.ShowDialog();
+        }
+
+        private static string DumpXmlContents(string xml)
+        {
+            try
+            {
+                var msgs = MetadataExtractor.Observe(xml).ToList();
+                if (msgs.Count == 0) return "(no NotificationMessages)";
+                var sb = new System.Text.StringBuilder();
+                int i = 0;
+                foreach (var m in msgs)
+                {
+                    if (i++ >= 4) { sb.Append("..."); break; }
+                    sb.Append("Topic=").Append(m.Topic);
+                    if (m.Data != null && m.Data.Count > 0)
+                    {
+                        sb.Append(" Data[");
+                        bool first = true;
+                        foreach (var kv in m.Data)
+                        {
+                            if (!first) sb.Append(',');
+                            sb.Append(kv.Key).Append('=').Append(kv.Value);
+                            first = false;
+                        }
+                        sb.Append(']');
+                    }
+                    sb.Append("; ");
+                }
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return "(dump failed: " + ex.Message + ")";
+            }
         }
 
         // Coloring rules (mirrors Admin/MetadataViewer style):

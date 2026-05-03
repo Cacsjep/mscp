@@ -274,7 +274,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Position" Style="{StaticResource FieldLabel}"/>
-                                        <ComboBox Grid.Column="1" x:Name="titlePositionCombo" SelectedIndex="0" Margin="0,0,8,0">
+                                        <ComboBox Grid.Column="1" x:Name="titlePositionCombo" SelectedIndex="1" Margin="0,0,8,0">
                                             <ComboBoxItem Content="Left"/>
                                             <ComboBoxItem Content="Center"/>
                                             <ComboBoxItem Content="Right"/>
@@ -292,20 +292,33 @@
                     <TextBlock Text="What to read" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button x:Name="learnStartButton" Content="Start Learn"
+                                        Margin="0,0,8,0" Click="OnStartLearn"/>
+                                <Button x:Name="learnStopButton" Content="Stop"
+                                        Margin="0,0,12,0" IsEnabled="False" Click="OnStopLearn"/>
+                                <TextBlock x:Name="learnStatus" VerticalAlignment="Center"
+                                           Style="{StaticResource HintText}"
+                                           Text="Idle. Start Learn to discover topics and data keys from the live stream."/>
+                            </StackPanel>
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Topic match" Style="{StaticResource FieldLabel}"/>
                                 <ComboBox Grid.Column="1" x:Name="topicCombo" IsEditable="True"/>
                                 <ComboBox Grid.Column="2" x:Name="topicMatchModeCombo" Width="100" Margin="6,0,0,0"
-                                          SelectedIndex="0">
+                                          SelectedIndex="1">
                                     <ComboBoxItem Content="Contains"/>
                                     <ComboBoxItem Content="Exact"/>
                                     <ComboBoxItem Content="EndsWith"/>
                                 </ComboBox>
+                                <Button Grid.Column="3" x:Name="inspectPacketButton" Content="Inspect packet..."
+                                        Margin="6,0,0,0" Click="OnInspectPacket"
+                                        ToolTip="Open the latest captured XML in a syntax-highlighted viewer"/>
                             </Grid>
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
@@ -323,19 +336,6 @@
                                     <ItemsControl x:Name="learnedSourceList"/>
                                 </StackPanel>
                             </Expander>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="Learn from live data" Style="{StaticResource SectionTitle}"/>
-                    <Border Style="{StaticResource SectionContainer}">
-                        <StackPanel Orientation="Horizontal">
-                            <Button x:Name="learnStartButton" Content="Start Learn"
-                                    Margin="0,0,8,0" Click="OnStartLearn"/>
-                            <Button x:Name="learnStopButton" Content="Stop"
-                                    Margin="0,0,12,0" IsEnabled="False" Click="OnStopLearn"/>
-                            <TextBlock x:Name="learnStatus" VerticalAlignment="Center"
-                                       Style="{StaticResource HintText}"
-                                       Text="Idle. Pick a channel, then Start Learn to capture live messages and discover topics + keys."/>
                         </StackPanel>
                     </Border>
 
@@ -499,65 +499,40 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Right column: tabbed inspector -->
-            <Border Grid.Column="2" Background="#FF252525" BorderBrush="#FF333333" BorderThickness="1" CornerRadius="4">
-                <TabControl>
-                    <TabItem Header="Live preview">
-                        <Grid Margin="14">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="64"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0"
-                                       x:Name="previewTitleText"
-                                       Foreground="#FFCFD7DA"
-                                       Margin="0,0,0,4"
-                                       Visibility="Collapsed"/>
-                            <Viewbox Grid.Row="1" Stretch="Uniform">
-                                <Grid x:Name="previewHost" Width="320" Height="200" Background="#FF1C2326"/>
-                            </Viewbox>
-                            <StackPanel Grid.Row="2" Orientation="Vertical" VerticalAlignment="Bottom">
-                                <TextBlock x:Name="previewMetaText" Text="" Foreground="#FFA9B5BB" FontSize="12" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock x:Name="previewAgeText" Text="" Foreground="#FFA9B5BB" FontSize="12"/>
-                                <TextBlock x:Name="previewStatusText"
-                                           Foreground="#FFA9B5BB"
-                                           FontSize="12"
-                                           TextWrapping="Wrap"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxHeight="32"
-                                           Text="(no data yet)"/>
-                            </StackPanel>
-                        </Grid>
-                    </TabItem>
-                    <TabItem Header="Package log">
-                        <Grid Margin="0">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="160"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <Border Grid.Row="0" Padding="10,6" BorderBrush="#FF333333" BorderThickness="0,0,0,1">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Clear" Padding="10,2" Click="OnClearPacketLog"/>
-                                    <TextBlock x:Name="packetLogStatus" VerticalAlignment="Center" Foreground="#FFA9B5BB"
-                                               Text="Waiting for first packet..."/>
-                                </DockPanel>
-                            </Border>
-                            <ListBox x:Name="packetList" Grid.Row="1"
-                                     Background="#FF1C2326" Foreground="#FFD0D0D0"
-                                     BorderThickness="0" FontFamily="Consolas" FontSize="11"
-                                     SelectionChanged="OnPacketSelected"/>
-                            <RichTextBox x:Name="packetView" Grid.Row="2"
-                                         Background="#FF1A1A1A" Foreground="#FFE6EAEC"
-                                         BorderThickness="0,1,0,0" BorderBrush="#FF333333"
-                                         FontFamily="Consolas" FontSize="11"
-                                         IsReadOnly="True"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"/>
-                        </Grid>
-                    </TabItem>
-                </TabControl>
+            <!-- Right column: live preview -->
+            <Border Grid.Column="2" Background="#FF252525" BorderBrush="#FF333333" BorderThickness="1" CornerRadius="4" Padding="14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="64"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0"
+                               Text="Live preview"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="#FFE6EAEC"
+                               Margin="0,0,0,8"/>
+                    <TextBlock Grid.Row="1"
+                               x:Name="previewTitleText"
+                               Foreground="#FFCFD7DA"
+                               Margin="0,0,0,4"
+                               Visibility="Collapsed"/>
+                    <Viewbox Grid.Row="2" Stretch="Uniform">
+                        <Grid x:Name="previewHost" Width="320" Height="200" Background="#FF1C2326"/>
+                    </Viewbox>
+                    <StackPanel Grid.Row="3" Orientation="Vertical" VerticalAlignment="Bottom">
+                        <TextBlock x:Name="previewMetaText" Text="" Foreground="#FFA9B5BB" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="previewAgeText" Text="" Foreground="#FFA9B5BB" FontSize="12"/>
+                        <TextBlock x:Name="previewStatusText"
+                                   Foreground="#FFA9B5BB"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxHeight="32"
+                                   Text="(no data yet)"/>
+                    </StackPanel>
+                </Grid>
             </Border>
 
         </Grid>

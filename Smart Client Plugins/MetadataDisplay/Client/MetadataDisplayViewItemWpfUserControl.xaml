@@ -5,43 +5,21 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     PreviewMouseLeftButtonUp="OnMouseLeftUp"
     PreviewMouseDoubleClick="OnMouseDoubleClick">
-    <Grid Background="#FF1C2326">
-        <Viewbox Stretch="Uniform" Margin="12">
-            <Grid x:Name="rootGrid" Width="320" Height="200">
+    <Grid Background="#FF1C2326" ClipToBounds="True">
+        <Viewbox x:Name="renderViewbox" Stretch="Uniform" Margin="6">
+            <Grid x:Name="rootGrid" Width="320" Background="Transparent">
                 <Grid.RowDefinitions>
                     <RowDefinition x:Name="titleRow" Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="200"/>
                 </Grid.RowDefinitions>
                 <TextBlock x:Name="titleText"
                            Grid.Row="0"
                            Foreground="#FFCFD7DA"
                            FontSize="14"
-                           Margin="0,0,0,4"
-                           HorizontalAlignment="Left"/>
-                <Grid x:Name="renderHost" Grid.Row="1"/>
-                <StackPanel x:Name="setupPanel"
-                            Grid.Row="1"
-                            Orientation="Vertical"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Visibility="Collapsed">
-                    <TextBlock x:Name="setupHint"
-                               Foreground="#FF7A8388"
-                               FontSize="14"
-                               TextAlignment="Center"
-                               Margin="0,0,0,12"/>
-                    <Button x:Name="openConfigButton"
-                            Content="Open configuration..."
-                            HorizontalAlignment="Center"
-                            Padding="14,6"
-                            Cursor="Hand"
-                            Background="#FF2A2A2A"
-                            Foreground="#FFD0D0D0"
-                            BorderBrush="#FF555555"
-                            BorderThickness="1"
-                            FontSize="13"
-                            Click="OnOpenConfigClick"/>
-                </StackPanel>
+                           Margin="0,0,0,2"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"/>
+                <Grid x:Name="renderHost" Grid.Row="1" Background="Transparent"/>
                 <Border x:Name="staleBadge"
                         Grid.Row="0"
                         Background="#88000000"
@@ -54,5 +32,30 @@
                 </Border>
             </Grid>
         </Viewbox>
+        <StackPanel x:Name="setupPanel"
+                    Orientation="Vertical"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed">
+            <TextBlock x:Name="setupHint"
+                       Foreground="#FF7A8388"
+                       FontSize="14"
+                       TextAlignment="Center"
+                       Margin="0,0,0,12"/>
+            <Border x:Name="openConfigButton"
+                    Background="#FF2A2A2A"
+                    BorderBrush="#FF555555"
+                    BorderThickness="1"
+                    CornerRadius="3"
+                    Padding="16,8"
+                    Cursor="Hand"
+                    HorizontalAlignment="Center"
+                    MouseLeftButtonUp="OnOpenConfigClick">
+                <TextBlock Text="Open configuration..."
+                           Foreground="#FFD0D0D0"
+                           FontSize="13"
+                           HorizontalAlignment="Center"/>
+            </Border>
+        </StackPanel>
     </Grid>
 </external:ViewItemWpfUserControl>

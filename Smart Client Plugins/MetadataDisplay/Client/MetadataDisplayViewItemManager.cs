@@ -70,7 +70,7 @@ namespace MetadataDisplay.Client
         // Contains | Exact | EndsWith
         public string TopicMatchMode
         {
-            get => GetProperty(TopicMatchModeKey) ?? "Contains";
+            get => GetProperty(TopicMatchModeKey) ?? "Exact";
             set => SetProperty(TopicMatchModeKey, value);
         }
 
@@ -110,7 +110,7 @@ namespace MetadataDisplay.Client
         // Left | Center | Right
         public string TitlePosition
         {
-            get => GetProperty(TitlePositionKey) ?? "Left";
+            get => GetProperty(TitlePositionKey) ?? "Center";
             set => SetProperty(TitlePositionKey, value);
         }
 
@@ -204,7 +204,7 @@ namespace MetadataDisplay.Client
 
         public string GaugeValueFontSize
         {
-            get => GetProperty(GaugeValueFontSizeKey) ?? "26";
+            get => GetProperty(GaugeValueFontSizeKey) ?? "34";
             set => SetProperty(GaugeValueFontSizeKey, value);
         }
 

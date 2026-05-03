@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -92,12 +93,12 @@ namespace MetadataDisplay.Client
                 setupHint.Text = overlay;
                 openConfigButton.Visibility = mode == Mode.ClientSetup ? Visibility.Visible : Visibility.Collapsed;
                 setupPanel.Visibility = Visibility.Visible;
-                renderHost.Visibility = Visibility.Collapsed;
+                renderViewbox.Visibility = Visibility.Collapsed;
                 return;
             }
 
             setupPanel.Visibility = Visibility.Collapsed;
-            renderHost.Visibility = Visibility.Visible;
+            renderViewbox.Visibility = Visibility.Visible;
 
             if (mode == Mode.ClientLive)
                 StartLive();
@@ -402,7 +403,18 @@ namespace MetadataDisplay.Client
 
                 var hit = MetadataExtractor.TryExtract(xml, _extractorCfg);
                 if (_livePacketsSeen <= 3 || _livePacketsSeen % 50 == 0)
+                {
                     _log.Info($"[ViewItem] Live packet #{_livePacketsSeen} bytes={xml.Length} extracted={(hit?.Value ?? "(no match)")}");
+                    if (hit == null)
+                    {
+                        var msgs = MetadataExtractor.Observe(xml).Take(3).ToList();
+                        foreach (var m in msgs)
+                        {
+                            var keys = string.Join(",", m.Data?.Select(kv => kv.Key + "=" + kv.Value) ?? new string[0]);
+                            _log.Info($"[ViewItem]   present topic='{m.Topic}' data=[{keys}]");
+                        }
+                    }
+                }
                 if (hit == null) return;
 
                 Dispatcher.BeginInvoke(new Action(() =>
@@ -444,8 +456,9 @@ namespace MetadataDisplay.Client
         private void OnMouseLeftUp(object sender, MouseButtonEventArgs e) => FireClickEvent();
         private void OnMouseDoubleClick(object sender, MouseButtonEventArgs e) => FireDoubleClickEvent();
 
-        private void OnOpenConfigClick(object sender, RoutedEventArgs e)
+        private void OnOpenConfigClick(object sender, MouseButtonEventArgs e)
         {
+            e.Handled = true;
             try
             {
                 var win = new MetadataDisplayConfigurationWindow(_viewItemManager);

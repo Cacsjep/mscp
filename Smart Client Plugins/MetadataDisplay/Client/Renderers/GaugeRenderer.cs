@@ -34,7 +34,7 @@ namespace MetadataDisplay.Client.Renderers
                 RangeMax = rmax,
                 Style = style,
                 ShowValue = !string.Equals(m.GaugeShowValue, "false", StringComparison.OrdinalIgnoreCase),
-                ValueFontSize = ParseDouble(m.GaugeValueFontSize, 26),
+                ValueFontSize = ParseDouble(m.GaugeValueFontSize, 34),
                 Numeric = NumericConfig.FromManager(m),
             };
         }
@@ -54,7 +54,9 @@ namespace MetadataDisplay.Client.Renderers
         private readonly TextBlock _unitText;
         private readonly StackPanel _labelStack;
 
-        // Arc geometry constants (logical canvas size 320x200; outer Viewbox scales)
+        // Arc geometry constants (logical canvas size 320x200; outer Viewbox scales).
+        // The arc is anchored near the top of the canvas so we don't waste vertical
+        // pixels — the value/unit labels sit in the lower portion below the hub.
         private const double LogicalW = 320;
         private const double LogicalH = 200;
 
@@ -71,7 +73,7 @@ namespace MetadataDisplay.Client.Renderers
             {
                 Text = "—",
                 Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0xF7, 0xF8)),
-                FontSize = 26,
+                FontSize = 34,
                 FontWeight = FontWeights.SemiBold,
                 TextAlignment = TextAlignment.Center,
             };
@@ -115,18 +117,18 @@ namespace MetadataDisplay.Client.Renderers
                 case GaugeStyle.Bar:
                     DrawBar(v, cfg);
                     Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 4);
+                    Canvas.SetTop(_labelStack, 8);
                     break;
                 case GaugeStyle.Arc270:
                     DrawArc(v, cfg, sweepDegrees: 270);
                     Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 150);
+                    Canvas.SetTop(_labelStack, 130);
                     break;
                 case GaugeStyle.Arc180:
                 default:
                     DrawArc(v, cfg, sweepDegrees: 180);
                     Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 165);
+                    Canvas.SetTop(_labelStack, 130);
                     break;
             }
         }
@@ -150,9 +152,9 @@ namespace MetadataDisplay.Client.Renderers
             // Arc180 sweeps from 180° (left) to 360° (right) — top half.
             // Arc270 sweeps from 135° to 405° — leaves a 90° opening at the bottom.
             double cx = LogicalW / 2.0;
-            double cy = sweepDegrees >= 270 ? 110 : 145;
-            double radius = sweepDegrees >= 270 ? 78 : 92;
-            double thickness = 18;
+            double cy = sweepDegrees >= 270 ? 95 : 110;
+            double radius = sweepDegrees >= 270 ? 70 : 88;
+            double thickness = 16;
 
             double startAngle = sweepDegrees >= 270 ? 135 : 180;
             double endAngle = startAngle + sweepDegrees;
@@ -277,7 +279,8 @@ namespace MetadataDisplay.Client.Renderers
 
         private void DrawBar(double? value, GaugeConfig cfg)
         {
-            double left = 20, top = 70, width = LogicalW - 40, height = 36;
+            // Bar in lower half of canvas; value/unit labels sit at the top (y=8).
+            double left = 20, top = 90, width = LogicalW - 40, height = 36;
 
             double rmin = cfg.RangeMin;
             double rmax = cfg.RangeMax;
