@@ -1,5 +1,4 @@
 using System;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -11,26 +10,23 @@ namespace MetadataDisplay.Client
     {
         public event EventHandler ColorChanged;
 
-        private bool _suppress;
+        private string _hex = "#777777";
 
         public ColorPickerControl()
         {
             InitializeComponent();
+            UpdateSwatch();
         }
 
         public string HexValue
         {
-            get => hexBox.Text ?? "";
+            get => _hex;
             set
             {
-                if (string.Equals(hexBox.Text, value, StringComparison.OrdinalIgnoreCase)) return;
-                _suppress = true;
-                try
-                {
-                    hexBox.Text = value ?? "";
-                    UpdateSwatch();
-                }
-                finally { _suppress = false; }
+                var v = string.IsNullOrWhiteSpace(value) ? "#777777" : value.Trim();
+                if (string.Equals(_hex, v, StringComparison.OrdinalIgnoreCase)) return;
+                _hex = v;
+                UpdateSwatch();
             }
         }
 
@@ -38,7 +34,7 @@ namespace MetadataDisplay.Client
         {
             try
             {
-                var c = (Color)ColorConverter.ConvertFromString(NormalizeForWpf(hexBox.Text));
+                var c = (Color)ColorConverter.ConvertFromString(NormalizeForWpf(_hex));
                 swatch.Background = new SolidColorBrush(c);
             }
             catch
@@ -47,16 +43,7 @@ namespace MetadataDisplay.Client
             }
         }
 
-        private void OnHexChanged(object sender, TextChangedEventArgs e)
-        {
-            UpdateSwatch();
-            if (!_suppress) ColorChanged?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void OnSwatchClick(object sender, MouseButtonEventArgs e) => OpenDialog();
-        private void OnPickClick(object sender, RoutedEventArgs e) => OpenDialog();
-
-        private void OpenDialog()
+        private void OnSwatchClick(object sender, MouseButtonEventArgs e)
         {
             using (var dlg = new WinForms.ColorDialog())
             {
@@ -64,7 +51,7 @@ namespace MetadataDisplay.Client
                 dlg.AnyColor = true;
                 try
                 {
-                    var c = (Color)ColorConverter.ConvertFromString(NormalizeForWpf(hexBox.Text));
+                    var c = (Color)ColorConverter.ConvertFromString(NormalizeForWpf(_hex));
                     dlg.Color = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
                 }
                 catch { }
@@ -72,13 +59,13 @@ namespace MetadataDisplay.Client
                 if (dlg.ShowDialog() == WinForms.DialogResult.OK)
                 {
                     var picked = dlg.Color;
-                    HexValue = $"#{picked.R:X2}{picked.G:X2}{picked.B:X2}";
+                    _hex = $"#{picked.R:X2}{picked.G:X2}{picked.B:X2}";
+                    UpdateSwatch();
                     ColorChanged?.Invoke(this, EventArgs.Empty);
                 }
             }
         }
 
-        // Accept "#RGB", "#RRGGBB", "RRGGBB", "#AARRGGBB" etc.
         private static string NormalizeForWpf(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return "#777777";

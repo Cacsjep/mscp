@@ -4,14 +4,13 @@
     xmlns:local="clr-namespace:MetadataDisplay.Client"
     x:Class="MetadataDisplay.Client.MetadataDisplayConfigurationWindow"
     Title="Metadata Display - Configuration"
-    Width="1200" Height="900"
-    MinWidth="1000" MinHeight="700"
+    Width="1280" Height="900"
+    MinWidth="1100" MinHeight="720"
     WindowStartupLocation="CenterOwner"
     Background="#FF1E1E1E"
     Foreground="#FFD0D0D0"
     FontSize="13">
     <Window.Resources>
-        <!-- Section heading -->
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -35,7 +34,6 @@
             <Setter Property="FontSize" Value="11"/>
         </Style>
 
-        <!-- Inputs -->
         <Style x:Key="DarkTextBox" TargetType="TextBox">
             <Setter Property="Background" Value="#FF2A2A2A"/>
             <Setter Property="Foreground" Value="#FFD0D0D0"/>
@@ -178,10 +176,47 @@
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="#FFD0D0D0"/>
         </Style>
+
+        <!-- TabControl dark theme -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#FF333333"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Background" Value="#FF252525"/>
+            <Setter Property="Foreground" Value="#FFA9B5BB"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="#FF333333"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="3,3,0,0"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="0,0,2,0">
+                            <ContentPresenter ContentSource="Header"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF1E2528"/>
+                                <Setter Property="Foreground" Value="#FFE6EAEC"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF2C2C2C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <DockPanel>
-        <!-- Footer -->
         <Border DockPanel.Dock="Bottom" Background="#FF252525" Padding="12,10" BorderBrush="#FF333333" BorderThickness="0,1,0,0">
             <DockPanel>
                 <TextBlock x:Name="statusText" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#FFA9B5BB"/>
@@ -196,13 +231,12 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="14"/>
-                <ColumnDefinition Width="420"/>
+                <ColumnDefinition Width="460"/>
             </Grid.ColumnDefinitions>
 
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
 
-                    <!-- Metadata channel -->
                     <TextBlock Text="Metadata channel" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <Grid>
@@ -216,7 +250,6 @@
                         </Grid>
                     </Border>
 
-                    <!-- Title -->
                     <TextBlock Text="Title" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel>
@@ -236,7 +269,9 @@
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Position" Style="{StaticResource FieldLabel}"/>
                                         <ComboBox Grid.Column="1" x:Name="titlePositionCombo" SelectedIndex="0" Margin="0,0,8,0">
@@ -245,22 +280,15 @@
                                             <ComboBoxItem Content="Right"/>
                                         </ComboBox>
                                         <TextBlock Grid.Column="2" Text="Font size" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="3" x:Name="titleFontSizeBox"/>
-                                    </Grid>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="Font color" Style="{StaticResource FieldLabel}"/>
-                                        <Grid Grid.Column="1" x:Name="titleColorPickerHost"/>
+                                        <TextBox  Grid.Column="3" x:Name="titleFontSizeBox" Tag="positiveNumber"/>
+                                        <TextBlock Grid.Column="4" Text="Color" Style="{StaticResource FieldLabel}" Margin="12,0,0,0"/>
+                                        <Grid Grid.Column="5" x:Name="titleColorPickerHost"/>
                                     </Grid>
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>
 
-                    <!-- What to read -->
                     <TextBlock Text="What to read" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel>
@@ -298,7 +326,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Learn -->
                     <TextBlock Text="Learn from live data" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel Orientation="Horizontal">
@@ -312,7 +339,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- How to display -->
                     <TextBlock Text="How to display" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel>
@@ -325,7 +351,7 @@
 
                             <Grid x:Name="lampPanel" Visibility="Visible">
                                 <StackPanel>
-                                    <TextBlock Text="Map raw values to a label and color:" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Map raw values to a label, color and optional icon:" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
                                     <ItemsControl x:Name="lampRows"/>
                                     <Button x:Name="addLampRowButton" Content="+ Add row" HorizontalAlignment="Left" Margin="0,4,0,0" Click="OnAddLampRow"/>
                                 </StackPanel>
@@ -341,30 +367,25 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="1" x:Name="numMinBox" Margin="0,0,8,0"/>
+                                        <TextBox  Grid.Column="1" x:Name="numMinBox" Margin="0,0,8,0" Tag="number"/>
                                         <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="3" x:Name="numMaxBox"/>
+                                        <TextBox  Grid.Column="3" x:Name="numMaxBox" Tag="number"/>
                                     </Grid>
                                     <CheckBox x:Name="highIsBadCheck" Content="High value is bad (red above Max)" IsChecked="True" Margin="0,0,0,10"/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="OK color" Style="{StaticResource FieldLabel}"/>
-                                        <Grid Grid.Column="1" x:Name="colorOkPickerHost" Margin="0,0,8,0"/>
-                                        <TextBlock Grid.Column="2" Text="Warn color" Style="{StaticResource FieldLabel}"/>
-                                        <Grid Grid.Column="3" x:Name="colorWarnPickerHost"/>
-                                    </Grid>
-                                    <Grid Margin="0,0,0,8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="Bad color" Style="{StaticResource FieldLabel}"/>
-                                        <Grid Grid.Column="1" x:Name="colorBadPickerHost"/>
+                                        <TextBlock Grid.Column="0" Text="Colors" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="colorOkPickerHost" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="colorWarnPickerHost" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="colorBadPickerHost"/>
+                                        </StackPanel>
                                     </Grid>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -389,9 +410,9 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Scale Min" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="1" x:Name="gaugeRangeMinBox" Margin="0,0,8,0"/>
+                                        <TextBox  Grid.Column="1" x:Name="gaugeRangeMinBox" Margin="0,0,8,0" Tag="number"/>
                                         <TextBlock Grid.Column="2" Text="Scale Max" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="3" x:Name="gaugeRangeMaxBox"/>
+                                        <TextBox  Grid.Column="3" x:Name="gaugeRangeMaxBox" Tag="number"/>
                                     </Grid>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -405,6 +426,18 @@
                                             <ComboBoxItem Content="Bar"/>
                                         </ComboBox>
                                     </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Value" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <CheckBox x:Name="gaugeShowValueCheck" Content="Show value" IsChecked="True" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Font size" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="gaugeValueFontSizeBox" Width="80" Tag="positiveNumber"/>
+                                        </StackPanel>
+                                    </Grid>
                                     <TextBlock Margin="0,8,0,6" FontWeight="SemiBold" Text="Threshold colors"/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -414,30 +447,25 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="1" x:Name="gaugeNumMinBox" Margin="0,0,8,0"/>
+                                        <TextBox  Grid.Column="1" x:Name="gaugeNumMinBox" Margin="0,0,8,0" Tag="number"/>
                                         <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="3" x:Name="gaugeNumMaxBox"/>
+                                        <TextBox  Grid.Column="3" x:Name="gaugeNumMaxBox" Tag="number"/>
                                     </Grid>
                                     <CheckBox x:Name="gaugeHighIsBadCheck" Content="High value is bad" IsChecked="True" Margin="0,0,0,10"/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="OK color" Style="{StaticResource FieldLabel}"/>
-                                        <Grid Grid.Column="1" x:Name="gaugeColorOkPickerHost" Margin="0,0,8,0"/>
-                                        <TextBlock Grid.Column="2" Text="Warn color" Style="{StaticResource FieldLabel}"/>
-                                        <Grid Grid.Column="3" x:Name="gaugeColorWarnPickerHost"/>
-                                    </Grid>
-                                    <Grid Margin="0,0,0,8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="Bad color" Style="{StaticResource FieldLabel}"/>
-                                        <Grid Grid.Column="1" x:Name="gaugeColorBadPickerHost"/>
+                                        <TextBlock Grid.Column="0" Text="Colors" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="gaugeColorOkPickerHost" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="gaugeColorWarnPickerHost" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="gaugeColorBadPickerHost"/>
+                                        </StackPanel>
                                     </Grid>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -456,7 +484,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Stale -->
                     <TextBlock Text="Stale handling (optional)" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <Grid>
@@ -465,38 +492,72 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Mark stale after (seconds, 0 = off)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox  Grid.Column="1" x:Name="staleSecondsBox"/>
+                            <TextBox  Grid.Column="1" x:Name="staleSecondsBox" Tag="nonNegativeInteger"/>
                         </Grid>
                     </Border>
 
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Right: live preview -->
-            <Border Grid.Column="2" Background="#FF252525" BorderBrush="#FF333333" BorderThickness="1" CornerRadius="4" Padding="14">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top"
-                               Text="Live preview"
-                               FontSize="14" FontWeight="SemiBold"
-                               Foreground="#FFE6EAEC"
-                               Margin="0,0,0,10"/>
-                    <TextBlock DockPanel.Dock="Top"
-                               x:Name="previewTitleText"
-                               Foreground="#FFCFD7DA"
-                               Margin="0,0,0,4"
-                               Visibility="Collapsed"/>
-                    <TextBlock DockPanel.Dock="Bottom" x:Name="previewMetaText" Text=""
-                               Foreground="#FFA9B5BB" Margin="0,8,0,0" FontSize="12"/>
-                    <TextBlock DockPanel.Dock="Bottom" x:Name="previewAgeText"  Text=""
-                               Foreground="#FFA9B5BB" Margin="0,2,0,0" FontSize="12"/>
-                    <TextBlock DockPanel.Dock="Bottom" x:Name="previewStatusText"
-                               Foreground="#FFA9B5BB" Margin="0,8,0,0"
-                               TextWrapping="Wrap" FontSize="12"
-                               Text="(no data yet)"/>
-                    <Viewbox Stretch="Uniform" Margin="0,4,0,4">
-                        <Grid x:Name="previewHost" Width="320" Height="200" Background="#FF1C2326"/>
-                    </Viewbox>
-                </DockPanel>
+            <!-- Right column: tabbed inspector -->
+            <Border Grid.Column="2" Background="#FF252525" BorderBrush="#FF333333" BorderThickness="1" CornerRadius="4">
+                <TabControl>
+                    <TabItem Header="Live preview">
+                        <Grid Margin="14">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="64"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0"
+                                       x:Name="previewTitleText"
+                                       Foreground="#FFCFD7DA"
+                                       Margin="0,0,0,4"
+                                       Visibility="Collapsed"/>
+                            <Viewbox Grid.Row="1" Stretch="Uniform">
+                                <Grid x:Name="previewHost" Width="320" Height="200" Background="#FF1C2326"/>
+                            </Viewbox>
+                            <StackPanel Grid.Row="2" Orientation="Vertical" VerticalAlignment="Bottom">
+                                <TextBlock x:Name="previewMetaText" Text="" Foreground="#FFA9B5BB" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="previewAgeText" Text="" Foreground="#FFA9B5BB" FontSize="12"/>
+                                <TextBlock x:Name="previewStatusText"
+                                           Foreground="#FFA9B5BB"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxHeight="32"
+                                           Text="(no data yet)"/>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Package log">
+                        <Grid Margin="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="160"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Padding="10,6" BorderBrush="#FF333333" BorderThickness="0,0,0,1">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Clear" Padding="10,2" Click="OnClearPacketLog"/>
+                                    <TextBlock x:Name="packetLogStatus" VerticalAlignment="Center" Foreground="#FFA9B5BB"
+                                               Text="Waiting for first packet..."/>
+                                </DockPanel>
+                            </Border>
+                            <ListBox x:Name="packetList" Grid.Row="1"
+                                     Background="#FF1C2326" Foreground="#FFD0D0D0"
+                                     BorderThickness="0" FontFamily="Consolas" FontSize="11"
+                                     SelectionChanged="OnPacketSelected"/>
+                            <RichTextBox x:Name="packetView" Grid.Row="2"
+                                         Background="#FF1A1A1A" Foreground="#FFE6EAEC"
+                                         BorderThickness="0,1,0,0" BorderBrush="#FF333333"
+                                         FontFamily="Consolas" FontSize="11"
+                                         IsReadOnly="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"/>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
             </Border>
 
         </Grid>

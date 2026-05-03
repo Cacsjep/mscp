@@ -2,11 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Xml;
+using System.Xml.Linq;
 using CommunitySDK;
+using FontAwesome5;
 using MetadataDisplay.Client.Renderers;
 using VideoOS.Platform;
 using VideoOS.Platform.Live;
@@ -125,12 +131,15 @@ namespace MetadataDisplay.Client
             _gaugeColorWarn.HexValue = _colorWarn.HexValue;
             _gaugeColorBad.HexValue = _colorBad.HexValue;
             unitBoxGauge.Text = _vim.Unit ?? "";
+            gaugeShowValueCheck.IsChecked = !string.Equals(_vim.GaugeShowValue, "false", StringComparison.OrdinalIgnoreCase);
+            gaugeValueFontSizeBox.Text = _vim.GaugeValueFontSize ?? "26";
 
             staleSecondsBox.Text = _vim.StaleSeconds ?? "0";
 
             ApplyRenderTypeVisibility();
             BuildPreviewHost();
             RebuildExtractorSnapshot();
+            InstallNumericValidation();
             StartSourceIfReady();
             EnsureAgeTicker();
 
@@ -347,6 +356,9 @@ namespace MetadataDisplay.Client
             highIsBadCheck.Unchecked += (s, e) => ReRenderPreview();
             gaugeHighIsBadCheck.Checked += (s, e) => ReRenderPreview();
             gaugeHighIsBadCheck.Unchecked += (s, e) => ReRenderPreview();
+            gaugeShowValueCheck.Checked += (s, e) => ReRenderPreview();
+            gaugeShowValueCheck.Unchecked += (s, e) => ReRenderPreview();
+            gaugeValueFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
 
             // Title section live preview
             showTitleCheck.Checked += (s, e) => { ApplyTitleEnabled(); UpdatePreviewTitle(); };
@@ -359,77 +371,147 @@ namespace MetadataDisplay.Client
 
         // ───────── Lamp rows ─────────
 
+        private sealed class LampRowControls
+        {
+            public Grid Container;
+            public TextBox ValueBox;
+            public TextBox LabelBox;
+            public ColorPickerControl ColorPicker;
+            public Button IconButton;
+            public string IconName;
+        }
+
+        private readonly List<LampRowControls> _lampRowControls = new List<LampRowControls>();
+
         private void RebuildLampRowsFromManager()
         {
+            _lampRowControls.Clear();
             var rows = LampMapParser.Parse(_vim.LampMap);
             lampRows.Items.Clear();
             if (rows.Count == 0)
             {
-                lampRows.Items.Add(BuildLampRow("0", "Off", "#777777"));
-                lampRows.Items.Add(BuildLampRow("1", "On", "#3CB371"));
+                lampRows.Items.Add(BuildLampRow("0", "Off", "#777777", "").Container);
+                lampRows.Items.Add(BuildLampRow("1", "On", "#3CB371", "").Container);
             }
             else
             {
                 foreach (var r in rows)
-                    lampRows.Items.Add(BuildLampRow(r.Value, r.Label, r.ColorHex));
+                    lampRows.Items.Add(BuildLampRow(r.Value, r.Label, r.ColorHex, r.IconName).Container);
             }
         }
 
-        private FrameworkElement BuildLampRow(string value, string label, string color)
+        private LampRowControls BuildLampRow(string value, string label, string color, string iconName)
         {
             var grid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(180) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            var valueBox = new TextBox { Text = value, Padding = new Thickness(3, 2, 3, 2), Margin = new Thickness(0, 0, 6, 0), Tag = "value" };
-            var labelBox = new TextBox { Text = label, Padding = new Thickness(3, 2, 3, 2), Margin = new Thickness(0, 0, 6, 0), Tag = "label" };
-            var colorBox = new TextBox { Text = color, Padding = new Thickness(3, 2, 3, 2), Margin = new Thickness(0, 0, 6, 0), Tag = "color" };
+            var valueBox = new TextBox { Text = value, Padding = new Thickness(3, 2, 3, 2), Margin = new Thickness(0, 0, 6, 0) };
+            var labelBox = new TextBox { Text = label, Padding = new Thickness(3, 2, 3, 2), Margin = new Thickness(0, 0, 6, 0) };
+
+            var picker = new ColorPickerControl { Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center };
+            picker.HexValue = color;
+
+            var ctrls = new LampRowControls
+            {
+                Container = grid,
+                ValueBox = valueBox,
+                LabelBox = labelBox,
+                ColorPicker = picker,
+                IconName = iconName ?? "",
+            };
+
+            var iconButton = new Button
+            {
+                Content = BuildIconButtonContent(ctrls.IconName),
+                Padding = new Thickness(6, 2, 6, 2),
+                Margin = new Thickness(0, 0, 6, 0),
+                ToolTip = "Pick icon",
+                Width = 60,
+            };
+            ctrls.IconButton = iconButton;
+            iconButton.Click += (s, e) => OpenIconPickerForRow(ctrls);
+
             valueBox.TextChanged += (s, e) => ReRenderPreview();
             labelBox.TextChanged += (s, e) => ReRenderPreview();
-            colorBox.TextChanged += (s, e) => ReRenderPreview();
+            picker.ColorChanged += (s, e) => ReRenderPreview();
 
             var removeButton = new Button { Content = "Remove", Padding = new Thickness(8, 2, 8, 2) };
-            removeButton.Click += (s, e) => { lampRows.Items.Remove(grid); ReRenderPreview(); };
+            removeButton.Click += (s, e) =>
+            {
+                lampRows.Items.Remove(grid);
+                _lampRowControls.Remove(ctrls);
+                ReRenderPreview();
+            };
 
             Grid.SetColumn(valueBox, 0);
             Grid.SetColumn(labelBox, 1);
-            Grid.SetColumn(colorBox, 2);
-            Grid.SetColumn(removeButton, 3);
+            Grid.SetColumn(picker, 2);
+            Grid.SetColumn(iconButton, 3);
+            Grid.SetColumn(removeButton, 4);
             grid.Children.Add(valueBox);
             grid.Children.Add(labelBox);
-            grid.Children.Add(colorBox);
+            grid.Children.Add(picker);
+            grid.Children.Add(iconButton);
             grid.Children.Add(removeButton);
-            return grid;
+
+            _lampRowControls.Add(ctrls);
+            return ctrls;
+        }
+
+        private static UIElement BuildIconButtonContent(string iconName)
+        {
+            if (LampMapParser.TryParseIcon(iconName, out var fa))
+            {
+                return new ImageAwesome
+                {
+                    Icon = fa,
+                    Width = 16,
+                    Height = 16,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0)),
+                };
+            }
+            return new TextBlock { Text = "Icon", Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0)) };
+        }
+
+        private void OpenIconPickerForRow(LampRowControls ctrls)
+        {
+            var initial = EFontAwesomeIcon.None;
+            LampMapParser.TryParseIcon(ctrls.IconName, out initial);
+            var dlg = new IconPickerWindow(initial) { Owner = this };
+            if (dlg.ShowDialog() == true)
+            {
+                ctrls.IconName = dlg.SelectedIcon == EFontAwesomeIcon.None ? "" : dlg.SelectedIcon.ToString();
+                ctrls.IconButton.Content = BuildIconButtonContent(ctrls.IconName);
+                ReRenderPreview();
+            }
         }
 
         private void OnAddLampRow(object sender, RoutedEventArgs e)
         {
-            lampRows.Items.Add(BuildLampRow("", "", "#3CB371"));
+            var row = BuildLampRow("", "", "#3CB371", "");
+            lampRows.Items.Add(row.Container);
         }
 
         private string SerializeLampRows()
         {
-            var parts = new List<string>();
-            foreach (var item in lampRows.Items)
+            var entries = new List<LampMapEntry>();
+            foreach (var ctrls in _lampRowControls)
             {
-                if (!(item is Grid grid)) continue;
-                string v = "", l = "", c = "#777777";
-                foreach (var child in grid.Children)
-                {
-                    if (child is TextBox tb)
-                    {
-                        var tag = tb.Tag as string;
-                        if (tag == "value") v = tb.Text?.Trim() ?? "";
-                        else if (tag == "label") l = tb.Text?.Trim() ?? "";
-                        else if (tag == "color") c = tb.Text?.Trim() ?? "#777777";
-                    }
-                }
+                var v = ctrls.ValueBox.Text?.Trim() ?? "";
                 if (string.IsNullOrEmpty(v)) continue;
-                parts.Add($"{v}={l}:{c}");
+                entries.Add(new LampMapEntry
+                {
+                    Value = v,
+                    Label = ctrls.LabelBox.Text?.Trim() ?? "",
+                    ColorHex = ctrls.ColorPicker.HexValue,
+                    IconName = ctrls.IconName ?? "",
+                });
             }
-            return string.Join("|", parts);
+            return LampMapParser.Serialize(entries);
         }
 
         // ───────── Single shared MetadataLiveSource ─────────
@@ -558,6 +640,9 @@ namespace MetadataDisplay.Client
 
                 // Learn aggregation
                 if (_learn.IsActive) _learn.Observe(xml);
+
+                // Append to package log (UI thread).
+                Dispatcher.BeginInvoke(new Action(() => AppendPacketLog(xml)));
 
                 // Preview extraction — read the UI-thread-built snapshot, NOT the controls.
                 var cfg = _extractorSnapshot;
@@ -828,6 +913,8 @@ namespace MetadataDisplay.Client
                 RangeMin = rmin,
                 RangeMax = rmax,
                 Style = style,
+                ShowValue = gaugeShowValueCheck.IsChecked == true,
+                ValueFontSize = TryParseDouble(gaugeValueFontSizeBox.Text) ?? 26,
                 Numeric = BuildNumericConfigFromUi(true),
             };
         }
@@ -892,8 +979,292 @@ namespace MetadataDisplay.Client
                 error = "Set a Data key.";
                 return false;
             }
+
+            foreach (var box in EnumerateValidatedTextBoxes())
+            {
+                if (!IsTextBoxValid(box, out var err))
+                {
+                    error = err;
+                    box.Focus();
+                    return false;
+                }
+            }
             error = null;
             return true;
+        }
+
+        // ───────── Numeric input validation ─────────
+
+        // Tag values: "number" (any double), "positiveNumber" (> 0), "nonNegativeInteger" (>= 0 integer).
+        private static readonly Regex NumberAllowedChars = new Regex(@"^[\-0-9\.,]+$");
+        private static readonly Regex IntegerAllowedChars = new Regex(@"^[0-9]+$");
+
+        private void InstallNumericValidation()
+        {
+            foreach (var tb in EnumerateValidatedTextBoxes())
+            {
+                tb.PreviewTextInput += OnNumericPreviewTextInput;
+                DataObject.AddPastingHandler(tb, OnNumericPaste);
+                tb.TextChanged += (s, e) => UpdateValidationStyle((TextBox)s);
+                UpdateValidationStyle(tb);
+            }
+        }
+
+        private IEnumerable<TextBox> EnumerateValidatedTextBoxes()
+        {
+            yield return numMinBox;
+            yield return numMaxBox;
+            yield return gaugeRangeMinBox;
+            yield return gaugeRangeMaxBox;
+            yield return gaugeNumMinBox;
+            yield return gaugeNumMaxBox;
+            yield return titleFontSizeBox;
+            yield return gaugeValueFontSizeBox;
+            yield return staleSecondsBox;
+        }
+
+        private static string TagOf(TextBox tb) => tb?.Tag as string ?? "number";
+
+        private void OnNumericPreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            var tb = (TextBox)sender;
+            var tag = TagOf(tb);
+            var ch = e.Text;
+            if (tag == "nonNegativeInteger")
+            {
+                if (!IntegerAllowedChars.IsMatch(ch)) e.Handled = true;
+            }
+            else
+            {
+                if (!NumberAllowedChars.IsMatch(ch)) e.Handled = true;
+            }
+        }
+
+        private void OnNumericPaste(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!e.SourceDataObject.GetDataPresent(DataFormats.Text)) { e.CancelCommand(); return; }
+            var s = e.SourceDataObject.GetData(DataFormats.Text) as string;
+            var tag = TagOf((TextBox)sender);
+            var allowed = tag == "nonNegativeInteger" ? IntegerAllowedChars : NumberAllowedChars;
+            if (string.IsNullOrEmpty(s) || !allowed.IsMatch(s)) e.CancelCommand();
+        }
+
+        private void UpdateValidationStyle(TextBox tb)
+        {
+            tb.BorderBrush = IsTextBoxValid(tb, out _)
+                ? new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x44))
+                : new SolidColorBrush(Color.FromRgb(0xD8, 0x39, 0x2C));
+        }
+
+        private static bool IsTextBoxValid(TextBox tb, out string error)
+        {
+            var tag = TagOf(tb);
+            var s = tb.Text ?? "";
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                // Empty values are tolerated (treated as "use default") for thresholds/scale.
+                // Only positiveNumber and nonNegativeInteger require a value.
+                if (tag == "positiveNumber" || tag == "nonNegativeInteger")
+                {
+                    error = $"'{tb.Name}': value required.";
+                    return false;
+                }
+                error = null;
+                return true;
+            }
+            if (tag == "nonNegativeInteger")
+            {
+                if (!int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var iv) || iv < 0)
+                {
+                    error = $"'{tb.Name}': must be a non-negative integer.";
+                    return false;
+                }
+            }
+            else
+            {
+                if (!double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var dv))
+                {
+                    error = $"'{tb.Name}': must be a number.";
+                    return false;
+                }
+                if (tag == "positiveNumber" && dv <= 0)
+                {
+                    error = $"'{tb.Name}': must be greater than 0.";
+                    return false;
+                }
+            }
+            error = null;
+            return true;
+        }
+
+        // ───────── Package log ─────────
+
+        private const int MaxLoggedPackets = 200;
+
+        private sealed class PacketLogEntry
+        {
+            public DateTime Utc;
+            public string Xml;
+            public int Bytes;
+            public string Topic;
+        }
+
+        private readonly List<PacketLogEntry> _packetLog = new List<PacketLogEntry>();
+        private string _selectedPacketKey;
+
+        private void AppendPacketLog(string xml)
+        {
+            var entry = new PacketLogEntry
+            {
+                Utc = DateTime.UtcNow,
+                Xml = xml,
+                Bytes = xml?.Length ?? 0,
+                Topic = ExtractFirstTopic(xml),
+            };
+            _packetLog.Add(entry);
+            while (_packetLog.Count > MaxLoggedPackets) _packetLog.RemoveAt(0);
+
+            // Insert at top of list (newest first).
+            packetList.Items.Insert(0, BuildPacketListItem(entry));
+            while (packetList.Items.Count > MaxLoggedPackets)
+                packetList.Items.RemoveAt(packetList.Items.Count - 1);
+
+            packetLogStatus.Text = $"{_packetLog.Count} packet(s) captured (newest first).";
+        }
+
+        private static string ExtractFirstTopic(string xml)
+        {
+            if (string.IsNullOrEmpty(xml)) return "";
+            try
+            {
+                using (var reader = XmlReader.Create(new System.IO.StringReader(xml)))
+                {
+                    while (reader.Read())
+                    {
+                        if (reader.NodeType == XmlNodeType.Element &&
+                            reader.LocalName == "Topic")
+                        {
+                            return (reader.ReadElementContentAsString() ?? "").Trim();
+                        }
+                    }
+                }
+            }
+            catch { }
+            return "";
+        }
+
+        private ListBoxItem BuildPacketListItem(PacketLogEntry e)
+        {
+            var ts = e.Utc.ToLocalTime().ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture);
+            var topic = string.IsNullOrEmpty(e.Topic) ? "(no topic)" : e.Topic;
+            var item = new ListBoxItem
+            {
+                Content = $"{ts}  {e.Bytes,5}B  {topic}",
+                Tag = e,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0)),
+                Background = Brushes.Transparent,
+            };
+            return item;
+        }
+
+        private void OnPacketSelected(object sender, SelectionChangedEventArgs e)
+        {
+            if (!(packetList.SelectedItem is ListBoxItem item)) return;
+            if (!(item.Tag is PacketLogEntry entry)) return;
+            _selectedPacketKey = entry.Utc.Ticks.ToString();
+            RenderPacketXml(entry.Xml);
+        }
+
+        private void OnClearPacketLog(object sender, RoutedEventArgs e)
+        {
+            _packetLog.Clear();
+            packetList.Items.Clear();
+            packetView.Document.Blocks.Clear();
+            packetLogStatus.Text = "Cleared.";
+        }
+
+        private void RenderPacketXml(string xml)
+        {
+            packetView.Document.Blocks.Clear();
+            if (string.IsNullOrEmpty(xml)) return;
+
+            string pretty;
+            try
+            {
+                var doc = XDocument.Parse(xml);
+                pretty = doc.ToString(SaveOptions.None);
+            }
+            catch
+            {
+                pretty = xml;
+            }
+
+            var para = new Paragraph { Margin = new Thickness(0) };
+            HighlightXmlInto(para, pretty);
+            packetView.Document.Blocks.Add(para);
+        }
+
+        // Coloring rules (mirrors Admin/MetadataViewer style):
+        //   <,>,/  : dim gray
+        //   element name      : light blue
+        //   attribute name    : salmon
+        //   attribute value   : light orange
+        //   text content      : default foreground
+        private static readonly SolidColorBrush BrushBracket = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+        private static readonly SolidColorBrush BrushElement = new SolidColorBrush(Color.FromRgb(0x6B, 0xB6, 0xFF));
+        private static readonly SolidColorBrush BrushAttr = new SolidColorBrush(Color.FromRgb(0xE6, 0x95, 0x80));
+        private static readonly SolidColorBrush BrushAttrValue = new SolidColorBrush(Color.FromRgb(0xE6, 0xB8, 0x6B));
+        private static readonly SolidColorBrush BrushText = new SolidColorBrush(Color.FromRgb(0xE6, 0xEA, 0xEC));
+
+        private static readonly Regex XmlTokenRegex = new Regex(
+            @"(?<tag><(?<close>/?)(?<elname>[\w:.\-]+)(?<attrs>(\s+[\w:.\-]+\s*=\s*""[^""]*"")*)\s*(?<self>/?)>)|(?<text>[^<]+)",
+            RegexOptions.Compiled | RegexOptions.Singleline);
+
+        private static readonly Regex AttrRegex = new Regex(
+            @"(?<name>[\w:.\-]+)\s*=\s*""(?<value>[^""]*)""",
+            RegexOptions.Compiled);
+
+        private static void HighlightXmlInto(Paragraph para, string xml)
+        {
+            int i = 0;
+            foreach (Match m in XmlTokenRegex.Matches(xml))
+            {
+                if (m.Index > i)
+                    para.Inlines.Add(new Run(xml.Substring(i, m.Index - i)) { Foreground = BrushText });
+
+                if (m.Groups["text"].Success)
+                {
+                    para.Inlines.Add(new Run(m.Value) { Foreground = BrushText });
+                }
+                else
+                {
+                    para.Inlines.Add(new Run("<" + m.Groups["close"].Value) { Foreground = BrushBracket });
+                    para.Inlines.Add(new Run(m.Groups["elname"].Value) { Foreground = BrushElement });
+                    var attrs = m.Groups["attrs"].Value;
+                    if (!string.IsNullOrEmpty(attrs))
+                    {
+                        int last = 0;
+                        foreach (Match am in AttrRegex.Matches(attrs))
+                        {
+                            if (am.Index > last)
+                                para.Inlines.Add(new Run(attrs.Substring(last, am.Index - last)) { Foreground = BrushBracket });
+                            para.Inlines.Add(new Run(am.Groups["name"].Value) { Foreground = BrushAttr });
+                            para.Inlines.Add(new Run("=\"") { Foreground = BrushBracket });
+                            para.Inlines.Add(new Run(am.Groups["value"].Value) { Foreground = BrushAttrValue });
+                            para.Inlines.Add(new Run("\"") { Foreground = BrushBracket });
+                            last = am.Index + am.Length;
+                        }
+                        if (last < attrs.Length)
+                            para.Inlines.Add(new Run(attrs.Substring(last)) { Foreground = BrushBracket });
+                    }
+                    var selfClose = m.Groups["self"].Value;
+                    para.Inlines.Add(new Run(selfClose + ">") { Foreground = BrushBracket });
+                }
+
+                i = m.Index + m.Length;
+            }
+            if (i < xml.Length)
+                para.Inlines.Add(new Run(xml.Substring(i)) { Foreground = BrushText });
         }
 
         private void WriteToManager()
@@ -944,6 +1315,8 @@ namespace MetadataDisplay.Client
             _vim.GaugeRangeMin = NormalizeNumberText(gaugeRangeMinBox.Text, "0");
             _vim.GaugeRangeMax = NormalizeNumberText(gaugeRangeMaxBox.Text, "100");
             _vim.GaugeStyle = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Arc180";
+            _vim.GaugeShowValue = (gaugeShowValueCheck.IsChecked == true) ? "true" : "false";
+            _vim.GaugeValueFontSize = NormalizeNumberText(gaugeValueFontSizeBox.Text, "26");
 
             _vim.StaleSeconds = NormalizeNumberText(staleSecondsBox.Text, "0");
         }

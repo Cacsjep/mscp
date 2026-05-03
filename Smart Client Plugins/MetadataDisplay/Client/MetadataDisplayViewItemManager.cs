@@ -38,6 +38,8 @@ namespace MetadataDisplay.Client
         private const string GaugeRangeMinKey = "GaugeRangeMin";
         private const string GaugeRangeMaxKey = "GaugeRangeMax";
         private const string GaugeStyleKey = "GaugeStyle";
+        private const string GaugeShowValueKey = "GaugeShowValue";
+        private const string GaugeValueFontSizeKey = "GaugeValueFontSize";
 
         // Stale
         private const string StaleSecondsKey = "StaleSeconds";
@@ -191,6 +193,19 @@ namespace MetadataDisplay.Client
         {
             get => GetProperty(GaugeStyleKey) ?? "Arc180";
             set => SetProperty(GaugeStyleKey, value);
+        }
+
+        // "true" / "false"
+        public string GaugeShowValue
+        {
+            get => GetProperty(GaugeShowValueKey) ?? "true";
+            set => SetProperty(GaugeShowValueKey, value);
+        }
+
+        public string GaugeValueFontSize
+        {
+            get => GetProperty(GaugeValueFontSizeKey) ?? "26";
+            set => SetProperty(GaugeValueFontSizeKey, value);
         }
 
         public string StaleSeconds

@@ -1,33 +1,15 @@
 <UserControl
     x:Class="MetadataDisplay.Client.ColorPickerControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
-        <Border x:Name="swatch"
-                Grid.Column="0"
-                Width="28" Height="22"
-                CornerRadius="3"
-                Background="#FF777777"
-                BorderBrush="#55FFFFFF"
-                BorderThickness="1"
-                Cursor="Hand"
-                MouseLeftButtonUp="OnSwatchClick"
-                Margin="0,0,6,0"/>
-        <TextBox x:Name="hexBox"
-                 Grid.Column="1"
-                 Padding="3,2"
-                 Text="#777777"
-                 TextChanged="OnHexChanged"/>
-        <Button x:Name="pickButton"
-                Grid.Column="2"
-                Content="..."
-                Padding="8,2"
-                Margin="6,0,0,0"
-                Click="OnPickClick"/>
-    </Grid>
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    HorizontalAlignment="Left">
+    <Border x:Name="swatch"
+            Width="38" Height="22"
+            CornerRadius="3"
+            Background="#FF777777"
+            BorderBrush="#FF555555"
+            BorderThickness="1"
+            Cursor="Hand"
+            ToolTip="Click to pick a color"
+            MouseLeftButtonUp="OnSwatchClick"/>
 </UserControl>

@@ -90,12 +90,13 @@ namespace MetadataDisplay.Client
             if (overlay != null)
             {
                 setupHint.Text = overlay;
-                setupHint.Visibility = Visibility.Visible;
+                openConfigButton.Visibility = mode == Mode.ClientSetup ? Visibility.Visible : Visibility.Collapsed;
+                setupPanel.Visibility = Visibility.Visible;
                 renderHost.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            setupHint.Visibility = Visibility.Collapsed;
+            setupPanel.Visibility = Visibility.Collapsed;
             renderHost.Visibility = Visibility.Visible;
 
             if (mode == Mode.ClientLive)
@@ -110,13 +111,13 @@ namespace MetadataDisplay.Client
         private string ResolveOverlayMessage(Mode mode)
         {
             if (mode == Mode.ClientSetup)
-                return "Configure in properties";
+                return "Click to configure this view item";
 
             bool hasChannelId = !string.IsNullOrEmpty(_viewItemManager.MetadataId)
                                 && Guid.TryParse(_viewItemManager.MetadataId, out var g)
                                 && g != Guid.Empty;
             if (!hasChannelId)
-                return "Configure in properties";
+                return "Not configured";
 
             if (_metadataItem == null)
             {
@@ -442,6 +443,27 @@ namespace MetadataDisplay.Client
 
         private void OnMouseLeftUp(object sender, MouseButtonEventArgs e) => FireClickEvent();
         private void OnMouseDoubleClick(object sender, MouseButtonEventArgs e) => FireDoubleClickEvent();
+
+        private void OnOpenConfigClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var win = new MetadataDisplayConfigurationWindow(_viewItemManager);
+                var owner = Window.GetWindow(this);
+                if (owner != null) win.Owner = owner;
+                var result = win.ShowDialog();
+                _log.Info($"[ViewItem] Configuration window closed result={result}");
+                if (result == true)
+                {
+                    _viewItemManager.Save();
+                    Reconfigure();
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"OnOpenConfigClick threw: {ex.Message}", ex);
+            }
+        }
 
         public override bool Maximizable => true;
         public override bool Selectable => true;

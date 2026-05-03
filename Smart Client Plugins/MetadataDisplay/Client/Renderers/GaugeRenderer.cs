@@ -14,6 +14,8 @@ namespace MetadataDisplay.Client.Renderers
         public double RangeMin;
         public double RangeMax;
         public GaugeStyle Style;
+        public bool ShowValue;
+        public double ValueFontSize;
         public NumericConfig Numeric; // reuses Min/Max thresholds + colors + unit
 
         public static GaugeConfig FromManager(MetadataDisplayViewItemManager m)
@@ -31,6 +33,8 @@ namespace MetadataDisplay.Client.Renderers
                 RangeMin = rmin,
                 RangeMax = rmax,
                 Style = style,
+                ShowValue = !string.Equals(m.GaugeShowValue, "false", StringComparison.OrdinalIgnoreCase),
+                ValueFontSize = ParseDouble(m.GaugeValueFontSize, 26),
                 Numeric = NumericConfig.FromManager(m),
             };
         }
@@ -48,6 +52,7 @@ namespace MetadataDisplay.Client.Renderers
         private readonly Canvas _canvas;
         private readonly TextBlock _valueText;
         private readonly TextBlock _unitText;
+        private readonly StackPanel _labelStack;
 
         // Arc geometry constants (logical canvas size 320x200; outer Viewbox scales)
         private const double LogicalW = 320;
@@ -66,7 +71,7 @@ namespace MetadataDisplay.Client.Renderers
             {
                 Text = "—",
                 Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0xF7, 0xF8)),
-                FontSize = 38,
+                FontSize = 26,
                 FontWeight = FontWeights.SemiBold,
                 TextAlignment = TextAlignment.Center,
             };
@@ -74,52 +79,65 @@ namespace MetadataDisplay.Client.Renderers
             {
                 Text = "",
                 Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
-                FontSize = 16,
+                FontSize = 14,
                 TextAlignment = TextAlignment.Center,
             };
-            var labelStack = new StackPanel
-            {
-                Orientation = Orientation.Vertical,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(0, 0, 0, 6),
-            };
-            labelStack.Children.Add(_valueText);
-            labelStack.Children.Add(_unitText);
+            _labelStack = new StackPanel { Orientation = Orientation.Vertical, Width = LogicalW };
+            _valueText.HorizontalAlignment = HorizontalAlignment.Center;
+            _unitText.HorizontalAlignment = HorizontalAlignment.Center;
+            _labelStack.Children.Add(_valueText);
+            _labelStack.Children.Add(_unitText);
+            _canvas.Children.Add(_labelStack);
 
             _root = new Grid();
             _root.Children.Add(_canvas);
-            _root.Children.Add(labelStack);
         }
 
         public UIElement Visual => _root;
 
         public void Update(string rawValue, GaugeConfig cfg)
         {
-            _canvas.Children.Clear();
+            // Clear all canvas children except the persistent label stack.
+            for (int i = _canvas.Children.Count - 1; i >= 0; i--)
+            {
+                if (!ReferenceEquals(_canvas.Children[i], _labelStack))
+                    _canvas.Children.RemoveAt(i);
+            }
             _unitText.Text = cfg.Numeric.Unit ?? "";
+            _valueText.FontSize = cfg.ValueFontSize > 0 ? cfg.ValueFontSize : 26;
+            _labelStack.Visibility = cfg.ShowValue ? Visibility.Visible : Visibility.Collapsed;
 
             double? v = ParseValue(rawValue);
-            _valueText.Text = v.HasValue ? FormatNumber(v.Value) : "—";
+            _valueText.Text = v.HasValue ? FormatNumber(v.Value) : (rawValue ?? "—");
 
             switch (cfg.Style)
             {
                 case GaugeStyle.Bar:
                     DrawBar(v, cfg);
+                    Canvas.SetLeft(_labelStack, 0);
+                    Canvas.SetTop(_labelStack, 4);
                     break;
                 case GaugeStyle.Arc270:
                     DrawArc(v, cfg, sweepDegrees: 270);
+                    Canvas.SetLeft(_labelStack, 0);
+                    Canvas.SetTop(_labelStack, 150);
                     break;
                 case GaugeStyle.Arc180:
                 default:
                     DrawArc(v, cfg, sweepDegrees: 180);
+                    Canvas.SetLeft(_labelStack, 0);
+                    Canvas.SetTop(_labelStack, 165);
                     break;
             }
         }
 
         public void Clear()
         {
-            _canvas.Children.Clear();
+            for (int i = _canvas.Children.Count - 1; i >= 0; i--)
+            {
+                if (!ReferenceEquals(_canvas.Children[i], _labelStack))
+                    _canvas.Children.RemoveAt(i);
+            }
             _valueText.Text = "—";
             _unitText.Text = "";
         }
