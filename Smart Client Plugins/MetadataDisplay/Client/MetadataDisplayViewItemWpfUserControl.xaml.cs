@@ -32,6 +32,7 @@ namespace MetadataDisplay.Client
         private NumberRenderer _numberRenderer;
         private GaugeRenderer _gaugeRenderer;
         private TextRenderer _textRenderer;
+        private LineChartRenderer _lineRenderer;
 
         private DateTime? _lastValueUtc;
         private bool _hasReceivedValue;
@@ -98,14 +99,22 @@ namespace MetadataDisplay.Client
                 openConfigButton.Visibility = mode == Mode.ClientSetup ? Visibility.Visible : Visibility.Collapsed;
                 setupPanel.Visibility = Visibility.Visible;
                 renderViewbox.Visibility = Visibility.Collapsed;
+                chartRoot.Visibility = Visibility.Collapsed;
                 noDataPanel.Visibility = Visibility.Collapsed;
                 return;
             }
 
             setupPanel.Visibility = Visibility.Collapsed;
-            renderViewbox.Visibility = Visibility.Collapsed;
             _hasReceivedValue = false;
-            noDataPanel.Visibility = Visibility.Visible;
+
+            // LineChart goes into the native-resolution chartRoot; other renderers
+            // use the 320-wide renderViewbox. Show the chart immediately (axes +
+            // threshold bands are useful empty); other renderers stay hidden behind
+            // the "Waiting for data" overlay until a value arrives.
+            bool isChart = string.Equals(_viewItemManager.RenderType, "LineChart", StringComparison.Ordinal);
+            renderViewbox.Visibility = Visibility.Collapsed;
+            chartRoot.Visibility = isChart ? Visibility.Visible : Visibility.Collapsed;
+            noDataPanel.Visibility = isChart ? Visibility.Collapsed : Visibility.Visible;
             noDataDetail.Text = mode == Mode.ClientPlayback
                 ? "Move the playback cursor to a time when this metadata was recorded."
                 : $"Subscribed to {_metadataItem?.Name ?? "channel"}. Waiting for first matching packet.";
@@ -144,6 +153,40 @@ namespace MetadataDisplay.Client
                 return "No data key configured";
 
             return null;
+        }
+
+        // Chart hosts have their own title TextBlock outside the Viewbox-scaled tree —
+        // mirror the user's title settings into it whenever the chart renderer is built.
+        private void ApplyChartTitle()
+        {
+            var title = _viewItemManager.Title ?? "";
+            bool show = !string.Equals(_viewItemManager.ShowTitle, "false", StringComparison.OrdinalIgnoreCase)
+                        && !string.IsNullOrEmpty(title);
+            if (!show)
+            {
+                chartTitleText.Visibility = Visibility.Collapsed;
+                chartTitleRow.Height = new GridLength(0);
+                return;
+            }
+            chartTitleText.Text = title;
+            chartTitleText.Visibility = Visibility.Visible;
+            chartTitleRow.Height = GridLength.Auto;
+            switch (_viewItemManager.TitlePosition ?? "Left")
+            {
+                case "Center": chartTitleText.HorizontalAlignment = HorizontalAlignment.Center; chartTitleText.TextAlignment = TextAlignment.Center; break;
+                case "Right":  chartTitleText.HorizontalAlignment = HorizontalAlignment.Right;  chartTitleText.TextAlignment = TextAlignment.Right;  break;
+                default:       chartTitleText.HorizontalAlignment = HorizontalAlignment.Left;   chartTitleText.TextAlignment = TextAlignment.Left;   break;
+            }
+            double baseFs = 14;
+            if (double.TryParse(_viewItemManager.TitleFontSize, NumberStyles.Float, CultureInfo.InvariantCulture, out var fs) && fs > 0)
+                baseFs = fs;
+            chartTitleText.FontSize = baseFs;
+            try
+            {
+                var c = (Color)ColorConverter.ConvertFromString(_viewItemManager.TitleColor);
+                chartTitleText.Foreground = new SolidColorBrush(c);
+            }
+            catch { chartTitleText.Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)); }
         }
 
         private void ApplyTitleSettings()
@@ -284,7 +327,11 @@ namespace MetadataDisplay.Client
                         utc = dt2.Kind == DateTimeKind.Utc ? dt2 : dt2.ToUniversalTime();
                 }
 
-                if (utc.HasValue) _pump.RequestTime(utc.Value);
+                if (utc.HasValue)
+                {
+                    _pump.RequestTime(utc.Value);
+                    _lineRenderer?.SetCursor(utc.Value);
+                }
             }
             catch (Exception ex)
             {
@@ -296,12 +343,15 @@ namespace MetadataDisplay.Client
         private void BuildRenderHost()
         {
             renderHost.Children.Clear();
+            chartHost.Children.Clear();
             _lampRenderer = null;
             _numberRenderer = null;
             _gaugeRenderer = null;
             _textRenderer = null;
+            _lineRenderer = null;
 
             UIElement visual;
+            bool isChart = false;
             switch (_viewItemManager.RenderType)
             {
                 case "Number":
@@ -319,6 +369,12 @@ namespace MetadataDisplay.Client
                     visual = _textRenderer.Visual;
                     _textRenderer.Clear();
                     break;
+                case "LineChart":
+                    _lineRenderer = new LineChartRenderer();
+                    _lineRenderer.Configure(LineChartConfig.FromManager(_viewItemManager));
+                    visual = _lineRenderer.Visual;
+                    isChart = true;
+                    break;
                 case "Lamp":
                 default:
                     _lampRenderer = new LampRenderer();
@@ -327,7 +383,18 @@ namespace MetadataDisplay.Client
                     break;
             }
 
-            renderHost.Children.Add(visual);
+            // Chart renderers go into the native-resolution host (no Viewbox scaling).
+            // All other renderers stay in the 320-wide Viewbox host so they keep their
+            // existing scale-to-fit behaviour.
+            if (isChart)
+            {
+                chartHost.Children.Add(visual);
+                ApplyChartTitle();
+            }
+            else
+            {
+                renderHost.Children.Add(visual);
+            }
         }
 
         private void ResolveMetadataItem()
@@ -448,7 +515,10 @@ namespace MetadataDisplay.Client
             {
                 _hasReceivedValue = true;
                 noDataPanel.Visibility = Visibility.Collapsed;
-                renderViewbox.Visibility = Visibility.Visible;
+                // Chart renderer is already visible (shown empty); only the
+                // bitmap-scaled host needs the first-value reveal.
+                if (_lineRenderer == null)
+                    renderViewbox.Visibility = Visibility.Visible;
             }
 
             string density = _viewItemManager.WidgetDensity ?? "Comfortable";
@@ -473,6 +543,14 @@ namespace MetadataDisplay.Client
             {
                 _textRenderer.FontSize = ParseDouble(_viewItemManager.TextFontSize, 28);
                 _textRenderer.Update(value);
+            }
+            else if (_lineRenderer != null)
+            {
+                if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                {
+                    var ts = _lastValueUtc ?? DateTime.UtcNow;
+                    _lineRenderer.AddSample(v, ts);
+                }
             }
         }
 

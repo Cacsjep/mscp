@@ -32,6 +32,24 @@
                 </Border>
             </Grid>
         </Viewbox>
+        <!-- Native-resolution host for renderers (LineChart) that draw with SkiaSharp.
+             Bypasses the 320-wide Viewbox so Skia paints at the actual pane size
+             instead of being bitmap-scaled and looking pixelated. The title bar
+             above doesn't apply here — chart renderers handle their own labels. -->
+        <Grid x:Name="chartRoot" Margin="6" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="chartTitleRow" Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="chartTitleText"
+                       Grid.Row="0"
+                       Foreground="#FFCFD7DA"
+                       FontSize="14"
+                       Margin="0,0,0,2"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"/>
+            <Grid x:Name="chartHost" Grid.Row="1" Background="Transparent"/>
+        </Grid>
         <Grid x:Name="noDataPanel"
               HorizontalAlignment="Center"
               VerticalAlignment="Center"

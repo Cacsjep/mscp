@@ -30,7 +30,8 @@ namespace MetadataDisplay.Client
         // Text
         private const string TextFontSizeKey = "TextFontSize";
 
-        // Number / Gauge thresholds
+        // Number / Gauge / Line thresholds
+        private const string ThresholdsEnabledKey = "ThresholdsEnabled";
         private const string NumMinKey = "NumMin";
         private const string NumMaxKey = "NumMax";
         private const string NumDirectionKey = "NumDirection";
@@ -47,6 +48,15 @@ namespace MetadataDisplay.Client
         private const string GaugeShowTicksKey = "GaugeShowTicks";
         private const string GaugeTickCountKey = "GaugeTickCount";
         private const string GaugeTrackThicknessKey = "GaugeTrackThickness";
+
+        // LineChart
+        private const string LineWindowSecondsKey = "LineWindowSeconds";
+        private const string LineYMinKey = "LineYMin";
+        private const string LineYMaxKey = "LineYMax";
+        private const string LineColorKey = "LineColor";
+        private const string LineFillKey = "LineFill";
+        private const string LineSmoothingKey = "LineSmoothing";
+        private const string LineShowMarkerKey = "LineShowMarker";
 
         // Theme
         private const string WidgetDensityKey = "WidgetDensity";
@@ -161,6 +171,15 @@ namespace MetadataDisplay.Client
             set => SetProperty(TextFontSizeKey, value);
         }
 
+        // "true" / "false". Default off — widgets show neutral coloring until the
+        // operator opts in (matches the principle that a fresh widget shouldn't
+        // assert that 50 is "warning" when the user hasn't said what 50 means).
+        public string ThresholdsEnabled
+        {
+            get => GetProperty(ThresholdsEnabledKey) ?? "false";
+            set => SetProperty(ThresholdsEnabledKey, value);
+        }
+
         public string NumMin
         {
             get => GetProperty(NumMinKey) ?? string.Empty;
@@ -249,6 +268,51 @@ namespace MetadataDisplay.Client
         {
             get => GetProperty(GaugeTrackThicknessKey);
             set => SetProperty(GaugeTrackThicknessKey, value);
+        }
+
+        public string LineWindowSeconds
+        {
+            get => GetProperty(LineWindowSecondsKey) ?? "60";
+            set => SetProperty(LineWindowSecondsKey, value);
+        }
+
+        public string LineYMin
+        {
+            get => GetProperty(LineYMinKey) ?? string.Empty;
+            set => SetProperty(LineYMinKey, value);
+        }
+
+        public string LineYMax
+        {
+            get => GetProperty(LineYMaxKey) ?? string.Empty;
+            set => SetProperty(LineYMaxKey, value);
+        }
+
+        public string LineColor
+        {
+            get => GetProperty(LineColorKey) ?? "#FF4FC3F7";
+            set => SetProperty(LineColorKey, value);
+        }
+
+        // "true" / "false"
+        public string LineFill
+        {
+            get => GetProperty(LineFillKey) ?? "true";
+            set => SetProperty(LineFillKey, value);
+        }
+
+        // "true" / "false"
+        public string LineSmoothing
+        {
+            get => GetProperty(LineSmoothingKey) ?? "false";
+            set => SetProperty(LineSmoothingKey, value);
+        }
+
+        // "true" / "false"
+        public string LineShowMarker
+        {
+            get => GetProperty(LineShowMarkerKey) ?? "false";
+            set => SetProperty(LineShowMarkerKey, value);
         }
 
         // Compact | Comfortable | Spacious

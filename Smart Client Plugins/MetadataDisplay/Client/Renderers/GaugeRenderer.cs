@@ -225,28 +225,42 @@ namespace MetadataDisplay.Client.Renderers
             // Determine threshold breakpoints in the value domain.
             double rmin = cfg.RangeMin;
             double rmax = cfg.RangeMax;
-            double tMin = cfg.Numeric.Min ?? rmin;
-            double tMax = cfg.Numeric.Max ?? rmax;
-            tMin = Clamp(tMin, rmin, rmax);
-            tMax = Clamp(tMax, rmin, rmax);
-            if (tMax < tMin) tMax = tMin;
 
-            Color cOk = cfg.Numeric.ColorOk;
-            Color cWarn = cfg.Numeric.ColorWarn;
-            Color cBad = cfg.Numeric.ColorBad;
+            if (cfg.Numeric.Enabled)
+            {
+                double tMin = cfg.Numeric.Min ?? rmin;
+                double tMax = cfg.Numeric.Max ?? rmax;
+                tMin = Clamp(tMin, rmin, rmax);
+                tMax = Clamp(tMax, rmin, rmax);
+                if (tMax < tMin) tMax = tMin;
 
-            // Three bands per direction. With HighIsBad: [rmin..tMin]=Ok, [tMin..tMax]=Warn, [tMax..rmax]=Bad.
-            // With LowIsBad: [rmin..tMin]=Bad, [tMin..tMax]=Warn, [tMax..rmax]=Ok.
-            Color band1 = cfg.Numeric.HighIsBad ? cOk : cBad;
-            Color band2 = cWarn;
-            Color band3 = cfg.Numeric.HighIsBad ? cBad : cOk;
+                Color cOk = cfg.Numeric.ColorOk;
+                Color cWarn = cfg.Numeric.ColorWarn;
+                Color cBad = cfg.Numeric.ColorBad;
 
-            DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(rmin, rmin, rmax, startAngle, endAngle), ValueToAngle(tMin, rmin, rmax, startAngle, endAngle), band1);
-            DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(tMin, rmin, rmax, startAngle, endAngle), ValueToAngle(tMax, rmin, rmax, startAngle, endAngle), band2);
-            DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(tMax, rmin, rmax, startAngle, endAngle), ValueToAngle(rmax, rmin, rmax, startAngle, endAngle), band3);
+                // Three bands per direction. With HighIsBad: [rmin..tMin]=Ok, [tMin..tMax]=Warn, [tMax..rmax]=Bad.
+                // With LowIsBad: [rmin..tMin]=Bad, [tMin..tMax]=Warn, [tMax..rmax]=Ok.
+                Color band1 = cfg.Numeric.HighIsBad ? cOk : cBad;
+                Color band2 = cWarn;
+                Color band3 = cfg.Numeric.HighIsBad ? cBad : cOk;
 
-            DrawScaleLabel(cx, cy, radius + thickness, startAngle, FormatNumber(rmin));
-            DrawScaleLabel(cx, cy, radius + thickness, endAngle, FormatNumber(rmax));
+                DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(rmin, rmin, rmax, startAngle, endAngle), ValueToAngle(tMin, rmin, rmax, startAngle, endAngle), band1);
+                DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(tMin, rmin, rmax, startAngle, endAngle), ValueToAngle(tMax, rmin, rmax, startAngle, endAngle), band2);
+                DrawArcSegment(cx, cy, radius, thickness, ValueToAngle(tMax, rmin, rmax, startAngle, endAngle), ValueToAngle(rmax, rmin, rmax, startAngle, endAngle), band3);
+            }
+            else
+            {
+                // Thresholds off — single neutral fill across the whole sweep.
+                DrawArcSegment(cx, cy, radius, thickness, startAngle, endAngle, WidgetTheme.TrackColor);
+            }
+
+            // Push min/max labels outward past the arc edge so they don't sit on top
+            // of the colored band tips. The half-thickness offsets the stroke center
+            // out to the band's outer edge, then a fixed gap keeps the digits clear.
+            const double scaleLabelGap = 10;
+            double labelRadius = radius + thickness / 2 + scaleLabelGap;
+            DrawScaleLabel(cx, cy, labelRadius, startAngle, FormatNumber(rmin));
+            DrawScaleLabel(cx, cy, labelRadius, endAngle, FormatNumber(rmax));
 
             if (cfg.ShowTicks && cfg.TickCount > 0)
                 DrawArcTicks(cx, cy, radius, thickness, startAngle, endAngle, cfg.TickCount);
@@ -320,9 +334,11 @@ namespace MetadataDisplay.Client.Renderers
                 }
             }
 
-            // Tick labels at min/max — small + subtle.
-            DrawScaleLabel(cx, cy, radius + progressThickness + 2, startAngle, FormatNumber(rmin));
-            DrawScaleLabel(cx, cy, radius + progressThickness + 2, endAngle, FormatNumber(rmax));
+            // Tick labels at min/max — small + subtle. Pushed outward so the digits
+            // don't crowd the rounded arc end caps.
+            double modernLabelRadius = radius + progressThickness / 2 + 10;
+            DrawScaleLabel(cx, cy, modernLabelRadius, startAngle, FormatNumber(rmin));
+            DrawScaleLabel(cx, cy, modernLabelRadius, endAngle, FormatNumber(rmax));
 
             if (cfg.ShowTicks && cfg.TickCount > 0)
                 DrawArcTicks(cx, cy, radius, progressThickness, startAngle, endAngle, cfg.TickCount);
@@ -427,22 +443,30 @@ namespace MetadataDisplay.Client.Renderers
 
             double rmin = cfg.RangeMin;
             double rmax = cfg.RangeMax;
-            double tMin = cfg.Numeric.Min ?? rmin;
-            double tMax = cfg.Numeric.Max ?? rmax;
-            tMin = Clamp(tMin, rmin, rmax);
-            tMax = Clamp(tMax, rmin, rmax);
-            if (tMax < tMin) tMax = tMin;
 
-            Color cOk = cfg.Numeric.ColorOk;
-            Color cWarn = cfg.Numeric.ColorWarn;
-            Color cBad = cfg.Numeric.ColorBad;
-            Color band1 = cfg.Numeric.HighIsBad ? cOk : cBad;
-            Color band2 = cWarn;
-            Color band3 = cfg.Numeric.HighIsBad ? cBad : cOk;
+            if (cfg.Numeric.Enabled)
+            {
+                double tMin = cfg.Numeric.Min ?? rmin;
+                double tMax = cfg.Numeric.Max ?? rmax;
+                tMin = Clamp(tMin, rmin, rmax);
+                tMax = Clamp(tMax, rmin, rmax);
+                if (tMax < tMin) tMax = tMin;
 
-            DrawBarBand(left, top, ValueToX(rmin, rmin, rmax, left, width), ValueToX(tMin, rmin, rmax, left, width), height, band1);
-            DrawBarBand(left, top, ValueToX(tMin, rmin, rmax, left, width), ValueToX(tMax, rmin, rmax, left, width), height, band2);
-            DrawBarBand(left, top, ValueToX(tMax, rmin, rmax, left, width), ValueToX(rmax, rmin, rmax, left, width), height, band3);
+                Color cOk = cfg.Numeric.ColorOk;
+                Color cWarn = cfg.Numeric.ColorWarn;
+                Color cBad = cfg.Numeric.ColorBad;
+                Color band1 = cfg.Numeric.HighIsBad ? cOk : cBad;
+                Color band2 = cWarn;
+                Color band3 = cfg.Numeric.HighIsBad ? cBad : cOk;
+
+                DrawBarBand(left, top, ValueToX(rmin, rmin, rmax, left, width), ValueToX(tMin, rmin, rmax, left, width), height, band1);
+                DrawBarBand(left, top, ValueToX(tMin, rmin, rmax, left, width), ValueToX(tMax, rmin, rmax, left, width), height, band2);
+                DrawBarBand(left, top, ValueToX(tMax, rmin, rmax, left, width), ValueToX(rmax, rmin, rmax, left, width), height, band3);
+            }
+            else
+            {
+                DrawBarBand(left, top, left, left + width, height, WidgetTheme.TrackColor);
+            }
 
             DrawBarScaleLabel(left, top + height + 4, FormatNumber(rmin), TextAlignment.Left);
             DrawBarScaleLabel(left + width, top + height + 4, FormatNumber(rmax), TextAlignment.Right);
