@@ -86,6 +86,10 @@ namespace MetadataDisplay.Client.Renderers
     internal sealed class LineChartRenderer
     {
         private readonly Grid _root;
+        // _chart is rebuilt on every LineType swap. Cheaper-looking alternatives
+        // (replacing Series array, mutating an ObservableCollection<ISeries>) leak
+        // observers in LiveCharts2 and cause the post-swap chart to either stop
+        // updating or double-paint. Full rebuild is the only state we trust.
         private CartesianChart _chart;
         private ISeries _series;
         private LineSeries<DateTimePoint> _lineSeries;
@@ -175,11 +179,18 @@ namespace MetadataDisplay.Client.Renderers
         public void Configure(LineChartConfig cfg)
         {
             _cfg = cfg;
-            // Switch series type if the line-style category changed.
+            // Rebuild the entire CartesianChart when the line-style category
+            // changes. Earlier attempts (replacing the Series array, then mutating
+            // an ObservableCollection) left LiveCharts2 with stale internal state —
+            // visible as a stuck preview that didn't redraw on new samples plus
+            // double-painting. Recreating the chart guarantees a clean slate.
             if (cfg.LineType != _activeType)
             {
                 BuildSeries(cfg.LineType);
-                _chart.Series = new[] { _series };
+                BuildChart();
+                _root.Children.Clear();
+                _root.Children.Add(_chart);
+                _root.Children.Add(_pauseOverlay);
             }
             ApplyConfig();
         }
