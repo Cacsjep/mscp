@@ -8,28 +8,6 @@
 
 A collection of community-built plugins and drivers for Milestone XProtect™, maintained as a single repository with a unified build and installer.
 
-## Plugins & Drivers
-
-| Name | Category | Description |
-|---|---|---|
-| [Weather](Smart%20Client%20Plugins/Weather) | Smart Client | Live weather display in Smart Client view items (Open-Meteo) |
-| [RDP](Smart%20Client%20Plugins/RDP) | Smart Client | Embedded RDP sessions in Smart Client view items |
-| [Notepad](Smart%20Client%20Plugins/Notepad) | Smart Client | Simple text editor for operator notes in Smart Client view items |
-| [Rtmp](Device%20Drivers/Rtmp) | Device Driver | Receive RTMP/RTMPS push streams (H.264) directly into XProtect™ |
-| [Rtsp](Device%20Drivers/Rtsp) | Device Driver | Pull RTSP streams (H.264/H.265 + audio) with dual streams and rich diagnostics |
-| [RTMPStreamer](Admin%20Plugins/RTMPStreamer) | Admin Plugin | Stream XProtect™ cameras to RTMP destinations (YouTube, Twitch, etc.) |
-| [SnapReport](Smart%20Client%20Plugins/SnapReport) | Smart Client | Camera snapshot PDF report generator for site surveys and compliance |
-| [MonitorRTMPStreamer](Smart%20Client%20Plugins/MonitorRTMPStreamer) | Smart Client | Capture desktop monitors and stream via RTMP |
-| [CertWatchdog](Admin%20Plugins/CertWatchdog) | Admin Plugin | Monitor SSL certificate expiry for all XProtect™ HTTPS endpoints |
-| [Auditor](Admin%20Plugins/Auditor) | Admin Plugin | Audit user access to recorded video with per-user rules and reason prompts |
-| [HttpRequests](Admin%20Plugins/HttpRequests) | Admin Plugin | Configure and execute HTTP requests as rule actions with custom payloads and flexible authentication |
-| [SmartBar](Smart%20Client%20Plugins/SmartBar) | Smart Client | Command palette for quickly finding and launching cameras, views, commands, events, outputs and programs |
-| [FlexView](Smart%20Client%20Plugins/FlexView) | Smart Client | Freeform grid-based view layout designer with drag-and-drop pane creation |
-| [ViewCarousel](Smart%20Client%20Plugins/ViewCarousel) | Smart Client | Cycle through Smart Client views inside a single view item slot |
-| [Remote Control](Smart%20Client%20Plugins/SCRemoteControl) | Smart Client | Control Smart Client remotely via REST API with Swagger UI |
-| [MetadataViewer](Admin%20Plugins/MetadataViewer) | Admin Plugin | Subscribe to a metadata channel in the Management Client and inspect the live ONVIF event stream |
-| [MetadataDisplay](Smart%20Client%20Plugins/MetadataDisplay) | Smart Client | Display ONVIF metadata values as live and playback dashboard widgets (lamp, number with thresholds, gauge, text) in view items |
-
 ## Installation
 
 ### Unified Installer (Recommended)
@@ -49,41 +27,6 @@ Individual ZIPs for each plugin/driver are also available on the [Releases](../.
 
 > [!NOTE]
 > Always **unblock** downloaded ZIP files before extracting (right-click -> Properties -> Unblock). Windows marks downloaded files as untrusted and will block the DLLs from loading if you skip this step.
-
-## Repository Structure
-
-```
-mscp/
-├── Smart Client Plugins/
-│   ├── Weather/                   Weather view item plugin
-│   ├── RDP/                       RDP view item plugin
-│   ├── Notepad/                   Notepad view item plugin
-│   ├── SnapReport/                Camera snapshot PDF report generator
-│   ├── MonitorRTMPStreamer/        Desktop monitor RTMP streaming
-│   ├── SmartBar/                  Workspace toolbar plugin
-│   ├── ViewCarousel/              View carousel inside a single view slot
-│   └── FlexView/                  Freeform grid view layout designer
-├── Device Drivers/
-│   ├── Rtmp/                      RTMP push stream driver
-│   └── Rtsp/                      RTSP pull stream driver (H.264/H.265 + audio)
-├── Admin Plugins/
-│   ├── RTMPStreamer/              RTMP outbound streaming plugin
-│   ├── CertWatchdog/              SSL certificate expiry monitoring plugin
-│   ├── MetadataViewer/            Live ONVIF metadata inspector (Management Client)
-│   └── Auditor/                   User access audit plugin
-├── CommunitySDK/                    Shared library (logging, messaging, UI helpers)
-├── MSCPlugins.sln                 Visual Studio solution (all projects)
-├── plugins.json                   Central plugin manifest (drives CI, build, installer)
-├── Directory.Build.props          Shared MSBuild properties (paths, deploy flags)
-├── Directory.Build.targets        Shared build targets (stop/deploy/start cycle)
-├── installer/
-│   ├── wix/                       WiX MSI installer (Product.wxs, License.rtf)
-│   └── generate-wix.ps1           Generates WiX components from plugins.json
-├── .github/workflows/
-│   └── build-release.yml          CI: matrix build + create release
-├── build.ps1                      Local build script
-└── README.md
-```
 
 ## Building from Source
 

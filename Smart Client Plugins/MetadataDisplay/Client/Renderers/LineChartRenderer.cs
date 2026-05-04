@@ -36,6 +36,11 @@ namespace MetadataDisplay.Client.Renderers
         public bool ZoomEnabled;
         public LineAggregation Aggregation;
         public bool EnvelopeEnabled;
+        // Set by the view-item when entering playback. Suppresses the pause
+        // overlay because there is no live tail to "pause" — the cursor anchors
+        // the visible window. Zoom/pan still work; they simply don't trigger the
+        // "click to resume live" badge.
+        public bool PlaybackMode;
         public NumericConfig Numeric;
 
         public static LineChartConfig FromManager(MetadataDisplayViewItemManager m)
@@ -252,6 +257,10 @@ namespace MetadataDisplay.Client.Renderers
                 _root.Children.Add(_chart);
                 _root.Children.Add(_pauseOverlay);
             }
+
+            // Mode-flip cleanup: never let the pause overlay linger into playback.
+            if (cfg.PlaybackMode && _paused) Resume();
+            if (cfg.PlaybackMode) _pauseOverlay.Visibility = Visibility.Collapsed;
             else if (prevAgg.HasValue && prevAgg.Value != cfg.Aggregation)
             {
                 // Aggregation switched — repopulate the displayed points from the
@@ -462,10 +471,16 @@ namespace MetadataDisplay.Client.Renderers
                 MinHeight = 80,
                 MinWidth = 120,
             };
-            _chart.PreviewMouseWheel += (s, e) => { if (_cfg != null && _cfg.ZoomEnabled) Pause(); };
+            // Auto-pause on user interaction is only meaningful in live mode —
+            // in playback the cursor anchors the visible window, so the "Paused
+            // (click to resume live)" overlay would be misleading.
+            _chart.PreviewMouseWheel += (s, e) =>
+            {
+                if (_cfg != null && _cfg.ZoomEnabled && !_cfg.PlaybackMode) Pause();
+            };
             _chart.PreviewMouseDown  += (s, e) =>
             {
-                if (_cfg == null || !_cfg.ZoomEnabled) return;
+                if (_cfg == null || !_cfg.ZoomEnabled || _cfg.PlaybackMode) return;
                 if (e.ChangedButton == MouseButton.Left || e.ChangedButton == MouseButton.Middle) Pause();
             };
         }

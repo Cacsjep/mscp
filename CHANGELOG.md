@@ -2,10 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.6.1] - 2026-05-04
-- Fix Metadata Display: Setup Mode Display proper scaling
-- Fix Metadata Display: Bar ticks and unit suffic visual clash
-- Improve Metadata Display: Reduce default tickness to have more modern look
+## [2.6.6] - 2026-05-04
+- Add Metadata Display: **Line Chart** render type. Time-series view of any numeric data key with selectable window (60 seconds up to 24 hours), Mean / Min / Max aggregation into time buckets, optional min/max envelope band, Straight / Smooth / Step line types, configurable color, thickness, fill area and markers, optional dashed warn / critical threshold lines, and zoom and pan (mouse wheel and drag).
+- Add Metadata Display: **Live archive backfill** for Line Chart. When the chart appears with a window longer than 60 seconds it is seeded from recorded metadata so the user sees real history immediately instead of waiting for the window to fill from live samples. Switching between Live and Playback or changing the window no longer wipes the visible history.
+- Add Metadata Display: **Playback support** for Line Chart. The chart seeds itself at the current playback time on entry (no scrub needed), the cursor line tracks the timeline position, and large jumps trigger a fresh range scan around the new cursor. Zoom and pan are always enabled in playback and the live "Paused" badge is suppressed.
+- Add Metadata Display: **In-pane time window picker** for Line Chart (top-right of the chart). Lets viewers temporarily switch the window (60 seconds, 5 / 10 / 30 minutes, 1 / 6 / 24 hours) without entering Setup mode. A **Default** entry reverts to the saved value; an asterisk on the badge label flags an active session override. Override is session-only and never modifies the saved configuration.
+- Add Metadata Display: **Loading indicators** while archive backfill runs (cold-start in both Live and Playback, plus after window picker switches).
+- Add Metadata Display: **Threshold enable toggle** for Number, Gauge and Line Chart, mirrored across all three render panels. When off, gauges show a single neutral track and the chart hides its threshold lines.
+- Improve Metadata Display: **Number widget** value and unit now share a true text baseline so readouts like `43.99 km/h` look like a single piece of typography.
+- Improve Metadata Display: **Min / Max chips** redesigned with warn-triangle (lower bound) and critical-circle (upper bound) icons, color-coded to the threshold direction.
+- Improve Metadata Display: **Bar gauge** layout - value, unit, and Min/Max scale labels share one row under the bar; ticks moved above; thinner value indicator that does not hide the scale.
+- Improve Metadata Display: Default **track thickness** of 6 for arc gauges and 2 for bar gauges (max 20) for a cleaner default look.
+- Improve Metadata Display: Setup mode panel scales properly on small panes.
+- Improve Metadata Display: Live preview now uses the same "Waiting for data..." indicator as the runtime widget instead of a key=value status line; Line Chart preview is sized 16:9 so the configured shape matches the runtime pane.
+- Improve Metadata Display: Configuration window capped at 1280px wide.
+- Improve Metadata Display: Diagnostic logging under the `MetadataDisplay` category for chart backfill (start, sample counts, cancellations, faults), playback seeding, and window-picker overrides.
 
 ## [2.6.0] - 2026-05-02
 - Add Metadata Display: A new Smart Client plugin (View Item Plugin) to display metadata contained data in live and also recording mode.
