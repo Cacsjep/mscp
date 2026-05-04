@@ -40,6 +40,10 @@ namespace MetadataDisplay.Client
         // backfilled around so a small scrub just moves the cursor marker, while
         // a big jump (or first entry) triggers a fresh range scan.
         private DateTime? _lastBackfillCursorUtc;
+        // Most recent playback cursor seen via PlaybackCurrentTimeIndication.
+        // Lets the in-pane window picker immediately refill the chart at the
+        // current cursor instead of forcing the user to scrub the timeline.
+        private DateTime? _lastPlaybackCursorUtc;
         private System.Threading.CancellationTokenSource _backfillCts;
         // In-pane window quick-picker: session-only override applied on top of
         // the saved LineWindowSeconds. Cleared by the "Default" entry. Persists
@@ -365,9 +369,7 @@ namespace MetadataDisplay.Client
 
             // Show "Waiting for data..." while the backfill runs so the empty
             // chart isn't mistaken for "channel is dead".
-            noDataPanel.Visibility = Visibility.Visible;
-            chartRoot.Visibility = Visibility.Collapsed;
-            noDataDetail.Text = $"Loading last {FormatWindow(cfg.WindowSeconds)} from archive...";
+            ShowLoadingOverlay($"Loading last {FormatWindow(cfg.WindowSeconds)} from archive...");
 
             try { _backfillCts?.Cancel(); } catch { }
             _backfillCts = new System.Threading.CancellationTokenSource();
@@ -408,8 +410,7 @@ namespace MetadataDisplay.Client
 
                     // Restore the chart visibility regardless of scan outcome —
                     // even an empty backfill still leads into live streaming.
-                    noDataPanel.Visibility = Visibility.Collapsed;
-                    chartRoot.Visibility = Visibility.Visible;
+                    HideLoadingOverlay();
                     StartLive();
                 }));
             }, System.Threading.Tasks.TaskScheduler.Default);
@@ -426,11 +427,16 @@ namespace MetadataDisplay.Client
         // Builds the runtime LineChartConfig honoring any in-pane window override.
         // All chart code paths must go through this rather than calling
         // LineChartConfig.FromManager directly so the session window picker takes effect.
+        // In playback mode zoom/pan is always enabled regardless of the saved
+        // setting — there is no live stream that could fight with the pan-pause
+        // behaviour, and users routinely want to scrub a region of the archive.
         private LineChartConfig BuildLineChartConfig()
         {
             var cfg = LineChartConfig.FromManager(_viewItemManager);
             if (_sessionWindowSecondsOverride.HasValue && _sessionWindowSecondsOverride.Value > 0)
                 cfg.WindowSeconds = _sessionWindowSecondsOverride.Value;
+            if (EnvironmentManager.Instance.Mode == Mode.ClientPlayback)
+                cfg.ZoomEnabled = true;
             return cfg;
         }
 
@@ -530,9 +536,12 @@ namespace MetadataDisplay.Client
             }
             else if (mode == Mode.ClientPlayback)
             {
-                // Force the next playback time message to refill via range scan
-                // around the new (likely larger or smaller) window.
+                // Refill immediately around the most recent cursor instead of
+                // waiting for the user to scrub the timeline. _lastBackfillCursorUtc
+                // is reset so a future scrub still re-evaluates against the new window.
                 _lastBackfillCursorUtc = null;
+                if (_lastPlaybackCursorUtc.HasValue && _pump != null)
+                    BackfillLineChart(_lastPlaybackCursorUtc.Value, cfg);
             }
         }
 
@@ -556,6 +565,10 @@ namespace MetadataDisplay.Client
             var fromUtc = cursorUtc.AddSeconds(-cfg.WindowSeconds);
             _lastBackfillCursorUtc = cursorUtc;
 
+            // Show the same loading overlay live mode uses so window switches and
+            // wide scrubs in playback give visible feedback while the scan runs.
+            ShowLoadingOverlay($"Loading {FormatWindow(cfg.WindowSeconds)} from archive...");
+
             // Cap pulled frames at a few thousand to keep the scan bounded for
             // very high-cadence sources or wide windows.
             const int maxFrames = 4000;
@@ -575,13 +588,29 @@ namespace MetadataDisplay.Client
                     }
                     _lineRenderer.ResetWithSamples(samples);
                     _lineRenderer.SetCursor(cursorUtc);
+                    HideLoadingOverlay();
                     if (samples.Count > 0)
                     {
                         _hasReceivedValue = true;
-                        noDataPanel.Visibility = Visibility.Collapsed;
                     }
                 }));
             }, System.Threading.Tasks.TaskScheduler.Default);
+        }
+
+        // Centralised loading-overlay show/hide for chart backfills. Hides the
+        // chart and shows the spinner panel ("Waiting for data..." styling) with
+        // a custom detail message; HideLoadingOverlay restores the chart.
+        private void ShowLoadingOverlay(string detail)
+        {
+            noDataPanel.Visibility = Visibility.Visible;
+            chartRoot.Visibility = Visibility.Collapsed;
+            noDataDetail.Text = detail ?? "";
+        }
+
+        private void HideLoadingOverlay()
+        {
+            noDataPanel.Visibility = Visibility.Collapsed;
+            chartRoot.Visibility = Visibility.Visible;
         }
 
         private object OnPlaybackTime(Message message, FQID destination, FQID sender)
@@ -605,6 +634,7 @@ namespace MetadataDisplay.Client
                 if (utc.HasValue)
                 {
                     _pump.RequestTime(utc.Value);
+                    _lastPlaybackCursorUtc = utc.Value;
 
                     // LineChart playback: small scrubs just move the cursor, but
                     // jumps bigger than half the visible window (or the first time
