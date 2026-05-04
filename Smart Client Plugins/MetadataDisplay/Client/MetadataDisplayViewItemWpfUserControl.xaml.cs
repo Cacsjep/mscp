@@ -41,6 +41,11 @@ namespace MetadataDisplay.Client
         // a big jump (or first entry) triggers a fresh range scan.
         private DateTime? _lastBackfillCursorUtc;
         private System.Threading.CancellationTokenSource _backfillCts;
+        // In-pane window quick-picker: session-only override applied on top of
+        // the saved LineWindowSeconds. Cleared by the "Default" entry. Persists
+        // across mode toggles within this view-item lifetime; cleared on full
+        // Reconfigure (Save).
+        private int? _sessionWindowSecondsOverride;
         private bool _hasReceivedValue;
         private DispatcherTimer _staleTicker;
         private int _staleSeconds;
@@ -74,9 +79,12 @@ namespace MetadataDisplay.Client
         }
 
         // Called by the configuration window after a Save so the rendered widget
-        // picks up the new config without needing a mode toggle.
+        // picks up the new config without needing a mode toggle. Drops any
+        // session window override since the user has now changed the saved value
+        // and the override would otherwise mask the new setting.
         internal void Reconfigure()
         {
+            _sessionWindowSecondsOverride = null;
             ApplyMode(EnvironmentManager.Instance.Mode);
         }
 
@@ -134,7 +142,7 @@ namespace MetadataDisplay.Client
                 // other render types).
                 if (isChart && _viewItemManager.RenderType == "LineChart")
                 {
-                    var cfg = LineChartConfig.FromManager(_viewItemManager);
+                    var cfg = BuildLineChartConfig();
                     if (cfg.WindowSeconds > 60)
                     {
                         BackfillLineChartLive(cfg);
@@ -415,6 +423,127 @@ namespace MetadataDisplay.Client
             return $"{seconds}s";
         }
 
+        // Builds the runtime LineChartConfig honoring any in-pane window override.
+        // All chart code paths must go through this rather than calling
+        // LineChartConfig.FromManager directly so the session window picker takes effect.
+        private LineChartConfig BuildLineChartConfig()
+        {
+            var cfg = LineChartConfig.FromManager(_viewItemManager);
+            if (_sessionWindowSecondsOverride.HasValue && _sessionWindowSecondsOverride.Value > 0)
+                cfg.WindowSeconds = _sessionWindowSecondsOverride.Value;
+            return cfg;
+        }
+
+        private static readonly (string Label, int Seconds)[] _windowPresets = new (string, int)[]
+        {
+            ("Last 60 seconds",  60),
+            ("Last 5 minutes",   300),
+            ("Last 10 minutes",  600),
+            ("Last 30 minutes",  1800),
+            ("Last 1 hour",      3600),
+            ("Last 6 hours",     21600),
+            ("Last 24 hours",    86400),
+        };
+
+        private void OnWindowPickerClick(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            BuildWindowPickerOptions();
+            windowPickerPopup.IsOpen = !windowPickerPopup.IsOpen;
+        }
+
+        private void BuildWindowPickerOptions()
+        {
+            windowPickerOptions.Children.Clear();
+            int currentEffective = BuildLineChartConfig().WindowSeconds;
+            foreach (var p in _windowPresets)
+            {
+                int sec = p.Seconds;
+                bool isCurrent = sec == currentEffective;
+                windowPickerOptions.Children.Add(CreateWindowPickerItem(p.Label, isCurrent, () => SetSessionWindow(sec)));
+            }
+            // Separator + Default entry. "Default" reverts the override and
+            // re-reads the saved configuration.
+            windowPickerOptions.Children.Add(new System.Windows.Controls.Border
+            {
+                Height = 1,
+                Background = new SolidColorBrush(Color.FromRgb(0x33, 0x3E, 0x42)),
+                Margin = new Thickness(4, 2, 4, 2),
+            });
+            int savedDefault = LineChartConfig.FromManager(_viewItemManager).WindowSeconds;
+            string defaultLabel = $"Default ({FormatWindow(savedDefault)})";
+            windowPickerOptions.Children.Add(CreateWindowPickerItem(defaultLabel, !_sessionWindowSecondsOverride.HasValue, () => SetSessionWindow(null)));
+        }
+
+        private System.Windows.FrameworkElement CreateWindowPickerItem(string label, bool isCurrent, Action onClick)
+        {
+            var b = new System.Windows.Controls.Border
+            {
+                Padding = new Thickness(10, 4, 10, 4),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Background = isCurrent
+                    ? (Brush)new SolidColorBrush(Color.FromRgb(0x2A, 0x35, 0x39))
+                    : System.Windows.Media.Brushes.Transparent,
+            };
+            var tb = new System.Windows.Controls.TextBlock
+            {
+                Text = label,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
+                FontSize = 12,
+                FontWeight = isCurrent ? FontWeights.SemiBold : FontWeights.Normal,
+            };
+            b.Child = tb;
+            b.MouseEnter += (s, e) => b.Background = new SolidColorBrush(Color.FromRgb(0x33, 0x3E, 0x42));
+            b.MouseLeave += (s, e) =>
+                b.Background = isCurrent
+                    ? (Brush)new SolidColorBrush(Color.FromRgb(0x2A, 0x35, 0x39))
+                    : System.Windows.Media.Brushes.Transparent;
+            b.MouseLeftButtonUp += (s, e) =>
+            {
+                e.Handled = true;
+                windowPickerPopup.IsOpen = false;
+                onClick();
+            };
+            return b;
+        }
+
+        private void SetSessionWindow(int? overrideSeconds)
+        {
+            _sessionWindowSecondsOverride = overrideSeconds;
+            UpdateWindowPickerLabel();
+            if (_lineRenderer == null) return;
+
+            var cfg = BuildLineChartConfig();
+            _lineRenderer.Configure(cfg);
+
+            var mode = EnvironmentManager.Instance.Mode;
+            if (mode == Mode.ClientLive)
+            {
+                // Tear down the live subscription and re-enter through the same
+                // path ApplyMode uses, so a wide window backfills from archive
+                // first and a short window starts streaming immediately.
+                StopLive();
+                if (cfg.WindowSeconds > 60)
+                    BackfillLineChartLive(cfg);
+                else
+                    StartLive();
+            }
+            else if (mode == Mode.ClientPlayback)
+            {
+                // Force the next playback time message to refill via range scan
+                // around the new (likely larger or smaller) window.
+                _lastBackfillCursorUtc = null;
+            }
+        }
+
+        private void UpdateWindowPickerLabel()
+        {
+            int effective = BuildLineChartConfig().WindowSeconds;
+            string label = FormatWindow(effective);
+            if (_sessionWindowSecondsOverride.HasValue) label += "*";
+            windowPickerText.Text = label;
+        }
+
         // Kick off a range scan covering [cursor - window, cursor] and on success
         // bulk-load the results into the line chart. Cancels any previous in-flight
         // scan first so rapid scrubbing doesn't pile up overlapping requests.
@@ -484,7 +613,7 @@ namespace MetadataDisplay.Client
                     if (_lineRenderer != null)
                     {
                         _lineRenderer.SetCursor(utc.Value);
-                        var cfg = LineChartConfig.FromManager(_viewItemManager);
+                        var cfg = BuildLineChartConfig();
                         bool needBackfill = !_lastBackfillCursorUtc.HasValue
                             || Math.Abs((utc.Value - _lastBackfillCursorUtc.Value).TotalSeconds) > cfg.WindowSeconds / 2.0;
                         if (needBackfill)
@@ -530,7 +659,7 @@ namespace MetadataDisplay.Client
                     break;
                 case "LineChart":
                     _lineRenderer = new LineChartRenderer();
-                    _lineRenderer.Configure(LineChartConfig.FromManager(_viewItemManager));
+                    _lineRenderer.Configure(BuildLineChartConfig());
                     visual = _lineRenderer.Visual;
                     isChart = true;
                     break;
@@ -549,6 +678,7 @@ namespace MetadataDisplay.Client
             {
                 chartHost.Children.Add(visual);
                 ApplyChartTitle();
+                UpdateWindowPickerLabel();
             }
             else
             {
