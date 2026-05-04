@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.1] - 2026-05-04
+- Fix Metadata Display: Setup Mode Display proper scaling
+- Fix Metadata Display: Bar ticks and unit suffic visual clash
+- Improve Metadata Display: Reduce default tickness to have more modern look
+
 ## [2.6.0] - 2026-05-02
 - Add Metadata Display: A new Smart Client plugin (View Item Plugin) to display metadata contained data in live and also recording mode.
 

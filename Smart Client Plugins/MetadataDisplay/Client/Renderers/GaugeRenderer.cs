@@ -37,6 +37,12 @@ namespace MetadataDisplay.Client.Renderers
             if (int.TryParse(m.GaugeTickCount, NumberStyles.Integer, CultureInfo.InvariantCulture, out var tc) && tc >= 0)
                 tickCount = tc;
 
+            // Defaults: bar reads narrow (2), arc/modern read at 6. Stored value
+            // wins; clamp to the documented max of 20.
+            double thickness = ParseDouble(m.GaugeTrackThickness, DefaultTrackThickness(style));
+            if (thickness > MaxTrackThickness) thickness = MaxTrackThickness;
+            if (thickness < 0) thickness = 0;
+
             return new GaugeConfig
             {
                 RangeMin = rmin,
@@ -46,10 +52,15 @@ namespace MetadataDisplay.Client.Renderers
                 ValueFontSize = ParseDouble(m.GaugeValueFontSize, 34),
                 ShowTicks = string.Equals(m.GaugeShowTicks, "true", StringComparison.OrdinalIgnoreCase),
                 TickCount = tickCount,
-                TrackThickness = ParseDouble(m.GaugeTrackThickness, 14),
+                TrackThickness = thickness,
                 Numeric = NumericConfig.FromManager(m),
             };
         }
+
+        public const double MaxTrackThickness = 20;
+
+        public static double DefaultTrackThickness(GaugeStyle style)
+            => style == GaugeStyle.Bar ? 2 : 6;
 
         private static double ParseDouble(string s, double fallback)
         {
@@ -64,7 +75,6 @@ namespace MetadataDisplay.Client.Renderers
         private readonly Canvas _canvas;
         private readonly TextBlock _valueText;
         private readonly TextBlock _unitText;
-        private readonly StackPanel _labelStack;
 
         // Arc geometry constants (logical canvas size 320x200; outer Viewbox scales).
         // The arc is anchored near the top of the canvas so we don't waste vertical
@@ -81,6 +91,9 @@ namespace MetadataDisplay.Client.Renderers
                 Background = Brushes.Transparent,
                 ClipToBounds = false,
             };
+            // Value and unit live directly on the canvas (Width = LogicalW + centered
+            // text alignment) so each style can position them independently. The bar
+            // style needs the unit below the bar, away from the top-mounted ticks.
             _valueText = new TextBlock
             {
                 Text = "—",
@@ -88,6 +101,7 @@ namespace MetadataDisplay.Client.Renderers
                 FontSize = WidgetTheme.FontValue,
                 FontWeight = FontWeights.SemiBold,
                 TextAlignment = TextAlignment.Center,
+                Width = LogicalW,
             };
             _unitText = new TextBlock
             {
@@ -95,13 +109,12 @@ namespace MetadataDisplay.Client.Renderers
                 Foreground = new SolidColorBrush(WidgetTheme.UnitColor),
                 FontSize = WidgetTheme.FontUnit,
                 TextAlignment = TextAlignment.Center,
+                Width = LogicalW,
             };
-            _labelStack = new StackPanel { Orientation = Orientation.Vertical, Width = LogicalW };
-            _valueText.HorizontalAlignment = HorizontalAlignment.Center;
-            _unitText.HorizontalAlignment = HorizontalAlignment.Center;
-            _labelStack.Children.Add(_valueText);
-            _labelStack.Children.Add(_unitText);
-            _canvas.Children.Add(_labelStack);
+            Canvas.SetLeft(_valueText, 0);
+            Canvas.SetLeft(_unitText, 0);
+            _canvas.Children.Add(_valueText);
+            _canvas.Children.Add(_unitText);
 
             _root = new Grid();
             _root.Children.Add(_canvas);
@@ -114,66 +127,84 @@ namespace MetadataDisplay.Client.Renderers
 
         public void Update(string rawValue, GaugeConfig cfg)
         {
-            // Clear all canvas children except the persistent label stack.
-            for (int i = _canvas.Children.Count - 1; i >= 0; i--)
-            {
-                if (!ReferenceEquals(_canvas.Children[i], _labelStack))
-                    _canvas.Children.RemoveAt(i);
-            }
+            ClearCanvasExceptLabels();
             double scale = WidgetTheme.DensityScale(Density);
             _unitText.Text = cfg.Numeric.Unit ?? "";
             _unitText.FontSize = WidgetTheme.FontUnit * scale;
             _valueText.FontSize = cfg.ValueFontSize > 0 ? cfg.ValueFontSize : WidgetTheme.FontValue;
-            _labelStack.Visibility = cfg.ShowValue ? Visibility.Visible : Visibility.Collapsed;
+            _valueText.Visibility = cfg.ShowValue ? Visibility.Visible : Visibility.Collapsed;
+            _unitText.Visibility = (cfg.ShowValue && !string.IsNullOrEmpty(_unitText.Text))
+                ? Visibility.Visible : Visibility.Collapsed;
 
             double? v = ParseValue(rawValue);
             _valueText.Text = v.HasValue ? FormatNumber(v.Value) : (rawValue ?? "—");
 
+            // Measure so we know the rendered text height when stacking value+unit.
+            _valueText.Measure(new Size(LogicalW, double.PositiveInfinity));
+            _unitText.Measure(new Size(LogicalW, double.PositiveInfinity));
+            double valueH = _valueText.Visibility == Visibility.Visible ? _valueText.DesiredSize.Height : 0;
+            double unitH  = _unitText.Visibility  == Visibility.Visible ? _unitText.DesiredSize.Height  : 0;
+
             switch (cfg.Style)
             {
                 case GaugeStyle.Bar:
-                    _canvas.Height = 135;
+                {
                     DrawBar(v, cfg);
-                    Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 8);
+                    Canvas.SetTop(_valueText, 8);
+                    // Bar geometry mirrors DrawBar: top=70, bar height = trackThickness*2.5
+                    // (or 36 fallback). Min/max scale labels sit on the row below the bar;
+                    // the unit shares that row, centered between them — keeps the dense
+                    // ticks at the top of the bar from colliding with the unit label.
+                    double barH = cfg.TrackThickness > 0 ? cfg.TrackThickness * 2.5 : 36;
+                    double labelY = 70 + barH + 4;
+                    Canvas.SetTop(_unitText, labelY);
+                    double bottomTextH = Math.Max(unitH, WidgetTheme.FontTickLabel + 4);
+                    _canvas.Height = labelY + bottomTextH + 6;
                     break;
+                }
                 case GaugeStyle.Arc270:
                     _canvas.Height = 195;
                     DrawArc(v, cfg, sweepDegrees: 270);
-                    Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 80);
+                    Canvas.SetTop(_valueText, 80);
+                    Canvas.SetTop(_unitText, 80 + valueH);
                     break;
                 case GaugeStyle.Modern270:
                     _canvas.Height = 180;
                     DrawModernArc(v, cfg, sweepDegrees: 270);
-                    Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 65);
+                    Canvas.SetTop(_valueText, 65);
+                    Canvas.SetTop(_unitText, 65 + valueH);
                     break;
                 case GaugeStyle.Modern180:
                     _canvas.Height = 150;
                     DrawModernArc(v, cfg, sweepDegrees: 180);
-                    Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 100);
+                    Canvas.SetTop(_valueText, 100);
+                    Canvas.SetTop(_unitText, 100 + valueH);
                     break;
                 case GaugeStyle.Arc180:
                 default:
                     _canvas.Height = 165;
                     DrawArc(v, cfg, sweepDegrees: 180);
-                    Canvas.SetLeft(_labelStack, 0);
-                    Canvas.SetTop(_labelStack, 105);
+                    Canvas.SetTop(_valueText, 105);
+                    Canvas.SetTop(_unitText, 105 + valueH);
                     break;
             }
         }
 
         public void Clear()
         {
-            for (int i = _canvas.Children.Count - 1; i >= 0; i--)
-            {
-                if (!ReferenceEquals(_canvas.Children[i], _labelStack))
-                    _canvas.Children.RemoveAt(i);
-            }
+            ClearCanvasExceptLabels();
             _valueText.Text = "—";
             _unitText.Text = "";
+        }
+
+        private void ClearCanvasExceptLabels()
+        {
+            for (int i = _canvas.Children.Count - 1; i >= 0; i--)
+            {
+                var child = _canvas.Children[i];
+                if (!ReferenceEquals(child, _valueText) && !ReferenceEquals(child, _unitText))
+                    _canvas.Children.RemoveAt(i);
+            }
         }
 
         // ───────── Arc drawing ─────────
@@ -429,9 +460,9 @@ namespace MetadataDisplay.Client.Renderers
                     {
                         X1 = x, Y1 = tickY1, X2 = x, Y2 = tickY2,
                         Stroke = new SolidColorBrush(WidgetTheme.SubtleColor),
-                        StrokeThickness = 1.4,
-                        StrokeStartLineCap = PenLineCap.Round,
-                        StrokeEndLineCap = PenLineCap.Round,
+                        StrokeThickness = 0.7,
+                        StrokeStartLineCap = PenLineCap.Flat,
+                        StrokeEndLineCap = PenLineCap.Flat,
                     });
                 }
             }
@@ -453,13 +484,14 @@ namespace MetadataDisplay.Client.Renderers
             {
                 var v = Clamp(value.Value, rmin, rmax);
                 var x = ValueToX(v, rmin, rmax, left, width);
+                const double markerWidth = 2;
                 var marker = new System.Windows.Shapes.Rectangle
                 {
-                    Width = 4,
+                    Width = markerWidth,
                     Height = height + 12,
                     Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF)),
                 };
-                Canvas.SetLeft(marker, x - 2);
+                Canvas.SetLeft(marker, x - markerWidth / 2);
                 Canvas.SetTop(marker, top - 6);
                 _canvas.Children.Add(marker);
             }

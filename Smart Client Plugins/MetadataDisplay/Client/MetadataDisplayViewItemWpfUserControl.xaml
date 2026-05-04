@@ -67,12 +67,13 @@
                            MaxWidth="320"/>
             </StackPanel>
         </Grid>
-        <StackPanel x:Name="setupPanel"
-                    Orientation="Vertical"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    MaxWidth="480"
-                    Visibility="Collapsed">
+        <Viewbox x:Name="setupPanel"
+                 Stretch="Uniform"
+                 StretchDirection="DownOnly"
+                 Margin="12"
+                 Visibility="Collapsed">
+        <StackPanel Orientation="Vertical"
+                    MaxWidth="480">
             <TextBlock x:Name="setupHeader"
                        Foreground="#FFE6EAEC"
                        FontSize="14"
@@ -126,5 +127,6 @@
                        Visibility="Collapsed"
                        TextWrapping="Wrap"/>
         </StackPanel>
+        </Viewbox>
     </Grid>
 </external:ViewItemWpfUserControl>

@@ -243,9 +243,11 @@ namespace MetadataDisplay.Client
             set => SetProperty(GaugeTickCountKey, value);
         }
 
+        // Returns null when the user hasn't set a value — callers (renderer + config
+        // window) substitute a style-specific default (Bar=2, others=6).
         public string GaugeTrackThickness
         {
-            get => GetProperty(GaugeTrackThicknessKey) ?? "14";
+            get => GetProperty(GaugeTrackThicknessKey);
             set => SetProperty(GaugeTrackThicknessKey, value);
         }
 

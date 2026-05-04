@@ -46,6 +46,11 @@ namespace MetadataDisplay.Client
         private DispatcherTimer _ageTicker;
         private bool _uiReady;
 
+        // Tracks the gauge style at last hydrate / style-change so we can swap the
+        // thickness textbox between style defaults (Bar=2, others=6) only when the
+        // user hadn't typed a custom value.
+        private GaugeStyle _prevGaugeStyle;
+
         // Live preview renderers (mirror the actual ViewItem widget)
         private LampRenderer _previewLamp;
         private NumberRenderer _previewNumber;
@@ -138,7 +143,9 @@ namespace MetadataDisplay.Client
             gaugeValueFontSizeBox.Text = _vim.GaugeValueFontSize ?? "34";
             gaugeShowTicksCheck.IsChecked = string.Equals(_vim.GaugeShowTicks, "true", StringComparison.OrdinalIgnoreCase);
             gaugeTickCountBox.Text = _vim.GaugeTickCount ?? "10";
-            gaugeTrackThicknessBox.Text = _vim.GaugeTrackThickness ?? "14";
+            // Stored value wins; otherwise show the style-specific default (Bar=2, others=6).
+            gaugeTrackThicknessBox.Text = _vim.GaugeTrackThickness ?? FormatNumber(GaugeConfig.DefaultTrackThickness(CurrentGaugeStyle()));
+            _prevGaugeStyle = CurrentGaugeStyle();
 
             staleSecondsBox.Text = _vim.StaleSeconds ?? "0";
 
@@ -353,7 +360,7 @@ namespace MetadataDisplay.Client
             gaugeNumMinBox.TextChanged += (s, e) => ReRenderPreview();
             gaugeNumMaxBox.TextChanged += (s, e) => ReRenderPreview();
             unitBoxGauge.TextChanged += (s, e) => ReRenderPreview();
-            gaugeStyleCombo.SelectionChanged += (s, e) => { BuildPreviewHost(); ReRenderPreview(); };
+            gaugeStyleCombo.SelectionChanged += (s, e) => { OnGaugeStyleChanged(); BuildPreviewHost(); ReRenderPreview(); };
             highIsBadCheck.Checked += (s, e) => ReRenderPreview();
             highIsBadCheck.Unchecked += (s, e) => ReRenderPreview();
             gaugeHighIsBadCheck.Checked += (s, e) => ReRenderPreview();
@@ -970,6 +977,10 @@ namespace MetadataDisplay.Client
             if (int.TryParse(gaugeTickCountBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ptc) && ptc >= 0)
                 tc = ptc;
 
+            double thickness = TryParseDouble(gaugeTrackThicknessBox.Text) ?? GaugeConfig.DefaultTrackThickness(style);
+            if (thickness > GaugeConfig.MaxTrackThickness) thickness = GaugeConfig.MaxTrackThickness;
+            if (thickness < 0) thickness = 0;
+
             return new GaugeConfig
             {
                 RangeMin = rmin,
@@ -979,7 +990,7 @@ namespace MetadataDisplay.Client
                 ValueFontSize = TryParseDouble(gaugeValueFontSizeBox.Text) ?? 34,
                 ShowTicks = gaugeShowTicksCheck.IsChecked == true,
                 TickCount = tc,
-                TrackThickness = TryParseDouble(gaugeTrackThicknessBox.Text) ?? 14,
+                TrackThickness = thickness,
                 Numeric = BuildNumericConfigFromUi(true),
             };
         }
@@ -1371,7 +1382,15 @@ namespace MetadataDisplay.Client
             _vim.GaugeValueFontSize = NormalizeNumberText(gaugeValueFontSizeBox.Text, "34");
             _vim.GaugeShowTicks = (gaugeShowTicksCheck.IsChecked == true) ? "true" : "false";
             _vim.GaugeTickCount = NormalizeNumberText(gaugeTickCountBox.Text, "10");
-            _vim.GaugeTrackThickness = NormalizeNumberText(gaugeTrackThicknessBox.Text, "14");
+            // Default fallback follows the selected style; clamp to documented max of 20.
+            var styleDefault = FormatNumber(GaugeConfig.DefaultTrackThickness(CurrentGaugeStyle()));
+            var thicknessText = NormalizeNumberText(gaugeTrackThicknessBox.Text, styleDefault);
+            if (double.TryParse(thicknessText, NumberStyles.Float, CultureInfo.InvariantCulture, out var thicknessNum)
+                && thicknessNum > GaugeConfig.MaxTrackThickness)
+            {
+                thicknessText = FormatNumber(GaugeConfig.MaxTrackThickness);
+            }
+            _vim.GaugeTrackThickness = thicknessText;
 
             _vim.StaleSeconds = NormalizeNumberText(staleSecondsBox.Text, "0");
 
@@ -1390,6 +1409,38 @@ namespace MetadataDisplay.Client
             if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
                 return v.ToString(CultureInfo.InvariantCulture);
             return fallback;
+        }
+
+        private static string FormatNumber(double v)
+        {
+            if (v == (long)v) return ((long)v).ToString(CultureInfo.InvariantCulture);
+            return v.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private GaugeStyle CurrentGaugeStyle()
+        {
+            var styleText = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.Equals(styleText, "Arc270", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Arc270;
+            if (string.Equals(styleText, "Bar", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Bar;
+            if (string.Equals(styleText, "Modern270", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Modern270;
+            if (string.Equals(styleText, "Modern180", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Modern180;
+            return GaugeStyle.Arc180;
+        }
+
+        // When the user picks a different gauge style and the thickness textbox still
+        // holds the previous style's default, swap to the new style's default. A custom
+        // value the user typed (anything that doesn't match the prior default) is left
+        // alone so we don't trash deliberate edits.
+        private void OnGaugeStyleChanged()
+        {
+            if (!_uiReady) return;
+            var newStyle = CurrentGaugeStyle();
+            var prevDefault = FormatNumber(GaugeConfig.DefaultTrackThickness(_prevGaugeStyle));
+            if (string.Equals((gaugeTrackThicknessBox.Text ?? "").Trim(), prevDefault, StringComparison.Ordinal))
+            {
+                gaugeTrackThicknessBox.Text = FormatNumber(GaugeConfig.DefaultTrackThickness(newStyle));
+            }
+            _prevGaugeStyle = newStyle;
         }
 
         // ───────── Helpers ─────────
