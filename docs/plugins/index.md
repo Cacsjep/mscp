@@ -117,6 +117,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-weather-partly-cloudy"></i></div>
     <div class="pt"><span class="pn">Weather</span><span class="pd">Live weather display powered by Open-Meteo</span></div>
   </a>
+  <a class="pr" href="smart-client/web-viewer/">
+    <div class="pi sc"><i class="mdi mdi-web"></i></div>
+    <div class="pt"><span class="pn">Web Viewer</span><span class="pd">Embed any web page (dashboard, status board, intranet site) in a view item with optional credentials and self-signed cert tolerance</span></div>
+  </a>
 </div>
 
 ### Device Drivers
