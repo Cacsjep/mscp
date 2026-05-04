@@ -15,9 +15,13 @@
   <ItemGroup>
     <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
-    <!-- LiveCharts2 + SkiaSharp for the LineChart render type. Kept out of ILRepack
-         (large + SkiaSharp ships native libSkiaSharp.dll / libHarfBuzzSharp.dll)
-         so they ship as side-by-side DLLs in the plugin folder. -->
+    <!-- LiveCharts2 + SkiaSharp for the LineChart render type. LiveChartsCore* is
+         ILRepacked /internalize'd into MetadataDisplay.dll (see MergeLiveCharts
+         target below) because every LiveCharts2 rc/beta ships AssemblyVersion
+         2.0.0.0 with API drift between rcs — without internalization, two plugins
+         each carrying a different rc collide in Smart Client's AppDomain and the
+         second one to need a type hits TypeLoadException. SkiaSharp/HarfBuzz stay
+         external (large + native libSkiaSharp.dll / libHarfBuzzSharp.dll). -->
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc5.4" />
   </ItemGroup>
 
@@ -37,5 +41,17 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- Merge LiveChartsCore* into MetadataDisplay.dll with /internalize so a
+       different LiveCharts rc shipped by another MIPPlugin can't satisfy
+       (or fail to satisfy) our type references via Fusion's same-AssemblyVersion
+       coalescing. Runs after MergeCommunitySDK so CommunitySDK is already folded
+       in, and before MIPDeploy so the side-by-side LiveChartsCore DLLs never
+       reach the plugin folder. -->
+  <Target Name="MergeLiveCharts" AfterTargets="MergeCommunitySDK" BeforeTargets="MIPDeploy"
+          Condition="Exists('$(TargetDir)LiveChartsCore.dll')">
+    <Exec Command="&quot;$(PkgILRepack)\tools\ILRepack.exe&quot; /internalize /lib:&quot;$(TargetDir).&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)LiveChartsCore.dll&quot; &quot;$(TargetDir)LiveChartsCore.SkiaSharpView.dll&quot; &quot;$(TargetDir)LiveChartsCore.SkiaSharpView.WPF.dll&quot;" />
+    <Delete Files="$(TargetDir)LiveChartsCore.dll;$(TargetDir)LiveChartsCore.pdb;$(TargetDir)LiveChartsCore.SkiaSharpView.dll;$(TargetDir)LiveChartsCore.SkiaSharpView.pdb;$(TargetDir)LiveChartsCore.SkiaSharpView.WPF.dll;$(TargetDir)LiveChartsCore.SkiaSharpView.WPF.pdb" />
+  </Target>
 
 </Project>

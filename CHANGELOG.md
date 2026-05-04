@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.7.1] - 2026-05-04
+- Fix Metadata Display: `TypeLoadException` for `LiveChartsCore.CoreAxis`2` `LiveChartsCore`, `LiveChartsCore.SkiaSharpView` and `LiveChartsCore.SkiaSharpView.WPF` are now ILRepacked /internalize'd into `MetadataDisplay.dll` so the chart code resolves against its own private copy regardless of what other plugins ship. SkiaSharp / HarfBuzz remain external (large + native libs).
+
 ## [2.7.0] - 2026-05-04
 - Add Web Viewer: New Smart Client view item plugin that embeds a single web page in a view item using Microsoft Edge WebView2. One URL per view item with optional title, HTTP Basic credentials (DPAPI-encrypted under the current Windows user), auto-accept of invalid TLS certificates (default on, for in-house dashboards with self-signed certs), and one-shot auto-fill of the basic-auth prompt (default on). For multi-tab / folder-tree usage with both web pages and RDP, use the existing Remote Manager plugin.
 
