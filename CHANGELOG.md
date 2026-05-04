@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.7.0] - 2026-05-04
+- Add Web Viewer: New Smart Client view item plugin that embeds a single web page in a view item using Microsoft Edge WebView2. One URL per view item with optional title, HTTP Basic credentials (DPAPI-encrypted under the current Windows user), auto-accept of invalid TLS certificates (default on, for in-house dashboards with self-signed certs), and one-shot auto-fill of the basic-auth prompt (default on). For multi-tab / folder-tree usage with both web pages and RDP, use the existing Remote Manager plugin.
+
 ## [2.6.6] - 2026-05-04
 - Add Metadata Display: **Line Chart** render type. Time-series view of any numeric data key with selectable window (60 seconds up to 24 hours), Mean / Min / Max aggregation into time buckets, optional min/max envelope band, Straight / Smooth / Step line types, configurable color, thickness, fill area and markers, optional dashed warn / critical threshold lines, and zoom and pan (mouse wheel and drag).
 - Add Metadata Display: **Live archive backfill** for Line Chart. When the chart appears with a window longer than 60 seconds it is seeded from recorded metadata so the user sees real history immediately instead of waiting for the window to fill from live samples. Switching between Live and Playback or changing the window no longer wipes the visible history.

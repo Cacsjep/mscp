@@ -56,6 +56,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimelineJump", "Smart Clien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetadataDisplay", "Smart Client Plugins\MetadataDisplay\MetadataDisplay.csproj", "{2BF4B6FA-5440-4210-840F-8577E013F5EE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebViewer", "Smart Client Plugins\WebViewer\WebViewer.csproj", "{C7D8E9F0-1234-4567-89AB-CDEF01234567}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InstallerCustomActions", "installer\customactions\InstallerCustomActions.csproj", "{97D26033-9FB5-4D75-85B9-F11D5495A7C7}"
 EndProject
 Global
@@ -258,6 +260,14 @@ Global
 		{D4F8A726-3B91-4C5E-A0F8-7B2D9E4C1A37}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D4F8A726-3B91-4C5E-A0F8-7B2D9E4C1A37}.Release|x64.ActiveCfg = Release|Any CPU
 		{D4F8A726-3B91-4C5E-A0F8-7B2D9E4C1A37}.Release|x64.Build.0 = Release|Any CPU
+		{C7D8E9F0-1234-4567-89AB-CDEF01234567}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7D8E9F0-1234-4567-89AB-CDEF01234567}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7D8E9F0-1234-4567-89AB-CDEF01234567}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C7D8E9F0-1234-4567-89AB-CDEF01234567}.Debug|x64.Build.0 = Debug|Any CPU
+		{C7D8E9F0-1234-4567-89AB-CDEF01234567}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7D8E9F0-1234-4567-89AB-CDEF01234567}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7D8E9F0-1234-4567-89AB-CDEF01234567}.Release|x64.ActiveCfg = Release|Any CPU
+		{C7D8E9F0-1234-4567-89AB-CDEF01234567}.Release|x64.Build.0 = Release|Any CPU
 		{2BF4B6FA-5440-4210-840F-8577E013F5EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2BF4B6FA-5440-4210-840F-8577E013F5EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2BF4B6FA-5440-4210-840F-8577E013F5EE}.Debug|x64.ActiveCfg = Debug|Any CPU

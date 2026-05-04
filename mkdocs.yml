@@ -59,6 +59,7 @@ nav:
       - Timeline Jump: plugins/smart-client/timeline-jump.md
       - View Carousel: plugins/smart-client/view-carousel.md
       - Weather: plugins/smart-client/weather.md
+      - Web Viewer: plugins/smart-client/web-viewer.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md
     - RTSP Driver: plugins/device-drivers/rtsp.md
