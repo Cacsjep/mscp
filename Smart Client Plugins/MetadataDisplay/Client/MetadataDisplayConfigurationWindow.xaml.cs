@@ -168,8 +168,15 @@ namespace MetadataDisplay.Client
             lineYMaxBox.Text = _vim.LineYMax ?? "";
             _lineColor.HexValue = _vim.LineColor ?? "#FF4FC3F7";
             lineFillCheck.IsChecked = string.Equals(_vim.LineFill, "true", StringComparison.OrdinalIgnoreCase);
-            lineSmoothCheck.IsChecked = string.Equals(_vim.LineSmoothing, "true", StringComparison.OrdinalIgnoreCase);
             lineMarkerCheck.IsChecked = string.Equals(_vim.LineShowMarker, "true", StringComparison.OrdinalIgnoreCase);
+            lineZoomCheck.IsChecked = !string.Equals(_vim.LineZoomEnabled, "false", StringComparison.OrdinalIgnoreCase);
+            // LineType wins over the older LineSmoothing flag; if LineType isn't set
+            // yet (legacy widget), promote LineSmoothing="true" to "Smooth".
+            string storedType = _vim.LineType;
+            if (string.IsNullOrEmpty(storedType))
+                storedType = string.Equals(_vim.LineSmoothing, "true", StringComparison.OrdinalIgnoreCase) ? "Smooth" : "Straight";
+            SelectComboItem(lineTypeCombo, storedType);
+            lineThicknessBox.Text = _vim.LineThickness ?? "2";
             // Reuse the shared NumMin/NumMax/Direction + colors for thresholds.
             lineNumMinBox.Text = _vim.NumMin ?? "";
             lineNumMaxBox.Text = _vim.NumMax ?? "";
@@ -484,10 +491,12 @@ namespace MetadataDisplay.Client
             lineYMaxBox.TextChanged += (s, e) => ReconfigureLinePreview();
             lineFillCheck.Checked += (s, e) => ReconfigureLinePreview();
             lineFillCheck.Unchecked += (s, e) => ReconfigureLinePreview();
-            lineSmoothCheck.Checked += (s, e) => ReconfigureLinePreview();
-            lineSmoothCheck.Unchecked += (s, e) => ReconfigureLinePreview();
             lineMarkerCheck.Checked += (s, e) => ReconfigureLinePreview();
             lineMarkerCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineZoomCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineZoomCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineTypeCombo.SelectionChanged += (s, e) => ReconfigureLinePreview();
+            lineThicknessBox.TextChanged += (s, e) => ReconfigureLinePreview();
             lineNumMinBox.TextChanged += (s, e) => ReconfigureLinePreview();
             lineNumMaxBox.TextChanged += (s, e) => ReconfigureLinePreview();
             lineHighIsBadCheck.Checked += (s, e) => ReconfigureLinePreview();
@@ -1173,10 +1182,19 @@ namespace MetadataDisplay.Client
                 YMax = TryParseDouble(lineYMaxBox.Text),
                 LineColor = ColorUtil.Parse(_lineColor.HexValue, Color.FromRgb(0x4F, 0xC3, 0xF7)),
                 FillEnabled = lineFillCheck.IsChecked == true,
-                Smooth = lineSmoothCheck.IsChecked == true,
                 ShowMarker = lineMarkerCheck.IsChecked == true,
+                LineType = ParseLineType((lineTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()),
+                LineThickness = TryParseDouble(lineThicknessBox.Text) ?? 2,
+                ZoomEnabled = lineZoomCheck.IsChecked == true,
                 Numeric = numeric,
             };
+        }
+
+        private static LineChartType ParseLineType(string s)
+        {
+            if (string.Equals(s, "Smooth", StringComparison.OrdinalIgnoreCase)) return LineChartType.Smooth;
+            if (string.Equals(s, "Step",   StringComparison.OrdinalIgnoreCase)) return LineChartType.Step;
+            return LineChartType.Straight;
         }
 
         // Reconfigure existing line preview without losing accumulated samples.
@@ -1284,6 +1302,7 @@ namespace MetadataDisplay.Client
             yield return gaugeTickCountBox;
             yield return gaugeTrackThicknessBox;
             yield return lineWindowSecondsBox;
+            yield return lineThicknessBox;
             yield return lineYMinBox;
             yield return lineYMaxBox;
             yield return lineNumMinBox;
@@ -1600,8 +1619,13 @@ namespace MetadataDisplay.Client
             _vim.LineYMax = lineYMaxBox.Text?.Trim() ?? "";
             _vim.LineColor = NormalizeColor(_lineColor.HexValue);
             _vim.LineFill = (lineFillCheck.IsChecked == true) ? "true" : "false";
-            _vim.LineSmoothing = (lineSmoothCheck.IsChecked == true) ? "true" : "false";
             _vim.LineShowMarker = (lineMarkerCheck.IsChecked == true) ? "true" : "false";
+            _vim.LineType = (lineTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Straight";
+            _vim.LineThickness = NormalizeNumberText(lineThicknessBox.Text, "2");
+            _vim.LineZoomEnabled = (lineZoomCheck.IsChecked == true) ? "true" : "false";
+            // Keep the legacy LineSmoothing flag in sync so older renderers see the
+            // same effective behaviour.
+            _vim.LineSmoothing = string.Equals(_vim.LineType, "Smooth", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
 
             _vim.StaleSeconds = NormalizeNumberText(staleSecondsBox.Text, "0");
 

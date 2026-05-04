@@ -57,6 +57,9 @@ namespace MetadataDisplay.Client
         private const string LineFillKey = "LineFill";
         private const string LineSmoothingKey = "LineSmoothing";
         private const string LineShowMarkerKey = "LineShowMarker";
+        private const string LineTypeKey = "LineType";          // Straight | Smooth | Step
+        private const string LineThicknessKey = "LineThickness";
+        private const string LineZoomEnabledKey = "LineZoomEnabled";
 
         // Theme
         private const string WidgetDensityKey = "WidgetDensity";
@@ -313,6 +316,27 @@ namespace MetadataDisplay.Client
         {
             get => GetProperty(LineShowMarkerKey) ?? "false";
             set => SetProperty(LineShowMarkerKey, value);
+        }
+
+        // Straight | Smooth | Step
+        public string LineType
+        {
+            get => GetProperty(LineTypeKey) ?? "Straight";
+            set => SetProperty(LineTypeKey, value);
+        }
+
+        public string LineThickness
+        {
+            get => GetProperty(LineThicknessKey) ?? "2";
+            set => SetProperty(LineThicknessKey, value);
+        }
+
+        // "true" / "false". When on, mouse-wheel zooms the X axis and click-drag pans;
+        // also auto-pauses the rolling-window slide so the user can inspect.
+        public string LineZoomEnabled
+        {
+            get => GetProperty(LineZoomEnabledKey) ?? "true";
+            set => SetProperty(LineZoomEnabledKey, value);
         }
 
         // Compact | Comfortable | Spacious

@@ -49,10 +49,11 @@ namespace MetadataDisplay.Client.Renderers
             _valueRow.Inlines.Add(new Run(" ") { FontSize = WidgetTheme.FontUnitLarge }); // space at unit size
             _valueRow.Inlines.Add(_unitRun);
 
-            // Down-arrow for min, up-arrow for max — matches the colored-pill style
-            // the user asked for (icon + label, outlined with the threshold color).
-            _minChip = BuildChip(EFontAwesomeIcon.Solid_ArrowDown, out _minChipText, out _minChipIcon);
-            _maxChip = BuildChip(EFontAwesomeIcon.Solid_ArrowUp,   out _maxChipText, out _maxChipIcon);
+            // Warn-triangle for the warn boundary, critical-circle for the bad boundary.
+            // Which threshold key (Min vs Max) maps to which severity flips with the
+            // HighIsBad direction — handled in ApplyChipColors.
+            _minChip = BuildChip(EFontAwesomeIcon.Solid_ExclamationTriangle, out _minChipText, out _minChipIcon);
+            _maxChip = BuildChip(EFontAwesomeIcon.Solid_ExclamationCircle,   out _maxChipText, out _maxChipIcon);
             _minChip.Margin = new Thickness(0, 0, 6, 0);
             _maxChip.Margin = new Thickness(6, 0, 0, 0);
 
@@ -109,12 +110,22 @@ namespace MetadataDisplay.Client.Renderers
 
         private void ApplyChipColors(NumericConfig cfg)
         {
-            // With HighIsBad: min boundary = Ok side (green), max boundary = Bad side (red).
-            // With LowIsBad : min boundary = Bad side (red),   max boundary = Ok side (green).
-            Color minColor = cfg.HighIsBad ? cfg.ColorOk : cfg.ColorBad;
-            Color maxColor = cfg.HighIsBad ? cfg.ColorBad : cfg.ColorOk;
-            ApplyChipPalette(_minChip, _minChipText, _minChipIcon, minColor);
-            ApplyChipPalette(_maxChip, _maxChipText, _maxChipIcon, maxColor);
+            // The two threshold keys are the warn / critical boundaries — "OK" is
+            // implicit (everything not flagged). With HighIsBad: Min = warn boundary,
+            // Max = critical boundary. With LowIsBad it inverts so the chip with the
+            // critical icon always names the harder boundary.
+            Color warnColor = cfg.ColorWarn;
+            Color critColor = cfg.ColorBad;
+            if (cfg.HighIsBad)
+            {
+                ApplyChipPalette(_minChip, _minChipText, _minChipIcon, warnColor); // triangle
+                ApplyChipPalette(_maxChip, _maxChipText, _maxChipIcon, critColor); // circle
+            }
+            else
+            {
+                ApplyChipPalette(_minChip, _minChipText, _minChipIcon, critColor); // triangle wears critical color
+                ApplyChipPalette(_maxChip, _maxChipText, _maxChipIcon, warnColor); // circle wears warn color
+            }
         }
 
         private static void ApplyChipPalette(Border chip, TextBlock label, ImageAwesome icon, Color color)
