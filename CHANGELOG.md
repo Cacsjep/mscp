@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.7.1] - 2026-05-04
+## [2.7.2] - 2026-05-04
 - Fix Metadata Display: `TypeLoadException` for `LiveChartsCore.CoreAxis`2` `LiveChartsCore`, `LiveChartsCore.SkiaSharpView` and `LiveChartsCore.SkiaSharpView.WPF` are now ILRepacked /internalize'd into `MetadataDisplay.dll` so the chart code resolves against its own private copy regardless of what other plugins ship. SkiaSharp / HarfBuzz remain external (large + native libs).
 
 ## [2.7.0] - 2026-05-04
