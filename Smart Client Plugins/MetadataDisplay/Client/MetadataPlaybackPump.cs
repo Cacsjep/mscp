@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Data;
@@ -62,6 +64,88 @@ namespace MetadataDisplay.Client
                 utc = utc.ToUniversalTime();
             Interlocked.Exchange(ref _requestedUtcTicks, utc.Ticks);
             _wake.Set();
+        }
+
+        // Range-scan for the LineChart playback backfill. Runs on a fresh
+        // MetadataPlaybackSource off the UI thread so it doesn't fight the live
+        // pump for the same source. Returns extracted (value, timestamp) pairs
+        // covering [from, to] in chronological order.
+        //
+        // We use MetadataPlaybackSource.Get(timestamp, maxTimeAfter, maxCount):
+        // it returns up to maxCount frames forward of `timestamp`. We loop with
+        // the last frame's NextDateTime as the next anchor until we pass `to`
+        // or the server stops returning data.
+        public Task<List<(string Value, DateTime TimestampUtc)>> ScanRangeAsync(
+            DateTime fromUtc, DateTime toUtc, int maxFrames, CancellationToken ct)
+        {
+            return Task.Run(() =>
+            {
+                var results = new List<(string, DateTime)>();
+                if (toUtc <= fromUtc) return results;
+                if (fromUtc.Kind != DateTimeKind.Utc) fromUtc = fromUtc.ToUniversalTime();
+                if (toUtc.Kind   != DateTimeKind.Utc) toUtc   = toUtc.ToUniversalTime();
+
+                MetadataPlaybackSource src = null;
+                try
+                {
+                    src = new MetadataPlaybackSource(_item);
+                    src.Init();
+
+                    var cfg = _cfgProvider("playback-range");
+                    if (cfg == null || string.IsNullOrEmpty(cfg.DataKey)) return results;
+
+                    var cursor = fromUtc;
+                    int chunk = 200;
+                    int safety = 0;
+                    while (!ct.IsCancellationRequested && cursor <= toUtc && safety++ < 1000)
+                    {
+                        List<MetadataPlaybackData> frames = null;
+                        try
+                        {
+                            frames = src.Get(cursor, toUtc - cursor, chunk);
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.Error($"[Pump] ScanRange Get threw: {ex.Message}");
+                            break;
+                        }
+                        if (frames == null || frames.Count == 0) break;
+
+                        DateTime? lastFrameUtc = null;
+                        foreach (var f in frames)
+                        {
+                            if (f == null) continue;
+                            string xml;
+                            try { xml = f.Content?.GetMetadataString(); }
+                            catch { continue; }
+                            if (string.IsNullOrEmpty(xml)) continue;
+
+                            var hit = MetadataExtractor.TryExtract(xml, cfg);
+                            if (hit != null) results.Add((hit.Value, hit.TimestampUtc));
+                            lastFrameUtc = f.DateTime;
+
+                            if (results.Count >= maxFrames) return results;
+                        }
+
+                        if (!lastFrameUtc.HasValue) break;
+                        // Step past the last frame to avoid re-fetching it. NextDateTime
+                        // would be more correct but isn't always populated; +1 tick is
+                        // safe given metadata cadence is well above ticks resolution.
+                        var nextStart = lastFrameUtc.Value.AddTicks(1);
+                        if (nextStart <= cursor) break; // no progress
+                        cursor = nextStart;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"[Pump] ScanRange failed: {ex.Message}");
+                }
+                finally
+                {
+                    SafeClose(src);
+                }
+                return results;
+            }, ct);
         }
 
         private void Run()

@@ -32,6 +32,54 @@
                 </Border>
             </Grid>
         </Viewbox>
+        <!-- Native-resolution host for renderers (LineChart) that draw with SkiaSharp.
+             Bypasses the 320-wide Viewbox so Skia paints at the actual pane size
+             instead of being bitmap-scaled and looking pixelated. The title bar
+             above doesn't apply here — chart renderers handle their own labels. -->
+        <Grid x:Name="chartRoot" Margin="6" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="chartTitleRow" Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="chartTitleText"
+                       Grid.Row="0"
+                       Foreground="#FFCFD7DA"
+                       FontSize="14"
+                       Margin="0,0,0,2"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"/>
+            <Grid x:Name="chartHost" Grid.Row="1" Background="Transparent"/>
+            <!-- Session-only window quick-picker (Grafana-style). Visible only when
+                 the chart is shown; its popup lets the user temporarily switch the
+                 time window without touching the saved configuration. The asterisk
+                 in the badge label indicates an override is active; "Default" reverts. -->
+            <Border x:Name="windowPickerBadge"
+                    Grid.Row="1"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,4,8,0"
+                    Background="#AA1F2528"
+                    BorderBrush="#FF333E42"
+                    BorderThickness="1"
+                    CornerRadius="3"
+                    Padding="6,2"
+                    Cursor="Hand"
+                    MouseLeftButtonUp="OnWindowPickerClick">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="windowPickerText" Text="60s" Foreground="#FFCFD7DA" FontSize="11"/>
+                    <TextBlock Text=" ▾" Foreground="#FFCFD7DA" FontSize="11"/>
+                </StackPanel>
+            </Border>
+            <Popup x:Name="windowPickerPopup"
+                   PlacementTarget="{Binding ElementName=windowPickerBadge}"
+                   Placement="Bottom"
+                   StaysOpen="False"
+                   AllowsTransparency="True">
+                <Border Background="#FF1F2528" BorderBrush="#FF333E42" BorderThickness="1" CornerRadius="3" Padding="2">
+                    <StackPanel x:Name="windowPickerOptions" Orientation="Vertical"/>
+                </Border>
+            </Popup>
+        </Grid>
         <Grid x:Name="noDataPanel"
               HorizontalAlignment="Center"
               VerticalAlignment="Center"
@@ -67,12 +115,13 @@
                            MaxWidth="320"/>
             </StackPanel>
         </Grid>
-        <StackPanel x:Name="setupPanel"
-                    Orientation="Vertical"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    MaxWidth="480"
-                    Visibility="Collapsed">
+        <Viewbox x:Name="setupPanel"
+                 Stretch="Uniform"
+                 StretchDirection="DownOnly"
+                 Margin="12"
+                 Visibility="Collapsed">
+        <StackPanel Orientation="Vertical"
+                    MaxWidth="480">
             <TextBlock x:Name="setupHeader"
                        Foreground="#FFE6EAEC"
                        FontSize="14"
@@ -126,5 +175,6 @@
                        Visibility="Collapsed"
                        TextWrapping="Wrap"/>
         </StackPanel>
+        </Viewbox>
     </Grid>
 </external:ViewItemWpfUserControl>

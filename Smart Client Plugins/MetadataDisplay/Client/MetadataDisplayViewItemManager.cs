@@ -30,7 +30,8 @@ namespace MetadataDisplay.Client
         // Text
         private const string TextFontSizeKey = "TextFontSize";
 
-        // Number / Gauge thresholds
+        // Number / Gauge / Line thresholds
+        private const string ThresholdsEnabledKey = "ThresholdsEnabled";
         private const string NumMinKey = "NumMin";
         private const string NumMaxKey = "NumMax";
         private const string NumDirectionKey = "NumDirection";
@@ -47,6 +48,20 @@ namespace MetadataDisplay.Client
         private const string GaugeShowTicksKey = "GaugeShowTicks";
         private const string GaugeTickCountKey = "GaugeTickCount";
         private const string GaugeTrackThicknessKey = "GaugeTrackThickness";
+
+        // LineChart
+        private const string LineWindowSecondsKey = "LineWindowSeconds";
+        private const string LineYMinKey = "LineYMin";
+        private const string LineYMaxKey = "LineYMax";
+        private const string LineColorKey = "LineColor";
+        private const string LineFillKey = "LineFill";
+        private const string LineSmoothingKey = "LineSmoothing";
+        private const string LineShowMarkerKey = "LineShowMarker";
+        private const string LineTypeKey = "LineType";          // Straight | Smooth | Step
+        private const string LineThicknessKey = "LineThickness";
+        private const string LineZoomEnabledKey = "LineZoomEnabled";
+        private const string LineAggregationKey = "LineAggregation"; // Mean | Last | Min | Max | Count
+        private const string LineEnvelopeKey = "LineEnvelope";       // "true" / "false"
 
         // Theme
         private const string WidgetDensityKey = "WidgetDensity";
@@ -161,6 +176,15 @@ namespace MetadataDisplay.Client
             set => SetProperty(TextFontSizeKey, value);
         }
 
+        // "true" / "false". Default off — widgets show neutral coloring until the
+        // operator opts in (matches the principle that a fresh widget shouldn't
+        // assert that 50 is "warning" when the user hasn't said what 50 means).
+        public string ThresholdsEnabled
+        {
+            get => GetProperty(ThresholdsEnabledKey) ?? "false";
+            set => SetProperty(ThresholdsEnabledKey, value);
+        }
+
         public string NumMin
         {
             get => GetProperty(NumMinKey) ?? string.Empty;
@@ -243,10 +267,95 @@ namespace MetadataDisplay.Client
             set => SetProperty(GaugeTickCountKey, value);
         }
 
+        // Returns null when the user hasn't set a value — callers (renderer + config
+        // window) substitute a style-specific default (Bar=2, others=6).
         public string GaugeTrackThickness
         {
-            get => GetProperty(GaugeTrackThicknessKey) ?? "14";
+            get => GetProperty(GaugeTrackThicknessKey);
             set => SetProperty(GaugeTrackThicknessKey, value);
+        }
+
+        public string LineWindowSeconds
+        {
+            get => GetProperty(LineWindowSecondsKey) ?? "60";
+            set => SetProperty(LineWindowSecondsKey, value);
+        }
+
+        public string LineYMin
+        {
+            get => GetProperty(LineYMinKey) ?? string.Empty;
+            set => SetProperty(LineYMinKey, value);
+        }
+
+        public string LineYMax
+        {
+            get => GetProperty(LineYMaxKey) ?? string.Empty;
+            set => SetProperty(LineYMaxKey, value);
+        }
+
+        public string LineColor
+        {
+            get => GetProperty(LineColorKey) ?? "#FF4FC3F7";
+            set => SetProperty(LineColorKey, value);
+        }
+
+        // "true" / "false"
+        public string LineFill
+        {
+            get => GetProperty(LineFillKey) ?? "true";
+            set => SetProperty(LineFillKey, value);
+        }
+
+        // "true" / "false"
+        public string LineSmoothing
+        {
+            get => GetProperty(LineSmoothingKey) ?? "false";
+            set => SetProperty(LineSmoothingKey, value);
+        }
+
+        // "true" / "false"
+        public string LineShowMarker
+        {
+            get => GetProperty(LineShowMarkerKey) ?? "false";
+            set => SetProperty(LineShowMarkerKey, value);
+        }
+
+        // Straight | Smooth | Step
+        public string LineType
+        {
+            get => GetProperty(LineTypeKey) ?? "Straight";
+            set => SetProperty(LineTypeKey, value);
+        }
+
+        public string LineThickness
+        {
+            get => GetProperty(LineThicknessKey) ?? "2";
+            set => SetProperty(LineThicknessKey, value);
+        }
+
+        // "true" / "false". When on, mouse-wheel zooms the X axis and click-drag pans;
+        // also auto-pauses the rolling-window slide so the user can inspect.
+        public string LineZoomEnabled
+        {
+            get => GetProperty(LineZoomEnabledKey) ?? "true";
+            set => SetProperty(LineZoomEnabledKey, value);
+        }
+
+        // Mean | Last | Min | Max | Count. Drives how raw samples within a bucket
+        // collapse to one displayed value.
+        public string LineAggregation
+        {
+            get => GetProperty(LineAggregationKey) ?? "Mean";
+            set => SetProperty(LineAggregationKey, value);
+        }
+
+        // "true" / "false". When on, the chart adds two thin lines at the per-bucket
+        // min and max (in addition to the aggregated mean line) so the operator can
+        // see how much variation each bucket smoothed away.
+        public string LineEnvelope
+        {
+            get => GetProperty(LineEnvelopeKey) ?? "false";
+            set => SetProperty(LineEnvelopeKey, value);
         }
 
         // Compact | Comfortable | Spacious

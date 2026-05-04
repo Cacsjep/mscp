@@ -46,15 +46,22 @@ namespace MetadataDisplay.Client
         private DispatcherTimer _ageTicker;
         private bool _uiReady;
 
+        // Tracks the gauge style at last hydrate / style-change so we can swap the
+        // thickness textbox between style defaults (Bar=2, others=6) only when the
+        // user hadn't typed a custom value.
+        private GaugeStyle _prevGaugeStyle;
+
         // Live preview renderers (mirror the actual ViewItem widget)
         private LampRenderer _previewLamp;
         private NumberRenderer _previewNumber;
         private GaugeRenderer _previewGauge;
         private TextRenderer _previewText;
+        private LineChartRenderer _previewLine;
 
         // Color pickers (one per color slot)
         private ColorPickerControl _colorOk, _colorWarn, _colorBad;
         private ColorPickerControl _gaugeColorOk, _gaugeColorWarn, _gaugeColorBad;
+        private ColorPickerControl _lineColor, _lineColorOk, _lineColorWarn, _lineColorBad;
         private ColorPickerControl _titleColor;
 
         public MetadataDisplayConfigurationWindow(MetadataDisplayViewItemManager viewItemManager)
@@ -82,6 +89,10 @@ namespace MetadataDisplay.Client
             _gaugeColorOk = MountColorPicker(gaugeColorOkPickerHost);
             _gaugeColorWarn = MountColorPicker(gaugeColorWarnPickerHost);
             _gaugeColorBad = MountColorPicker(gaugeColorBadPickerHost);
+            _lineColor = MountColorPicker(lineColorPickerHost);
+            _lineColorOk = MountColorPicker(lineColorOkPickerHost);
+            _lineColorWarn = MountColorPicker(lineColorWarnPickerHost);
+            _lineColorBad = MountColorPicker(lineColorBadPickerHost);
             _titleColor = MountColorPicker(titleColorPickerHost);
 
             // Title section
@@ -106,15 +117,24 @@ namespace MetadataDisplay.Client
 
             switch ((_vim.RenderType ?? "Lamp"))
             {
-                case "Number": rtNumber.IsChecked = true; break;
-                case "Gauge":  rtGauge.IsChecked = true; break;
-                case "Text":   rtText.IsChecked = true; break;
-                default:       rtLamp.IsChecked = true; break;
+                case "Number":    rtNumber.IsChecked = true; break;
+                case "Gauge":     rtGauge.IsChecked = true; break;
+                case "Text":      rtText.IsChecked = true; break;
+                case "LineChart": rtLine.IsChecked = true; break;
+                default:          rtLamp.IsChecked = true; break;
             }
 
             RebuildLampRowsFromManager();
             lampIconSizeBox.Text = _vim.LampIconSize ?? "96";
             textFontSizeBox.Text = _vim.TextFontSize ?? "28";
+
+            // Master enable for the shared Number/Gauge/LineChart threshold model.
+            // Mirror the same checked state into all three panel checkboxes so the UI
+            // stays consistent regardless of which render type the user opens with.
+            bool thresholdsOn = string.Equals(_vim.ThresholdsEnabled, "true", StringComparison.OrdinalIgnoreCase);
+            thresholdsEnabledCheckNumber.IsChecked = thresholdsOn;
+            thresholdsEnabledCheckGauge.IsChecked = thresholdsOn;
+            thresholdsEnabledCheckLine.IsChecked = thresholdsOn;
 
             numMinBox.Text = _vim.NumMin ?? "";
             numMaxBox.Text = _vim.NumMax ?? "";
@@ -138,11 +158,40 @@ namespace MetadataDisplay.Client
             gaugeValueFontSizeBox.Text = _vim.GaugeValueFontSize ?? "34";
             gaugeShowTicksCheck.IsChecked = string.Equals(_vim.GaugeShowTicks, "true", StringComparison.OrdinalIgnoreCase);
             gaugeTickCountBox.Text = _vim.GaugeTickCount ?? "10";
-            gaugeTrackThicknessBox.Text = _vim.GaugeTrackThickness ?? "14";
+            // Stored value wins; otherwise show the style-specific default (Bar=2, others=6).
+            gaugeTrackThicknessBox.Text = _vim.GaugeTrackThickness ?? FormatNumber(GaugeConfig.DefaultTrackThickness(CurrentGaugeStyle()));
+            _prevGaugeStyle = CurrentGaugeStyle();
+
+            // LineChart
+            lineWindowSecondsBox.Text = _vim.LineWindowSeconds ?? "60";
+            SyncLineWindowPresetCombo();
+            SelectComboItem(lineAggregationCombo, _vim.LineAggregation ?? "Mean");
+            lineEnvelopeCheck.IsChecked = string.Equals(_vim.LineEnvelope, "true", StringComparison.OrdinalIgnoreCase);
+            lineYMinBox.Text = _vim.LineYMin ?? "";
+            lineYMaxBox.Text = _vim.LineYMax ?? "";
+            _lineColor.HexValue = _vim.LineColor ?? "#FF4FC3F7";
+            lineFillCheck.IsChecked = string.Equals(_vim.LineFill, "true", StringComparison.OrdinalIgnoreCase);
+            lineMarkerCheck.IsChecked = string.Equals(_vim.LineShowMarker, "true", StringComparison.OrdinalIgnoreCase);
+            lineZoomCheck.IsChecked = !string.Equals(_vim.LineZoomEnabled, "false", StringComparison.OrdinalIgnoreCase);
+            // LineType wins over the older LineSmoothing flag; if LineType isn't set
+            // yet (legacy widget), promote LineSmoothing="true" to "Smooth".
+            string storedType = _vim.LineType;
+            if (string.IsNullOrEmpty(storedType))
+                storedType = string.Equals(_vim.LineSmoothing, "true", StringComparison.OrdinalIgnoreCase) ? "Smooth" : "Straight";
+            SelectComboItem(lineTypeCombo, storedType);
+            lineThicknessBox.Text = _vim.LineThickness ?? "2";
+            // Reuse the shared NumMin/NumMax/Direction + colors for thresholds.
+            lineNumMinBox.Text = _vim.NumMin ?? "";
+            lineNumMaxBox.Text = _vim.NumMax ?? "";
+            lineHighIsBadCheck.IsChecked = highIsBadCheck.IsChecked;
+            _lineColorOk.HexValue = _colorOk.HexValue;
+            _lineColorWarn.HexValue = _colorWarn.HexValue;
+            _lineColorBad.HexValue = _colorBad.HexValue;
 
             staleSecondsBox.Text = _vim.StaleSeconds ?? "0";
 
             ApplyRenderTypeVisibility();
+            ApplyThresholdsEnabledVisibility();
             BuildPreviewHost();
             RebuildExtractorSnapshot();
             InstallNumericValidation();
@@ -287,23 +336,76 @@ namespace MetadataDisplay.Client
 
         private void ApplyRenderTypeVisibility()
         {
-            if (lampPanel == null || numberPanel == null || gaugePanel == null || textPanel == null) return;
+            if (lampPanel == null || numberPanel == null || gaugePanel == null || textPanel == null || linePanel == null) return;
             lampPanel.Visibility   = rtLamp.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
             numberPanel.Visibility = rtNumber.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             gaugePanel.Visibility  = rtGauge.IsChecked  == true ? Visibility.Visible : Visibility.Collapsed;
             textPanel.Visibility   = rtText.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
+            linePanel.Visibility   = rtLine.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private bool _syncingThresholdsToggles;
+
+        // Threshold-enable is a single shared setting. The three checkboxes on the
+        // three panels mirror each other so the user sees the same answer no matter
+        // which render type they're configuring.
+        private void OnThresholdsToggled(CheckBox source)
+        {
+            if (!_uiReady || _syncingThresholdsToggles) return;
+            _syncingThresholdsToggles = true;
+            try
+            {
+                bool on = source.IsChecked == true;
+                if (thresholdsEnabledCheckNumber != source) thresholdsEnabledCheckNumber.IsChecked = on;
+                if (thresholdsEnabledCheckGauge  != source) thresholdsEnabledCheckGauge.IsChecked = on;
+                if (thresholdsEnabledCheckLine   != source) thresholdsEnabledCheckLine.IsChecked = on;
+            }
+            finally
+            {
+                _syncingThresholdsToggles = false;
+            }
+            ApplyThresholdsEnabledVisibility();
+            ReconfigureLinePreview();
+            ReRenderPreview();
+        }
+
+        // Show "Waiting for data..." overlay when no value has arrived yet (matches
+        // the live ViewItem behaviour). Hide once we render an actual value. The
+        // detail line piggybacks on the existing previewStatusText so error / channel
+        // diagnostics still surface to the user without the verbose packet-counter UI.
+        private void ApplyWaitingPanelVisibility()
+        {
+            if (previewWaitingPanel == null) return;
+            bool hasValue = _lastPreviewValue != null;
+            // Line chart accumulates samples — once one's in the buffer we treat it
+            // as "has value" even if the latest packet didn't extract this tick.
+            if (!hasValue && _previewLine != null) hasValue = false;
+            previewWaitingPanel.Visibility = hasValue ? Visibility.Collapsed : Visibility.Visible;
+            if (!hasValue && previewWaitingDetail != null)
+                previewWaitingDetail.Text = previewStatusText?.Text ?? "";
+        }
+
+        private void ApplyThresholdsEnabledVisibility()
+        {
+            bool on = thresholdsEnabledCheckNumber?.IsChecked == true;
+            if (numberThresholdsBlock != null) { numberThresholdsBlock.IsEnabled = on; numberThresholdsBlock.Opacity = on ? 1.0 : 0.4; }
+            if (gaugeThresholdsBlock  != null) { gaugeThresholdsBlock.IsEnabled  = on; gaugeThresholdsBlock.Opacity  = on ? 1.0 : 0.4; }
+            if (lineThresholdsBlock   != null) { lineThresholdsBlock.IsEnabled   = on; lineThresholdsBlock.Opacity   = on ? 1.0 : 0.4; }
         }
 
         private void BuildPreviewHost()
         {
             if (previewHost == null) return;
             previewHost.Children.Clear();
+            previewChartHost.Children.Clear();
             _previewLamp = null;
             _previewNumber = null;
             _previewGauge = null;
             _previewText = null;
+            _previewLine = null;
 
             UIElement visual;
+            bool isChart = false;
             if (rtNumber.IsChecked == true)
             {
                 _previewNumber = new NumberRenderer();
@@ -322,6 +424,13 @@ namespace MetadataDisplay.Client
                 visual = _previewText.Visual;
                 _previewText.Clear();
             }
+            else if (rtLine.IsChecked == true)
+            {
+                _previewLine = new LineChartRenderer();
+                _previewLine.Configure(BuildLineChartConfigFromUi());
+                visual = _previewLine.Visual;
+                isChart = true;
+            }
             else
             {
                 _previewLamp = new LampRenderer();
@@ -329,7 +438,18 @@ namespace MetadataDisplay.Client
                 _previewLamp.Clear();
             }
 
-            previewHost.Children.Add(visual);
+            if (isChart)
+            {
+                previewChartHost.Children.Add(visual);
+                previewChartViewbox.Visibility = Visibility.Visible;
+                previewViewbox.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                previewHost.Children.Add(visual);
+                previewChartViewbox.Visibility = Visibility.Collapsed;
+                previewViewbox.Visibility = Visibility.Visible;
+            }
         }
 
         private void HookFieldChangeHandlers()
@@ -353,7 +473,7 @@ namespace MetadataDisplay.Client
             gaugeNumMinBox.TextChanged += (s, e) => ReRenderPreview();
             gaugeNumMaxBox.TextChanged += (s, e) => ReRenderPreview();
             unitBoxGauge.TextChanged += (s, e) => ReRenderPreview();
-            gaugeStyleCombo.SelectionChanged += (s, e) => { BuildPreviewHost(); ReRenderPreview(); };
+            gaugeStyleCombo.SelectionChanged += (s, e) => { OnGaugeStyleChanged(); BuildPreviewHost(); ReRenderPreview(); };
             highIsBadCheck.Checked += (s, e) => ReRenderPreview();
             highIsBadCheck.Unchecked += (s, e) => ReRenderPreview();
             gaugeHighIsBadCheck.Checked += (s, e) => ReRenderPreview();
@@ -367,7 +487,41 @@ namespace MetadataDisplay.Client
             gaugeTrackThicknessBox.TextChanged += (s, e) => ReRenderPreview();
             lampIconSizeBox.TextChanged += (s, e) => ReRenderPreview();
             textFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
+            // Line chart fields trigger a full preview rebuild so the chart picks up
+            // axis-range / color / threshold changes (configure-only, no extra samples).
+            lineWindowSecondsBox.TextChanged += (s, e) => { SyncLineWindowPresetCombo(); ReconfigureLinePreview(); };
+            lineWindowPresetCombo.SelectionChanged += (s, e) => OnLineWindowPresetChanged();
+            lineAggregationCombo.SelectionChanged += (s, e) => ReconfigureLinePreview();
+            lineEnvelopeCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineEnvelopeCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineYMinBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineYMaxBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineFillCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineFillCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineMarkerCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineMarkerCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineZoomCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineZoomCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineTypeCombo.SelectionChanged += (s, e) => ReconfigureLinePreview();
+            lineThicknessBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineNumMinBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineNumMaxBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineHighIsBadCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineHighIsBadCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            _lineColor.ColorChanged += (s, e) => ReconfigureLinePreview();
+            _lineColorOk.ColorChanged += (s, e) => ReconfigureLinePreview();
+            _lineColorWarn.ColorChanged += (s, e) => ReconfigureLinePreview();
+            _lineColorBad.ColorChanged += (s, e) => ReconfigureLinePreview();
             densityCombo.SelectionChanged += (s, e) => { UpdatePreviewTitle(); ReRenderPreview(); };
+
+            // Threshold master toggle — keep all three panel checkboxes in sync, gate
+            // the threshold input blocks, and re-render the preview / line config.
+            thresholdsEnabledCheckNumber.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckNumber);
+            thresholdsEnabledCheckNumber.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckNumber);
+            thresholdsEnabledCheckGauge.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckGauge);
+            thresholdsEnabledCheckGauge.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckGauge);
+            thresholdsEnabledCheckLine.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckLine);
+            thresholdsEnabledCheckLine.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckLine);
 
             // Title section live preview
             showTitleCheck.Checked += (s, e) => { ApplyTitleEnabled(); UpdatePreviewTitle(); };
@@ -896,12 +1050,16 @@ namespace MetadataDisplay.Client
                 _previewNumber?.Clear();
                 _previewGauge?.Clear();
                 _previewText?.Clear();
+                // Don't clear the line chart on missing value — its accumulated history
+                // is its whole point. Just leave the existing buffer.
                 previewMetaText.Text = "";
+                ApplyWaitingPanelVisibility();
                 UpdatePreviewAge();
                 return;
             }
 
             previewMetaText.Text = $"key={dataKeyCombo.Text}  value={_lastPreviewValue}";
+            ApplyWaitingPanelVisibility();
 
             string density = (densityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Comfortable";
 
@@ -927,6 +1085,14 @@ namespace MetadataDisplay.Client
                 _previewText.FontSize = TryParseDouble(textFontSizeBox.Text) ?? 28;
                 _previewText.Update(_lastPreviewValue);
             }
+            else if (_previewLine != null)
+            {
+                if (double.TryParse(_lastPreviewValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                {
+                    var ts = _lastPreviewUtc ?? DateTime.UtcNow;
+                    _previewLine.AddSample(v, ts);
+                }
+            }
 
             UpdatePreviewAge();
         }
@@ -943,6 +1109,7 @@ namespace MetadataDisplay.Client
 
             return new NumericConfig
             {
+                Enabled = thresholdsEnabledCheckNumber?.IsChecked == true,
                 Min = TryParseDouble(min),
                 Max = TryParseDouble(max),
                 HighIsBad = highBad,
@@ -970,6 +1137,10 @@ namespace MetadataDisplay.Client
             if (int.TryParse(gaugeTickCountBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ptc) && ptc >= 0)
                 tc = ptc;
 
+            double thickness = TryParseDouble(gaugeTrackThicknessBox.Text) ?? GaugeConfig.DefaultTrackThickness(style);
+            if (thickness > GaugeConfig.MaxTrackThickness) thickness = GaugeConfig.MaxTrackThickness;
+            if (thickness < 0) thickness = 0;
+
             return new GaugeConfig
             {
                 RangeMin = rmin,
@@ -979,7 +1150,7 @@ namespace MetadataDisplay.Client
                 ValueFontSize = TryParseDouble(gaugeValueFontSizeBox.Text) ?? 34,
                 ShowTicks = gaugeShowTicksCheck.IsChecked == true,
                 TickCount = tc,
-                TrackThickness = TryParseDouble(gaugeTrackThicknessBox.Text) ?? 14,
+                TrackThickness = thickness,
                 Numeric = BuildNumericConfigFromUi(true),
             };
         }
@@ -988,6 +1159,105 @@ namespace MetadataDisplay.Client
         {
             if (string.IsNullOrWhiteSpace(s)) return null;
             return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? (double?)v : null;
+        }
+
+        // Builds a LineChartConfig from the UI without going through the manager —
+        // the manager only updates on Save, but the preview needs live values.
+        private LineChartConfig BuildLineChartConfigFromUi()
+        {
+            int win = (int)(TryParseDouble(lineWindowSecondsBox.Text) ?? 60);
+            if (win <= 0) win = 60;
+
+            // Reuse the line panel's threshold inputs into a NumericConfig the renderer
+            // already knows how to consume.
+            var numeric = new NumericConfig
+            {
+                Enabled = thresholdsEnabledCheckLine?.IsChecked == true,
+                Min = TryParseDouble(lineNumMinBox.Text),
+                Max = TryParseDouble(lineNumMaxBox.Text),
+                HighIsBad = lineHighIsBadCheck.IsChecked == true,
+                ColorOk = ColorUtil.Parse(_lineColorOk.HexValue, Color.FromRgb(0x3C, 0xB3, 0x71)),
+                ColorWarn = ColorUtil.Parse(_lineColorWarn.HexValue, Color.FromRgb(0xE6, 0x95, 0x00)),
+                ColorBad = ColorUtil.Parse(_lineColorBad.HexValue, Color.FromRgb(0xD8, 0x39, 0x2C)),
+                Unit = "",
+            };
+
+            return new LineChartConfig
+            {
+                WindowSeconds = win,
+                YMin = TryParseDouble(lineYMinBox.Text),
+                YMax = TryParseDouble(lineYMaxBox.Text),
+                LineColor = ColorUtil.Parse(_lineColor.HexValue, Color.FromRgb(0x4F, 0xC3, 0xF7)),
+                FillEnabled = lineFillCheck.IsChecked == true,
+                ShowMarker = lineMarkerCheck.IsChecked == true,
+                LineType = ParseLineType((lineTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()),
+                LineThickness = TryParseDouble(lineThicknessBox.Text) ?? 2,
+                ZoomEnabled = lineZoomCheck.IsChecked == true,
+                Aggregation = ParseLineAggregation((lineAggregationCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()),
+                EnvelopeEnabled = lineEnvelopeCheck.IsChecked == true,
+                Numeric = numeric,
+            };
+        }
+
+        private static LineChartType ParseLineType(string s)
+        {
+            if (string.Equals(s, "Smooth", StringComparison.OrdinalIgnoreCase)) return LineChartType.Smooth;
+            if (string.Equals(s, "Step",   StringComparison.OrdinalIgnoreCase)) return LineChartType.Step;
+            return LineChartType.Straight;
+        }
+
+        private static LineAggregation ParseLineAggregation(string s)
+        {
+            if (string.Equals(s, "Min", StringComparison.OrdinalIgnoreCase)) return LineAggregation.Min;
+            if (string.Equals(s, "Max", StringComparison.OrdinalIgnoreCase)) return LineAggregation.Max;
+            return LineAggregation.Mean;
+        }
+
+        // Match the seconds textbox to one of the preset items (or to "Custom" when
+        // it doesn't match any preset). Suppress the recursive event so editing the
+        // textbox doesn't fire OnLineWindowPresetChanged in a loop.
+        private bool _syncingLineWindow;
+        private void SyncLineWindowPresetCombo()
+        {
+            if (_syncingLineWindow) return;
+            _syncingLineWindow = true;
+            try
+            {
+                string secs = (lineWindowSecondsBox.Text ?? "").Trim();
+                bool matched = false;
+                foreach (var item in lineWindowPresetCombo.Items)
+                {
+                    var ci = item as ComboBoxItem;
+                    if (ci?.Tag?.ToString() == secs) { lineWindowPresetCombo.SelectedItem = ci; matched = true; break; }
+                }
+                if (!matched)
+                {
+                    foreach (var item in lineWindowPresetCombo.Items)
+                    {
+                        var ci = item as ComboBoxItem;
+                        if (ci?.Tag?.ToString() == "custom") { lineWindowPresetCombo.SelectedItem = ci; break; }
+                    }
+                }
+            }
+            finally { _syncingLineWindow = false; }
+        }
+
+        private void OnLineWindowPresetChanged()
+        {
+            if (_syncingLineWindow) return;
+            var tag = (lineWindowPresetCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.IsNullOrEmpty(tag) || tag == "custom") return;
+            _syncingLineWindow = true;
+            try { lineWindowSecondsBox.Text = tag; }
+            finally { _syncingLineWindow = false; }
+            ReconfigureLinePreview();
+        }
+
+        // Reconfigure existing line preview without losing accumulated samples.
+        private void ReconfigureLinePreview()
+        {
+            if (!_uiReady) return;
+            _previewLine?.Configure(BuildLineChartConfigFromUi());
         }
 
         private void UpdatePreviewAge()
@@ -1087,6 +1357,12 @@ namespace MetadataDisplay.Client
             yield return gaugeValueFontSizeBox;
             yield return gaugeTickCountBox;
             yield return gaugeTrackThicknessBox;
+            yield return lineWindowSecondsBox;
+            yield return lineThicknessBox;
+            yield return lineYMinBox;
+            yield return lineYMaxBox;
+            yield return lineNumMinBox;
+            yield return lineNumMaxBox;
             yield return lampIconSizeBox;
             yield return textFontSizeBox;
             yield return staleSecondsBox;
@@ -1337,6 +1613,7 @@ namespace MetadataDisplay.Client
             if (rtNumber.IsChecked == true) rt = "Number";
             else if (rtGauge.IsChecked == true) rt = "Gauge";
             else if (rtText.IsChecked == true) rt = "Text";
+            else if (rtLine.IsChecked == true) rt = "LineChart";
             _vim.RenderType = rt;
 
             _vim.LampMap = SerializeLampRows();
@@ -1352,6 +1629,16 @@ namespace MetadataDisplay.Client
                 _vim.ColorWarn = NormalizeColor(_gaugeColorWarn.HexValue);
                 _vim.ColorBad = NormalizeColor(_gaugeColorBad.HexValue);
                 _vim.Unit = unitBoxGauge.Text?.Trim() ?? "";
+            }
+            else if (rt == "LineChart")
+            {
+                _vim.NumMin = lineNumMinBox.Text?.Trim() ?? "";
+                _vim.NumMax = lineNumMaxBox.Text?.Trim() ?? "";
+                _vim.NumDirection = (lineHighIsBadCheck.IsChecked == true) ? "HighIsBad" : "LowIsBad";
+                _vim.ColorOk = NormalizeColor(_lineColorOk.HexValue);
+                _vim.ColorWarn = NormalizeColor(_lineColorWarn.HexValue);
+                _vim.ColorBad = NormalizeColor(_lineColorBad.HexValue);
+                // Line chart has no inline unit; leave any prior Unit untouched.
             }
             else
             {
@@ -1371,7 +1658,32 @@ namespace MetadataDisplay.Client
             _vim.GaugeValueFontSize = NormalizeNumberText(gaugeValueFontSizeBox.Text, "34");
             _vim.GaugeShowTicks = (gaugeShowTicksCheck.IsChecked == true) ? "true" : "false";
             _vim.GaugeTickCount = NormalizeNumberText(gaugeTickCountBox.Text, "10");
-            _vim.GaugeTrackThickness = NormalizeNumberText(gaugeTrackThicknessBox.Text, "14");
+            // Default fallback follows the selected style; clamp to documented max of 20.
+            var styleDefault = FormatNumber(GaugeConfig.DefaultTrackThickness(CurrentGaugeStyle()));
+            var thicknessText = NormalizeNumberText(gaugeTrackThicknessBox.Text, styleDefault);
+            if (double.TryParse(thicknessText, NumberStyles.Float, CultureInfo.InvariantCulture, out var thicknessNum)
+                && thicknessNum > GaugeConfig.MaxTrackThickness)
+            {
+                thicknessText = FormatNumber(GaugeConfig.MaxTrackThickness);
+            }
+            _vim.GaugeTrackThickness = thicknessText;
+
+            _vim.ThresholdsEnabled = (thresholdsEnabledCheckNumber.IsChecked == true) ? "true" : "false";
+
+            _vim.LineWindowSeconds = NormalizeNumberText(lineWindowSecondsBox.Text, "60");
+            _vim.LineYMin = lineYMinBox.Text?.Trim() ?? "";
+            _vim.LineYMax = lineYMaxBox.Text?.Trim() ?? "";
+            _vim.LineColor = NormalizeColor(_lineColor.HexValue);
+            _vim.LineFill = (lineFillCheck.IsChecked == true) ? "true" : "false";
+            _vim.LineShowMarker = (lineMarkerCheck.IsChecked == true) ? "true" : "false";
+            _vim.LineType = (lineTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Straight";
+            _vim.LineThickness = NormalizeNumberText(lineThicknessBox.Text, "2");
+            _vim.LineZoomEnabled = (lineZoomCheck.IsChecked == true) ? "true" : "false";
+            _vim.LineAggregation = (lineAggregationCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Mean";
+            _vim.LineEnvelope = (lineEnvelopeCheck.IsChecked == true) ? "true" : "false";
+            // Keep the legacy LineSmoothing flag in sync so older renderers see the
+            // same effective behaviour.
+            _vim.LineSmoothing = string.Equals(_vim.LineType, "Smooth", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
 
             _vim.StaleSeconds = NormalizeNumberText(staleSecondsBox.Text, "0");
 
@@ -1390,6 +1702,38 @@ namespace MetadataDisplay.Client
             if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
                 return v.ToString(CultureInfo.InvariantCulture);
             return fallback;
+        }
+
+        private static string FormatNumber(double v)
+        {
+            if (v == (long)v) return ((long)v).ToString(CultureInfo.InvariantCulture);
+            return v.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private GaugeStyle CurrentGaugeStyle()
+        {
+            var styleText = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.Equals(styleText, "Arc270", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Arc270;
+            if (string.Equals(styleText, "Bar", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Bar;
+            if (string.Equals(styleText, "Modern270", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Modern270;
+            if (string.Equals(styleText, "Modern180", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Modern180;
+            return GaugeStyle.Arc180;
+        }
+
+        // When the user picks a different gauge style and the thickness textbox still
+        // holds the previous style's default, swap to the new style's default. A custom
+        // value the user typed (anything that doesn't match the prior default) is left
+        // alone so we don't trash deliberate edits.
+        private void OnGaugeStyleChanged()
+        {
+            if (!_uiReady) return;
+            var newStyle = CurrentGaugeStyle();
+            var prevDefault = FormatNumber(GaugeConfig.DefaultTrackThickness(_prevGaugeStyle));
+            if (string.Equals((gaugeTrackThicknessBox.Text ?? "").Trim(), prevDefault, StringComparison.Ordinal))
+            {
+                gaugeTrackThicknessBox.Text = FormatNumber(GaugeConfig.DefaultTrackThickness(newStyle));
+            }
+            _prevGaugeStyle = newStyle;
         }
 
         // ───────── Helpers ─────────
