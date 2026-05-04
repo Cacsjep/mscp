@@ -23,7 +23,7 @@ Control the Milestone XProtect Smart Client remotely via a REST API with interac
 
 ## API Endpoints
 
-All endpoints require a `Bearer` token in the `Authorization` header. Use the Swagger UI Authorize button or pass it directly:
+All endpoints require a `Bearer` token in the `Authorization` header. Use the Swagger UI Authorize button or pass it directly.
 
 ```
 Authorization: Bearer <your-token>
