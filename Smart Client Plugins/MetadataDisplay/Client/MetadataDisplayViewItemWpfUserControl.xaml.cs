@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -35,6 +36,11 @@ namespace MetadataDisplay.Client
         private LineChartRenderer _lineRenderer;
 
         private DateTime? _lastValueUtc;
+        // Playback line-chart backfill bookkeeping: track the last cursor we
+        // backfilled around so a small scrub just moves the cursor marker, while
+        // a big jump (or first entry) triggers a fresh range scan.
+        private DateTime? _lastBackfillCursorUtc;
+        private System.Threading.CancellationTokenSource _backfillCts;
         private bool _hasReceivedValue;
         private DispatcherTimer _staleTicker;
         private int _staleSeconds;
@@ -120,7 +126,29 @@ namespace MetadataDisplay.Client
                 : $"Subscribed to {_metadataItem?.Name ?? "channel"}. Waiting for first matching packet.";
 
             if (mode == Mode.ClientLive)
-                StartLive();
+            {
+                // For LineChart with a non-trivial window we backfill the chart
+                // from the archive first so the user sees recent history right
+                // away instead of waiting N minutes for it to fill. StartLive runs
+                // after the backfill resolves (or immediately for short windows /
+                // other render types).
+                if (isChart && _viewItemManager.RenderType == "LineChart")
+                {
+                    var cfg = LineChartConfig.FromManager(_viewItemManager);
+                    if (cfg.WindowSeconds > 60)
+                    {
+                        BackfillLineChartLive(cfg);
+                    }
+                    else
+                    {
+                        StartLive();
+                    }
+                }
+                else
+                {
+                    StartLive();
+                }
+            }
             else if (mode == Mode.ClientPlayback)
                 StartPlayback();
 
@@ -307,6 +335,124 @@ namespace MetadataDisplay.Client
                 _pump.Stop();
                 _pump = null;
             }
+            // Cancel any in-flight backfill scan; results would land after the
+            // mode change and could repaint a chart that's no longer visible.
+            try { _backfillCts?.Cancel(); } catch { }
+            _backfillCts = null;
+            _lastBackfillCursorUtc = null;
+        }
+
+        // Live backfill: range-scan the archive for [now - window, now] before
+        // opening the live subscription. Same scan code as playback backfill but
+        // anchored to wall-clock now. Without this, switching to a "Last 6 hours"
+        // line chart starts empty and only fills over the next 6 hours — and
+        // every live↔playback flip would reset the chart to empty.
+        //
+        // The live subscription doesn't open until the backfill resolves; that
+        // means we lose any samples emitted in the (~1-3s) scan window itself,
+        // which is acceptable for typical metadata cadence.
+        private void BackfillLineChartLive(LineChartConfig cfg)
+        {
+            if (_lineRenderer == null || _metadataItem == null) return;
+
+            // Show "Waiting for data..." while the backfill runs so the empty
+            // chart isn't mistaken for "channel is dead".
+            noDataPanel.Visibility = Visibility.Visible;
+            chartRoot.Visibility = Visibility.Collapsed;
+            noDataDetail.Text = $"Loading last {FormatWindow(cfg.WindowSeconds)} from archive...";
+
+            try { _backfillCts?.Cancel(); } catch { }
+            _backfillCts = new System.Threading.CancellationTokenSource();
+            var ct = _backfillCts.Token;
+
+            var nowUtc = DateTime.UtcNow;
+            var fromUtc = nowUtc.AddSeconds(-cfg.WindowSeconds);
+            const int maxFrames = 10000;
+
+            // Construct a one-shot pump just for the scan; it owns its own
+            // MetadataPlaybackSource and disposes it after the scan finishes.
+            var scanPump = new MetadataPlaybackPump(_metadataItem,
+                _ => ExtractorConfig.FromManager(_viewItemManager),
+                (_, __) => { });
+
+            scanPump.ScanRangeAsync(fromUtc, nowUtc, maxFrames, ct).ContinueWith(t =>
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (ct.IsCancellationRequested) return;
+                    if (_lineRenderer == null) return;
+
+                    if (!t.IsCanceled && !t.IsFaulted && t.Result != null)
+                    {
+                        var samples = new List<(double, DateTime)>(t.Result.Count);
+                        foreach (var r in t.Result)
+                        {
+                            if (double.TryParse(r.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
+                                samples.Add((v, r.TimestampUtc));
+                        }
+                        _lineRenderer.ResetWithSamples(samples);
+                        if (samples.Count > 0)
+                        {
+                            _hasReceivedValue = true;
+                            _lastValueUtc = samples[samples.Count - 1].Item2;
+                        }
+                    }
+
+                    // Restore the chart visibility regardless of scan outcome —
+                    // even an empty backfill still leads into live streaming.
+                    noDataPanel.Visibility = Visibility.Collapsed;
+                    chartRoot.Visibility = Visibility.Visible;
+                    StartLive();
+                }));
+            }, System.Threading.Tasks.TaskScheduler.Default);
+        }
+
+        private static string FormatWindow(int seconds)
+        {
+            if (seconds >= 86400) return $"{seconds / 86400}d";
+            if (seconds >= 3600)  return $"{seconds / 3600}h";
+            if (seconds >= 60)    return $"{seconds / 60}m";
+            return $"{seconds}s";
+        }
+
+        // Kick off a range scan covering [cursor - window, cursor] and on success
+        // bulk-load the results into the line chart. Cancels any previous in-flight
+        // scan first so rapid scrubbing doesn't pile up overlapping requests.
+        private void BackfillLineChart(DateTime cursorUtc, LineChartConfig cfg)
+        {
+            if (_pump == null || _lineRenderer == null) return;
+            try { _backfillCts?.Cancel(); } catch { }
+            _backfillCts = new System.Threading.CancellationTokenSource();
+            var ct = _backfillCts.Token;
+            var fromUtc = cursorUtc.AddSeconds(-cfg.WindowSeconds);
+            _lastBackfillCursorUtc = cursorUtc;
+
+            // Cap pulled frames at a few thousand to keep the scan bounded for
+            // very high-cadence sources or wide windows.
+            const int maxFrames = 4000;
+            _pump.ScanRangeAsync(fromUtc, cursorUtc, maxFrames, ct).ContinueWith(t =>
+            {
+                if (t.IsCanceled || t.IsFaulted) return;
+                var raw = t.Result;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (ct.IsCancellationRequested) return;
+                    if (_lineRenderer == null) return;
+                    var samples = new List<(double, DateTime)>(raw.Count);
+                    foreach (var r in raw)
+                    {
+                        if (double.TryParse(r.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
+                            samples.Add((v, r.TimestampUtc));
+                    }
+                    _lineRenderer.ResetWithSamples(samples);
+                    _lineRenderer.SetCursor(cursorUtc);
+                    if (samples.Count > 0)
+                    {
+                        _hasReceivedValue = true;
+                        noDataPanel.Visibility = Visibility.Collapsed;
+                    }
+                }));
+            }, System.Threading.Tasks.TaskScheduler.Default);
         }
 
         private object OnPlaybackTime(Message message, FQID destination, FQID sender)
@@ -330,7 +476,20 @@ namespace MetadataDisplay.Client
                 if (utc.HasValue)
                 {
                     _pump.RequestTime(utc.Value);
-                    _lineRenderer?.SetCursor(utc.Value);
+
+                    // LineChart playback: small scrubs just move the cursor, but
+                    // jumps bigger than half the visible window (or the first time
+                    // we see a cursor) trigger a fresh range scan to refill the
+                    // visible buffer with archive samples.
+                    if (_lineRenderer != null)
+                    {
+                        _lineRenderer.SetCursor(utc.Value);
+                        var cfg = LineChartConfig.FromManager(_viewItemManager);
+                        bool needBackfill = !_lastBackfillCursorUtc.HasValue
+                            || Math.Abs((utc.Value - _lastBackfillCursorUtc.Value).TotalSeconds) > cfg.WindowSeconds / 2.0;
+                        if (needBackfill)
+                            BackfillLineChart(utc.Value, cfg);
+                    }
                 }
             }
             catch (Exception ex)
@@ -448,6 +607,10 @@ namespace MetadataDisplay.Client
 
         private void StopLive()
         {
+            // Cancel in-flight live-mode chart backfill; we don't want it to land
+            // on a mode that's no longer live.
+            try { _backfillCts?.Cancel(); } catch { }
+            _backfillCts = null;
             if (_liveSource == null) return;
             _log.Info($"[ViewItem] StopLive packets={_livePacketsSeen}");
             try

@@ -553,9 +553,38 @@
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="Window (seconds)" Style="{StaticResource FieldLabel}"/>
-                                        <TextBox  Grid.Column="1" x:Name="lineWindowSecondsBox" Width="100" HorizontalAlignment="Left" Tag="positiveNumber"/>
+                                        <TextBlock Grid.Column="0" Text="Window" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <ComboBox x:Name="lineWindowPresetCombo" Width="160" Margin="0,0,12,0">
+                                                <ComboBoxItem Content="Last 60 sec" Tag="60"/>
+                                                <ComboBoxItem Content="Last 5 min" Tag="300"/>
+                                                <ComboBoxItem Content="Last 10 min" Tag="600"/>
+                                                <ComboBoxItem Content="Last 30 min" Tag="1800"/>
+                                                <ComboBoxItem Content="Last 1 hour" Tag="3600"/>
+                                                <ComboBoxItem Content="Last 6 hours" Tag="21600"/>
+                                                <ComboBoxItem Content="Last 24 hours" Tag="86400"/>
+                                                <ComboBoxItem Content="Custom (seconds)" Tag="custom"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="lineWindowSecondsBox" Width="80" Tag="positiveNumber" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                     </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Aggregation" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <ComboBox x:Name="lineAggregationCombo" Width="120" Margin="0,0,16,0" SelectedIndex="0">
+                                                <ComboBoxItem Content="Mean" Tag="Mean"/>
+                                                <ComboBoxItem Content="Min" Tag="Min"/>
+                                                <ComboBoxItem Content="Max" Tag="Max"/>
+                                            </ComboBox>
+                                            <CheckBox x:Name="lineEnvelopeCheck" Content="Show min/max envelope" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,12"
+                                               Text="Samples are auto-bucketed (~300 buckets per window) so render cost stays flat from 60 sec to 24 hours. The aggregation picks how raw samples in each bucket collapse to one point."/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>

@@ -21,6 +21,8 @@ namespace MetadataDisplay.Client.Renderers
 {
     internal enum LineChartType { Straight, Smooth, Step }
 
+    internal enum LineAggregation { Mean, Min, Max }
+
     internal sealed class LineChartConfig
     {
         public int WindowSeconds;
@@ -32,7 +34,9 @@ namespace MetadataDisplay.Client.Renderers
         public LineChartType LineType;
         public double LineThickness;
         public bool ZoomEnabled;
-        public NumericConfig Numeric; // unit + threshold colors + Min/Max for thresholds
+        public LineAggregation Aggregation;
+        public bool EnvelopeEnabled;
+        public NumericConfig Numeric;
 
         public static LineChartConfig FromManager(MetadataDisplayViewItemManager m)
         {
@@ -40,7 +44,6 @@ namespace MetadataDisplay.Client.Renderers
             if (int.TryParse(m.LineWindowSeconds, NumberStyles.Integer, CultureInfo.InvariantCulture, out var w) && w > 0)
                 win = w;
 
-            // Smoothing flag stays for back-compat — when true, force LineType=Smooth.
             var lt = LineChartType.Straight;
             if (string.Equals(m.LineSmoothing, "true", StringComparison.OrdinalIgnoreCase)) lt = LineChartType.Smooth;
             if (string.Equals(m.LineType, "Smooth", StringComparison.OrdinalIgnoreCase)) lt = LineChartType.Smooth;
@@ -61,8 +64,17 @@ namespace MetadataDisplay.Client.Renderers
                 LineType = lt,
                 LineThickness = thickness,
                 ZoomEnabled = !string.Equals(m.LineZoomEnabled, "false", StringComparison.OrdinalIgnoreCase),
+                Aggregation = ParseAgg(m.LineAggregation),
+                EnvelopeEnabled = string.Equals(m.LineEnvelope, "true", StringComparison.OrdinalIgnoreCase),
                 Numeric = NumericConfig.FromManager(m),
             };
+        }
+
+        private static LineAggregation ParseAgg(string s)
+        {
+            if (string.Equals(s, "Min", StringComparison.OrdinalIgnoreCase)) return LineAggregation.Min;
+            if (string.Equals(s, "Max", StringComparison.OrdinalIgnoreCase)) return LineAggregation.Max;
+            return LineAggregation.Mean;
         }
 
         private static double? ParseNullable(string s)
@@ -72,44 +84,78 @@ namespace MetadataDisplay.Client.Renderers
         }
     }
 
+    // One time bucket holding the aggregates needed to render mean / last / min /
+    // max / count without keeping the underlying samples around.
+    internal sealed class Bucket
+    {
+        public DateTime StartUtc;
+        public double Sum;
+        public double Min = double.PositiveInfinity;
+        public double Max = double.NegativeInfinity;
+        public int Count;
+
+        public void Add(double v)
+        {
+            Sum += v;
+            if (v < Min) Min = v;
+            if (v > Max) Max = v;
+            Count++;
+        }
+
+        public double Pick(LineAggregation agg)
+        {
+            switch (agg)
+            {
+                case LineAggregation.Min: return Count > 0 ? Min : 0;
+                case LineAggregation.Max: return Count > 0 ? Max : 0;
+                case LineAggregation.Mean:
+                default:                  return Count > 0 ? Sum / Count : 0;
+            }
+        }
+    }
+
     // Time-series line chart backed by LiveCharts2 / SkiaSharp.
-    // - Holds an in-memory ring buffer of (DateTime, double) samples; window is
-    //   anchored to the latest sample so it works for both live (latest=now) and
-    //   playback (latest=cursor).
-    // - Threshold model: dashed horizontal lines at warn (Min) and critical (Max)
-    //   instead of filled bands — easier to read against time-series data.
-    // - Line-type styles: straight, smooth, step. Picks a different LiveCharts
-    //   series type for Step (StepLineSeries) since it's a different geometry.
-    // - Optional X-axis zoom + auto-pause: when the user wheels or drags, we stop
-    //   sliding the visible window so they can inspect; a "Resume live" overlay
-    //   button lets them re-engage live tracking.
+    //
+    // Storage: instead of raw samples we keep fixed-width buckets sized by the
+    // window length (target ~300 visible buckets). This means a 60s window draws
+    // 1s buckets, an hour window draws 12s buckets, a day window draws 5min
+    // buckets — the chart cost is constant regardless of how long the user wants
+    // to look back. Each bucket carries Sum/Min/Max/Last/Count so we can switch
+    // aggregation modes without re-fetching.
+    //
+    // Threshold model: dashed horizontal lines at warn (Min) and critical (Max)
+    // value levels. (Filled bands hid the line in the original design.)
+    //
+    // Playback support: ResetForPlaybackBackfill() wipes existing buckets so the
+    // ViewItem can replay a range scan into the chart with cursor anchoring.
     internal sealed class LineChartRenderer
     {
+        // Aim for this many buckets across the window — chart-render cost is
+        // proportional to point count, so we cap at a stable budget regardless
+        // of how long the user's window is.
+        private const int TargetBucketCount = 300;
+
         private readonly Grid _root;
-        // _chart is rebuilt on every LineType swap. Cheaper-looking alternatives
-        // (replacing Series array, mutating an ObservableCollection<ISeries>) leak
-        // observers in LiveCharts2 and cause the post-swap chart to either stop
-        // updating or double-paint. Full rebuild is the only state we trust.
         private CartesianChart _chart;
-        private ISeries _series;
-        private LineSeries<DateTimePoint> _lineSeries;
-        private StepLineSeries<DateTimePoint> _stepSeries;
-        // ObservableCollection so LiveCharts auto-redraws when samples are added /
-        // removed — needed because we swap series instances when LineType changes
-        // (a plain List wouldn't notify the new series of incoming samples).
-        private readonly ObservableCollection<DateTimePoint> _points = new ObservableCollection<DateTimePoint>();
+        private ISeries _meanSeries;
+        private LineSeries<DateTimePoint> _meanLine;
+        private StepLineSeries<DateTimePoint> _meanStep;
+        private LineSeries<DateTimePoint> _envelopeMin;
+        private LineSeries<DateTimePoint> _envelopeMax;
+        private readonly ObservableCollection<DateTimePoint> _meanPoints = new ObservableCollection<DateTimePoint>();
+        private readonly ObservableCollection<DateTimePoint> _envMinPoints = new ObservableCollection<DateTimePoint>();
+        private readonly ObservableCollection<DateTimePoint> _envMaxPoints = new ObservableCollection<DateTimePoint>();
+        private readonly List<Bucket> _buckets = new List<Bucket>(TargetBucketCount * 2);
         private readonly Axis _xAxis;
         private readonly Axis _yAxis;
 
         private LineChartConfig _cfg;
         private LineChartType _activeType = LineChartType.Straight;
+        private TimeSpan _bucketSize = TimeSpan.FromSeconds(1);
 
-        // Cursor + threshold sections (rebuilt by ApplySections each Configure).
         private readonly RectangularSection _cursorSection;
         private DateTime? _cursorTime;
 
-        // Pause state — when true, we keep appending samples but stop sliding the
-        // X axis. Auto-engaged when the user manipulates the chart (zoom/pan).
         private bool _paused;
         private readonly Border _pauseOverlay;
         private readonly TextBlock _pauseText;
@@ -121,7 +167,10 @@ namespace MetadataDisplay.Client.Renderers
                 Labeler = ticks =>
                 {
                     var t = new DateTime((long)ticks, DateTimeKind.Utc).ToLocalTime();
-                    return t.ToString("HH:mm:ss");
+                    // Use a wider label format when the visible span is > 1h so we
+                    // get HH:mm-only ticks instead of HH:mm:ss every label.
+                    var span = TimeSpan.FromTicks((long)((_xAxis?.MaxLimit ?? 0) - (_xAxis?.MinLimit ?? 0)));
+                    return span.TotalHours >= 1 ? t.ToString("HH:mm") : t.ToString("HH:mm:ss");
                 },
                 LabelsPaint = new SolidColorPaint(SKColors.Gray),
                 TextSize = 10,
@@ -143,6 +192,7 @@ namespace MetadataDisplay.Client.Renderers
             };
 
             BuildSeries(LineChartType.Straight);
+            BuildEnvelopeSeries();
             BuildChart();
 
             _pauseText = new TextBlock
@@ -178,12 +228,22 @@ namespace MetadataDisplay.Client.Renderers
 
         public void Configure(LineChartConfig cfg)
         {
+            var prevWindow = _cfg?.WindowSeconds ?? -1;
+            var prevAgg = _cfg?.Aggregation;
             _cfg = cfg;
-            // Rebuild the entire CartesianChart when the line-style category
-            // changes. Earlier attempts (replacing the Series array, then mutating
-            // an ObservableCollection) left LiveCharts2 with stale internal state —
-            // visible as a stuck preview that didn't redraw on new samples plus
-            // double-painting. Recreating the chart guarantees a clean slate.
+
+            // Recompute bucket size from the window — keeps point count near the
+            // TargetBucketCount budget so render cost stays flat.
+            _bucketSize = ChooseBucketSize(cfg.WindowSeconds);
+
+            // If the window length changed, the existing buckets are the wrong
+            // width. Drop them and start fresh — re-bucketing the live raw stream
+            // isn't possible because we never kept the raw samples.
+            if (prevWindow > 0 && prevWindow != cfg.WindowSeconds)
+            {
+                _buckets.Clear();
+            }
+
             if (cfg.LineType != _activeType)
             {
                 BuildSeries(cfg.LineType);
@@ -192,28 +252,38 @@ namespace MetadataDisplay.Client.Renderers
                 _root.Children.Add(_chart);
                 _root.Children.Add(_pauseOverlay);
             }
+            else if (prevAgg.HasValue && prevAgg.Value != cfg.Aggregation)
+            {
+                // Aggregation switched — repopulate the displayed points from the
+                // existing bucket aggregates without re-bucketing.
+                RebuildSeriesFromBuckets();
+            }
             ApplyConfig();
         }
 
-        // Add a sample. Pruning is anchored to the latest sample so playback (where
-        // "latest" walks the cursor) gets the same window behaviour as live.
+        // Add a single sample (used by live streaming).
         public void AddSample(double value, DateTime utc)
         {
             if (_cfg == null) return;
             if (utc.Kind != DateTimeKind.Utc) utc = utc.ToUniversalTime();
+            BucketAppend(value, utc);
+            PruneAndRescale();
+        }
 
-            // Drop duplicate / out-of-order samples for the same timestamp — keeps
-            // the chart monotonic on X.
-            if (_points.Count > 0 && _points[_points.Count - 1].DateTime >= utc)
-                _points[_points.Count - 1] = new DateTimePoint(utc, value);
-            else
-                _points.Add(new DateTimePoint(utc, value));
-
-            // Hard cap the buffer so very long sessions don't grow without bound.
-            // Twice the window in samples is plenty of headroom.
-            int hardCap = Math.Max(2048, _cfg.WindowSeconds * 60);
-            while (_points.Count > hardCap) _points.RemoveAt(0);
-
+        // Bulk-load samples from a playback range scan. Wipes existing buckets so
+        // the chart shows exactly the requested range and nothing carried over
+        // from a previous live session.
+        public void ResetWithSamples(IReadOnlyList<(double Value, DateTime Utc)> samples)
+        {
+            if (_cfg == null) return;
+            _buckets.Clear();
+            foreach (var s in samples)
+            {
+                var u = s.Utc;
+                if (u.Kind != DateTimeKind.Utc) u = u.ToUniversalTime();
+                BucketAppend(s.Value, u);
+            }
+            RebuildSeriesFromBuckets();
             PruneAndRescale();
         }
 
@@ -225,7 +295,8 @@ namespace MetadataDisplay.Client.Renderers
 
         public void Clear()
         {
-            _points.Clear();
+            _buckets.Clear();
+            RebuildSeriesFromBuckets();
             _cursorTime = null;
             ApplySections();
         }
@@ -245,51 +316,144 @@ namespace MetadataDisplay.Client.Renderers
             PruneAndRescale();
         }
 
-        // Tooltip formatter shared by both series types. The X-axis tooltip already
-        // shows the time; the series tooltip just shows the value to avoid the
-        // "08:44:25 / 08:44:25 0.93" duplication the user flagged.
-        private static string FormatTooltip(LiveChartsCore.Kernel.ChartPoint point)
-            => point.Coordinate.PrimaryValue.ToString("0.##", CultureInfo.InvariantCulture);
+        private static TimeSpan ChooseBucketSize(int windowSeconds)
+        {
+            // Floor at 1s — the metadata cadence is rarely below that and going
+            // sub-second creates lots of zero-count buckets.
+            double secs = Math.Max(1.0, (double)windowSeconds / TargetBucketCount);
+            // Snap to humane bucket sizes so axis labels / grid lines align nicely.
+            double[] snaps = { 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600, 43200, 86400 };
+            foreach (var s in snaps)
+            {
+                if (secs <= s) return TimeSpan.FromSeconds(s);
+            }
+            return TimeSpan.FromSeconds(86400);
+        }
+
+        private DateTime BucketStart(DateTime utc)
+        {
+            var ticks = _bucketSize.Ticks;
+            return new DateTime((utc.Ticks / ticks) * ticks, DateTimeKind.Utc);
+        }
+
+        private void BucketAppend(double value, DateTime utc)
+        {
+            var start = BucketStart(utc);
+            Bucket b = null;
+            if (_buckets.Count > 0 && _buckets[_buckets.Count - 1].StartUtc == start)
+                b = _buckets[_buckets.Count - 1];
+            else if (_buckets.Count > 0 && _buckets[_buckets.Count - 1].StartUtc > start)
+            {
+                // Out-of-order sample (rare) — find or insert.
+                int idx = _buckets.FindLastIndex(x => x.StartUtc <= start);
+                if (idx >= 0 && _buckets[idx].StartUtc == start) b = _buckets[idx];
+                else
+                {
+                    b = new Bucket { StartUtc = start };
+                    _buckets.Insert(idx + 1, b);
+                }
+            }
+            else
+            {
+                b = new Bucket { StartUtc = start };
+                _buckets.Add(b);
+            }
+
+            b.Add(value);
+
+            // Update series points incrementally instead of rebuilding everything
+            // for every new sample. Last-bucket-grow is the common case.
+            UpdatePointForBucket(b, _buckets.Count - 1);
+        }
+
+        private void UpdatePointForBucket(Bucket b, int bucketIndex)
+        {
+            if (_cfg == null) return;
+            var meanPoint = new DateTimePoint(b.StartUtc, b.Pick(_cfg.Aggregation));
+            // The series point at bucketIndex is either present (update) or new (add).
+            if (bucketIndex < _meanPoints.Count) _meanPoints[bucketIndex] = meanPoint;
+            else                                  _meanPoints.Add(meanPoint);
+
+            if (_cfg.EnvelopeEnabled)
+            {
+                var minPt = new DateTimePoint(b.StartUtc, b.Count > 0 ? b.Min : 0);
+                var maxPt = new DateTimePoint(b.StartUtc, b.Count > 0 ? b.Max : 0);
+                if (bucketIndex < _envMinPoints.Count) _envMinPoints[bucketIndex] = minPt; else _envMinPoints.Add(minPt);
+                if (bucketIndex < _envMaxPoints.Count) _envMaxPoints[bucketIndex] = maxPt; else _envMaxPoints.Add(maxPt);
+            }
+        }
+
+        private void RebuildSeriesFromBuckets()
+        {
+            _meanPoints.Clear();
+            _envMinPoints.Clear();
+            _envMaxPoints.Clear();
+            if (_cfg == null) return;
+            for (int i = 0; i < _buckets.Count; i++)
+                UpdatePointForBucket(_buckets[i], i);
+        }
 
         private void BuildSeries(LineChartType type)
         {
             _activeType = type;
             if (type == LineChartType.Step)
             {
-                _stepSeries = new StepLineSeries<DateTimePoint>
+                _meanStep = new StepLineSeries<DateTimePoint>
                 {
-                    Values = _points,
+                    Values = _meanPoints,
                     YToolTipLabelFormatter = FormatTooltip,
                 };
-                _lineSeries = null;
-                _series = _stepSeries;
+                _meanLine = null;
+                _meanSeries = _meanStep;
             }
             else
             {
-                _lineSeries = new LineSeries<DateTimePoint>
+                _meanLine = new LineSeries<DateTimePoint>
                 {
-                    Values = _points,
+                    Values = _meanPoints,
                     YToolTipLabelFormatter = FormatTooltip,
                 };
-                _stepSeries = null;
-                _series = _lineSeries;
+                _meanStep = null;
+                _meanSeries = _meanLine;
             }
+        }
+
+        private void BuildEnvelopeSeries()
+        {
+            _envelopeMin = new LineSeries<DateTimePoint>
+            {
+                Values = _envMinPoints,
+                Fill = null,
+                GeometrySize = 0,
+                LineSmoothness = 0,
+            };
+            _envelopeMax = new LineSeries<DateTimePoint>
+            {
+                Values = _envMaxPoints,
+                Fill = null,
+                GeometrySize = 0,
+                LineSmoothness = 0,
+            };
         }
 
         private void BuildChart()
         {
+            var seriesList = new List<ISeries>(3);
+            if (_cfg != null && _cfg.EnvelopeEnabled)
+            {
+                seriesList.Add(_envelopeMin);
+                seriesList.Add(_envelopeMax);
+            }
+            seriesList.Add(_meanSeries);
+
             _chart = new CartesianChart
             {
-                Series = new[] { _series },
+                Series = seriesList,
                 XAxes = new[] { _xAxis },
                 YAxes = new[] { _yAxis },
                 Sections = new RectangularSection[0],
                 Background = System.Windows.Media.Brushes.Transparent,
                 LegendPosition = LegendPosition.Hidden,
-                // Hover tooltip — LiveCharts2 picks the nearest point. The label
-                // text is built by the series' YToolTipLabelFormatter. Theme the
-                // tooltip to match the Smart Client dark UI (default LiveCharts
-                // palette is light-on-grey, which clashed with the dark widget).
                 TooltipPosition = TooltipPosition.Top,
                 TooltipBackgroundPaint = new SolidColorPaint(new SKColor(0x2A, 0x32, 0x36, 0xF2)),
                 TooltipTextPaint = new SolidColorPaint(new SKColor(0xE6, 0xEA, 0xEC)),
@@ -298,9 +462,6 @@ namespace MetadataDisplay.Client.Renderers
                 MinHeight = 80,
                 MinWidth = 120,
             };
-            // Auto-pause the rolling window the moment the user starts interacting
-            // (wheel zoom or click-drag pan). Without this, samples would keep
-            // sliding the X-axis out from under their inspection.
             _chart.PreviewMouseWheel += (s, e) => { if (_cfg != null && _cfg.ZoomEnabled) Pause(); };
             _chart.PreviewMouseDown  += (s, e) =>
             {
@@ -308,6 +469,9 @@ namespace MetadataDisplay.Client.Renderers
                 if (e.ChangedButton == MouseButton.Left || e.ChangedButton == MouseButton.Middle) Pause();
             };
         }
+
+        private static string FormatTooltip(LiveChartsCore.Kernel.ChartPoint point)
+            => point.Coordinate.PrimaryValue.ToString("0.##", CultureInfo.InvariantCulture);
 
         private void ApplyConfig()
         {
@@ -317,55 +481,80 @@ namespace MetadataDisplay.Client.Renderers
                 ? new SolidColorPaint(new SKColor(sk.Red, sk.Green, sk.Blue, 0x40))
                 : null;
 
-            if (_lineSeries != null)
+            if (_meanLine != null)
             {
-                _lineSeries.Stroke = stroke;
-                _lineSeries.Fill = fill;
-                _lineSeries.LineSmoothness = _cfg.LineType == LineChartType.Smooth ? 0.65 : 0;
-                _lineSeries.GeometrySize = _cfg.ShowMarker ? 4 : 0;
-                _lineSeries.GeometryStroke = new SolidColorPaint(sk) { StrokeThickness = 1.5f };
-                _lineSeries.GeometryFill = new SolidColorPaint(sk);
+                _meanLine.Stroke = stroke;
+                _meanLine.Fill = fill;
+                _meanLine.LineSmoothness = _cfg.LineType == LineChartType.Smooth ? 0.65 : 0;
+                _meanLine.GeometrySize = _cfg.ShowMarker ? 4 : 0;
+                _meanLine.GeometryStroke = new SolidColorPaint(sk) { StrokeThickness = 1.5f };
+                _meanLine.GeometryFill = new SolidColorPaint(sk);
             }
-            if (_stepSeries != null)
+            if (_meanStep != null)
             {
-                _stepSeries.Stroke = stroke;
-                _stepSeries.Fill = fill;
-                _stepSeries.GeometrySize = _cfg.ShowMarker ? 4 : 0;
-                _stepSeries.GeometryStroke = new SolidColorPaint(sk) { StrokeThickness = 1.5f };
-                _stepSeries.GeometryFill = new SolidColorPaint(sk);
+                _meanStep.Stroke = stroke;
+                _meanStep.Fill = fill;
+                _meanStep.GeometrySize = _cfg.ShowMarker ? 4 : 0;
+                _meanStep.GeometryStroke = new SolidColorPaint(sk) { StrokeThickness = 1.5f };
+                _meanStep.GeometryFill = new SolidColorPaint(sk);
             }
+
+            // Envelope lines — same hue, low opacity, thin stroke. Visible only
+            // when EnvelopeEnabled AND the series is present in the chart.
+            var envStroke = new SolidColorPaint(new SKColor(sk.Red, sk.Green, sk.Blue, 0x80))
+            {
+                StrokeThickness = 1f,
+                PathEffect = new DashEffect(new float[] { 3, 3 }),
+            };
+            _envelopeMin.Stroke = envStroke;
+            _envelopeMax.Stroke = envStroke;
+
+            // The envelope series are listed in the chart only when enabled, so
+            // toggling the flag means rebuilding the chart's Series list.
+            EnsureChartSeriesMatchesEnvelopeFlag();
 
             _yAxis.MinLimit = _cfg.YMin;
             _yAxis.MaxLimit = _cfg.YMax;
-
-            // X-axis zoom + click-drag pan.
             _chart.ZoomMode = _cfg.ZoomEnabled ? ZoomAndPanMode.X : ZoomAndPanMode.None;
+
+            // Aggregation may have changed independently of LineType — re-emit
+            // displayed points from the cached buckets so the user sees the
+            // change without waiting for fresh samples.
+            RebuildSeriesFromBuckets();
 
             ApplySections();
             PruneAndRescale();
         }
 
+        private void EnsureChartSeriesMatchesEnvelopeFlag()
+        {
+            bool wantEnv = _cfg != null && _cfg.EnvelopeEnabled;
+            // Cheaper to just rebuild the Series array — these are tiny lists.
+            var list = new List<ISeries>(3);
+            if (wantEnv)
+            {
+                list.Add(_envelopeMin);
+                list.Add(_envelopeMax);
+            }
+            list.Add(_meanSeries);
+            _chart.Series = list;
+        }
+
         private void ApplySections()
         {
             var sections = new List<RectangularSection>();
-
             if (_cfg != null && _cfg.Numeric != null && _cfg.Numeric.Enabled)
             {
                 var n = _cfg.Numeric;
-                // Two dashed horizontal threshold lines — warn boundary (Min) and
-                // critical boundary (Max). Replaces the filled-band approach because
-                // bands hid the line and competed visually with threshold colors.
                 if (n.Min.HasValue) sections.Add(MakeThresholdLine(n.Min.Value, n.HighIsBad ? n.ColorWarn : n.ColorBad));
                 if (n.Max.HasValue) sections.Add(MakeThresholdLine(n.Max.Value, n.HighIsBad ? n.ColorBad : n.ColorWarn));
             }
-
             if (_cursorTime.HasValue)
             {
                 _cursorSection.Xi = _cursorTime.Value.Ticks;
                 _cursorSection.Xj = _cursorTime.Value.Ticks;
                 sections.Add(_cursorSection);
             }
-
             _chart.Sections = sections;
         }
 
@@ -387,32 +576,38 @@ namespace MetadataDisplay.Client.Renderers
 
         private void PruneAndRescale()
         {
-            if (_points.Count == 0)
+            if (_buckets.Count == 0)
             {
                 _xAxis.MinLimit = null;
                 _xAxis.MaxLimit = null;
                 ApplySections();
                 return;
             }
-
-            // While paused, leave the X-axis alone so the user keeps their zoom/pan
-            // window. We still let new samples accumulate in the buffer.
             if (_paused)
             {
                 ApplySections();
                 return;
             }
 
-            var latest = _cursorTime ?? _points[_points.Count - 1].DateTime;
+            var latest = _cursorTime ?? _buckets[_buckets.Count - 1].StartUtc + _bucketSize;
             var cutoff = latest.AddSeconds(-_cfg.WindowSeconds);
 
-            // Drop samples older than the rolling window. List is sorted by time
-            // (we enforce that on insert) so we always drop from the front.
-            while (_points.Count > 0 && _points[0].DateTime < cutoff) _points.RemoveAt(0);
+            // Drop stale buckets and their points.
+            int drop = 0;
+            while (drop < _buckets.Count && _buckets[drop].StartUtc + _bucketSize < cutoff) drop++;
+            if (drop > 0)
+            {
+                _buckets.RemoveRange(0, drop);
+                for (int i = 0; i < drop && _meanPoints.Count > 0; i++) _meanPoints.RemoveAt(0);
+                if (_cfg != null && _cfg.EnvelopeEnabled)
+                {
+                    for (int i = 0; i < drop && _envMinPoints.Count > 0; i++) _envMinPoints.RemoveAt(0);
+                    for (int i = 0; i < drop && _envMaxPoints.Count > 0; i++) _envMaxPoints.RemoveAt(0);
+                }
+            }
 
             _xAxis.MinLimit = cutoff.Ticks;
             _xAxis.MaxLimit = latest.Ticks;
-
             ApplySections();
         }
 

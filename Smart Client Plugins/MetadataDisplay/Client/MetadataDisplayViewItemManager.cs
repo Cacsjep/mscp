@@ -60,6 +60,8 @@ namespace MetadataDisplay.Client
         private const string LineTypeKey = "LineType";          // Straight | Smooth | Step
         private const string LineThicknessKey = "LineThickness";
         private const string LineZoomEnabledKey = "LineZoomEnabled";
+        private const string LineAggregationKey = "LineAggregation"; // Mean | Last | Min | Max | Count
+        private const string LineEnvelopeKey = "LineEnvelope";       // "true" / "false"
 
         // Theme
         private const string WidgetDensityKey = "WidgetDensity";
@@ -337,6 +339,23 @@ namespace MetadataDisplay.Client
         {
             get => GetProperty(LineZoomEnabledKey) ?? "true";
             set => SetProperty(LineZoomEnabledKey, value);
+        }
+
+        // Mean | Last | Min | Max | Count. Drives how raw samples within a bucket
+        // collapse to one displayed value.
+        public string LineAggregation
+        {
+            get => GetProperty(LineAggregationKey) ?? "Mean";
+            set => SetProperty(LineAggregationKey, value);
+        }
+
+        // "true" / "false". When on, the chart adds two thin lines at the per-bucket
+        // min and max (in addition to the aggregated mean line) so the operator can
+        // see how much variation each bucket smoothed away.
+        public string LineEnvelope
+        {
+            get => GetProperty(LineEnvelopeKey) ?? "false";
+            set => SetProperty(LineEnvelopeKey, value);
         }
 
         // Compact | Comfortable | Spacious

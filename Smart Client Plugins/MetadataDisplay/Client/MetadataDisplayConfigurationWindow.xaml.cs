@@ -164,6 +164,9 @@ namespace MetadataDisplay.Client
 
             // LineChart
             lineWindowSecondsBox.Text = _vim.LineWindowSeconds ?? "60";
+            SyncLineWindowPresetCombo();
+            SelectComboItem(lineAggregationCombo, _vim.LineAggregation ?? "Mean");
+            lineEnvelopeCheck.IsChecked = string.Equals(_vim.LineEnvelope, "true", StringComparison.OrdinalIgnoreCase);
             lineYMinBox.Text = _vim.LineYMin ?? "";
             lineYMaxBox.Text = _vim.LineYMax ?? "";
             _lineColor.HexValue = _vim.LineColor ?? "#FF4FC3F7";
@@ -486,7 +489,11 @@ namespace MetadataDisplay.Client
             textFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
             // Line chart fields trigger a full preview rebuild so the chart picks up
             // axis-range / color / threshold changes (configure-only, no extra samples).
-            lineWindowSecondsBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineWindowSecondsBox.TextChanged += (s, e) => { SyncLineWindowPresetCombo(); ReconfigureLinePreview(); };
+            lineWindowPresetCombo.SelectionChanged += (s, e) => OnLineWindowPresetChanged();
+            lineAggregationCombo.SelectionChanged += (s, e) => ReconfigureLinePreview();
+            lineEnvelopeCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineEnvelopeCheck.Unchecked += (s, e) => ReconfigureLinePreview();
             lineYMinBox.TextChanged += (s, e) => ReconfigureLinePreview();
             lineYMaxBox.TextChanged += (s, e) => ReconfigureLinePreview();
             lineFillCheck.Checked += (s, e) => ReconfigureLinePreview();
@@ -1186,6 +1193,8 @@ namespace MetadataDisplay.Client
                 LineType = ParseLineType((lineTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()),
                 LineThickness = TryParseDouble(lineThicknessBox.Text) ?? 2,
                 ZoomEnabled = lineZoomCheck.IsChecked == true,
+                Aggregation = ParseLineAggregation((lineAggregationCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()),
+                EnvelopeEnabled = lineEnvelopeCheck.IsChecked == true,
                 Numeric = numeric,
             };
         }
@@ -1195,6 +1204,53 @@ namespace MetadataDisplay.Client
             if (string.Equals(s, "Smooth", StringComparison.OrdinalIgnoreCase)) return LineChartType.Smooth;
             if (string.Equals(s, "Step",   StringComparison.OrdinalIgnoreCase)) return LineChartType.Step;
             return LineChartType.Straight;
+        }
+
+        private static LineAggregation ParseLineAggregation(string s)
+        {
+            if (string.Equals(s, "Min", StringComparison.OrdinalIgnoreCase)) return LineAggregation.Min;
+            if (string.Equals(s, "Max", StringComparison.OrdinalIgnoreCase)) return LineAggregation.Max;
+            return LineAggregation.Mean;
+        }
+
+        // Match the seconds textbox to one of the preset items (or to "Custom" when
+        // it doesn't match any preset). Suppress the recursive event so editing the
+        // textbox doesn't fire OnLineWindowPresetChanged in a loop.
+        private bool _syncingLineWindow;
+        private void SyncLineWindowPresetCombo()
+        {
+            if (_syncingLineWindow) return;
+            _syncingLineWindow = true;
+            try
+            {
+                string secs = (lineWindowSecondsBox.Text ?? "").Trim();
+                bool matched = false;
+                foreach (var item in lineWindowPresetCombo.Items)
+                {
+                    var ci = item as ComboBoxItem;
+                    if (ci?.Tag?.ToString() == secs) { lineWindowPresetCombo.SelectedItem = ci; matched = true; break; }
+                }
+                if (!matched)
+                {
+                    foreach (var item in lineWindowPresetCombo.Items)
+                    {
+                        var ci = item as ComboBoxItem;
+                        if (ci?.Tag?.ToString() == "custom") { lineWindowPresetCombo.SelectedItem = ci; break; }
+                    }
+                }
+            }
+            finally { _syncingLineWindow = false; }
+        }
+
+        private void OnLineWindowPresetChanged()
+        {
+            if (_syncingLineWindow) return;
+            var tag = (lineWindowPresetCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.IsNullOrEmpty(tag) || tag == "custom") return;
+            _syncingLineWindow = true;
+            try { lineWindowSecondsBox.Text = tag; }
+            finally { _syncingLineWindow = false; }
+            ReconfigureLinePreview();
         }
 
         // Reconfigure existing line preview without losing accumulated samples.
@@ -1623,6 +1679,8 @@ namespace MetadataDisplay.Client
             _vim.LineType = (lineTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Straight";
             _vim.LineThickness = NormalizeNumberText(lineThicknessBox.Text, "2");
             _vim.LineZoomEnabled = (lineZoomCheck.IsChecked == true) ? "true" : "false";
+            _vim.LineAggregation = (lineAggregationCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Mean";
+            _vim.LineEnvelope = (lineEnvelopeCheck.IsChecked == true) ? "true" : "false";
             // Keep the legacy LineSmoothing flag in sync so older renderers see the
             // same effective behaviour.
             _vim.LineSmoothing = string.Equals(_vim.LineType, "Smooth", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
