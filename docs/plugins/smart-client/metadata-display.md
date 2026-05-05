@@ -1,13 +1,13 @@
 ---
 title: "Metadata Display Widgets for Milestone XProtect"
-description: "Metadata Display plugin for Milestone XProtect Smart Client - turn ONVIF metadata channels into dashboard widgets (lamp, number, gauge, text, line chart)."
+description: "Metadata Display plugin for Milestone XProtect Smart Client - turn ONVIF metadata channels into dashboard widgets (lamp, number, gauge, text, line chart, table)."
 ---
 
 <div class="show-title" markdown>
 
 # Metadata Display
 
-Render any value from a Milestone metadata channel as a dashboard widget in the Smart Client. One widget per value, five render styles (Lamp, Number, Gauge, Text, Line Chart).
+Render any value from a Milestone metadata channel as a dashboard widget in the Smart Client. One widget per value, six render styles (Lamp, Number, Gauge, Text, Line Chart, Table).
 
 Built for ONVIF metadata like: Axis `CameraApplicationPlatform` analytics (area occupancy, line crossing, object counts), digital I/O port states, vendor counters - anything emitted as `tt:Message` over the metadata stream.
 
@@ -32,7 +32,7 @@ If the configuration's **Inspect packet...** button shows fresh XML and Learn di
 2. Click **Open configuration...**
 3. **Select channel...** -> pick a metadata channel
 4. Click **Start Learn** to discover the topics and data keys flowing through the stream, then pick from the dropdowns
-5. Choose a render type (Lamp / Number / Gauge / Text / Line Chart), tune the options, hit **Save**
+5. Choose a render type (Lamp / Number / Gauge / Text / Line Chart / Table), tune the options, hit **Save**
 6. Switch to **Live** - the widget starts displaying as soon as a matching packet arrives
 
 ## Render Types
@@ -108,6 +108,21 @@ The override is **session only**: it is dropped when the configuration is saved 
 - **Live** - new samples stream in and the right edge advances. Auto-pause kicks in when you zoom or pan so you can study a region without it sliding away.
 - **Playback** - zoom and pan are always on (there is no live tail to fight with) and the auto-pause badge is suppressed. Moving the timeline cursor moves the chart's cursor line; jumping further than half the visible window triggers a fresh range scan from the archive. The chart seeds itself at the current playback time on entry, so you do not need to scrub once to populate it.
 
+### Table
+
+Scrolling time-ordered table of `(Time, Value)` rows. Use when you want to read the actual values (numbers or text) in sequence rather than inferring them from a curve. Reuses the same archive backfill, in-pane window picker, and playback cursor machinery as the Line Chart.
+
+- **Newest on top** - the latest row is always inserted at the top of the table; older rows scroll down and off the bottom. Auto-follow keeps the viewport pinned to the top in Live mode; if the operator scrolls down to inspect older rows, a "Paused (click to jump back to newest)" badge appears at the bottom of the pane. Click the badge or scroll back to the top to resume following.
+- **Time window** - same preset list as the Line Chart (60 seconds up to 24 hours, plus Custom). Drives both the archive backfill scan range on first entry and the rolling age cutoff for in-memory rows.
+- **Max rows** - hard cap on stored rows independent of the window (default 200, max 5000). Whichever cuts harder wins: a 24-hour window with `Max rows = 200` keeps only the 200 newest, while a 60-second window with `Max rows = 5000` keeps only the last 60 seconds even if fewer than 5000.
+- **Header name** - custom header text for the value column; leave blank to use "Value". Useful when the data key is something opaque (`@Value`, `Level`) and the column should read "Speed", "PlateNumber", "Counter", etc.
+- **Timestamp column** - toggle the Time column on/off and pick a format string (default `HH:mm:ss`; standard .NET `DateTime` format strings work, e.g. `HH:mm:ss.fff` or `dd.MM HH:mm`).
+- **Value column** - font size and **Left / Center / Right** alignment.
+- **Show Δ column** - optional numeric difference between a row and the row immediately older than it. Renders blank for non-numeric values, so it's safe to enable on text-based fields without crashing.
+- **Thresholds** - same shared model as Number / Gauge / Line Chart. When **Enable thresholds** is on, the value text is tinted Ok / Warn / Bad based on Min / Max and the High-is-bad direction. Non-numeric values stay neutral.
+- **Live archive backfill** - on first appearance of a Table widget, the configured window of recorded data is loaded from the archive so the table opens with real history instead of accumulating a single row per packet from cold.
+- **Playback** - the row at-or-before the timeline cursor is highlighted as the cursor moves. Large jumps trigger a fresh range scan around the new cursor position, identical to the Line Chart behavior.
+
 ## What to Read
 
 The "What to read" section is the bridge from the raw stream to a single value:
@@ -134,7 +149,7 @@ User-set sizes (Title font size, Gauge value font size, Text font size, Lamp ico
 
 The configuration window has a live preview pane on the right. As soon as a metadata packet matches your Topic + Data key, the preview shows the same widget that will render in the view. Until a value arrives, the preview shows the same **Waiting for data...** indicator that the live view uses, so what you see in Setup matches what users will see at runtime.
 
-If you change the Topic or Data key, the preview re-runs against the most recent cached XML, so you don't have to wait for a fresh packet to validate the choice. The Line Chart preview is sized at 16:9 inside the configuration window so the chart shape matches the runtime pane.
+If you change the Topic or Data key, the preview re-runs against the most recent cached XML, so you don't have to wait for a fresh packet to validate the choice. The Line Chart and Table previews are sized at 16:9 inside the configuration window so the rendered shape matches the runtime pane.
 
 ## Stale Handling
 
@@ -145,16 +160,16 @@ Optional. **Mark stale after (seconds)** - if no matching packet arrives within 
 A pulsing dot with a status line is shown:
 
 - **Waiting for data...** - live mode is up, no matching packet yet
-- **Loading recent values from archive...** - line chart cold-start in playback mode while the seed query runs
-- **Loading last 6h from archive...** - line chart cold-start in live mode (or after a window switch) while history is being backfilled
+- **Loading recent values from archive...** - Line Chart or Table cold-start in playback mode while the seed query runs
+- **Loading last 6h from archive...** - Line Chart or Table cold-start in live mode (or after a window switch) while history is being backfilled
 
-The chart appears as soon as the loading step finishes, regardless of whether any samples were found.
+The chart or table appears as soon as the loading step finishes, regardless of whether any samples were found.
 
 ## Playback
 
 Playback mode is supported: as the timeline cursor moves, the widget shows the value that was emitted at that timestamp. Useful for replaying analytics events alongside recorded video.
 
-For Line Chart specifically, the chart is seeded with archive data on entry (no scrubbing needed to populate), the cursor line tracks the timeline position, and large jumps trigger a fresh range scan around the new cursor.
+For Line Chart and Table specifically, the view is seeded with archive data on entry (no scrubbing needed to populate). For Line Chart the cursor line tracks the timeline position; for Table the row at-or-before the cursor is highlighted. In both cases, large jumps trigger a fresh range scan around the new cursor.
 
 ## Storage Format
 
@@ -172,6 +187,8 @@ The plugin stores all settings as MIP item properties on the view item. No exter
 | Channel does not appear in the configuration channel picker | Either the metadata stream is not enabled on the camera, the user has no rights on the channel, or the channel is in a folder you cannot browse. See Prerequisites. |
 | Playback view stays empty | The metadata channel exists but is not being recorded. Add or extend a recording rule so the metadata channel is included. |
 | Line Chart "Paused" badge keeps appearing | You are zoomed in or panned in Live mode, which auto-pauses to keep the view stable. Click the badge to resume the rolling live window. |
+| Table "Paused" badge keeps appearing | You scrolled down from the top to inspect older rows; auto-follow stops so the view does not jump while you are reading. Click the badge or scroll back to the top to resume following the newest row. |
+| Table Δ column is blank | The data key is text-based (or only one value has been seen so far). Δ is only computed when both adjacent rows parse as numbers; non-numeric values render blank rather than wrong. |
 | In-pane window picker change does not persist | This is by design - the picker is session-only. Open the configuration and change **Time window** there to make it permanent. |
 
 </div>
