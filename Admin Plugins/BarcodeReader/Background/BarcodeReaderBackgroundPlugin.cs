@@ -570,6 +570,7 @@ namespace BarcodeReader.Background
                 case 3:  return "CameraNotFound";
                 case 4:  return "ManagedException";
                 case 5:  return "EnvironmentMissing";
+                case 6:  return "NativeDepsMissing";
                 case -1: return "NoExitCode";
                 case 255: return "NativeCrash";
                 default: return $"Unknown({code})";

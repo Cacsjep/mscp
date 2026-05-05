@@ -3,9 +3,11 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunitySDK;
+using Microsoft.Win32;
 using VideoOS.Platform;
 
 namespace BarcodeReaderHelper
@@ -24,6 +26,7 @@ namespace BarcodeReaderHelper
         public const int ExitCameraNotFound      = 3;
         public const int ExitManagedException    = 4;
         public const int ExitEnvironmentMissing  = 5;
+        public const int ExitNativeDepsMissing   = 6;
         // 255 / -1 / 0xc06d007e etc. are produced by the OS when our process is
         // terminated by an unhandled native exception (e.g. delay-load DLL miss).
         // We never return these explicitly  they signal "we never got to clean up".
@@ -76,8 +79,30 @@ namespace BarcodeReaderHelper
             _log.Info($"Assembly search dirs: {string.Join(" ; ", _assemblySearchDirs)}");
             AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 
+            // Native (delay-load) DLL search: the Windows native loader is a separate
+            // code path from the managed AssemblyResolve handler above. MIP SDK Media
+            // delay-binds CoreToolkits.dll / IMV1.dll / FFmpeg natives once the first
+            // JPEG frame arrives. Wire those dirs into the loader's default search list
+            // here so the bind succeeds without depending on cwd or PATH.
+            ConfigureNativeDllSearch(_assemblySearchDirs);
+
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+            // Probe the canonical Milestone native (CoreToolkits.dll) eagerly so a
+            // missing-deps host fails fast with a diagnosable exit code instead of
+            // crashing later inside MIP SDK Media with SEH 0xc06d007e (exit 255).
+            if (!ProbeCoreToolkits())
+            {
+                _log.Error("CoreToolkits.dll could not be located on this host. " +
+                           "Event Server Dir not found - add the Event Server install dir " +
+                           "(e.g. C:\\Program Files\\Milestone\\XProtect Event Server) to the " +
+                           "Machine PATH environment variable, or install the plugin on a host " +
+                           "that has Event Server / Recording Server. " +
+                           $"Searched: {string.Join(" ; ", _assemblySearchDirs)}");
+                WriteStatus("Error:NativeDepsMissing");
+                return ExitNativeDepsMissing;
+            }
 
             return Run(args);
         }
@@ -190,21 +215,153 @@ namespace BarcodeReaderHelper
             }
         }
 
+        // OEM-safe install-dir discovery. Probes in priority order so the first hit
+        // wins, but every probe runs so the resolved list is the *union* of valid
+        // directories (FFmpeg may sit in Recording Server while CoreToolkits is in
+        // Event Server, etc.). Hardcoded `C:\Program Files\Milestone\...` paths are a
+        // last-chance fallback only - on Husky / Arcules / non-default installs they
+        // simply don't exist and the registry/walk-up probes carry the load.
         private static string[] BuildSearchDirs(string milestoneDir)
         {
             var dirs = new System.Collections.Generic.List<string>();
-            if (!string.IsNullOrEmpty(milestoneDir) && Directory.Exists(milestoneDir)) dirs.Add(milestoneDir);
 
+            void Add(string dir, string source)
+            {
+                if (string.IsNullOrEmpty(dir)) return;
+                try { dir = Path.GetFullPath(dir.TrimEnd('\\', '/')); } catch { return; }
+                if (!Directory.Exists(dir)) return;
+                foreach (var existing in dirs)
+                    if (string.Equals(existing, dir, StringComparison.OrdinalIgnoreCase)) return;
+                dirs.Add(dir);
+                _log.Info($"Search dir [{source}]: {dir}");
+            }
+
+            // 1. Authoritative: dir handed in by the BackgroundPlugin host.
+            Add(milestoneDir, "host");
+
+            // 2. Walk up from the helper exe location. ...\MIPPlugins\BarcodeReader\
+            //    sits under the parent service install dir (Event/Recording Server).
+            try
+            {
+                var exeDir = Path.GetDirectoryName(typeof(Program).Assembly.Location);
+                for (int i = 0; i < 4 && !string.IsNullOrEmpty(exeDir); i++)
+                {
+                    Add(exeDir, $"walk-up[{i}]");
+                    exeDir = Path.GetDirectoryName(exeDir);
+                }
+            }
+            catch { }
+
+            // 3. Registry probes. Milestone writes these on standard installs but OEM
+            //    rebrands sometimes ship without them - missing keys are normal here,
+            //    not an error. Treat each independently so one missing key doesn't
+            //    skip the others.
+            foreach (var (subkey, name) in new[]
+            {
+                (@"SOFTWARE\VideoOS\Server",   "InstallationPath"),
+                (@"SOFTWARE\VideoOS\Recorder", "InstallationPath"),
+                (@"SOFTWARE\VideoOS\Platform", "InstallationPath"),
+            })
+            {
+                Add(TryReadRegistry(RegistryHive.LocalMachine, subkey, name), $"reg:HKLM\\{subkey}\\{name}");
+            }
+
+            // 4. Last-chance hardcoded defaults. On a stock English-locale Milestone
+            //    install these line up; on OEM/non-default installs they simply don't
+            //    exist and Add() drops them.
             foreach (var dir in new[]
             {
                 @"C:\Program Files\Milestone\XProtect Event Server",
                 @"C:\Program Files\Milestone\XProtect Recording Server",
-                @"C:\Program Files\Milestone\XProtect Management Server"
+                @"C:\Program Files\Milestone\XProtect Management Server",
             })
             {
-                if (Directory.Exists(dir) && !dirs.Contains(dir)) dirs.Add(dir);
+                Add(dir, "default");
             }
+
+            if (dirs.Count == 0)
+            {
+                _log.Error("Event Server Dir not found - no Milestone install dir located via host arg, " +
+                           "exe walk-up, registry (HKLM\\SOFTWARE\\VideoOS\\Server\\InstallationPath etc.), " +
+                           "or default paths. On OEM / non-default installations, add the Event Server " +
+                           "install dir to the Machine PATH environment variable so native delay-load " +
+                           "(CoreToolkits.dll, FFmpeg, etc.) can resolve.");
+            }
+
             return dirs.ToArray();
+        }
+
+        private static string TryReadRegistry(RegistryHive hive, string subkey, string valueName)
+        {
+            try
+            {
+                using (var baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64))
+                using (var key = baseKey.OpenSubKey(subkey))
+                {
+                    return key?.GetValue(valueName) as string;
+                }
+            }
+            catch { return null; }
+        }
+
+        // Native DLL search list (Win8+/Server2012+). Kernel32 falls back to legacy
+        // search rules if SetDefaultDllDirectories isn't available, in which case the
+        // AddDllDirectory calls are no-ops - same end result the helper already had.
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetDefaultDllDirectories(uint DirectoryFlags);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr AddDllDirectory(string NewDirectory);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr LoadLibraryW(string lpLibFileName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool FreeLibrary(IntPtr hLibModule);
+
+        private const uint LOAD_LIBRARY_SEARCH_DEFAULT_DIRS = 0x00001000;
+        private const uint LOAD_LIBRARY_SEARCH_USER_DIRS    = 0x00000400;
+        private const uint LOAD_LIBRARY_SEARCH_SYSTEM32     = 0x00000800;
+        private const uint LOAD_LIBRARY_SEARCH_APPLICATION_DIR = 0x00000200;
+
+        private static void ConfigureNativeDllSearch(string[] dirs)
+        {
+            try
+            {
+                SetDefaultDllDirectories(
+                    LOAD_LIBRARY_SEARCH_DEFAULT_DIRS |
+                    LOAD_LIBRARY_SEARCH_USER_DIRS |
+                    LOAD_LIBRARY_SEARCH_SYSTEM32 |
+                    LOAD_LIBRARY_SEARCH_APPLICATION_DIR);
+            }
+            catch (Exception ex)
+            {
+                _log.Info($"SetDefaultDllDirectories not available: {ex.Message}");
+            }
+
+            if (dirs == null) return;
+            foreach (var d in dirs)
+            {
+                if (string.IsNullOrEmpty(d)) continue;
+                try
+                {
+                    var h = AddDllDirectory(d);
+                    if (h == IntPtr.Zero) _log.Info($"AddDllDirectory failed (gle={Marshal.GetLastWin32Error()}): {d}");
+                }
+                catch (Exception ex) { _log.Info($"AddDllDirectory threw for {d}: {ex.Message}"); }
+            }
+        }
+
+        private static bool ProbeCoreToolkits()
+        {
+            try
+            {
+                var h = LoadLibraryW("CoreToolkits.dll");
+                if (h == IntPtr.Zero) return false;
+                FreeLibrary(h);
+                return true;
+            }
+            catch { return false; }
         }
 
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
