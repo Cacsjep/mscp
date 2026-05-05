@@ -1,6 +1,9 @@
 # Changelog
-
+https://lnkd.in/dW8gcgx3 <- Community Plugins for Milestone XProtect™
 All notable changes to this project will be documented in this file.
+
+## [2.7.3] - 2026-05-05
+- Fix Barcode Helper crash: The issue of helper crash, was that the helper was unable to find the correct decoding dll that are in event server folder.
 
 ## [2.7.2] - 2026-05-04
 - Fix Metadata Display: `TypeLoadException` for `LiveChartsCore.CoreAxis`2` `LiveChartsCore`, `LiveChartsCore.SkiaSharpView` and `LiveChartsCore.SkiaSharpView.WPF` are now ILRepacked /internalize'd into `MetadataDisplay.dll` so the chart code resolves against its own private copy regardless of what other plugins ship. SkiaSharp / HarfBuzz remain external (large + native libs).
