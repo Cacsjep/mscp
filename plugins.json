@@ -164,5 +164,12 @@
     "path": "Smart Client Plugins/MetadataDisplay",
     "category": "SmartClient",
     "description": "Display ONVIF metadata values as live and playback dashboard widgets (lamp, number with thresholds, gauge, text) in Smart Client view items"
+  },
+  {
+    "name": "WebViewer",
+    "displayName": "Web Viewer",
+    "path": "Smart Client Plugins/WebViewer",
+    "category": "SmartClient",
+    "description": "Embed a single web page in a Smart Client view item via Microsoft Edge WebView2 (per-item URL, optional title, HTTP Basic credentials)"
   }
 ]

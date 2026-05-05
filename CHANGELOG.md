@@ -2,6 +2,10 @@
 https://lnkd.in/dW8gcgx3 <- Community Plugins for Milestone XProtect™
 All notable changes to this project will be documented in this file.
 
+## [2.7.4] - 2026-05-05
+- Fix Web Viewer: Plugin was missing from CI ZIP artifacts and the unified MSI installer because it had no entry in `plugins.json` (the manifest that drives both the build matrix and `installer/generate-wix.ps1`). Added the WebViewer entry under the SmartClient category; the existing `bin/Release/net48` staging rule picks up the WebView2 native loaders (`runtimes/win-{x86,x64,arm64}/native/WebView2Loader.dll`) automatically, no extra staging directives needed.
+- Improve BarcodeReader: Quieter helper assembly-resolve logging. Successful resolves no longer write an `AssemblyResolve hit` info line, and `.resources` satellite-assembly probes (e.g. `VideoOS.Platform.resources`) are excluded from the miss-error filter — those are CLR localization lookups expected to miss on unlocalized binaries. Real misses for `VideoOS.*`, `ZXing.*` and `CommunitySDK` still fire as errors.
+
 ## [2.7.3] - 2026-05-05
 - Fix Barcode Helper crash: The issue of helper crash, was that the helper was unable to find the correct decoding dll that are in event server folder.
 

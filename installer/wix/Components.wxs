@@ -280,6 +280,66 @@
     </InstallExecuteSequence>
   </Fragment>
   <Fragment>
+    <DirectoryRef Id="MSCP_PAYLOAD_DIR">
+      <Component Guid="51CD61BA-24A6-FD4A-A322-7BAFE0DA79E1" Id="cmpZip_ColoredTimeline" Bitness="always64">
+        <File Source="!(bindpath.zips)\ColoredTimeline-v$(var.Version).zip" Name="ColoredTimeline.zip" Id="zip_ColoredTimeline" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <SetProperty Before="CA_Extract_ColoredTimeline" Id="CA_Extract_ColoredTimeline" Value="Source=[CommonAppDataFolder]Milestone\MSCPPluginPayload\ColoredTimeline.zip;Dest=[MIPPLUGINS]ColoredTimeline" Sequence="execute" />
+    <CustomAction Id="CA_Extract_ColoredTimeline" Return="check" DllEntry="ExtractZipToFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <SetProperty Before="CA_Cleanup_ColoredTimeline" Id="CA_Cleanup_ColoredTimeline" Value="Dest=[MIPPLUGINS]ColoredTimeline" Sequence="execute" />
+    <CustomAction Id="CA_Cleanup_ColoredTimeline" Return="ignore" DllEntry="RemoveExtractedFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <InstallExecuteSequence>
+      <Custom Condition="&amp;Feature_ColoredTimeline=3" Action="CA_Extract_ColoredTimeline" After="InstallFiles" />
+      <Custom Before="RemoveFiles" Condition="(&amp;Feature_ColoredTimeline=2) OR REMOVE=&quot;ALL&quot;" Action="CA_Cleanup_ColoredTimeline" />
+    </InstallExecuteSequence>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="MSCP_PAYLOAD_DIR">
+      <Component Guid="B9E479BB-7A8D-9749-AFF7-299580670FB8" Id="cmpZip_TimelineJump" Bitness="always64">
+        <File Source="!(bindpath.zips)\TimelineJump-v$(var.Version).zip" Name="TimelineJump.zip" Id="zip_TimelineJump" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <SetProperty Before="CA_Extract_TimelineJump" Id="CA_Extract_TimelineJump" Value="Source=[CommonAppDataFolder]Milestone\MSCPPluginPayload\TimelineJump.zip;Dest=[MIPPLUGINS]TimelineJump" Sequence="execute" />
+    <CustomAction Id="CA_Extract_TimelineJump" Return="check" DllEntry="ExtractZipToFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <SetProperty Before="CA_Cleanup_TimelineJump" Id="CA_Cleanup_TimelineJump" Value="Dest=[MIPPLUGINS]TimelineJump" Sequence="execute" />
+    <CustomAction Id="CA_Cleanup_TimelineJump" Return="ignore" DllEntry="RemoveExtractedFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <InstallExecuteSequence>
+      <Custom Condition="&amp;Feature_TimelineJump=3" Action="CA_Extract_TimelineJump" After="InstallFiles" />
+      <Custom Before="RemoveFiles" Condition="(&amp;Feature_TimelineJump=2) OR REMOVE=&quot;ALL&quot;" Action="CA_Cleanup_TimelineJump" />
+    </InstallExecuteSequence>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="MSCP_PAYLOAD_DIR">
+      <Component Guid="A99D0BD1-063F-1C4E-AA49-7C4868AB343C" Id="cmpZip_MetadataDisplay" Bitness="always64">
+        <File Source="!(bindpath.zips)\MetadataDisplay-v$(var.Version).zip" Name="MetadataDisplay.zip" Id="zip_MetadataDisplay" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <SetProperty Before="CA_Extract_MetadataDisplay" Id="CA_Extract_MetadataDisplay" Value="Source=[CommonAppDataFolder]Milestone\MSCPPluginPayload\MetadataDisplay.zip;Dest=[MIPPLUGINS]MetadataDisplay" Sequence="execute" />
+    <CustomAction Id="CA_Extract_MetadataDisplay" Return="check" DllEntry="ExtractZipToFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <SetProperty Before="CA_Cleanup_MetadataDisplay" Id="CA_Cleanup_MetadataDisplay" Value="Dest=[MIPPLUGINS]MetadataDisplay" Sequence="execute" />
+    <CustomAction Id="CA_Cleanup_MetadataDisplay" Return="ignore" DllEntry="RemoveExtractedFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <InstallExecuteSequence>
+      <Custom Condition="&amp;Feature_MetadataDisplay=3" Action="CA_Extract_MetadataDisplay" After="InstallFiles" />
+      <Custom Before="RemoveFiles" Condition="(&amp;Feature_MetadataDisplay=2) OR REMOVE=&quot;ALL&quot;" Action="CA_Cleanup_MetadataDisplay" />
+    </InstallExecuteSequence>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="MSCP_PAYLOAD_DIR">
+      <Component Guid="618F9C04-F1C7-5142-978C-5DE756D085CA" Id="cmpZip_WebViewer" Bitness="always64">
+        <File Source="!(bindpath.zips)\WebViewer-v$(var.Version).zip" Name="WebViewer.zip" Id="zip_WebViewer" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <SetProperty Before="CA_Extract_WebViewer" Id="CA_Extract_WebViewer" Value="Source=[CommonAppDataFolder]Milestone\MSCPPluginPayload\WebViewer.zip;Dest=[MIPPLUGINS]WebViewer" Sequence="execute" />
+    <CustomAction Id="CA_Extract_WebViewer" Return="check" DllEntry="ExtractZipToFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <SetProperty Before="CA_Cleanup_WebViewer" Id="CA_Cleanup_WebViewer" Value="Dest=[MIPPLUGINS]WebViewer" Sequence="execute" />
+    <CustomAction Id="CA_Cleanup_WebViewer" Return="ignore" DllEntry="RemoveExtractedFolder" BinaryRef="InstallerCustomActions" Execute="deferred" Impersonate="no" />
+    <InstallExecuteSequence>
+      <Custom Condition="&amp;Feature_WebViewer=3" Action="CA_Extract_WebViewer" After="InstallFiles" />
+      <Custom Before="RemoveFiles" Condition="(&amp;Feature_WebViewer=2) OR REMOVE=&quot;ALL&quot;" Action="CA_Cleanup_WebViewer" />
+    </InstallExecuteSequence>
+  </Fragment>
+  <Fragment>
     <Feature Id="SmartClientPlugins" Description="Plugins for the XProtect Smart Client. Installs to C:\Program Files\Milestone\MIPPlugins\" AllowAdvertise="no" Display="expand" Level="1" Title="Smart Client Plugins" AllowAbsent="yes">
       <Feature Id="Feature_Weather" Description="Display live weather in Smart Client view items (Open-Meteo)" AllowAdvertise="no" Level="1" Title="Weather Plugin" AllowAbsent="yes">
         <ComponentRef Id="cmpZip_Weather" />
@@ -310,6 +370,15 @@
       </Feature>
       <Feature Id="Feature_RemoteManager" Description="Unified workspace for hardware web interfaces, custom websites, and RDP connections with tag-based filtering" AllowAdvertise="no" Level="1" Title="Remote Manager" AllowAbsent="yes">
         <ComponentRef Id="cmpZip_RemoteManager" />
+      </Feature>
+      <Feature Id="Feature_TimelineJump" Description="Toolbar flyout to jump the playback timeline backward or forward by configurable increments (seconds, minutes, hours, days)" AllowAdvertise="no" Level="1" Title="Timeline Jump" AllowAbsent="yes">
+        <ComponentRef Id="cmpZip_TimelineJump" />
+      </Feature>
+      <Feature Id="Feature_MetadataDisplay" Description="Display ONVIF metadata values as live and playback dashboard widgets (lamp, number with thresholds, gauge, text) in Smart Client view items" AllowAdvertise="no" Level="1" Title="Metadata Display" AllowAbsent="yes">
+        <ComponentRef Id="cmpZip_MetadataDisplay" />
+      </Feature>
+      <Feature Id="Feature_WebViewer" Description="Embed a single web page in a Smart Client view item via Microsoft Edge WebView2 (per-item URL, optional title, HTTP Basic credentials)" AllowAdvertise="no" Level="1" Title="Web Viewer" AllowAbsent="yes">
+        <ComponentRef Id="cmpZip_WebViewer" />
       </Feature>
     </Feature>
   </Fragment>
@@ -343,6 +412,9 @@
       <Feature Id="Feature_MetadataViewer" Description="Subscribe to a metadata channel in the Management Client and view the live XML stream" AllowAdvertise="no" Level="1" Title="Metadata Viewer Plugin" AllowAbsent="yes">
         <ComponentRef Id="cmpZip_MetadataViewer" />
       </Feature>
+      <Feature Id="Feature_ColoredTimeline" Description="Render any pair of camera events (e.g. edge motion start/stop) as colored ribbons on the Smart Client playback timeline" AllowAdvertise="no" Level="1" Title="Colored Timeline Plugin" AllowAbsent="yes">
+        <ComponentRef Id="cmpZip_ColoredTimeline" />
+      </Feature>
     </Feature>
   </Fragment>
   <Fragment>
@@ -365,6 +437,10 @@
       <ComponentRef Id="cmpZip_RemoteManager" />
       <ComponentRef Id="cmpZip_BarcodeReader" />
       <ComponentRef Id="cmpZip_MetadataViewer" />
+      <ComponentRef Id="cmpZip_ColoredTimeline" />
+      <ComponentRef Id="cmpZip_TimelineJump" />
+      <ComponentRef Id="cmpZip_MetadataDisplay" />
+      <ComponentRef Id="cmpZip_WebViewer" />
     </ComponentGroup>
   </Fragment>
 </Wix>

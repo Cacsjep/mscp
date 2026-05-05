@@ -374,9 +374,7 @@ namespace BarcodeReaderHelper
                 if (!File.Exists(path)) continue;
                 try
                 {
-                    var asm = Assembly.LoadFrom(path);
-                    _log.Info($"AssemblyResolve hit: {name} -> {path}");
-                    return asm;
+                    return Assembly.LoadFrom(path);
                 }
                 catch (Exception ex)
                 {
@@ -394,6 +392,9 @@ namespace BarcodeReaderHelper
         private static bool LooksLikeOurDependency(string name)
         {
             if (string.IsNullOrEmpty(name)) return false;
+            // Satellite-assembly probes (e.g. "VideoOS.Platform.resources") are CLR
+            // localization lookups that are expected to miss for an unlocalized binary.
+            if (name.EndsWith(".resources", StringComparison.OrdinalIgnoreCase)) return false;
             return name.StartsWith("VideoOS.", StringComparison.OrdinalIgnoreCase)
                 || name.StartsWith("zxing", StringComparison.OrdinalIgnoreCase)
                 || name.StartsWith("CommunitySDK", StringComparison.OrdinalIgnoreCase);
