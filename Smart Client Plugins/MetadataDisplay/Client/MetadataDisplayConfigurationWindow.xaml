@@ -361,7 +361,8 @@
                                 <RadioButton x:Name="rtNumber" Content="Number" GroupName="rt" Margin="0,0,16,0" Checked="OnRenderTypeChanged"/>
                                 <RadioButton x:Name="rtGauge" Content="Gauge" GroupName="rt" Margin="0,0,16,0" Checked="OnRenderTypeChanged"/>
                                 <RadioButton x:Name="rtText" Content="Text" GroupName="rt" Margin="0,0,16,0" Checked="OnRenderTypeChanged"/>
-                                <RadioButton x:Name="rtLine" Content="Line chart" GroupName="rt" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtLine" Content="Line chart" GroupName="rt" Margin="0,0,16,0" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtTable" Content="Table" GroupName="rt" Checked="OnRenderTypeChanged"/>
                             </StackPanel>
 
                             <Grid x:Name="lampPanel" Visibility="Visible">
@@ -659,6 +660,114 @@
                                             <Grid x:Name="lineColorBadPickerHost"/>
                                         </StackPanel>
                                     </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="tablePanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8"
+                                               Text="Scrolling table of (Time, Value) rows. Live mode keeps the newest N rows in a rolling window; in playback the row at-or-before the cursor is highlighted."/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Window" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="tableWindowSecondsBox" Tag="positiveNumber"/>
+                                        <TextBlock Grid.Column="2" Text="seconds" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="6,0,16,0"/>
+                                        <ComboBox Grid.Column="3" x:Name="tableWindowPresetCombo" SelectedIndex="2" HorizontalAlignment="Left" Width="180">
+                                            <ComboBoxItem Content="Last 60 seconds"  Tag="60"/>
+                                            <ComboBoxItem Content="Last 5 minutes"   Tag="300"/>
+                                            <ComboBoxItem Content="Last 10 minutes"  Tag="600"/>
+                                            <ComboBoxItem Content="Last 30 minutes" Tag="1800"/>
+                                            <ComboBoxItem Content="Last 1 hour"     Tag="3600"/>
+                                            <ComboBoxItem Content="Last 6 hours"    Tag="21600"/>
+                                            <ComboBoxItem Content="Last 24 hours"   Tag="86400"/>
+                                            <ComboBoxItem Content="Custom"          Tag="custom"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Max rows" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="tableMaxRowsBox" Tag="positiveNumber"/>
+                                        <TextBlock Grid.Column="2" Text="hard cap on stored rows; oldest are dropped first" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Timestamp" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <CheckBox x:Name="tableShowTimestampCheck" Content="Show column" IsChecked="True" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Format" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="tableTimestampFormatBox" Width="120"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Header name" Style="{StaticResource FieldLabel}"
+                                                   ToolTip="Header text for the value column. Leave blank to use 'Value'."/>
+                                        <TextBox  Grid.Column="1" x:Name="tableValueColumnNameBox"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Value" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="Font size" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="tableFontSizeBox" Width="60" Tag="positiveNumber" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Align" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <ComboBox x:Name="tableValueAlignCombo" Width="100" SelectedIndex="0">
+                                                <ComboBoxItem Content="Left"   Tag="Left"/>
+                                                <ComboBoxItem Content="Center" Tag="Center"/>
+                                                <ComboBoxItem Content="Right"  Tag="Right"/>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Grid>
+                                    <CheckBox x:Name="tableShowDeltaCheck" Content="Show Δ column (numeric difference between consecutive rows)" Margin="0,0,0,10"/>
+                                    <CheckBox x:Name="thresholdsEnabledCheckTable" Content="Enable thresholds" Margin="0,0,0,6"/>
+                                    <StackPanel x:Name="tableThresholdsBlock">
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox  Grid.Column="1" x:Name="tableNumMinBox" Margin="0,0,16,0" Tag="number"/>
+                                            <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                            <TextBox  Grid.Column="3" x:Name="tableNumMaxBox" Tag="number"/>
+                                        </Grid>
+                                        <CheckBox x:Name="tableHighIsBadCheck" Content="High value is bad" IsChecked="True" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Colors" Style="{StaticResource FieldLabel}"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <TextBlock Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="tableColorOkPickerHost" Margin="0,0,16,0"/>
+                                                <TextBlock Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="tableColorWarnPickerHost" Margin="0,0,16,0"/>
+                                                <TextBlock Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="tableColorBadPickerHost"/>
+                                            </StackPanel>
+                                        </Grid>
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>

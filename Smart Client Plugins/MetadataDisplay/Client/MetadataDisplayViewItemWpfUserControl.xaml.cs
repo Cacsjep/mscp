@@ -34,6 +34,7 @@ namespace MetadataDisplay.Client
         private GaugeRenderer _gaugeRenderer;
         private TextRenderer _textRenderer;
         private LineChartRenderer _lineRenderer;
+        private TableRenderer _tableRenderer;
 
         private DateTime? _lastValueUtc;
         // Playback line-chart backfill bookkeeping: track the last cursor we
@@ -125,11 +126,11 @@ namespace MetadataDisplay.Client
             setupPanel.Visibility = Visibility.Collapsed;
             _hasReceivedValue = false;
 
-            // LineChart goes into the native-resolution chartRoot; other renderers
-            // use the 320-wide renderViewbox. Show the chart immediately (axes +
-            // threshold bands are useful empty); other renderers stay hidden behind
-            // the "Waiting for data" overlay until a value arrives.
-            bool isChart = string.Equals(_viewItemManager.RenderType, "LineChart", StringComparison.Ordinal);
+            // LineChart and Table go into the native-resolution chartRoot; other
+            // renderers use the 320-wide renderViewbox. Show the chart immediately
+            // (axes + threshold bands are useful empty); other renderers stay
+            // hidden behind the "Waiting for data" overlay until a value arrives.
+            bool isChart = IsArchiveBackedRenderer(_viewItemManager.RenderType);
             renderViewbox.Visibility = Visibility.Collapsed;
             // For non-chart renderers we show the empty chart frame; for chart
             // renderers we hide the chart and show the spinner overlay so the
@@ -144,17 +145,18 @@ namespace MetadataDisplay.Client
 
             if (mode == Mode.ClientLive)
             {
-                // For LineChart with a non-trivial window we backfill the chart
-                // from the archive first so the user sees recent history right
-                // away instead of waiting N minutes for it to fill. StartLive runs
-                // after the backfill resolves (or immediately for short windows /
-                // other render types).
-                if (isChart && _viewItemManager.RenderType == "LineChart")
+                // For archive-backed renderers (LineChart, Table) with a
+                // non-trivial window we backfill from the archive first so the
+                // user sees recent history right away instead of waiting N
+                // minutes for it to fill. StartLive runs after the backfill
+                // resolves (or immediately for short windows / other render
+                // types).
+                if (isChart)
                 {
-                    var cfg = BuildLineChartConfig();
-                    if (cfg.WindowSeconds > 60)
+                    int windowSeconds = ResolveArchiveWindowSeconds();
+                    if (windowSeconds > 60)
                     {
-                        BackfillLineChartLive(cfg);
+                        BackfillArchiveLive(windowSeconds);
                     }
                     else
                     {
@@ -343,8 +345,9 @@ namespace MetadataDisplay.Client
             // PlaybackCurrentTimeIndication only fires when the cursor moves, so
             // entering playback while paused leaves the chart empty until the
             // user scrubs. Query the current cursor explicitly via the request
-            // message and seed an immediate backfill if we're showing a chart.
-            if (_lineRenderer != null)
+            // message and seed an immediate backfill if we're showing an
+            // archive-backed renderer (line chart or table).
+            if (_lineRenderer != null || _tableRenderer != null)
             {
                 try
                 {
@@ -364,11 +367,12 @@ namespace MetadataDisplay.Client
                     }
                     if (seed.HasValue)
                     {
-                        _log.Info($"[ViewItem] StartPlayback seeding chart backfill at {seed.Value:O}");
+                        _log.Info($"[ViewItem] StartPlayback seeding archive backfill at {seed.Value:O}");
                         _pump.RequestTime(seed.Value);
                         _lastPlaybackCursorUtc = seed.Value;
-                        _lineRenderer.SetCursor(seed.Value);
-                        BackfillLineChart(seed.Value, BuildLineChartConfig());
+                        _lineRenderer?.SetCursor(seed.Value);
+                        _tableRenderer?.SetCursor(seed.Value);
+                        BackfillArchive(seed.Value, ResolveArchiveWindowSeconds());
                     }
                     else
                     {
@@ -403,29 +407,48 @@ namespace MetadataDisplay.Client
             _lastBackfillCursorUtc = null;
         }
 
+        // True for renderers that can backfill from the archive (line chart and
+        // table). They share the chartRoot host, the session-window picker, and
+        // the same scan + handoff machinery.
+        private static bool IsArchiveBackedRenderer(string renderType)
+        {
+            return string.Equals(renderType, "LineChart", StringComparison.Ordinal)
+                || string.Equals(renderType, "Table", StringComparison.Ordinal);
+        }
+
+        // The window length the active archive-backed renderer uses for backfills
+        // and prune cutoffs. Honors the in-pane session override.
+        private int ResolveArchiveWindowSeconds()
+        {
+            if (_lineRenderer != null) return BuildLineChartConfig().WindowSeconds;
+            if (_tableRenderer != null) return BuildTableConfig().WindowSeconds;
+            return 60;
+        }
+
         // Live backfill: range-scan the archive for [now - window, now] before
         // opening the live subscription. Same scan code as playback backfill but
         // anchored to wall-clock now. Without this, switching to a "Last 6 hours"
-        // line chart starts empty and only fills over the next 6 hours — and
-        // every live↔playback flip would reset the chart to empty.
+        // window starts empty and only fills over the next 6 hours — and every
+        // live↔playback flip would reset the buffer to empty.
         //
         // The live subscription doesn't open until the backfill resolves; that
         // means we lose any samples emitted in the (~1-3s) scan window itself,
         // which is acceptable for typical metadata cadence.
-        private void BackfillLineChartLive(LineChartConfig cfg)
+        private void BackfillArchiveLive(int windowSeconds)
         {
-            if (_lineRenderer == null || _metadataItem == null) return;
+            if (_metadataItem == null) return;
+            if (_lineRenderer == null && _tableRenderer == null) return;
 
             // Show "Waiting for data..." while the backfill runs so the empty
-            // chart isn't mistaken for "channel is dead".
-            ShowLoadingOverlay($"Loading last {FormatWindow(cfg.WindowSeconds)} from archive...");
+            // pane isn't mistaken for "channel is dead".
+            ShowLoadingOverlay($"Loading last {FormatWindow(windowSeconds)} from archive...");
 
             try { _backfillCts?.Cancel(); } catch { }
             _backfillCts = new System.Threading.CancellationTokenSource();
             var ct = _backfillCts.Token;
 
             var nowUtc = DateTime.UtcNow;
-            var fromUtc = nowUtc.AddSeconds(-cfg.WindowSeconds);
+            var fromUtc = nowUtc.AddSeconds(-windowSeconds);
             const int maxFrames = 10000;
 
             // Construct a one-shot pump just for the scan; it owns its own
@@ -434,37 +457,25 @@ namespace MetadataDisplay.Client
                 _ => ExtractorConfig.FromManager(_viewItemManager),
                 (_, __) => { });
 
-            _log.Info($"[ViewItem] BackfillLineChart(live) window={cfg.WindowSeconds}s from={fromUtc:O} to={nowUtc:O}");
+            _log.Info($"[ViewItem] BackfillArchive(live) window={windowSeconds}s from={fromUtc:O} to={nowUtc:O}");
             scanPump.ScanRangeAsync(fromUtc, nowUtc, maxFrames, ct).ContinueWith(t =>
             {
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (ct.IsCancellationRequested) return;
-                    if (_lineRenderer == null) return;
+                    if (_lineRenderer == null && _tableRenderer == null) return;
 
                     if (t.IsCanceled)
                     {
-                        _log.Info("[ViewItem] BackfillLineChart(live) cancelled");
+                        _log.Info("[ViewItem] BackfillArchive(live) cancelled");
                     }
                     else if (t.IsFaulted)
                     {
-                        _log.Error($"[ViewItem] BackfillLineChart(live) faulted: {t.Exception?.GetBaseException().Message}");
+                        _log.Error($"[ViewItem] BackfillArchive(live) faulted: {t.Exception?.GetBaseException().Message}");
                     }
                     else if (t.Result != null)
                     {
-                        var samples = new List<(double, DateTime)>(t.Result.Count);
-                        foreach (var r in t.Result)
-                        {
-                            if (double.TryParse(r.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
-                                samples.Add((v, r.TimestampUtc));
-                        }
-                        _log.Info($"[ViewItem] BackfillLineChart(live) raw={t.Result.Count} parsed={samples.Count}");
-                        _lineRenderer.ResetWithSamples(samples);
-                        if (samples.Count > 0)
-                        {
-                            _hasReceivedValue = true;
-                            _lastValueUtc = samples[samples.Count - 1].Item2;
-                        }
+                        ApplyBackfillResults(t.Result);
                     }
 
                     // Restore the chart visibility regardless of scan outcome —
@@ -473,6 +484,40 @@ namespace MetadataDisplay.Client
                     StartLive();
                 }));
             }, System.Threading.Tasks.TaskScheduler.Default);
+        }
+
+        // Push the scan result into whichever archive-backed renderer is active.
+        // Line chart needs numeric parse; table keeps strings.
+        private void ApplyBackfillResults(System.Collections.Generic.List<(string Value, DateTime TimestampUtc)> raw)
+        {
+            if (_lineRenderer != null)
+            {
+                var samples = new List<(double, DateTime)>(raw.Count);
+                foreach (var r in raw)
+                {
+                    if (double.TryParse(r.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
+                        samples.Add((v, r.TimestampUtc));
+                }
+                _log.Info($"[ViewItem] Backfill apply (line) raw={raw.Count} parsed={samples.Count}");
+                _lineRenderer.ResetWithSamples(samples);
+                if (samples.Count > 0)
+                {
+                    _hasReceivedValue = true;
+                    _lastValueUtc = samples[samples.Count - 1].Item2;
+                }
+            }
+            if (_tableRenderer != null)
+            {
+                var samples = new List<(string, DateTime)>(raw.Count);
+                foreach (var r in raw) samples.Add((r.Value, r.TimestampUtc));
+                _log.Info($"[ViewItem] Backfill apply (table) rows={samples.Count}");
+                _tableRenderer.ResetWithSamples(samples);
+                if (samples.Count > 0)
+                {
+                    _hasReceivedValue = true;
+                    _lastValueUtc = samples[samples.Count - 1].Item2;
+                }
+            }
         }
 
         private static string FormatWindow(int seconds)
@@ -523,7 +568,7 @@ namespace MetadataDisplay.Client
         private void BuildWindowPickerOptions()
         {
             windowPickerOptions.Children.Clear();
-            int currentEffective = BuildLineChartConfig().WindowSeconds;
+            int currentEffective = ResolveArchiveWindowSeconds();
             foreach (var p in _windowPresets)
             {
                 int sec = p.Seconds;
@@ -538,7 +583,9 @@ namespace MetadataDisplay.Client
                 Background = new SolidColorBrush(Color.FromRgb(0x33, 0x3E, 0x42)),
                 Margin = new Thickness(4, 2, 4, 2),
             });
-            int savedDefault = LineChartConfig.FromManager(_viewItemManager).WindowSeconds;
+            int savedDefault = _tableRenderer != null
+                ? TableConfig.FromManager(_viewItemManager).WindowSeconds
+                : LineChartConfig.FromManager(_viewItemManager).WindowSeconds;
             string defaultLabel = $"Default ({FormatWindow(savedDefault)})";
             windowPickerOptions.Children.Add(CreateWindowPickerItem(defaultLabel, !_sessionWindowSecondsOverride.HasValue, () => SetSessionWindow(null)));
         }
@@ -579,12 +626,24 @@ namespace MetadataDisplay.Client
         {
             _sessionWindowSecondsOverride = overrideSeconds;
             UpdateWindowPickerLabel();
-            if (_lineRenderer == null) return;
+            if (_lineRenderer == null && _tableRenderer == null) return;
 
-            var cfg = BuildLineChartConfig();
+            int effectiveWindow;
             var mode = EnvironmentManager.Instance.Mode;
-            _log.Info($"[ViewItem] WindowPicker override={(overrideSeconds.HasValue ? overrideSeconds.Value.ToString() : "default")} effective={cfg.WindowSeconds}s mode={mode}");
-            _lineRenderer.Configure(cfg);
+            if (_lineRenderer != null)
+            {
+                var cfg = BuildLineChartConfig();
+                effectiveWindow = cfg.WindowSeconds;
+                _log.Info($"[ViewItem] WindowPicker override={(overrideSeconds.HasValue ? overrideSeconds.Value.ToString() : "default")} effective={effectiveWindow}s mode={mode} render=Line");
+                _lineRenderer.Configure(cfg);
+            }
+            else
+            {
+                var cfg = BuildTableConfig();
+                effectiveWindow = cfg.WindowSeconds;
+                _log.Info($"[ViewItem] WindowPicker override={(overrideSeconds.HasValue ? overrideSeconds.Value.ToString() : "default")} effective={effectiveWindow}s mode={mode} render=Table");
+                _tableRenderer.Configure(cfg);
+            }
 
             if (mode == Mode.ClientLive)
             {
@@ -592,8 +651,8 @@ namespace MetadataDisplay.Client
                 // path ApplyMode uses, so a wide window backfills from archive
                 // first and a short window starts streaming immediately.
                 StopLive();
-                if (cfg.WindowSeconds > 60)
-                    BackfillLineChartLive(cfg);
+                if (effectiveWindow > 60)
+                    BackfillArchiveLive(effectiveWindow);
                 else
                     StartLive();
             }
@@ -604,69 +663,73 @@ namespace MetadataDisplay.Client
                 // is reset so a future scrub still re-evaluates against the new window.
                 _lastBackfillCursorUtc = null;
                 if (_lastPlaybackCursorUtc.HasValue && _pump != null)
-                    BackfillLineChart(_lastPlaybackCursorUtc.Value, cfg);
+                    BackfillArchive(_lastPlaybackCursorUtc.Value, effectiveWindow);
             }
         }
 
         private void UpdateWindowPickerLabel()
         {
-            int effective = BuildLineChartConfig().WindowSeconds;
+            int effective = ResolveArchiveWindowSeconds();
             string label = FormatWindow(effective);
             if (_sessionWindowSecondsOverride.HasValue) label += "*";
             windowPickerText.Text = label;
         }
 
-        // Kick off a range scan covering [cursor - window, cursor] and on success
-        // bulk-load the results into the line chart. Cancels any previous in-flight
-        // scan first so rapid scrubbing doesn't pile up overlapping requests.
-        private void BackfillLineChart(DateTime cursorUtc, LineChartConfig cfg)
+        // Builds the runtime TableConfig honoring any in-pane window override.
+        // Mirrors BuildLineChartConfig so all window-picker code paths converge.
+        private TableConfig BuildTableConfig()
         {
-            if (_pump == null || _lineRenderer == null) return;
+            var cfg = TableConfig.FromManager(_viewItemManager);
+            if (_sessionWindowSecondsOverride.HasValue && _sessionWindowSecondsOverride.Value > 0)
+                cfg.WindowSeconds = _sessionWindowSecondsOverride.Value;
+            if (EnvironmentManager.Instance.Mode == Mode.ClientPlayback)
+                cfg.PlaybackMode = true;
+            return cfg;
+        }
+
+        // Kick off a range scan covering [cursor - window, cursor] and on success
+        // bulk-load the results into the active archive-backed renderer. Cancels
+        // any previous in-flight scan first so rapid scrubbing doesn't pile up
+        // overlapping requests.
+        private void BackfillArchive(DateTime cursorUtc, int windowSeconds)
+        {
+            if (_pump == null) return;
+            if (_lineRenderer == null && _tableRenderer == null) return;
             try { _backfillCts?.Cancel(); } catch { }
             _backfillCts = new System.Threading.CancellationTokenSource();
             var ct = _backfillCts.Token;
-            var fromUtc = cursorUtc.AddSeconds(-cfg.WindowSeconds);
+            var fromUtc = cursorUtc.AddSeconds(-windowSeconds);
             _lastBackfillCursorUtc = cursorUtc;
 
             // Show the same loading overlay live mode uses so window switches and
             // wide scrubs in playback give visible feedback while the scan runs.
-            ShowLoadingOverlay($"Loading {FormatWindow(cfg.WindowSeconds)} from archive...");
+            ShowLoadingOverlay($"Loading {FormatWindow(windowSeconds)} from archive...");
 
             // Cap pulled frames at a few thousand to keep the scan bounded for
             // very high-cadence sources or wide windows.
             const int maxFrames = 4000;
-            _log.Info($"[ViewItem] BackfillLineChart(playback) cursor={cursorUtc:O} window={cfg.WindowSeconds}s from={fromUtc:O}");
+            _log.Info($"[ViewItem] BackfillArchive(playback) cursor={cursorUtc:O} window={windowSeconds}s from={fromUtc:O}");
             _pump.ScanRangeAsync(fromUtc, cursorUtc, maxFrames, ct).ContinueWith(t =>
             {
                 if (t.IsCanceled)
                 {
-                    _log.Info("[ViewItem] BackfillLineChart(playback) cancelled");
+                    _log.Info("[ViewItem] BackfillArchive(playback) cancelled");
                     return;
                 }
                 if (t.IsFaulted)
                 {
-                    _log.Error($"[ViewItem] BackfillLineChart(playback) faulted: {t.Exception?.GetBaseException().Message}");
+                    _log.Error($"[ViewItem] BackfillArchive(playback) faulted: {t.Exception?.GetBaseException().Message}");
                     return;
                 }
                 var raw = t.Result;
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (ct.IsCancellationRequested) return;
-                    if (_lineRenderer == null) return;
-                    var samples = new List<(double, DateTime)>(raw.Count);
-                    foreach (var r in raw)
-                    {
-                        if (double.TryParse(r.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
-                            samples.Add((v, r.TimestampUtc));
-                    }
-                    _log.Info($"[ViewItem] BackfillLineChart(playback) raw={raw.Count} parsed={samples.Count}");
-                    _lineRenderer.ResetWithSamples(samples);
-                    _lineRenderer.SetCursor(cursorUtc);
+                    if (_lineRenderer == null && _tableRenderer == null) return;
+                    ApplyBackfillResults(raw);
+                    _lineRenderer?.SetCursor(cursorUtc);
+                    _tableRenderer?.SetCursor(cursorUtc);
                     HideLoadingOverlay();
-                    if (samples.Count > 0)
-                    {
-                        _hasReceivedValue = true;
-                    }
                 }));
             }, System.Threading.Tasks.TaskScheduler.Default);
         }
@@ -710,18 +773,19 @@ namespace MetadataDisplay.Client
                     _pump.RequestTime(utc.Value);
                     _lastPlaybackCursorUtc = utc.Value;
 
-                    // LineChart playback: small scrubs just move the cursor, but
-                    // jumps bigger than half the visible window (or the first time
-                    // we see a cursor) trigger a fresh range scan to refill the
-                    // visible buffer with archive samples.
-                    if (_lineRenderer != null)
+                    // Archive-backed playback: small scrubs just move the cursor,
+                    // but jumps bigger than half the visible window (or the first
+                    // time we see a cursor) trigger a fresh range scan to refill
+                    // the visible buffer with archive samples.
+                    if (_lineRenderer != null || _tableRenderer != null)
                     {
-                        _lineRenderer.SetCursor(utc.Value);
-                        var cfg = BuildLineChartConfig();
+                        _lineRenderer?.SetCursor(utc.Value);
+                        _tableRenderer?.SetCursor(utc.Value);
+                        int windowSeconds = ResolveArchiveWindowSeconds();
                         bool needBackfill = !_lastBackfillCursorUtc.HasValue
-                            || Math.Abs((utc.Value - _lastBackfillCursorUtc.Value).TotalSeconds) > cfg.WindowSeconds / 2.0;
+                            || Math.Abs((utc.Value - _lastBackfillCursorUtc.Value).TotalSeconds) > windowSeconds / 2.0;
                         if (needBackfill)
-                            BackfillLineChart(utc.Value, cfg);
+                            BackfillArchive(utc.Value, windowSeconds);
                     }
                 }
             }
@@ -741,6 +805,7 @@ namespace MetadataDisplay.Client
             _gaugeRenderer = null;
             _textRenderer = null;
             _lineRenderer = null;
+            _tableRenderer = null;
 
             UIElement visual;
             bool isChart = false;
@@ -765,6 +830,12 @@ namespace MetadataDisplay.Client
                     _lineRenderer = new LineChartRenderer();
                     _lineRenderer.Configure(BuildLineChartConfig());
                     visual = _lineRenderer.Visual;
+                    isChart = true;
+                    break;
+                case "Table":
+                    _tableRenderer = new TableRenderer();
+                    _tableRenderer.Configure(BuildTableConfig());
+                    visual = _tableRenderer.Visual;
                     isChart = true;
                     break;
                 case "Lamp":
@@ -912,9 +983,10 @@ namespace MetadataDisplay.Client
             {
                 _hasReceivedValue = true;
                 noDataPanel.Visibility = Visibility.Collapsed;
-                // Chart renderer is already visible (shown empty); only the
-                // bitmap-scaled host needs the first-value reveal.
-                if (_lineRenderer == null)
+                // Archive-backed renderers (line, table) are already visible
+                // (shown empty); only the bitmap-scaled host needs the
+                // first-value reveal.
+                if (_lineRenderer == null && _tableRenderer == null)
                     renderViewbox.Visibility = Visibility.Visible;
             }
 
@@ -948,6 +1020,11 @@ namespace MetadataDisplay.Client
                     var ts = _lastValueUtc ?? DateTime.UtcNow;
                     _lineRenderer.AddSample(v, ts);
                 }
+            }
+            else if (_tableRenderer != null)
+            {
+                var ts = _lastValueUtc ?? DateTime.UtcNow;
+                _tableRenderer.AddSample(value, ts);
             }
         }
 

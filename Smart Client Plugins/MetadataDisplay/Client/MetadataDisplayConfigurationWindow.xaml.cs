@@ -57,11 +57,13 @@ namespace MetadataDisplay.Client
         private GaugeRenderer _previewGauge;
         private TextRenderer _previewText;
         private LineChartRenderer _previewLine;
+        private TableRenderer _previewTable;
 
         // Color pickers (one per color slot)
         private ColorPickerControl _colorOk, _colorWarn, _colorBad;
         private ColorPickerControl _gaugeColorOk, _gaugeColorWarn, _gaugeColorBad;
         private ColorPickerControl _lineColor, _lineColorOk, _lineColorWarn, _lineColorBad;
+        private ColorPickerControl _tableColorOk, _tableColorWarn, _tableColorBad;
         private ColorPickerControl _titleColor;
 
         public MetadataDisplayConfigurationWindow(MetadataDisplayViewItemManager viewItemManager)
@@ -93,6 +95,9 @@ namespace MetadataDisplay.Client
             _lineColorOk = MountColorPicker(lineColorOkPickerHost);
             _lineColorWarn = MountColorPicker(lineColorWarnPickerHost);
             _lineColorBad = MountColorPicker(lineColorBadPickerHost);
+            _tableColorOk = MountColorPicker(tableColorOkPickerHost);
+            _tableColorWarn = MountColorPicker(tableColorWarnPickerHost);
+            _tableColorBad = MountColorPicker(tableColorBadPickerHost);
             _titleColor = MountColorPicker(titleColorPickerHost);
 
             // Title section
@@ -121,6 +126,7 @@ namespace MetadataDisplay.Client
                 case "Gauge":     rtGauge.IsChecked = true; break;
                 case "Text":      rtText.IsChecked = true; break;
                 case "LineChart": rtLine.IsChecked = true; break;
+                case "Table":     rtTable.IsChecked = true; break;
                 default:          rtLamp.IsChecked = true; break;
             }
 
@@ -135,6 +141,7 @@ namespace MetadataDisplay.Client
             thresholdsEnabledCheckNumber.IsChecked = thresholdsOn;
             thresholdsEnabledCheckGauge.IsChecked = thresholdsOn;
             thresholdsEnabledCheckLine.IsChecked = thresholdsOn;
+            thresholdsEnabledCheckTable.IsChecked = thresholdsOn;
 
             numMinBox.Text = _vim.NumMin ?? "";
             numMaxBox.Text = _vim.NumMax ?? "";
@@ -187,6 +194,23 @@ namespace MetadataDisplay.Client
             _lineColorOk.HexValue = _colorOk.HexValue;
             _lineColorWarn.HexValue = _colorWarn.HexValue;
             _lineColorBad.HexValue = _colorBad.HexValue;
+
+            // Table
+            tableWindowSecondsBox.Text = _vim.TableWindowSeconds ?? "300";
+            SyncTableWindowPresetCombo();
+            tableMaxRowsBox.Text = _vim.TableMaxRows ?? "200";
+            tableShowTimestampCheck.IsChecked = !string.Equals(_vim.TableShowTimestamp, "false", StringComparison.OrdinalIgnoreCase);
+            tableTimestampFormatBox.Text = _vim.TableTimestampFormat ?? "HH:mm:ss";
+            tableShowDeltaCheck.IsChecked = string.Equals(_vim.TableShowDelta, "true", StringComparison.OrdinalIgnoreCase);
+            tableFontSizeBox.Text = _vim.TableFontSize ?? "12";
+            SelectComboItem(tableValueAlignCombo, _vim.TableValueAlignment ?? "Left");
+            tableValueColumnNameBox.Text = _vim.TableValueColumnName ?? string.Empty;
+            tableNumMinBox.Text = _vim.NumMin ?? "";
+            tableNumMaxBox.Text = _vim.NumMax ?? "";
+            tableHighIsBadCheck.IsChecked = highIsBadCheck.IsChecked;
+            _tableColorOk.HexValue = _colorOk.HexValue;
+            _tableColorWarn.HexValue = _colorWarn.HexValue;
+            _tableColorBad.HexValue = _colorBad.HexValue;
 
             staleSecondsBox.Text = _vim.StaleSeconds ?? "0";
 
@@ -336,12 +360,13 @@ namespace MetadataDisplay.Client
 
         private void ApplyRenderTypeVisibility()
         {
-            if (lampPanel == null || numberPanel == null || gaugePanel == null || textPanel == null || linePanel == null) return;
+            if (lampPanel == null || numberPanel == null || gaugePanel == null || textPanel == null || linePanel == null || tablePanel == null) return;
             lampPanel.Visibility   = rtLamp.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
             numberPanel.Visibility = rtNumber.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             gaugePanel.Visibility  = rtGauge.IsChecked  == true ? Visibility.Visible : Visibility.Collapsed;
             textPanel.Visibility   = rtText.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
             linePanel.Visibility   = rtLine.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
+            tablePanel.Visibility  = rtTable.IsChecked  == true ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private bool _syncingThresholdsToggles;
@@ -359,6 +384,7 @@ namespace MetadataDisplay.Client
                 if (thresholdsEnabledCheckNumber != source) thresholdsEnabledCheckNumber.IsChecked = on;
                 if (thresholdsEnabledCheckGauge  != source) thresholdsEnabledCheckGauge.IsChecked = on;
                 if (thresholdsEnabledCheckLine   != source) thresholdsEnabledCheckLine.IsChecked = on;
+                if (thresholdsEnabledCheckTable  != source) thresholdsEnabledCheckTable.IsChecked = on;
             }
             finally
             {
@@ -366,6 +392,7 @@ namespace MetadataDisplay.Client
             }
             ApplyThresholdsEnabledVisibility();
             ReconfigureLinePreview();
+            ReconfigureTablePreview();
             ReRenderPreview();
         }
 
@@ -391,6 +418,7 @@ namespace MetadataDisplay.Client
             if (numberThresholdsBlock != null) { numberThresholdsBlock.IsEnabled = on; numberThresholdsBlock.Opacity = on ? 1.0 : 0.4; }
             if (gaugeThresholdsBlock  != null) { gaugeThresholdsBlock.IsEnabled  = on; gaugeThresholdsBlock.Opacity  = on ? 1.0 : 0.4; }
             if (lineThresholdsBlock   != null) { lineThresholdsBlock.IsEnabled   = on; lineThresholdsBlock.Opacity   = on ? 1.0 : 0.4; }
+            if (tableThresholdsBlock  != null) { tableThresholdsBlock.IsEnabled  = on; tableThresholdsBlock.Opacity  = on ? 1.0 : 0.4; }
         }
 
         private void BuildPreviewHost()
@@ -403,6 +431,7 @@ namespace MetadataDisplay.Client
             _previewGauge = null;
             _previewText = null;
             _previewLine = null;
+            _previewTable = null;
 
             UIElement visual;
             bool isChart = false;
@@ -429,6 +458,13 @@ namespace MetadataDisplay.Client
                 _previewLine = new LineChartRenderer();
                 _previewLine.Configure(BuildLineChartConfigFromUi());
                 visual = _previewLine.Visual;
+                isChart = true;
+            }
+            else if (rtTable.IsChecked == true)
+            {
+                _previewTable = new TableRenderer();
+                _previewTable.Configure(BuildTableConfigFromUi());
+                visual = _previewTable.Visual;
                 isChart = true;
             }
             else
@@ -512,9 +548,28 @@ namespace MetadataDisplay.Client
             _lineColorOk.ColorChanged += (s, e) => ReconfigureLinePreview();
             _lineColorWarn.ColorChanged += (s, e) => ReconfigureLinePreview();
             _lineColorBad.ColorChanged += (s, e) => ReconfigureLinePreview();
+            // Table chart fields
+            tableWindowSecondsBox.TextChanged += (s, e) => { SyncTableWindowPresetCombo(); ReconfigureTablePreview(); };
+            tableWindowPresetCombo.SelectionChanged += (s, e) => OnTableWindowPresetChanged();
+            tableMaxRowsBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableShowTimestampCheck.Checked += (s, e) => ReconfigureTablePreview();
+            tableShowTimestampCheck.Unchecked += (s, e) => ReconfigureTablePreview();
+            tableTimestampFormatBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableShowDeltaCheck.Checked += (s, e) => ReconfigureTablePreview();
+            tableShowDeltaCheck.Unchecked += (s, e) => ReconfigureTablePreview();
+            tableFontSizeBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableValueAlignCombo.SelectionChanged += (s, e) => ReconfigureTablePreview();
+            tableValueColumnNameBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableNumMinBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableNumMaxBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableHighIsBadCheck.Checked += (s, e) => ReconfigureTablePreview();
+            tableHighIsBadCheck.Unchecked += (s, e) => ReconfigureTablePreview();
+            _tableColorOk.ColorChanged += (s, e) => ReconfigureTablePreview();
+            _tableColorWarn.ColorChanged += (s, e) => ReconfigureTablePreview();
+            _tableColorBad.ColorChanged += (s, e) => ReconfigureTablePreview();
             densityCombo.SelectionChanged += (s, e) => { UpdatePreviewTitle(); ReRenderPreview(); };
 
-            // Threshold master toggle — keep all three panel checkboxes in sync, gate
+            // Threshold master toggle — keep all panel checkboxes in sync, gate
             // the threshold input blocks, and re-render the preview / line config.
             thresholdsEnabledCheckNumber.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckNumber);
             thresholdsEnabledCheckNumber.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckNumber);
@@ -522,6 +577,8 @@ namespace MetadataDisplay.Client
             thresholdsEnabledCheckGauge.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckGauge);
             thresholdsEnabledCheckLine.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckLine);
             thresholdsEnabledCheckLine.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckLine);
+            thresholdsEnabledCheckTable.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTable);
+            thresholdsEnabledCheckTable.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTable);
 
             // Title section live preview
             showTitleCheck.Checked += (s, e) => { ApplyTitleEnabled(); UpdatePreviewTitle(); };
@@ -1093,6 +1150,11 @@ namespace MetadataDisplay.Client
                     _previewLine.AddSample(v, ts);
                 }
             }
+            else if (_previewTable != null)
+            {
+                var ts = _lastPreviewUtc ?? DateTime.UtcNow;
+                _previewTable.AddSample(_lastPreviewValue, ts);
+            }
 
             UpdatePreviewAge();
         }
@@ -1258,6 +1320,98 @@ namespace MetadataDisplay.Client
         {
             if (!_uiReady) return;
             _previewLine?.Configure(BuildLineChartConfigFromUi());
+        }
+
+        private bool _syncingTableWindow;
+        private void SyncTableWindowPresetCombo()
+        {
+            if (_syncingTableWindow) return;
+            _syncingTableWindow = true;
+            try
+            {
+                string secs = (tableWindowSecondsBox.Text ?? "").Trim();
+                bool matched = false;
+                foreach (var item in tableWindowPresetCombo.Items)
+                {
+                    var ci = item as ComboBoxItem;
+                    if (ci?.Tag?.ToString() == secs) { tableWindowPresetCombo.SelectedItem = ci; matched = true; break; }
+                }
+                if (!matched)
+                {
+                    foreach (var item in tableWindowPresetCombo.Items)
+                    {
+                        var ci = item as ComboBoxItem;
+                        if (ci?.Tag?.ToString() == "custom") { tableWindowPresetCombo.SelectedItem = ci; break; }
+                    }
+                }
+            }
+            finally { _syncingTableWindow = false; }
+        }
+
+        private void OnTableWindowPresetChanged()
+        {
+            if (_syncingTableWindow) return;
+            var tag = (tableWindowPresetCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.IsNullOrEmpty(tag) || tag == "custom") return;
+            _syncingTableWindow = true;
+            try { tableWindowSecondsBox.Text = tag; }
+            finally { _syncingTableWindow = false; }
+            ReconfigureTablePreview();
+        }
+
+        // Builds a TableConfig from the UI without going through the manager so
+        // unsaved changes preview immediately.
+        private TableConfig BuildTableConfigFromUi()
+        {
+            int maxRows = 200;
+            if (int.TryParse(tableMaxRowsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var mr) && mr > 0)
+                maxRows = Math.Min(mr, 5000);
+            int win = 300;
+            if (int.TryParse(tableWindowSecondsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var w) && w > 0)
+                win = w;
+            double fs = 12;
+            if (double.TryParse(tableFontSizeBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var f) && f > 0)
+                fs = f;
+
+            var alignTag = (tableValueAlignCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Left";
+            TextAlignment align = TextAlignment.Left;
+            if (string.Equals(alignTag, "Right", StringComparison.OrdinalIgnoreCase)) align = TextAlignment.Right;
+            else if (string.Equals(alignTag, "Center", StringComparison.OrdinalIgnoreCase)) align = TextAlignment.Center;
+
+            return new TableConfig
+            {
+                MaxRows = maxRows,
+                WindowSeconds = win,
+                ShowTimestamp = tableShowTimestampCheck.IsChecked == true,
+                TimestampFormat = string.IsNullOrEmpty(tableTimestampFormatBox.Text) ? "HH:mm:ss" : tableTimestampFormatBox.Text,
+                ShowDelta = tableShowDeltaCheck.IsChecked == true,
+                FontSize = fs,
+                ValueAlignment = align,
+                ValueColumnName = tableValueColumnNameBox.Text ?? string.Empty,
+                Numeric = new NumericConfig
+                {
+                    Enabled = thresholdsEnabledCheckTable.IsChecked == true,
+                    Min = ParseNullableDouble(tableNumMinBox.Text),
+                    Max = ParseNullableDouble(tableNumMaxBox.Text),
+                    HighIsBad = tableHighIsBadCheck.IsChecked == true,
+                    ColorOk = ColorUtil.Parse(_tableColorOk.HexValue, Color.FromRgb(0x3C, 0xB3, 0x71)),
+                    ColorWarn = ColorUtil.Parse(_tableColorWarn.HexValue, Color.FromRgb(0xE6, 0x95, 0x00)),
+                    ColorBad = ColorUtil.Parse(_tableColorBad.HexValue, Color.FromRgb(0xD8, 0x39, 0x2C)),
+                    Unit = "",
+                },
+            };
+        }
+
+        private static double? ParseNullableDouble(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? (double?)v : null;
+        }
+
+        private void ReconfigureTablePreview()
+        {
+            if (!_uiReady) return;
+            _previewTable?.Configure(BuildTableConfigFromUi());
         }
 
         private void UpdatePreviewAge()
@@ -1614,6 +1768,7 @@ namespace MetadataDisplay.Client
             else if (rtGauge.IsChecked == true) rt = "Gauge";
             else if (rtText.IsChecked == true) rt = "Text";
             else if (rtLine.IsChecked == true) rt = "LineChart";
+            else if (rtTable.IsChecked == true) rt = "Table";
             _vim.RenderType = rt;
 
             _vim.LampMap = SerializeLampRows();
@@ -1639,6 +1794,16 @@ namespace MetadataDisplay.Client
                 _vim.ColorWarn = NormalizeColor(_lineColorWarn.HexValue);
                 _vim.ColorBad = NormalizeColor(_lineColorBad.HexValue);
                 // Line chart has no inline unit; leave any prior Unit untouched.
+            }
+            else if (rt == "Table")
+            {
+                _vim.NumMin = tableNumMinBox.Text?.Trim() ?? "";
+                _vim.NumMax = tableNumMaxBox.Text?.Trim() ?? "";
+                _vim.NumDirection = (tableHighIsBadCheck.IsChecked == true) ? "HighIsBad" : "LowIsBad";
+                _vim.ColorOk = NormalizeColor(_tableColorOk.HexValue);
+                _vim.ColorWarn = NormalizeColor(_tableColorWarn.HexValue);
+                _vim.ColorBad = NormalizeColor(_tableColorBad.HexValue);
+                // Table has no inline unit; leave any prior Unit untouched.
             }
             else
             {
@@ -1684,6 +1849,15 @@ namespace MetadataDisplay.Client
             // Keep the legacy LineSmoothing flag in sync so older renderers see the
             // same effective behaviour.
             _vim.LineSmoothing = string.Equals(_vim.LineType, "Smooth", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
+
+            _vim.TableWindowSeconds = NormalizeNumberText(tableWindowSecondsBox.Text, "300");
+            _vim.TableMaxRows = NormalizeNumberText(tableMaxRowsBox.Text, "200");
+            _vim.TableShowTimestamp = (tableShowTimestampCheck.IsChecked == true) ? "true" : "false";
+            _vim.TableTimestampFormat = string.IsNullOrWhiteSpace(tableTimestampFormatBox.Text) ? "HH:mm:ss" : tableTimestampFormatBox.Text.Trim();
+            _vim.TableShowDelta = (tableShowDeltaCheck.IsChecked == true) ? "true" : "false";
+            _vim.TableFontSize = NormalizeNumberText(tableFontSizeBox.Text, "12");
+            _vim.TableValueAlignment = (tableValueAlignCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Left";
+            _vim.TableValueColumnName = tableValueColumnNameBox.Text?.Trim() ?? string.Empty;
 
             _vim.StaleSeconds = NormalizeNumberText(staleSecondsBox.Text, "0");
 

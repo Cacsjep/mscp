@@ -49,6 +49,16 @@ namespace MetadataDisplay.Client
         private const string GaugeTickCountKey = "GaugeTickCount";
         private const string GaugeTrackThicknessKey = "GaugeTrackThickness";
 
+        // Table
+        private const string TableMaxRowsKey = "TableMaxRows";
+        private const string TableWindowSecondsKey = "TableWindowSeconds";
+        private const string TableShowTimestampKey = "TableShowTimestamp";
+        private const string TableTimestampFormatKey = "TableTimestampFormat";
+        private const string TableShowDeltaKey = "TableShowDelta";
+        private const string TableFontSizeKey = "TableFontSize";
+        private const string TableValueAlignmentKey = "TableValueAlignment";
+        private const string TableValueColumnNameKey = "TableValueColumnName";
+
         // LineChart
         private const string LineWindowSecondsKey = "LineWindowSeconds";
         private const string LineYMinKey = "LineYMin";
@@ -356,6 +366,59 @@ namespace MetadataDisplay.Client
         {
             get => GetProperty(LineEnvelopeKey) ?? "false";
             set => SetProperty(LineEnvelopeKey, value);
+        }
+
+        public string TableMaxRows
+        {
+            get => GetProperty(TableMaxRowsKey) ?? "200";
+            set => SetProperty(TableMaxRowsKey, value);
+        }
+
+        // Drives both the archive backfill scan window and the in-memory age cutoff.
+        public string TableWindowSeconds
+        {
+            get => GetProperty(TableWindowSecondsKey) ?? "300";
+            set => SetProperty(TableWindowSecondsKey, value);
+        }
+
+        // "true" / "false"
+        public string TableShowTimestamp
+        {
+            get => GetProperty(TableShowTimestampKey) ?? "true";
+            set => SetProperty(TableShowTimestampKey, value);
+        }
+
+        public string TableTimestampFormat
+        {
+            get => GetProperty(TableTimestampFormatKey) ?? "HH:mm:ss";
+            set => SetProperty(TableTimestampFormatKey, value);
+        }
+
+        // "true" / "false". Adds a numeric delta column when both rows parse as numbers.
+        public string TableShowDelta
+        {
+            get => GetProperty(TableShowDeltaKey) ?? "false";
+            set => SetProperty(TableShowDeltaKey, value);
+        }
+
+        public string TableFontSize
+        {
+            get => GetProperty(TableFontSizeKey) ?? "12";
+            set => SetProperty(TableFontSizeKey, value);
+        }
+
+        // Left | Center | Right
+        public string TableValueAlignment
+        {
+            get => GetProperty(TableValueAlignmentKey) ?? "Left";
+            set => SetProperty(TableValueAlignmentKey, value);
+        }
+
+        // Header text for the value column. Empty falls back to "Value".
+        public string TableValueColumnName
+        {
+            get => GetProperty(TableValueColumnNameKey) ?? string.Empty;
+            set => SetProperty(TableValueColumnNameKey, value);
         }
 
         // Compact | Comfortable | Spacious
