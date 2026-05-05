@@ -1,0 +1,2442 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Metadata Display plugin for Milestone XProtect Smart Client - turn ONVIF metadata channels into dashboard widgets (lamp, number, gauge, text, line chart, table).">
+      
+      
+      
+        <link rel="canonical" href="https://cacsjep.github.io/mscp/plugins/smart-client/metadata-display/">
+      
+      
+        <link rel="prev" href="../flexview/">
+      
+      
+        <link rel="next" href="../monitor-rtmp-streamer/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Metadata Display Widgets for Milestone XProtect - MS Community Plugins</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/css/custom.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Metadata Display Widgets for Milestone XProtect - MS Community Plugins">
+  <meta property="og:description" content="Metadata Display plugin for Milestone XProtect Smart Client - turn ONVIF metadata channels into dashboard widgets (lamp, number, gauge, text, line chart, table).">
+  <meta property="og:url" content="https://cacsjep.github.io/mscp/plugins/smart-client/metadata-display/">
+  <meta property="og:site_name" content="MS Community Plugins">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Metadata Display Widgets for Milestone XProtect - MS Community Plugins">
+  <meta name="twitter:description" content="Metadata Display plugin for Milestone XProtect Smart Client - turn ONVIF metadata channels into dashboard widgets (lamp, number, gauge, text, line chart, table).">
+
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "MS Community Plugins",
+    "description": "Free open-source Milestone XProtect plugins, Smart Client extensions, device drivers, and VMS tools - community-built add-ons for video surveillance and security management",
+    "url": "https://cacsjep.github.io/mscp/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://cacsjep.github.io/mscp/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "MS Community Plugins",
+    "description": "Free open-source Milestone XProtect plugins, Smart Client extensions, device drivers, and VMS tools - community-built add-ons for video surveillance and security management",
+    "url": "https://cacsjep.github.io/mscp/",
+    "applicationCategory": "SecurityApplication",
+    "operatingSystem": "Windows",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "sourceOrganization": {
+      "@type": "Organization",
+      "name": "MS Community Plugins",
+      "url": "https://github.com/Cacsjep/mscp"
+    }
+  }
+  </script>
+
+  <link href="../../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#metadata-display" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="MS Community Plugins" class="md-header__button md-logo" aria-label="MS Community Plugins" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MS Community Plugins
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Metadata Display Widgets for Milestone XProtect
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Cacsjep/mscp" title="Cacsjep/mscp" class="md-header-icon md-icon">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+</a>
+<a href="https://discord.gg/EU2HX4Qc" title="Join our Discord" class="md-header-icon md-icon md-header-icon--discord">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"></path></svg>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Plugins &amp; Drivers
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../getting-started/installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Download
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../admin/auditor/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Plugins
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../device-drivers/rtmp/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Device Drivers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../support/reporting-bugs/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Reporting Bugs
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../support/changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../support/third-party-notices/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Third-Party Notices
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="MS Community Plugins" class="md-nav__button md-logo" aria-label="MS Community Plugins" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    MS Community Plugins
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Cacsjep/mscp" title="Cacsjep/mscp" class="md-header-icon md-icon">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+</a>
+<a href="https://discord.gg/EU2HX4Qc" title="Join our Discord" class="md-header-icon md-icon md-header-icon--discord">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"></path></svg>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins &amp; Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Download
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugins
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_1">
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin Plugins
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Admin Plugins
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin/auditor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auditor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin/barcode-reader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Barcode Reader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin/cert-watchdog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Certificate Watchdog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin/colored-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Colored Timeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin/http-requests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP Requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin/metadata-viewer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Viewer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin/rtmp-streamer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RTMP Streamer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Smart Client
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Smart Client
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../flexview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flex Viewer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Display
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Display
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#render-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Render Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Render Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lamp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lamp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#number" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Number
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gauge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gauge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#line-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Line Chart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Line Chart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-pane-window-picker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-pane Window Picker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#live-vs-playback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live vs Playback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-to-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What to Read
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What to Read">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#learn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learn
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#title-and-density" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Title and Density
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live Preview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stale-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stale Handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no-data-and-loading-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No-Data and Loading Indicators
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#playback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor-rtmp-streamer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor RTMP Streamer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notepad/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notepad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sc-remote-control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remote Control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remote-manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remote Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../smartbar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Smart Bar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../snapreport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Snapshot Report
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../timelapse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timelapse
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../timeline-jump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Jump
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../view-carousel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    View Carousel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../weather/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Weather
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../web-viewer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web Viewer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device Drivers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Device Drivers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../device-drivers/rtmp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RTMP Push Driver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../device-drivers/rtsp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RTSP Driver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../support/reporting-bugs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting Bugs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../support/changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../support/third-party-notices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Third-Party Notices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#render-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Render Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Render Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lamp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lamp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#number" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Number
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gauge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gauge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#line-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Line Chart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Line Chart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-pane-window-picker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-pane Window Picker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#live-vs-playback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live vs Playback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-to-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What to Read
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What to Read">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#learn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Learn
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#title-and-density" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Title and Density
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live Preview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stale-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stale Handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no-data-and-loading-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No-Data and Loading Indicators
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#playback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<div class="show-title">
+<h1 id="metadata-display">Metadata Display<a class="headerlink" href="#metadata-display" title="Permanent link">¶</a></h1>
+<p>Render any value from a Milestone metadata channel as a dashboard widget in the Smart Client. One widget per value, six render styles (Lamp, Number, Gauge, Text, Line Chart, Table).</p>
+<p>Built for ONVIF metadata like: Axis <code>CameraApplicationPlatform</code> analytics (area occupancy, line crossing, object counts), digital I/O port states, vendor counters - anything emitted as <code>tt:Message</code> over the metadata stream.</p>
+<video controls="controls" width="100%">
+  <source src="../vids/metadata_display.mp4" type="video/mp4">
+</video>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">¶</a></h2>
+<p>Before the widget can show anything, the camera and the VMS need to be set up to actually deliver metadata to the Smart Client:</p>
+<ul>
+<li><strong>Metadata channel enabled on the camera</strong> - in Management Client, expand the camera under <strong>Devices &gt; Metadata</strong>, select the metadata channel, and on its <strong>Settings</strong> tab set <strong>Metadata stream &gt; Event data</strong> to <strong>Yes</strong>. This is what makes the camera publish its ONVIF events (analytics, I/O port states, vendor counters) on the stream the plugin reads. <strong>Analytics data</strong> and <strong>PTZ data</strong> can stay <strong>No</strong> unless you specifically need bounding boxes or PTZ position - the widget reads <code>tt:Message</code> items, which arrive under Event data.</li>
+<li><strong>Metadata recording enabled</strong> - on the metadata channel, set <strong>Recording</strong> to enabled. This is required for the <strong>Playback</strong> mode and for the Line Chart's archive backfill (the wide-window view, the cold-start seed in Playback, and the in-pane window picker all read from recorded data). Without recordings the widget still works in Live mode but cannot show any history.</li>
+<li><strong>Recording rule for the metadata channel</strong> - in Management Client under <strong>Rules</strong>, make sure a rule records the metadata channel (either always-on, or on the same trigger as the corresponding video). The default recording rule typically covers cameras but not their metadata channels - check that the rule's device list includes the metadata items, otherwise nothing ends up in the archive even though recording is "enabled" on the channel.</li>
+<li><strong>User permissions</strong> - the Smart Client user needs <strong>Live</strong> and <strong>Playback</strong> rights on the metadata channel. Without these the channel won't appear in the configuration's channel picker, or the widget will sit on <strong>Waiting for data...</strong> forever.</li>
+</ul>
+<p>If the configuration's <strong>Inspect packet...</strong> button shows fresh XML and Learn discovers topics, prerequisites are met. If it stays empty, the channel is not flowing - fix the camera or rule before tuning the widget.</p>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">¶</a></h2>
+<ol>
+<li>In <strong>Setup</strong> mode, drag a <strong>Metadata Display</strong> view item into a slot</li>
+<li>Click <strong>Open configuration...</strong></li>
+<li><strong>Select channel...</strong> -&gt; pick a metadata channel</li>
+<li>Click <strong>Start Learn</strong> to discover the topics and data keys flowing through the stream, then pick from the dropdowns</li>
+<li>Choose a render type (Lamp / Number / Gauge / Text / Line Chart / Table), tune the options, hit <strong>Save</strong></li>
+<li>Switch to <strong>Live</strong> - the widget starts displaying as soon as a matching packet arrives</li>
+</ol>
+<h2 id="render-types">Render Types<a class="headerlink" href="#render-types" title="Permanent link">¶</a></h2>
+<h3 id="lamp">Lamp<a class="headerlink" href="#lamp" title="Permanent link">¶</a></h3>
+<p>Discrete state indicator. Map raw values to a label, color, and optional FontAwesome icon. Ideal for I/O ports, alarm states, on/off counters.</p>
+<ul>
+<li>Each row: <code>value -&gt; label : color : icon</code></li>
+<li>Icon picker has ~140 curated solid icons with search</li>
+<li>Falls back to a colored circle when no icon is set</li>
+<li>Unmapped values render with the raw value as the label</li>
+</ul>
+<h3 id="number">Number<a class="headerlink" href="#number" title="Permanent link">¶</a></h3>
+<p>Big-number readout with optional unit suffix and threshold colors.</p>
+<ul>
+<li>Value and unit share the same baseline so the readout looks like a single piece of typography (e.g. <code>43.99 km/h</code>)</li>
+<li>Color shifts between <strong>Ok / Warn / Bad</strong> based on <strong>Threshold Min</strong> / <strong>Threshold Max</strong> when <strong>Enable thresholds</strong> is on</li>
+<li>"High value is bad" toggle inverts the direction</li>
+<li>Min/Max chips below the value use a warn triangle for the lower bound and a critical circle for the upper bound, color-coded to the threshold direction</li>
+</ul>
+<h3 id="gauge">Gauge<a class="headerlink" href="#gauge" title="Permanent link">¶</a></h3>
+<p>Five styles, all driven by the same numeric/threshold settings as the Number widget plus a <strong>Scale Min/Max</strong> range:</p>
+<table>
+<thead>
+<tr>
+<th>Style</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Modern - Half arc (180°)</strong></td>
+<td>Compact KPI tile, single quick-glance value</td>
+</tr>
+<tr>
+<td><strong>Modern - Three-quarter arc (270°)</strong></td>
+<td>More resolution per unit of arc; bigger needles</td>
+</tr>
+<tr>
+<td><strong>Classic - Half arc (180°)</strong></td>
+<td>Traditional speedometer with three colored bands and needle</td>
+</tr>
+<tr>
+<td><strong>Classic - Three-quarter arc (270°)</strong></td>
+<td>Classic style with extra range</td>
+</tr>
+<tr>
+<td><strong>Bar</strong></td>
+<td>Side-by-side rows; reads well at small heights</td>
+</tr>
+</tbody>
+</table>
+<p>Modern styles draw a single same-thickness progress arc that fills the threshold color. Classic styles draw three colored bands plus a needle. Both honor:</p>
+<ul>
+<li><strong>Show value</strong> + <strong>Font size</strong> for the inline numeric readout</li>
+<li><strong>Track thickness</strong> - applies to both gauge thickness and bar height (default 6 for arc gauges, 2 for the bar; max 20)</li>
+<li><strong>Show ticks</strong> + <strong>Count</strong> - tick marks evenly spaced inside the arc / above the bar</li>
+<li><strong>Enable thresholds</strong> - turns the colored band model on or off; when off, gauges show a single neutral track</li>
+</ul>
+<p>The Bar gauge places the value, unit, and the Min/Max scale labels in a single row underneath the bar so nothing collides with the ticks above. The vertical value indicator is intentionally thin so it doesn't hide the underlying scale.</p>
+<h3 id="text">Text<a class="headerlink" href="#text" title="Permanent link">¶</a></h3>
+<p>Plain text passthrough. Use for string values like license plates, names, statuses where the raw value is the message. Configurable font size; no background.</p>
+<h3 id="line-chart">Line Chart<a class="headerlink" href="#line-chart" title="Permanent link">¶</a></h3>
+<p>Time-series chart for numeric values. Plots a rolling history of the data key against time, with optional thresholds, an envelope (min/max band), zoom and pan, and an in-pane time-window picker.</p>
+<ul>
+<li><strong>Time window</strong> - choose how far back the chart looks. Presets cover <strong>60 seconds</strong>, <strong>5 / 10 / 30 minutes</strong>, <strong>1 hour</strong>, <strong>6 hours</strong>, and <strong>24 hours</strong>, plus a free-form <strong>Custom</strong> entry in seconds. The saved value is the default; the in-pane picker (top-right of the chart) lets viewers temporarily switch windows without going into Setup mode.</li>
+<li><strong>Backfill from archive</strong> - long windows (over 60 seconds) are seeded from recorded data when the chart appears, so a 6-hour view shows real history immediately instead of waiting 6 hours to fill. A loading spinner is shown while the seed query runs.</li>
+<li><strong>Aggregation</strong> - <strong>Mean</strong> (default), <strong>Min</strong>, or <strong>Max</strong>. The chart aggregates samples into time buckets sized for the chosen window so very wide windows still render quickly. With <strong>Show envelope</strong> enabled, the chart additionally draws a dashed min/max band around the aggregated line.</li>
+<li><strong>Line type</strong> - <strong>Straight</strong> (default), <strong>Smooth</strong> (curved), or <strong>Step</strong> (discrete level changes).</li>
+<li><strong>Line color</strong>, <strong>thickness</strong>, <strong>fill area</strong>, <strong>show markers</strong> - styling for the main series.</li>
+<li><strong>Y-axis Min / Max</strong> - clamps the value axis. Leave blank to auto-fit.</li>
+<li><strong>Thresholds</strong> - when <strong>Enable thresholds</strong> is on, warn (Min) and critical (Max) values are drawn as dashed horizontal lines (no filled bands - the line stays readable through them).</li>
+<li><strong>Zoom and pan</strong> - mouse wheel zooms the time axis; drag pans. While zoomed in <strong>Live</strong> mode the chart auto-pauses (a small "Paused (click to resume live)" badge appears) so the view does not jump as new data arrives. Click the badge to resume the rolling window.</li>
+</ul>
+<h4 id="in-pane-window-picker">In-pane Window Picker<a class="headerlink" href="#in-pane-window-picker" title="Permanent link">¶</a></h4>
+<p>The small badge in the top-right corner of the chart shows the current effective window (e.g. <code>5m</code>, <code>6h</code>). Click it to temporarily switch:</p>
+<ul>
+<li>Pick any preset (60 seconds up to 24 hours) - the chart is reloaded for the new range, with a loading indicator while the archive backfill runs</li>
+<li>Pick <strong>Default (xx)</strong> to revert to the saved Setup value</li>
+<li>An asterisk (e.g. <code>1h*</code>) on the badge label means a session override is active</li>
+</ul>
+<p>The override is <strong>session only</strong>: it is dropped when the configuration is saved or the view is reopened, and never modifies the saved configuration. It needs no permission and applies to whichever pane is in front of you.</p>
+<h4 id="live-vs-playback">Live vs Playback<a class="headerlink" href="#live-vs-playback" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>Live</strong> - new samples stream in and the right edge advances. Auto-pause kicks in when you zoom or pan so you can study a region without it sliding away.</li>
+<li><strong>Playback</strong> - zoom and pan are always on (there is no live tail to fight with) and the auto-pause badge is suppressed. Moving the timeline cursor moves the chart's cursor line; jumping further than half the visible window triggers a fresh range scan from the archive. The chart seeds itself at the current playback time on entry, so you do not need to scrub once to populate it.</li>
+</ul>
+<h3 id="table">Table<a class="headerlink" href="#table" title="Permanent link">¶</a></h3>
+<p>Scrolling time-ordered table of <code>(Time, Value)</code> rows. Use when you want to read the actual values (numbers or text) in sequence rather than inferring them from a curve. Reuses the same archive backfill, in-pane window picker, and playback cursor machinery as the Line Chart.</p>
+<ul>
+<li><strong>Newest on top</strong> - the latest row is always inserted at the top of the table; older rows scroll down and off the bottom. Auto-follow keeps the viewport pinned to the top in Live mode; if the operator scrolls down to inspect older rows, a "Paused (click to jump back to newest)" badge appears at the bottom of the pane. Click the badge or scroll back to the top to resume following.</li>
+<li><strong>Time window</strong> - same preset list as the Line Chart (60 seconds up to 24 hours, plus Custom). Drives both the archive backfill scan range on first entry and the rolling age cutoff for in-memory rows.</li>
+<li><strong>Max rows</strong> - hard cap on stored rows independent of the window (default 200, max 5000). Whichever cuts harder wins: a 24-hour window with <code>Max rows = 200</code> keeps only the 200 newest, while a 60-second window with <code>Max rows = 5000</code> keeps only the last 60 seconds even if fewer than 5000.</li>
+<li><strong>Header name</strong> - custom header text for the value column; leave blank to use "Value". Useful when the data key is something opaque (<code>@Value</code>, <code>Level</code>) and the column should read "Speed", "PlateNumber", "Counter", etc.</li>
+<li><strong>Timestamp column</strong> - toggle the Time column on/off and pick a format string (default <code>HH:mm:ss</code>; standard .NET <code>DateTime</code> format strings work, e.g. <code>HH:mm:ss.fff</code> or <code>dd.MM HH:mm</code>).</li>
+<li><strong>Value column</strong> - font size and <strong>Left / Center / Right</strong> alignment.</li>
+<li><strong>Show Δ column</strong> - optional numeric difference between a row and the row immediately older than it. Renders blank for non-numeric values, so it's safe to enable on text-based fields without crashing.</li>
+<li><strong>Thresholds</strong> - same shared model as Number / Gauge / Line Chart. When <strong>Enable thresholds</strong> is on, the value text is tinted Ok / Warn / Bad based on Min / Max and the High-is-bad direction. Non-numeric values stay neutral.</li>
+<li><strong>Live archive backfill</strong> - on first appearance of a Table widget, the configured window of recorded data is loaded from the archive so the table opens with real history instead of accumulating a single row per packet from cold.</li>
+<li><strong>Playback</strong> - the row at-or-before the timeline cursor is highlighted as the cursor moves. Large jumps trigger a fresh range scan around the new cursor position, identical to the Line Chart behavior.</li>
+</ul>
+<h2 id="what-to-read">What to Read<a class="headerlink" href="#what-to-read" title="Permanent link">¶</a></h2>
+<p>The "What to read" section is the bridge from the raw stream to a single value:</p>
+<ul>
+<li><strong>Topic match</strong> - filter incoming messages by ONVIF topic, with <strong>Contains / Exact / EndsWith</strong> matching modes (default: Exact)</li>
+<li><strong>Data key</strong> - the <code>tt:SimpleItem Name</code> to pull the value from</li>
+<li><strong>Inspect packet...</strong> - opens a syntax-highlighted XML viewer of the latest captured packet, so you can see exactly what the camera is emitting</li>
+<li><strong>Source filter</strong> (advanced) - constrain to specific Source SimpleItem name=value pairs (e.g. <code>port=1</code> for I/O input port 1)</li>
+</ul>
+<h3 id="learn">Learn<a class="headerlink" href="#learn" title="Permanent link">¶</a></h3>
+<p>Click <strong>Start Learn</strong> to subscribe to the live stream and watch the discovered topics + data keys populate the dropdowns. Stop when you have what you need. The data-key dropdown is filtered to only the keys observed under the currently-selected topic, so changing the topic refreshes the available keys.</p>
+<h2 id="title-and-density">Title and Density<a class="headerlink" href="#title-and-density" title="Permanent link">¶</a></h2>
+<p>Every widget has the same theme tokens (palette, type scale) so a wall of mixed widgets reads coherently.</p>
+<ul>
+<li><strong>Title</strong> - optional title text above the widget. Position <strong>Left / Center / Right</strong>, font size, color</li>
+<li><strong>Density</strong> - <strong>Compact</strong> (0.82x), <strong>Comfortable</strong> (1.0x), <strong>Spacious</strong> (1.18x). Multiplier applied to non-user-set sizes (lamp label, number value/unit, gauge unit, title) so widgets line up across panes without forcing identical absolute sizes everywhere</li>
+</ul>
+<p>User-set sizes (Title font size, Gauge value font size, Text font size, Lamp icon size) are <strong>not</strong> scaled by Density - if you set them explicitly, they are taken as-is.</p>
+<h2 id="live-preview">Live Preview<a class="headerlink" href="#live-preview" title="Permanent link">¶</a></h2>
+<p>The configuration window has a live preview pane on the right. As soon as a metadata packet matches your Topic + Data key, the preview shows the same widget that will render in the view. Until a value arrives, the preview shows the same <strong>Waiting for data...</strong> indicator that the live view uses, so what you see in Setup matches what users will see at runtime.</p>
+<p>If you change the Topic or Data key, the preview re-runs against the most recent cached XML, so you don't have to wait for a fresh packet to validate the choice. The Line Chart and Table previews are sized at 16:9 inside the configuration window so the rendered shape matches the runtime pane.</p>
+<h2 id="stale-handling">Stale Handling<a class="headerlink" href="#stale-handling" title="Permanent link">¶</a></h2>
+<p>Optional. <strong>Mark stale after (seconds)</strong> - if no matching packet arrives within that window, the widget dims and a "stale" badge appears in the corner. Useful for catching dead channels: if the camera silently stops emitting metadata, the widget visibly fades instead of pretending the last value is still current. Set to 0 to disable.</p>
+<h2 id="no-data-and-loading-indicators">No-Data and Loading Indicators<a class="headerlink" href="#no-data-and-loading-indicators" title="Permanent link">¶</a></h2>
+<p>A pulsing dot with a status line is shown:</p>
+<ul>
+<li><strong>Waiting for data...</strong> - live mode is up, no matching packet yet</li>
+<li><strong>Loading recent values from archive...</strong> - Line Chart or Table cold-start in playback mode while the seed query runs</li>
+<li><strong>Loading last 6h from archive...</strong> - Line Chart or Table cold-start in live mode (or after a window switch) while history is being backfilled</li>
+</ul>
+<p>The chart or table appears as soon as the loading step finishes, regardless of whether any samples were found.</p>
+<h2 id="playback">Playback<a class="headerlink" href="#playback" title="Permanent link">¶</a></h2>
+<p>Playback mode is supported: as the timeline cursor moves, the widget shows the value that was emitted at that timestamp. Useful for replaying analytics events alongside recorded video.</p>
+<p>For Line Chart and Table specifically, the view is seeded with archive data on entry (no scrubbing needed to populate). For Line Chart the cursor line tracks the timeline position; for Table the row at-or-before the cursor is highlighted. In both cases, large jumps trigger a fresh range scan around the new cursor.</p>
+<h2 id="storage-format">Storage Format<a class="headerlink" href="#storage-format" title="Permanent link">¶</a></h2>
+<p>The plugin stores all settings as MIP item properties on the view item. No external configuration files. Lamp rows serialize as <code>value=label:#color[:IconName]|...</code> so they survive backup / restore.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"Waiting for data..." never goes away</td>
+<td>Check the channel is recording metadata. Use Inspect packet... to see what topics are flowing. Confirm Topic match mode + Data key are correct.</td>
+</tr>
+<tr>
+<td>Plugin doesn't appear in Setup</td>
+<td>Check <code>MIPPlugins\MetadataDisplay\</code> exists. Unblock the ZIP if installed manually.</td>
+</tr>
+<tr>
+<td>Wrong value shown</td>
+<td>Topic / Data key mismatch (case-insensitive but the names must match). Use Learn to pick from the actual stream.</td>
+</tr>
+<tr>
+<td>Gauge value clipped or off-center</td>
+<td>Set the Scale Min/Max to bracket your real value range. Reduce Title font size if it's eating the canvas.</td>
+</tr>
+<tr>
+<td>Line Chart starts empty for a wide window</td>
+<td>Recorded metadata is required for backfill. Confirm a recording rule covers the metadata channel (see Prerequisites). Without recordings the chart still works, it just fills only with new live samples.</td>
+</tr>
+<tr>
+<td>Channel does not appear in the configuration channel picker</td>
+<td>Either the metadata stream is not enabled on the camera, the user has no rights on the channel, or the channel is in a folder you cannot browse. See Prerequisites.</td>
+</tr>
+<tr>
+<td>Playback view stays empty</td>
+<td>The metadata channel exists but is not being recorded. Add or extend a recording rule so the metadata channel is included.</td>
+</tr>
+<tr>
+<td>Line Chart "Paused" badge keeps appearing</td>
+<td>You are zoomed in or panned in Live mode, which auto-pauses to keep the view stable. Click the badge to resume the rolling live window.</td>
+</tr>
+<tr>
+<td>Table "Paused" badge keeps appearing</td>
+<td>You scrolled down from the top to inspect older rows; auto-follow stops so the view does not jump while you are reading. Click the badge or scroll back to the top to resume following the newest row.</td>
+</tr>
+<tr>
+<td>Table Δ column is blank</td>
+<td>The data key is text-based (or only one value has been seen so far). Δ is only computed when both adjacent rows parse as numbers; non-numeric values render blank rather than wrong.</td>
+</tr>
+<tr>
+<td>In-pane window picker change does not persist</td>
+<td>This is by design - the picker is session-only. Open the configuration and change <strong>Time window</strong> there to make it permanent.</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      MSC Community Plugins | Not affiliated with or supported by Milestone Systems. XProtect™ is a trademark of Milestone Systems A/S.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Cacsjep/mscp" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/EU2HX4Qc" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M492.5 69.8c-.2-.3-.4-.6-.8-.7-38.1-17.5-78.4-30-119.7-37.1-.4-.1-.8 0-1.1.1s-.6.4-.8.8c-5.5 9.9-10.5 20.2-14.9 30.6-44.6-6.8-89.9-6.8-134.4 0-4.5-10.5-9.5-20.7-15.1-30.6-.2-.3-.5-.6-.8-.8s-.7-.2-1.1-.2C162.5 39 122.2 51.5 84.1 69c-.3.1-.6.4-.8.7C7.1 183.5-13.8 294.6-3.6 404.2c0 .3.1.5.2.8s.3.4.5.6c44.4 32.9 94 58 146.8 74.2.4.1.8.1 1.1 0s.7-.4.9-.7c11.3-15.4 21.4-31.8 30-48.8.1-.2.2-.5.2-.8s0-.5-.1-.8-.2-.5-.4-.6-.4-.3-.7-.4c-15.8-6.1-31.2-13.4-45.9-21.9-.3-.2-.5-.4-.7-.6s-.3-.6-.3-.9 0-.6.2-.9.3-.5.6-.7c3.1-2.3 6.2-4.7 9.1-7.1.3-.2.6-.4.9-.4s.7 0 1 .1c96.2 43.9 200.4 43.9 295.5 0 .3-.1.7-.2 1-.2s.7.2.9.4c2.9 2.4 6 4.9 9.1 7.2.2.2.4.4.6.7s.2.6.2.9-.1.6-.3.9-.4.5-.6.6c-14.7 8.6-30 15.9-45.9 21.8-.2.1-.5.2-.7.4s-.3.4-.4.7-.1.5-.1.8.1.5.2.8c8.8 17 18.8 33.3 30 48.8.2.3.6.6.9.7s.8.1 1.1 0c52.9-16.2 102.6-41.3 147.1-74.2.2-.2.4-.4.5-.6s.2-.5.2-.8c12.3-126.8-20.5-236.9-86.9-334.5zm-302 267.7c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2m195.4 0c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2"></path></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "navigation.instant", "search.highlight", "search.suggest", "content.code.copy", "content.tabs.link"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
