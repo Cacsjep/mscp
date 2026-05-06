@@ -272,14 +272,15 @@ namespace MetadataDisplay.Client
 
         // Builds the extractor config from the WPF controls. MUST be called on the UI
         // thread; the resulting immutable snapshot is then safe to read from any thread.
-        // ResolveTopicFilter handles the WPF gotcha where SelectionChanged fires
-        // before the editable Text property catches up, so the snapshot here
-        // always reflects the operator's actual pick.
-        private void RebuildExtractorSnapshot()
+        // topicOverride lets the SelectionChanged handler pin the snapshot to
+        // the just-picked Topic (SelectedItem) before the editable Text
+        // property has caught up; every other caller passes null and we read
+        // Text directly.
+        private void RebuildExtractorSnapshot(string topicOverride = null)
         {
             _extractorSnapshot = new ExtractorConfig
             {
-                Topic = ResolveTopicFilter(),
+                Topic = topicOverride ?? topicCombo.Text ?? "",
                 TopicMatchMode = "Exact",
                 SourceFilters = ExtractorConfig.ParseSourceFilters(sourceFilterBox.Text ?? ""),
                 DataKey = dataKeyCombo.Text ?? "",
@@ -573,9 +574,9 @@ namespace MetadataDisplay.Client
             // Re-render when values that affect colors/labels/thresholds change.
             // Topic/Source/DataKey changes also re-extract from the cached XML so
             // the preview reflects the new selection without waiting for a fresh packet.
-            topicCombo.SelectionChanged += (s, e) => { RebuildExtractorSnapshot(); RefreshDataKeyCombo(); RefreshLearnedSourceList(); ReExtractAndRender(); };
+            topicCombo.SelectionChanged += (s, e) => OnTopicChanged(TopicFromSelectionChanged());
             topicCombo.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
-                new TextChangedEventHandler((s, e) => { RebuildExtractorSnapshot(); RefreshDataKeyCombo(); RefreshLearnedSourceList(); ReExtractAndRender(); }));
+                new TextChangedEventHandler((s, e) => OnTopicChanged(topicCombo.Text ?? string.Empty)));
             dataKeyCombo.SelectionChanged += (s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); };
             dataKeyCombo.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
                 new TextChangedEventHandler((s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); }));
@@ -1088,15 +1089,15 @@ namespace MetadataDisplay.Client
             learnStatus.Text =
                 $"Captured {snap.PacketsReceived} packet(s) - {topicCount} topic(s), {keyCount} key(s), {srcCount} source value(s).";
 
-            string currentTopicText = topicCombo.Text;
+            string currentTopic = topicCombo.Text;
             topicCombo.Items.Clear();
             foreach (var t in snap.Topics.OrderBy(x => x.Topic, StringComparer.OrdinalIgnoreCase))
                 topicCombo.Items.Add(t.Topic);
-            if (!string.IsNullOrEmpty(currentTopicText))
-                topicCombo.Text = currentTopicText;
+            if (!string.IsNullOrEmpty(currentTopic))
+                topicCombo.Text = currentTopic;
 
-            RefreshDataKeyCombo();
-            RefreshLearnedSourceList();
+            RefreshDataKeyCombo(currentTopic ?? string.Empty);
+            RefreshLearnedSourceList(currentTopic ?? string.Empty);
 
             // Fan the snapshot out to additional-series rows so each row's
             // Topic / Source filter / Data key dropdowns get the same picks.
@@ -1104,75 +1105,55 @@ namespace MetadataDisplay.Client
                 row.ApplyLearnSnapshot(snap);
         }
 
-        // Re-filters the Data key dropdown to keys observed for the currently chosen Topic.
-        // Clears the typed text when it doesn't belong to any of the matching topics, so a
-        // user can't keep a stale key from a previously selected topic.
-        private void RefreshDataKeyCombo()
+        // Re-filters the Data key dropdown to keys observed for the supplied
+        // Topic. Clears the typed Field when it doesn't belong to that
+        // Topic so the operator can't keep a stale key from a previously
+        // selected topic. Caller passes the authoritative Topic - see
+        // TopicFromSelectionChanged for the SelectionChanged-handler quirk.
+        private void RefreshDataKeyCombo(string topic)
         {
             var snap = _lastSnapshot;
+            bool topicSelected = !string.IsNullOrEmpty(topic);
             var matchingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            string topicFilter = ResolveTopicFilter();
-            bool topicSelected = !string.IsNullOrEmpty(topicFilter);
 
             if (snap != null)
             {
                 foreach (var t in snap.Topics)
                 {
-                    if (TopicMatchesFilter(t.Topic, topicFilter))
-                        foreach (var dk in t.DataKeyExamples.Keys) matchingKeys.Add(dk);
-                }
-                // If no topic is chosen yet, fall back to the full pool so the user can browse.
-                if (!topicSelected)
-                {
-                    foreach (var t in snap.Topics)
+                    if (!topicSelected || string.Equals(t.Topic, topic, StringComparison.OrdinalIgnoreCase))
                         foreach (var dk in t.DataKeyExamples.Keys) matchingKeys.Add(dk);
                 }
             }
 
-            string currentKeyText = dataKeyCombo.Text ?? "";
+            string current = dataKeyCombo.Text ?? "";
             dataKeyCombo.Items.Clear();
             foreach (var k in matchingKeys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
                 dataKeyCombo.Items.Add(k);
-
-            // Preserve the typed value only when it's actually one of the keys present for
-            // the currently selected topic. Otherwise drop it so the user re-picks.
-            if (!string.IsNullOrEmpty(currentKeyText) && matchingKeys.Contains(currentKeyText))
-                dataKeyCombo.Text = currentKeyText;
-            else if (topicSelected)
-                dataKeyCombo.Text = "";
-            else
-                dataKeyCombo.Text = currentKeyText;
+            dataKeyCombo.Text = matchingKeys.Contains(current) ? current : (topicSelected ? "" : current);
         }
 
-        // Resolves the authoritative Topic filter for selection-driven UI
-        // refreshes. SelectedItem is set BEFORE SelectionChanged fires, while
-        // the editable Text property may still hold the previously-picked
-        // value at handler entry - so reading Text alone causes the Field
-        // dropdown to filter against the OLD topic on the first event after
-        // a dropdown pick. Prefer SelectedItem; fall back to Text for cases
-        // where the operator typed a custom value (SelectedItem is null).
-        private string ResolveTopicFilter()
+        // SelectedItem is authoritative on SelectionChanged - it's set before
+        // the event fires regardless of whether the editable Text property has
+        // caught up yet. For every other context Text is correct (and
+        // SelectedItem may lag during free-form typing). Don't reuse this
+        // outside SelectionChanged handlers.
+        private string TopicFromSelectionChanged()
         {
             if (topicCombo.SelectedItem is string s && !string.IsNullOrEmpty(s)) return s;
             return topicCombo.Text ?? string.Empty;
         }
 
-        private static bool TopicMatchesFilter(string topic, string filter)
-        {
-            if (string.IsNullOrEmpty(filter)) return true;
-            return string.Equals(topic, filter, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private void RefreshLearnedSourceList()
+        private void RefreshLearnedSourceList(string topic)
         {
             var snap = _lastSnapshot;
             learnedSourceList.Items.Clear();
             if (snap == null) return;
 
+            bool topicSelected = !string.IsNullOrEmpty(topic);
             int distinct = 0;
             foreach (var t in snap.Topics)
             {
-                if (!TopicMatchesUi(t.Topic)) continue;
+                if (topicSelected && !string.Equals(t.Topic, topic, StringComparison.OrdinalIgnoreCase)) continue;
                 foreach (var sv in t.SourceValues)
                 {
                     foreach (var v in sv.Value)
@@ -1191,9 +1172,16 @@ namespace MetadataDisplay.Client
                 sourceFilterExpander.IsExpanded = true;
         }
 
-        private bool TopicMatchesUi(string topic)
+        // Single entry point for "Topic changed - refresh everything that
+        // depends on Topic." Both event handlers funnel through this with
+        // the appropriate topic value (SelectedItem-resolved for
+        // SelectionChanged, Text for TextChanged).
+        private void OnTopicChanged(string topic)
         {
-            return TopicMatchesFilter(topic, ResolveTopicFilter());
+            RebuildExtractorSnapshot(topic);
+            RefreshDataKeyCombo(topic);
+            RefreshLearnedSourceList(topic);
+            ReExtractAndRender();
         }
 
         // ───────── Preview render ─────────
@@ -1202,7 +1190,7 @@ namespace MetadataDisplay.Client
         {
             return new ExtractorConfig
             {
-                Topic = ResolveTopicFilter(),
+                Topic = topicCombo.Text ?? "",
                 TopicMatchMode = "Exact",
                 SourceFilters = ExtractorConfig.ParseSourceFilters(sourceFilterBox.Text ?? ""),
                 DataKey = dataKeyCombo.Text ?? "",
@@ -1998,7 +1986,10 @@ namespace MetadataDisplay.Client
             // doesn't match the selected one.
             string xml = null;
             bool fallback = false;
-            string selectedTopic = (ResolveTopicFilter() ?? string.Empty).Trim();
+            // Inspect uses Text directly: by the time the operator clicks the
+            // button, any pending SelectionChanged has long since settled and
+            // Text reflects the displayed Topic.
+            string selectedTopic = (topicCombo.Text ?? string.Empty).Trim();
             Guid itemId = _metadataItem.FQID.ObjectId;
 
             if (!string.IsNullOrEmpty(selectedTopic))
