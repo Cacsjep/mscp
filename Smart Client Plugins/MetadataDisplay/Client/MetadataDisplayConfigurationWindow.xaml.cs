@@ -1406,9 +1406,6 @@ namespace MetadataDisplay.Client
                 ReconfigureLinePreview();
             };
             row.OnExtractorChanged = RebuildAdditionalExtractorSnapshots;
-            // Lets the row pull the freshest learn snapshot every time the
-            // operator drops down one of its combos.
-            row.LearnSnapshotProvider = () => _lastSnapshot;
             // Row-owned learn session needs the metadata source to be running
             // before it'll receive any packets - this callback ensures that.
             row.OnStartLearnRequested = () =>

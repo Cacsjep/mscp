@@ -34,16 +34,19 @@ namespace MetadataDisplay.Client
         // ExtractorConfig snapshot consumed on the source-callback thread.
         public Action OnExtractorChanged;
         public Action<AdditionalLineSeriesRow> OnRemove;
-        // Set by the configuration window so the row can re-fetch the latest
-        // learn snapshot every time the operator opens a dropdown - guarantees
-        // dropdown items reflect current Learn state without manual refresh.
-        public Func<LearnSnapshot> LearnSnapshotProvider;
 
         // Per-row independent learn session: each row can run its own learn
         // capture without overwriting the main series fields. The configuration
         // window owns the metadata source and fans out raw packets to every
         // row's session via Observe().
         public MetadataLearnSession LearnSession { get; } = new MetadataLearnSession();
+
+        // The row's authoritative snapshot of discovered topics + fields.
+        // Mirrors the single `_lastSnapshot` field on the main window: every
+        // dropdown rebuild and every topic-change refilter reads exclusively
+        // from this. Updated only when a non-empty snapshot arrives so that
+        // a Reset (or an empty fan-out) can never wipe the discovered list.
+        private LearnSnapshot _lastSnapshot;
         // Invoked when the row's Start Learn button is clicked - the
         // configuration window uses this to ensure the metadata channel is
         // picked and the source is started before learning begins.
@@ -188,32 +191,40 @@ namespace MetadataDisplay.Client
         private void RefilterFieldCombo(string topic)
         {
             if (_applyingLearnSnapshot) return;
-            var snap = GetCurrentSnapshot();
-            if (snap != null) RefreshFieldComboItems(snap, topic);
+            if (_lastSnapshot == null) return;
+            RefreshFieldComboItems(_lastSnapshot, topic);
         }
 
-        // Pick whichever snapshot is freshest. The row's own LearnSession
-        // takes priority because the per-row Start Learn button is the
-        // natural way to populate this row's dropdowns - the window-level
-        // _lastSnapshot is only set when the GLOBAL Learn button was used,
-        // which the operator may never touch. Falling back to the window
-        // snapshot still helps newly-added rows pre-populate from prior
-        // global-learn data before they run their own session.
-        private LearnSnapshot GetCurrentSnapshot()
+        // Auto-stop on Topic-combo activation. Once the operator starts
+        // interacting with the Topic field they're done capturing - this
+        // covers the case where they forget to click Stop. Idempotent.
+        private void StopLearn()
         {
-            var rowSnap = LearnSession?.Snapshot();
-            if (rowSnap != null && rowSnap.Topics != null && rowSnap.Topics.Count > 0)
-                return rowSnap;
-            return LearnSnapshotProvider?.Invoke();
+            if (LearnSession.IsActive)
+            {
+                LearnSession.Stop();
+                if (_learnStatus != null)
+                    _learnStatus.Text = $"Stopped. Captured {LearnSession.PacketsReceived} packet(s).";
+            }
+            _learnStartBtn.IsEnabled = true;
+            _learnStopBtn.IsEnabled = false;
         }
 
         // Push learned topics + data keys + source filters into the dropdowns.
         // Preserves currently-typed values; new items appear as suggestions.
-        // Called by the configuration window when its LearnSnapshot updates -
-        // bulk refresh of all three combos at once.
+        // Called by:
+        //   - the row's own LearnSession.Updated (per-row capture)
+        //   - the configuration window fanning out its global LearnSnapshot
+        //   - the configuration window pre-populating a freshly-added row
+        //
+        // Empty snapshots (Topics.Count == 0) are ignored so a Reset() or
+        // a global-learn reset can't wipe the row's accumulated unique list.
         public void ApplyLearnSnapshot(LearnSnapshot snap)
         {
             if (snap == null || _applyingLearnSnapshot) return;
+            if (snap.Topics == null || snap.Topics.Count == 0) return;
+
+            _lastSnapshot = snap;
             _applyingLearnSnapshot = true;
             try
             {
@@ -365,18 +376,16 @@ namespace MetadataDisplay.Client
             {
                 bool ok = OnStartLearnRequested?.Invoke() ?? false;
                 if (!ok) return;
-                LearnSession.Reset();
+                // Don't Reset() - discoveries accumulate across Start/Stop
+                // cycles within the same window session. The user just wants
+                // a unique list; wiping it on every Start would also blank
+                // out the saved Field text via the empty-snapshot fan-out.
                 LearnSession.Start();
                 _learnStartBtn.IsEnabled = false;
                 _learnStopBtn.IsEnabled = true;
                 if (_learnStatus != null) _learnStatus.Text = "Listening - waiting for first packet...";
             };
-            _learnStopBtn.Click += (s, e) =>
-            {
-                LearnSession.Stop();
-                _learnStartBtn.IsEnabled = true;
-                _learnStopBtn.IsEnabled = false;
-            };
+            _learnStopBtn.Click += (s, e) => StopLearn();
             learnRow.Children.Add(_learnStartBtn);
             learnRow.Children.Add(_learnStopBtn);
             _learnStatus = new TextBlock
@@ -530,31 +539,31 @@ namespace MetadataDisplay.Client
             // editable mode resets _topicCombo's coupling between
             // SelectedItem and Text and feeds the wrong topic back into the
             // Field filter.
+            // Auto-stop learning the moment the operator starts interacting
+            // with the Topic field - "they're done capturing, let them pick".
+            // GotKeyboardFocus covers click-into-textbox AND tab. The dropdown
+            // open path stops too in case focus arrives via the toggle button.
+            _topicCombo.GotKeyboardFocus += (s, e) => StopLearn();
             _topicCombo.DropDownOpened += (s, e) =>
             {
-                if (_applyingLearnSnapshot) return;
-                var snap = GetCurrentSnapshot();
-                if (snap == null) return;
+                StopLearn();
+                if (_applyingLearnSnapshot || _lastSnapshot == null) return;
                 _applyingLearnSnapshot = true;
-                try { RefreshTopicComboItems(snap); }
+                try { RefreshTopicComboItems(_lastSnapshot); }
                 finally { _applyingLearnSnapshot = false; }
             };
             _dataKeyCombo.DropDownOpened += (s, e) =>
             {
-                if (_applyingLearnSnapshot) return;
-                var snap = GetCurrentSnapshot();
-                if (snap == null) return;
+                if (_applyingLearnSnapshot || _lastSnapshot == null) return;
                 _applyingLearnSnapshot = true;
-                try { RefreshFieldComboItems(snap, _topicCombo.Text ?? string.Empty); }
+                try { RefreshFieldComboItems(_lastSnapshot, _topicCombo.Text ?? string.Empty); }
                 finally { _applyingLearnSnapshot = false; }
             };
             _sourceFiltersCombo.DropDownOpened += (s, e) =>
             {
-                if (_applyingLearnSnapshot) return;
-                var snap = GetCurrentSnapshot();
-                if (snap == null) return;
+                if (_applyingLearnSnapshot || _lastSnapshot == null) return;
                 _applyingLearnSnapshot = true;
-                try { RefreshSourceFilterItems(snap, _topicCombo.Text ?? string.Empty); }
+                try { RefreshSourceFilterItems(_lastSnapshot, _topicCombo.Text ?? string.Empty); }
                 finally { _applyingLearnSnapshot = false; }
             };
 
