@@ -272,11 +272,14 @@ namespace MetadataDisplay.Client
 
         // Builds the extractor config from the WPF controls. MUST be called on the UI
         // thread; the resulting immutable snapshot is then safe to read from any thread.
+        // ResolveTopicFilter handles the WPF gotcha where SelectionChanged fires
+        // before the editable Text property catches up, so the snapshot here
+        // always reflects the operator's actual pick.
         private void RebuildExtractorSnapshot()
         {
             _extractorSnapshot = new ExtractorConfig
             {
-                Topic = topicCombo.Text ?? "",
+                Topic = ResolveTopicFilter(),
                 TopicMatchMode = "Exact",
                 SourceFilters = ExtractorConfig.ParseSourceFilters(sourceFilterBox.Text ?? ""),
                 DataKey = dataKeyCombo.Text ?? "",
@@ -1108,13 +1111,14 @@ namespace MetadataDisplay.Client
         {
             var snap = _lastSnapshot;
             var matchingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            bool topicSelected = !string.IsNullOrEmpty(topicCombo.Text);
+            string topicFilter = ResolveTopicFilter();
+            bool topicSelected = !string.IsNullOrEmpty(topicFilter);
 
             if (snap != null)
             {
                 foreach (var t in snap.Topics)
                 {
-                    if (TopicMatchesUi(t.Topic))
+                    if (TopicMatchesFilter(t.Topic, topicFilter))
                         foreach (var dk in t.DataKeyExamples.Keys) matchingKeys.Add(dk);
                 }
                 // If no topic is chosen yet, fall back to the full pool so the user can browse.
@@ -1138,6 +1142,25 @@ namespace MetadataDisplay.Client
                 dataKeyCombo.Text = "";
             else
                 dataKeyCombo.Text = currentKeyText;
+        }
+
+        // Resolves the authoritative Topic filter for selection-driven UI
+        // refreshes. SelectedItem is set BEFORE SelectionChanged fires, while
+        // the editable Text property may still hold the previously-picked
+        // value at handler entry - so reading Text alone causes the Field
+        // dropdown to filter against the OLD topic on the first event after
+        // a dropdown pick. Prefer SelectedItem; fall back to Text for cases
+        // where the operator typed a custom value (SelectedItem is null).
+        private string ResolveTopicFilter()
+        {
+            if (topicCombo.SelectedItem is string s && !string.IsNullOrEmpty(s)) return s;
+            return topicCombo.Text ?? string.Empty;
+        }
+
+        private static bool TopicMatchesFilter(string topic, string filter)
+        {
+            if (string.IsNullOrEmpty(filter)) return true;
+            return string.Equals(topic, filter, StringComparison.OrdinalIgnoreCase);
         }
 
         private void RefreshLearnedSourceList()
@@ -1170,9 +1193,7 @@ namespace MetadataDisplay.Client
 
         private bool TopicMatchesUi(string topic)
         {
-            var filter = topicCombo.Text ?? "";
-            if (string.IsNullOrEmpty(filter)) return true;
-            return string.Equals(topic, filter, StringComparison.OrdinalIgnoreCase);
+            return TopicMatchesFilter(topic, ResolveTopicFilter());
         }
 
         // ───────── Preview render ─────────
@@ -1181,7 +1202,7 @@ namespace MetadataDisplay.Client
         {
             return new ExtractorConfig
             {
-                Topic = topicCombo.Text ?? "",
+                Topic = ResolveTopicFilter(),
                 TopicMatchMode = "Exact",
                 SourceFilters = ExtractorConfig.ParseSourceFilters(sourceFilterBox.Text ?? ""),
                 DataKey = dataKeyCombo.Text ?? "",
@@ -1963,9 +1984,46 @@ namespace MetadataDisplay.Client
 
         private void OnInspectPacket(object sender, RoutedEventArgs e)
         {
+            if (_metadataItem == null)
+            {
+                MessageBox.Show(this,
+                    "No packet captured yet. Pick a metadata channel and wait for the first packet.",
+                    "Inspect packet", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Try to find a recent packet matching the Topic the operator
+            // currently has selected so the dialog reflects their choice.
+            // Cameras interleave several topics, so the "latest" packet often
+            // doesn't match the selected one.
             string xml = null;
-            if (_metadataItem != null && LastXmlCache.TryGet(_metadataItem.FQID.ObjectId, out var cached, out _))
-                xml = cached;
+            bool fallback = false;
+            string selectedTopic = (ResolveTopicFilter() ?? string.Empty).Trim();
+            Guid itemId = _metadataItem.FQID.ObjectId;
+
+            if (!string.IsNullOrEmpty(selectedTopic))
+            {
+                bool Matches(string candidate)
+                {
+                    if (string.IsNullOrEmpty(candidate)) return false;
+                    foreach (var msg in MetadataExtractor.Observe(candidate))
+                    {
+                        if (string.Equals(msg.Topic, selectedTopic, StringComparison.OrdinalIgnoreCase))
+                            return true;
+                    }
+                    return false;
+                }
+                if (LastXmlCache.TryGetMatching(itemId, Matches, out var matched, out _))
+                    xml = matched;
+            }
+            if (string.IsNullOrEmpty(xml))
+            {
+                if (LastXmlCache.TryGet(itemId, out var latest, out _))
+                {
+                    xml = latest;
+                    fallback = !string.IsNullOrEmpty(selectedTopic);
+                }
+            }
 
             if (string.IsNullOrEmpty(xml))
             {
@@ -1983,9 +2041,15 @@ namespace MetadataDisplay.Client
             }
             catch { pretty = xml; }
 
+            string title = string.IsNullOrEmpty(selectedTopic)
+                ? "Latest packet (XML)"
+                : (fallback
+                    ? $"Latest packet (XML) - no recent packet for topic '{selectedTopic}'"
+                    : $"Packet for topic '{selectedTopic}' (XML)");
+
             var win = new Window
             {
-                Title = "Latest packet (XML)",
+                Title = title,
                 Width = 900,
                 Height = 700,
                 Owner = this,

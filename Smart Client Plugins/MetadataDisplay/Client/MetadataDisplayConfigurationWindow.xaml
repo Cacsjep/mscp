@@ -255,6 +255,51 @@
                         </Grid>
                     </Border>
 
+                    <TextBlock Text="What to read" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button x:Name="learnStartButton" Content="Start Learn"
+                                        Margin="0,0,8,0" Click="OnStartLearn"/>
+                                <Button x:Name="learnStopButton" Content="Stop"
+                                        Margin="0,0,12,0" IsEnabled="False" Click="OnStopLearn"/>
+                                <TextBlock x:Name="learnStatus" VerticalAlignment="Center"
+                                           Style="{StaticResource HintText}" TextWrapping="Wrap"
+                                           Text="Idle. Start Learn to discover topics and fields."/>
+                            </StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Topic" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="topicCombo" IsEditable="True"
+                                          ToolTip="{Binding Text, RelativeSource={RelativeSource Self}, TargetNullValue='(no topic configured)', FallbackValue='(no topic configured)'}"
+                                          ToolTipService.ShowOnDisabled="True"/>
+                                <Button Grid.Column="2" x:Name="inspectPacketButton" Content="Inspect packet..."
+                                        Margin="8,0,0,0" Click="OnInspectPacket"
+                                        ToolTip="Open a recent XML packet for the selected Topic"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Field" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="dataKeyCombo" IsEditable="True"/>
+                            </Grid>
+                            <Expander x:Name="sourceFilterExpander" Header="Advanced - Source filter (per Source SimpleItem)" Foreground="#FFD0D0D0" Margin="-6,0,0,0">
+                                <StackPanel Margin="0,8,0,0">
+                                    <TextBlock TextWrapping="Wrap" Style="{StaticResource HintText}" Margin="0,0,0,6"
+                                               Text="Restrict to Source/SimpleItem matches. Format: name1=value1;name2=value2"/>
+                                    <TextBox x:Name="sourceFilterBox" Margin="0,0,0,6"/>
+                                    <ItemsControl x:Name="learnedSourceList"/>
+                                </StackPanel>
+                            </Expander>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Title and density" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel>
@@ -308,51 +353,6 @@
                                     </Grid>
                                 </StackPanel>
                             </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="What to read" Style="{StaticResource SectionTitle}"/>
-                    <Border Style="{StaticResource SectionContainer}">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <Button x:Name="learnStartButton" Content="Start Learn"
-                                        Margin="0,0,8,0" Click="OnStartLearn"/>
-                                <Button x:Name="learnStopButton" Content="Stop"
-                                        Margin="0,0,12,0" IsEnabled="False" Click="OnStopLearn"/>
-                                <TextBlock x:Name="learnStatus" VerticalAlignment="Center"
-                                           Style="{StaticResource HintText}" TextWrapping="Wrap"
-                                           Text="Idle. Start Learn to discover topics and fields."/>
-                            </StackPanel>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Topic" Style="{StaticResource FieldLabel}"/>
-                                <ComboBox Grid.Column="1" x:Name="topicCombo" IsEditable="True"
-                                          ToolTip="{Binding Text, RelativeSource={RelativeSource Self}, TargetNullValue='(no topic configured)', FallbackValue='(no topic configured)'}"
-                                          ToolTipService.ShowOnDisabled="True"/>
-                                <Button Grid.Column="2" x:Name="inspectPacketButton" Content="Inspect packet..."
-                                        Margin="8,0,0,0" Click="OnInspectPacket"
-                                        ToolTip="Open the latest captured XML in a syntax-highlighted viewer"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Field" Style="{StaticResource FieldLabel}"/>
-                                <ComboBox Grid.Column="1" x:Name="dataKeyCombo" IsEditable="True"/>
-                            </Grid>
-                            <Expander x:Name="sourceFilterExpander" Header="Advanced - Source filter (per Source SimpleItem)" Foreground="#FFD0D0D0" Margin="-6,0,0,0">
-                                <StackPanel Margin="0,8,0,0">
-                                    <TextBlock TextWrapping="Wrap" Style="{StaticResource HintText}" Margin="0,0,0,6"
-                                               Text="Restrict to Source/SimpleItem matches. Format: name1=value1;name2=value2"/>
-                                    <TextBox x:Name="sourceFilterBox" Margin="0,0,0,6"/>
-                                    <ItemsControl x:Name="learnedSourceList"/>
-                                </StackPanel>
-                            </Expander>
                         </StackPanel>
                     </Border>
 
