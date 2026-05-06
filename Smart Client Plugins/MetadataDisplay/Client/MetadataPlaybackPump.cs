@@ -78,6 +78,15 @@ namespace MetadataDisplay.Client
         public Task<List<(string Value, DateTime TimestampUtc)>> ScanRangeAsync(
             DateTime fromUtc, DateTime toUtc, int maxFrames, CancellationToken ct)
         {
+            return ScanRangeAsync(fromUtc, toUtc, maxFrames, ct, /*cfgOverride*/ null);
+        }
+
+        // Single-config scan with optional cfg override. The override is used by
+        // the multi-series fan-out (ScanRangeManyAsync) so it can reuse the same
+        // chunked-Get loop for each series without changing the cfgProvider.
+        private Task<List<(string Value, DateTime TimestampUtc)>> ScanRangeAsync(
+            DateTime fromUtc, DateTime toUtc, int maxFrames, CancellationToken ct, ExtractorConfig cfgOverride)
+        {
             return Task.Run(() =>
             {
                 var results = new List<(string, DateTime)>();
@@ -91,7 +100,7 @@ namespace MetadataDisplay.Client
                     src = new MetadataPlaybackSource(_item);
                     src.Init();
 
-                    var cfg = _cfgProvider("playback-range");
+                    var cfg = cfgOverride ?? _cfgProvider("playback-range");
                     if (cfg == null || string.IsNullOrEmpty(cfg.DataKey)) return results;
 
                     var cursor = fromUtc;
@@ -139,6 +148,83 @@ namespace MetadataDisplay.Client
                 catch (Exception ex)
                 {
                     _log.Error($"[Pump] ScanRange failed: {ex.Message}");
+                }
+                finally
+                {
+                    SafeClose(src);
+                }
+                return results;
+            }, ct);
+        }
+
+        // Multi-config range scan. One MetadataPlaybackSource walks the range,
+        // and every frame is dispatched to all configs at once via
+        // TryExtractMany - so a single network/disk sweep produces N parallel
+        // result lists instead of running N independent scans. Returned list
+        // index aligns with the input cfgs list (null entries are skipped).
+        public Task<List<List<(string Value, DateTime TimestampUtc)>>> ScanRangeManyAsync(
+            DateTime fromUtc, DateTime toUtc, IReadOnlyList<ExtractorConfig> cfgs, int maxFrames, CancellationToken ct)
+        {
+            return Task.Run(() =>
+            {
+                var results = new List<List<(string, DateTime)>>();
+                int n = cfgs?.Count ?? 0;
+                for (int i = 0; i < n; i++) results.Add(new List<(string, DateTime)>());
+                if (n == 0) return results;
+                if (toUtc <= fromUtc) return results;
+                if (fromUtc.Kind != DateTimeKind.Utc) fromUtc = fromUtc.ToUniversalTime();
+                if (toUtc.Kind   != DateTimeKind.Utc) toUtc   = toUtc.ToUniversalTime();
+
+                MetadataPlaybackSource src = null;
+                try
+                {
+                    src = new MetadataPlaybackSource(_item);
+                    src.Init();
+
+                    var cursor = fromUtc;
+                    int chunk = 200;
+                    int safety = 0;
+                    int totalHits = 0;
+                    while (!ct.IsCancellationRequested && cursor <= toUtc && safety++ < 1000)
+                    {
+                        List<MetadataPlaybackData> frames = null;
+                        try { frames = src.Get(cursor, toUtc - cursor, chunk); }
+                        catch (Exception ex)
+                        {
+                            _log.Error($"[Pump] ScanRangeMany Get threw: {ex.Message}");
+                            break;
+                        }
+                        if (frames == null || frames.Count == 0) break;
+
+                        DateTime? lastFrameUtc = null;
+                        foreach (var f in frames)
+                        {
+                            if (f == null) continue;
+                            string xml;
+                            try { xml = f.Content?.GetMetadataString(); }
+                            catch { continue; }
+                            if (string.IsNullOrEmpty(xml)) continue;
+
+                            var hits = MetadataExtractor.TryExtractMany(xml, cfgs);
+                            foreach (var kv in hits)
+                            {
+                                if (kv.Key < 0 || kv.Key >= results.Count) continue;
+                                results[kv.Key].Add((kv.Value.Value, kv.Value.TimestampUtc));
+                                totalHits++;
+                            }
+                            lastFrameUtc = f.DateTime;
+                            if (totalHits >= maxFrames) return results;
+                        }
+
+                        if (!lastFrameUtc.HasValue) break;
+                        var nextStart = lastFrameUtc.Value.AddTicks(1);
+                        if (nextStart <= cursor) break;
+                        cursor = nextStart;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"[Pump] ScanRangeMany failed: {ex.Message}");
                 }
                 finally
                 {

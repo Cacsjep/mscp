@@ -7,7 +7,7 @@ namespace MetadataDisplay.Client.Renderers
     // render types. Lets four widgets of different kinds (lamp, number, gauge,
     // text) read as one coherent product.
     //
-    // Status colors (Ok/Warn/Bad) are intentionally NOT here — those remain
+    // Status colors (Ok/Warn/Bad) are intentionally NOT here - those remain
     // user-configurable per widget via NumericConfig.
     internal static class WidgetTheme
     {

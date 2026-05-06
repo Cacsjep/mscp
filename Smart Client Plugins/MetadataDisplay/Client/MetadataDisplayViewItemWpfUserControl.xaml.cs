@@ -25,6 +25,11 @@ namespace MetadataDisplay.Client
         private MetadataLiveSource _liveSource;
         private Item _metadataItem;
         private ExtractorConfig _extractorCfg;
+        // Per-series extractor configs for the multi-line chart. Built from the
+        // active LineChartConfig.Series whenever the line renderer is (re)built.
+        // Live and backfill paths use this list; non-chart renderers continue
+        // using the legacy single _extractorCfg above.
+        private List<ExtractorConfig> _lineExtractorCfgs;
 
         private MetadataPlaybackPump _pump;
         private object _playbackTimeReceiver;
@@ -35,6 +40,7 @@ namespace MetadataDisplay.Client
         private TextRenderer _textRenderer;
         private LineChartRenderer _lineRenderer;
         private TableRenderer _tableRenderer;
+        private TrendRenderer _trendRenderer;
 
         private DateTime? _lastValueUtc;
         // Playback line-chart backfill bookkeeping: track the last cursor we
@@ -81,6 +87,7 @@ namespace MetadataDisplay.Client
             StopLive();
             StopPlayback();
             StopStaleTicker();
+            StopTrendBaselineRefreshTimer();
         }
 
         // Called by the configuration window after a Save so the rendered widget
@@ -120,6 +127,7 @@ namespace MetadataDisplay.Client
                 renderViewbox.Visibility = Visibility.Collapsed;
                 chartRoot.Visibility = Visibility.Collapsed;
                 noDataPanel.Visibility = Visibility.Collapsed;
+                UpdateExportBadgeVisibility();
                 return;
             }
 
@@ -138,6 +146,13 @@ namespace MetadataDisplay.Client
             // ShowLoadingOverlay/StartLive paths flip this back when ready.
             chartRoot.Visibility = Visibility.Collapsed;
             noDataPanel.Visibility = Visibility.Visible;
+            // Heading toggles between "Loading..." (active backfill) and
+            // "Waiting for data..." (live / playback waiting state) so the
+            // detail line below doesn't visually collide with a contradicting
+            // header - e.g. "Waiting for data..." sitting above "Loading from
+            // archive..." reads as two messages stacked.
+            bool isLoadingState = mode == Mode.ClientPlayback && isChart;
+            noDataHeading.Text = isLoadingState ? "Loading..." : "Waiting for data...";
             noDataDetail.Text = mode == Mode.ClientPlayback
                 ? (isChart ? "Loading recent values from archive..."
                            : "Move the playback cursor to a time when this metadata was recorded.")
@@ -160,7 +175,7 @@ namespace MetadataDisplay.Client
                     }
                     else
                     {
-                        // Short windows skip backfill — reveal the chart and let
+                        // Short windows skip backfill - reveal the chart and let
                         // the live stream fill it in.
                         HideLoadingOverlay();
                         StartLive();
@@ -175,6 +190,7 @@ namespace MetadataDisplay.Client
                 StartPlayback();
 
             StartStaleTickerIfEnabled();
+            UpdateExportBadgeVisibility();
         }
 
         // null = no overlay (render the widget). Non-null = show this message instead.
@@ -205,7 +221,7 @@ namespace MetadataDisplay.Client
             return null;
         }
 
-        // Chart hosts have their own title TextBlock outside the Viewbox-scaled tree —
+        // Chart hosts have their own title TextBlock outside the Viewbox-scaled tree -
         // mirror the user's title settings into it whenever the chart renderer is built.
         private void ApplyChartTitle()
         {
@@ -264,7 +280,7 @@ namespace MetadataDisplay.Client
                 default:       titleText.HorizontalAlignment = HorizontalAlignment.Left;   titleText.TextAlignment = TextAlignment.Left;   break;
             }
 
-            // Font size — density scales the title alongside the rest of the widget.
+            // Font size - density scales the title alongside the rest of the widget.
             double baseFs = 14;
             if (double.TryParse(_viewItemManager.TitleFontSize, NumberStyles.Float, CultureInfo.InvariantCulture, out var fs) && fs > 0)
                 baseFs = fs;
@@ -347,7 +363,7 @@ namespace MetadataDisplay.Client
             // user scrubs. Query the current cursor explicitly via the request
             // message and seed an immediate backfill if we're showing an
             // archive-backed renderer (line chart or table).
-            if (_lineRenderer != null || _tableRenderer != null)
+            if (_lineRenderer != null || _tableRenderer != null || _trendRenderer != null)
             {
                 try
                 {
@@ -372,6 +388,7 @@ namespace MetadataDisplay.Client
                         _lastPlaybackCursorUtc = seed.Value;
                         _lineRenderer?.SetCursor(seed.Value);
                         _tableRenderer?.SetCursor(seed.Value);
+                        _trendRenderer?.SetCursor(seed.Value);
                         BackfillArchive(seed.Value, ResolveArchiveWindowSeconds());
                     }
                     else
@@ -413,7 +430,8 @@ namespace MetadataDisplay.Client
         private static bool IsArchiveBackedRenderer(string renderType)
         {
             return string.Equals(renderType, "LineChart", StringComparison.Ordinal)
-                || string.Equals(renderType, "Table", StringComparison.Ordinal);
+                || string.Equals(renderType, "Table", StringComparison.Ordinal)
+                || string.Equals(renderType, "Trend", StringComparison.Ordinal);
         }
 
         // The window length the active archive-backed renderer uses for backfills
@@ -422,13 +440,18 @@ namespace MetadataDisplay.Client
         {
             if (_lineRenderer != null) return BuildLineChartConfig().WindowSeconds;
             if (_tableRenderer != null) return BuildTableConfig().WindowSeconds;
+            if (_trendRenderer != null)
+            {
+                var t = TrendConfig.FromManager(_viewItemManager);
+                return t.LookbackSeconds;
+            }
             return 60;
         }
 
         // Live backfill: range-scan the archive for [now - window, now] before
         // opening the live subscription. Same scan code as playback backfill but
         // anchored to wall-clock now. Without this, switching to a "Last 6 hours"
-        // window starts empty and only fills over the next 6 hours — and every
+        // window starts empty and only fills over the next 6 hours - and every
         // live↔playback flip would reset the buffer to empty.
         //
         // The live subscription doesn't open until the backfill resolves; that
@@ -437,7 +460,7 @@ namespace MetadataDisplay.Client
         private void BackfillArchiveLive(int windowSeconds)
         {
             if (_metadataItem == null) return;
-            if (_lineRenderer == null && _tableRenderer == null) return;
+            if (_lineRenderer == null && _tableRenderer == null && _trendRenderer == null) return;
 
             // Show "Waiting for data..." while the backfill runs so the empty
             // pane isn't mistaken for "channel is dead".
@@ -458,12 +481,34 @@ namespace MetadataDisplay.Client
                 (_, __) => { });
 
             _log.Info($"[ViewItem] BackfillArchive(live) window={windowSeconds}s from={fromUtc:O} to={nowUtc:O}");
+
+            // Multi-series line chart: dispatch every series in a single scan.
+            if (_lineRenderer != null && _lineExtractorCfgs != null && _lineExtractorCfgs.Count > 1)
+            {
+                var cfgs = _lineExtractorCfgs;
+                scanPump.ScanRangeManyAsync(fromUtc, nowUtc, cfgs, maxFrames, ct).ContinueWith(t =>
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (ct.IsCancellationRequested) return;
+                        if (_lineRenderer == null) return;
+                        if (t.IsCanceled) _log.Info("[ViewItem] BackfillArchive(live, multi) cancelled");
+                        else if (t.IsFaulted) _log.Error($"[ViewItem] BackfillArchive(live, multi) faulted: {t.Exception?.GetBaseException().Message}");
+                        else if (t.Result != null) ApplyMultiSeriesBackfillResults(t.Result);
+
+                        HideLoadingOverlay();
+                        StartLive();
+                    }));
+                }, System.Threading.Tasks.TaskScheduler.Default);
+                return;
+            }
+
             scanPump.ScanRangeAsync(fromUtc, nowUtc, maxFrames, ct).ContinueWith(t =>
             {
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (ct.IsCancellationRequested) return;
-                    if (_lineRenderer == null && _tableRenderer == null) return;
+                    if (_lineRenderer == null && _tableRenderer == null && _trendRenderer == null) return;
 
                     if (t.IsCanceled)
                     {
@@ -478,12 +523,54 @@ namespace MetadataDisplay.Client
                         ApplyBackfillResults(t.Result);
                     }
 
-                    // Restore the chart visibility regardless of scan outcome —
+                    // Restore the chart visibility regardless of scan outcome -
                     // even an empty backfill still leads into live streaming.
                     HideLoadingOverlay();
                     StartLive();
+                    // Trend comparison baseline: kick off the period-over-period
+                    // archive scan now that the renderer is hydrated. Anchors
+                    // at wall-clock now in live mode and refreshes hourly.
+                    if (_trendRenderer != null)
+                    {
+                        FetchTrendComparisonBaselineAsync(DateTime.UtcNow);
+                        StartTrendBaselineRefreshTimer();
+                    }
                 }));
             }, System.Threading.Tasks.TaskScheduler.Default);
+        }
+
+        // Multi-series scan applier. Parses each series's strings to doubles
+        // and seeds the line renderer in one shot via ResetAllWithSamples.
+        private void ApplyMultiSeriesBackfillResults(List<List<(string Value, DateTime TimestampUtc)>> raw)
+        {
+            if (_lineRenderer == null || raw == null) return;
+            var perSeries = new List<IReadOnlyList<(double, DateTime)>>(raw.Count);
+            int total = 0;
+            DateTime? latest = null;
+            foreach (var list in raw)
+            {
+                var parsed = new List<(double, DateTime)>(list?.Count ?? 0);
+                if (list != null)
+                {
+                    foreach (var r in list)
+                    {
+                        if (double.TryParse(r.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                        {
+                            parsed.Add((v, r.TimestampUtc));
+                            if (!latest.HasValue || r.TimestampUtc > latest.Value) latest = r.TimestampUtc;
+                        }
+                    }
+                }
+                perSeries.Add(parsed);
+                total += parsed.Count;
+            }
+            _log.Info($"[ViewItem] Backfill apply (line, multi) series={raw.Count} samples={total}");
+            _lineRenderer.ResetAllWithSamples(perSeries);
+            if (total > 0)
+            {
+                _hasReceivedValue = true;
+                _lastValueUtc = latest;
+            }
         }
 
         // Push the scan result into whichever archive-backed renderer is active.
@@ -518,6 +605,22 @@ namespace MetadataDisplay.Client
                     _lastValueUtc = samples[samples.Count - 1].Item2;
                 }
             }
+            if (_trendRenderer != null)
+            {
+                var samples = new List<(double, DateTime)>(raw.Count);
+                foreach (var r in raw)
+                {
+                    if (double.TryParse(r.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
+                        samples.Add((v, r.TimestampUtc));
+                }
+                _log.Info($"[ViewItem] Backfill apply (trend) raw={raw.Count} parsed={samples.Count}");
+                _trendRenderer.ResetWithSamples(samples);
+                if (samples.Count > 0)
+                {
+                    _hasReceivedValue = true;
+                    _lastValueUtc = samples[samples.Count - 1].Item2;
+                }
+            }
         }
 
         private static string FormatWindow(int seconds)
@@ -532,7 +635,7 @@ namespace MetadataDisplay.Client
         // All chart code paths must go through this rather than calling
         // LineChartConfig.FromManager directly so the session window picker takes effect.
         // In playback mode zoom/pan is always enabled regardless of the saved
-        // setting — there is no live stream that could fight with the pan-pause
+        // setting - there is no live stream that could fight with the pan-pause
         // behaviour, and users routinely want to scrub a region of the archive.
         private LineChartConfig BuildLineChartConfig()
         {
@@ -545,6 +648,157 @@ namespace MetadataDisplay.Client
                 cfg.PlaybackMode = true;
             }
             return cfg;
+        }
+
+        // Period-over-period baseline scanner for the Trend KPI. For all
+        // ComparisonModes other than RollingLookback, computes a list of
+        // target UTC instants (yesterday, last week, etc.), scans the archive
+        // for each ±AverageHalfWindow, averages samples per anchor, then
+        // averages across anchors. Pushes the result into the trend renderer
+        // via SetComparisonBaseline. Does nothing for Rolling mode.
+        private System.Threading.CancellationTokenSource _trendBaselineCts;
+        private DispatcherTimer _trendBaselineRefreshTimer;
+
+        private void FetchTrendComparisonBaselineAsync(DateTime anchorUtc)
+        {
+            if (_trendRenderer == null || _metadataItem == null) return;
+            var trendCfg = BuildTrendConfig();
+
+            var targets = ComputeTrendComparisonAnchors(anchorUtc, trendCfg.ComparisonMode);
+            if (targets == null || targets.Count == 0) return;
+
+            try { _trendBaselineCts?.Cancel(); } catch { }
+            _trendBaselineCts = new System.Threading.CancellationTokenSource();
+            var ct = _trendBaselineCts.Token;
+            // The in-pane window picker drives the averaging window: a
+            // 60s picker gets ±60s of archive (2 min total) around the
+            // historical anchor, a 1h picker gets ±1h, etc.
+            int halfWindow = Math.Max(30, trendCfg.LookbackSeconds);
+
+            var scanPump = new MetadataPlaybackPump(_metadataItem,
+                _ => ExtractorConfig.FromManager(_viewItemManager),
+                (_, __) => { });
+
+            System.Threading.Tasks.Task.Run(async () =>
+            {
+                double sum = 0;
+                int countAnchors = 0;
+                foreach (var target in targets)
+                {
+                    if (ct.IsCancellationRequested) return;
+                    var from = target.AddSeconds(-halfWindow);
+                    var to = target.AddSeconds(halfWindow);
+                    List<(string Value, DateTime TimestampUtc)> raw = null;
+                    try
+                    {
+                        raw = await scanPump.ScanRangeAsync(from, to, 2000, ct).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error($"[Trend] baseline scan threw for anchor {target:O}: {ex.Message}");
+                        continue;
+                    }
+                    if (raw == null || raw.Count == 0) continue;
+
+                    double anchorSum = 0; int anchorCount = 0;
+                    foreach (var r in raw)
+                    {
+                        if (double.TryParse(r.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                        {
+                            anchorSum += v; anchorCount++;
+                        }
+                    }
+                    if (anchorCount == 0) continue;
+                    sum += anchorSum / anchorCount;
+                    countAnchors++;
+                }
+
+                double? baseline = countAnchors > 0 ? (double?)(sum / countAnchors) : null;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (ct.IsCancellationRequested) return;
+                    if (_trendRenderer == null) return;
+                    _trendRenderer.SetComparisonBaseline(baseline);
+                    _log.Info($"[Trend] comparison baseline mode={trendCfg.ComparisonMode} anchors={countAnchors}/{targets.Count} value={(baseline.HasValue ? baseline.Value.ToString("0.###", CultureInfo.InvariantCulture) : "null")}");
+                }));
+            }, ct);
+        }
+
+        // Returns the UTC instant to scan for the configured comparison mode.
+        // Always returns a single-element list now (no averaging across
+        // multiple historical anchors).
+        private static List<DateTime> ComputeTrendComparisonAnchors(DateTime anchorUtc, TrendComparisonMode mode)
+        {
+            var list = new List<DateTime>();
+            switch (mode)
+            {
+                case TrendComparisonMode.SameTimeYesterday:
+                    list.Add(anchorUtc.AddDays(-1));
+                    break;
+                case TrendComparisonMode.SameTimeLastWeek:
+                    list.Add(anchorUtc.AddDays(-7));
+                    break;
+                case TrendComparisonMode.SameTimeLastMonth:
+                    list.Add(anchorUtc.AddMonths(-1));
+                    break;
+                default:
+                    list.Add(anchorUtc.AddDays(-1));
+                    break;
+            }
+            return list;
+        }
+
+        private void StartTrendBaselineRefreshTimer()
+        {
+            if (_trendBaselineRefreshTimer != null) return;
+            // Re-fetch the comparison baseline every hour. The anchor for "yesterday"
+            // rolls forward in real time; without a refresh the widget would
+            // compare today's current value against an anchor that drifts older.
+            _trendBaselineRefreshTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromHours(1),
+            };
+            _trendBaselineRefreshTimer.Tick += (s, e) =>
+            {
+                FetchTrendComparisonBaselineAsync(DateTime.UtcNow);
+            };
+            _trendBaselineRefreshTimer.Start();
+        }
+
+        private void StopTrendBaselineRefreshTimer()
+        {
+            if (_trendBaselineRefreshTimer == null) return;
+            _trendBaselineRefreshTimer.Stop();
+            _trendBaselineRefreshTimer = null;
+            try { _trendBaselineCts?.Cancel(); } catch { }
+        }
+
+        // Build the Trend config and stamp PlaybackMode so the renderer
+        // anchors the lookback at the cursor instead of wall-clock now.
+        // Honors the in-pane session window override on LookbackSeconds; the
+        // archive-baseline scan uses the same value as its averaging window.
+        private TrendConfig BuildTrendConfig()
+        {
+            var cfg = TrendConfig.FromManager(_viewItemManager);
+            if (_sessionWindowSecondsOverride.HasValue && _sessionWindowSecondsOverride.Value > 0)
+                cfg.LookbackSeconds = _sessionWindowSecondsOverride.Value;
+            if (EnvironmentManager.Instance.Mode == Mode.ClientPlayback)
+                cfg.PlaybackMode = true;
+            return cfg;
+        }
+
+        // Map each LineSeries to its ExtractorConfig in chart order. Live and
+        // backfill paths feed this list to TryExtractMany / ScanRangeManyAsync
+        // so a single XML walk fans out to every matching series.
+        private static List<ExtractorConfig> BuildLineExtractorConfigs(LineChartConfig cfg)
+        {
+            var list = new List<ExtractorConfig>();
+            if (cfg?.Series == null) return list;
+            foreach (var s in cfg.Series)
+            {
+                list.Add(s != null ? s.ToExtractorConfig() : null);
+            }
+            return list;
         }
 
         private static readonly (string Label, int Seconds)[] _windowPresets = new (string, int)[]
@@ -563,6 +817,81 @@ namespace MetadataDisplay.Client
             e.Handled = true;
             BuildWindowPickerOptions();
             windowPickerPopup.IsOpen = !windowPickerPopup.IsOpen;
+        }
+
+        // Reveals the right Export badge (chart-row variant for Line/Table, the
+        // floating one anchored to the parent Grid for everything else) when in
+        // Playback and the operator hasn't disabled the feature for this widget.
+        // Called from ApplyMode and after BuildRenderHost so badge state tracks
+        // both mode changes and render-type swaps.
+        private void UpdateExportBadgeVisibility()
+        {
+            var mode = EnvironmentManager.Instance.Mode;
+            bool enabled = !string.Equals(_viewItemManager.EnableExport, "false", StringComparison.OrdinalIgnoreCase);
+            bool channelReady = _metadataItem != null
+                                && _extractorCfg != null
+                                && !string.IsNullOrEmpty(_extractorCfg.DataKey);
+            bool show = mode == Mode.ClientPlayback && enabled && channelReady;
+            bool isChart = IsArchiveBackedRenderer(_viewItemManager.RenderType);
+            // Hide both first; then turn on the one matching the active render host.
+            exportBadgeChart.Visibility = Visibility.Collapsed;
+            exportBadgeRender.Visibility = Visibility.Collapsed;
+            if (!show) return;
+            if (isChart) exportBadgeChart.Visibility = Visibility.Visible;
+            else exportBadgeRender.Visibility = Visibility.Visible;
+        }
+
+        private void OnExportClick(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            try
+            {
+                if (_metadataItem == null)
+                {
+                    _log.Info("[Export] open dialog skipped - no metadata channel resolved.");
+                    return;
+                }
+                if (_extractorCfg == null || string.IsNullOrEmpty(_extractorCfg.DataKey))
+                {
+                    _log.Info("[Export] open dialog skipped - no DataKey configured.");
+                    return;
+                }
+                // Default range: last 24 hours from the playback cursor. The
+                // operator can narrow or widen via the date pickers / quick-range
+                // buttons before clicking Load Data.
+                const int windowSeconds = 86400;
+
+                DateTime cursorUtc = _lastPlaybackCursorUtc ?? DateTime.UtcNow;
+                DateTime defaultToUtc = cursorUtc;
+                DateTime defaultFromUtc = cursorUtc.AddSeconds(-windowSeconds);
+
+                // For multi-series Line Charts, pass the full series list so the
+                // dialog walks every line and emits a wide-format CSV.
+                IReadOnlyList<LineSeries> multiSeries = null;
+                if (_lineRenderer != null)
+                {
+                    var lineCfg = BuildLineChartConfig();
+                    if (lineCfg?.Series != null && lineCfg.Series.Count > 1)
+                        multiSeries = lineCfg.Series;
+                }
+
+                var dlg = new Export.ExportDialog(
+                    metadataItem: _metadataItem,
+                    extractorCfg: _extractorCfg,
+                    channelName: _metadataItem.Name,
+                    renderType: _viewItemManager.RenderType,
+                    lampMap: _viewItemManager.LampMap,
+                    defaultFromUtc: defaultFromUtc,
+                    defaultToUtc: defaultToUtc,
+                    multiSeries: multiSeries);
+                var owner = Window.GetWindow(this);
+                if (owner != null) dlg.Owner = owner;
+                dlg.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"OnExportClick threw: {ex.Message}", ex);
+            }
         }
 
         private void BuildWindowPickerOptions()
@@ -626,7 +955,7 @@ namespace MetadataDisplay.Client
         {
             _sessionWindowSecondsOverride = overrideSeconds;
             UpdateWindowPickerLabel();
-            if (_lineRenderer == null && _tableRenderer == null) return;
+            if (_lineRenderer == null && _tableRenderer == null && _trendRenderer == null) return;
 
             int effectiveWindow;
             var mode = EnvironmentManager.Instance.Mode;
@@ -636,13 +965,21 @@ namespace MetadataDisplay.Client
                 effectiveWindow = cfg.WindowSeconds;
                 _log.Info($"[ViewItem] WindowPicker override={(overrideSeconds.HasValue ? overrideSeconds.Value.ToString() : "default")} effective={effectiveWindow}s mode={mode} render=Line");
                 _lineRenderer.Configure(cfg);
+                _lineExtractorCfgs = BuildLineExtractorConfigs(cfg);
             }
-            else
+            else if (_tableRenderer != null)
             {
                 var cfg = BuildTableConfig();
                 effectiveWindow = cfg.WindowSeconds;
                 _log.Info($"[ViewItem] WindowPicker override={(overrideSeconds.HasValue ? overrideSeconds.Value.ToString() : "default")} effective={effectiveWindow}s mode={mode} render=Table");
                 _tableRenderer.Configure(cfg);
+            }
+            else
+            {
+                var cfg = BuildTrendConfig();
+                effectiveWindow = cfg.LookbackSeconds;
+                _log.Info($"[ViewItem] WindowPicker override={(overrideSeconds.HasValue ? overrideSeconds.Value.ToString() : "default")} effective={effectiveWindow}s mode={mode} render=Trend");
+                _trendRenderer.Configure(cfg);
             }
 
             if (mode == Mode.ClientLive)
@@ -694,7 +1031,7 @@ namespace MetadataDisplay.Client
         private void BackfillArchive(DateTime cursorUtc, int windowSeconds)
         {
             if (_pump == null) return;
-            if (_lineRenderer == null && _tableRenderer == null) return;
+            if (_lineRenderer == null && _tableRenderer == null && _trendRenderer == null) return;
             try { _backfillCts?.Cancel(); } catch { }
             _backfillCts = new System.Threading.CancellationTokenSource();
             var ct = _backfillCts.Token;
@@ -709,6 +1046,29 @@ namespace MetadataDisplay.Client
             // very high-cadence sources or wide windows.
             const int maxFrames = 4000;
             _log.Info($"[ViewItem] BackfillArchive(playback) cursor={cursorUtc:O} window={windowSeconds}s from={fromUtc:O}");
+
+            // Multi-series line chart fans out via ScanRangeManyAsync - one
+            // sweep, N parallel series populated.
+            if (_lineRenderer != null && _lineExtractorCfgs != null && _lineExtractorCfgs.Count > 1)
+            {
+                var cfgs = _lineExtractorCfgs;
+                _pump.ScanRangeManyAsync(fromUtc, cursorUtc, cfgs, maxFrames, ct).ContinueWith(t =>
+                {
+                    if (t.IsCanceled) { _log.Info("[ViewItem] BackfillArchive(playback, multi) cancelled"); return; }
+                    if (t.IsFaulted) { _log.Error($"[ViewItem] BackfillArchive(playback, multi) faulted: {t.Exception?.GetBaseException().Message}"); return; }
+                    var raw = t.Result;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (ct.IsCancellationRequested) return;
+                        if (_lineRenderer == null) return;
+                        ApplyMultiSeriesBackfillResults(raw);
+                        _lineRenderer.SetCursor(cursorUtc);
+                        HideLoadingOverlay();
+                    }));
+                }, System.Threading.Tasks.TaskScheduler.Default);
+                return;
+            }
+
             _pump.ScanRangeAsync(fromUtc, cursorUtc, maxFrames, ct).ContinueWith(t =>
             {
                 if (t.IsCanceled)
@@ -725,11 +1085,22 @@ namespace MetadataDisplay.Client
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (ct.IsCancellationRequested) return;
-                    if (_lineRenderer == null && _tableRenderer == null) return;
+                    if (_lineRenderer == null && _tableRenderer == null && _trendRenderer == null) return;
                     ApplyBackfillResults(raw);
                     _lineRenderer?.SetCursor(cursorUtc);
                     _tableRenderer?.SetCursor(cursorUtc);
+                    _trendRenderer?.SetCursor(cursorUtc);
                     HideLoadingOverlay();
+                    // Trend comparison baseline: anchor at the playback cursor
+                    // so "yesterday" means 24h before the cursor, not before
+                    // wall-clock now. Refresh timer kicks off once and keeps
+                    // running until Close (it re-fetches against UtcNow on
+                    // tick; live mode only - in playback the cursor controls
+                    // when this code path runs again).
+                    if (_trendRenderer != null)
+                    {
+                        FetchTrendComparisonBaselineAsync(cursorUtc);
+                    }
                 }));
             }, System.Threading.Tasks.TaskScheduler.Default);
         }
@@ -741,6 +1112,9 @@ namespace MetadataDisplay.Client
         {
             noDataPanel.Visibility = Visibility.Visible;
             chartRoot.Visibility = Visibility.Collapsed;
+            // Loading state has its own heading so it doesn't collide with the
+            // generic "Waiting for data..." placeholder text.
+            noDataHeading.Text = "Loading...";
             noDataDetail.Text = detail ?? "";
         }
 
@@ -777,10 +1151,11 @@ namespace MetadataDisplay.Client
                     // but jumps bigger than half the visible window (or the first
                     // time we see a cursor) trigger a fresh range scan to refill
                     // the visible buffer with archive samples.
-                    if (_lineRenderer != null || _tableRenderer != null)
+                    if (_lineRenderer != null || _tableRenderer != null || _trendRenderer != null)
                     {
                         _lineRenderer?.SetCursor(utc.Value);
                         _tableRenderer?.SetCursor(utc.Value);
+                        _trendRenderer?.SetCursor(utc.Value);
                         int windowSeconds = ResolveArchiveWindowSeconds();
                         bool needBackfill = !_lastBackfillCursorUtc.HasValue
                             || Math.Abs((utc.Value - _lastBackfillCursorUtc.Value).TotalSeconds) > windowSeconds / 2.0;
@@ -806,6 +1181,8 @@ namespace MetadataDisplay.Client
             _textRenderer = null;
             _lineRenderer = null;
             _tableRenderer = null;
+            _trendRenderer = null;
+            _lineExtractorCfgs = null;
 
             UIElement visual;
             bool isChart = false;
@@ -828,7 +1205,9 @@ namespace MetadataDisplay.Client
                     break;
                 case "LineChart":
                     _lineRenderer = new LineChartRenderer();
-                    _lineRenderer.Configure(BuildLineChartConfig());
+                    var lineCfg = BuildLineChartConfig();
+                    _lineRenderer.Configure(lineCfg);
+                    _lineExtractorCfgs = BuildLineExtractorConfigs(lineCfg);
                     visual = _lineRenderer.Visual;
                     isChart = true;
                     break;
@@ -837,6 +1216,12 @@ namespace MetadataDisplay.Client
                     _tableRenderer.Configure(BuildTableConfig());
                     visual = _tableRenderer.Visual;
                     isChart = true;
+                    break;
+                case "Trend":
+                    _trendRenderer = new TrendRenderer();
+                    _trendRenderer.Configure(BuildTrendConfig());
+                    visual = _trendRenderer.Visual;
+                    isChart = true; // native-resolution host: the sparkline must size with the pane.
                     break;
                 case "Lamp":
                 default:
@@ -943,6 +1328,42 @@ namespace MetadataDisplay.Client
                 if (_metadataItem != null)
                     LastXmlCache.Put(_metadataItem.FQID.ObjectId, xml);
 
+                // Multi-series line chart: walk the XML once and dispatch every
+                // matching series in a single pass. Other render types fall
+                // through to the legacy single-key TryExtract path below.
+                if (_lineRenderer != null && _lineExtractorCfgs != null && _lineExtractorCfgs.Count > 0)
+                {
+                    var hits = MetadataExtractor.TryExtractMany(xml, _lineExtractorCfgs);
+                    if (hits.Count == 0) return;
+                    var localHits = hits;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (_lineRenderer == null) return;
+                        DateTime? latest = null;
+                        foreach (var kv in localHits)
+                        {
+                            var h = kv.Value;
+                            if (h == null) continue;
+                            if (double.TryParse(h.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                                _lineRenderer.AddSample(kv.Key, v, h.TimestampUtc);
+                            if (!latest.HasValue || h.TimestampUtc > latest.Value)
+                                latest = h.TimestampUtc;
+                        }
+                        if (latest.HasValue)
+                        {
+                            _lastValueUtc = latest;
+                            if (!_hasReceivedValue)
+                            {
+                                _hasReceivedValue = true;
+                                noDataPanel.Visibility = Visibility.Collapsed;
+                                chartRoot.Visibility = Visibility.Visible;
+                            }
+                            UpdateStaleVisuals();
+                        }
+                    }));
+                    return;
+                }
+
                 var hit = MetadataExtractor.TryExtract(xml, _extractorCfg);
                 if (_livePacketsSeen <= 3 || _livePacketsSeen % 50 == 0)
                 {
@@ -983,10 +1404,10 @@ namespace MetadataDisplay.Client
             {
                 _hasReceivedValue = true;
                 noDataPanel.Visibility = Visibility.Collapsed;
-                // Archive-backed renderers (line, table) are already visible
-                // (shown empty); only the bitmap-scaled host needs the
+                // Archive-backed renderers (line, table, trend) are already
+                // visible (shown empty); only the bitmap-scaled host needs the
                 // first-value reveal.
-                if (_lineRenderer == null && _tableRenderer == null)
+                if (_lineRenderer == null && _tableRenderer == null && _trendRenderer == null)
                     renderViewbox.Visibility = Visibility.Visible;
             }
 
@@ -1025,6 +1446,14 @@ namespace MetadataDisplay.Client
             {
                 var ts = _lastValueUtc ?? DateTime.UtcNow;
                 _tableRenderer.AddSample(value, ts);
+            }
+            else if (_trendRenderer != null)
+            {
+                if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                {
+                    var ts = _lastValueUtc ?? DateTime.UtcNow;
+                    _trendRenderer.AddSample(v, ts);
+                }
             }
         }
 

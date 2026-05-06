@@ -69,7 +69,7 @@ namespace MetadataDisplay.Client.Renderers
     // operator's eye lands on the latest value first; older rows scroll off the
     // bottom. State model:
     //   - List of rows ordered newest-first; capped by MaxRows AND WindowSeconds
-    //     (whichever cuts harder — oldest get dropped).
+    //     (whichever cuts harder - oldest get dropped).
     //   - AddSample inserts at position 0; auto-follow keeps the scroll viewport
     //     pinned to the top unless the user has scrolled down to inspect older
     //     rows (Pause overlay matches LineChart's pattern).
@@ -92,7 +92,7 @@ namespace MetadataDisplay.Client.Renderers
         private DateTime? _cursorUtc;
         private bool _autoFollow = true;
         // Suppresses scroll-driven Pause/Resume while we're programmatically
-        // rebuilding visuals (Configure / ResetWithSamples) — clearing the panel
+        // rebuilding visuals (Configure / ResetWithSamples) - clearing the panel
         // briefly puts the scroll position at non-top, which would otherwise
         // trip the auto-pause heuristic.
         private bool _suppressScrollEvents;
@@ -205,7 +205,7 @@ namespace MetadataDisplay.Client.Renderers
             _hdrTime.Visibility = cfg.ShowTimestamp ? Visibility.Visible : Visibility.Collapsed;
             _hdrDelta.Visibility = cfg.ShowDelta ? Visibility.Visible : Visibility.Collapsed;
             _hdrValue.Text = string.IsNullOrWhiteSpace(cfg.ValueColumnName) ? "Value" : cfg.ValueColumnName;
-            // Playback never auto-pauses — cursor anchors what's shown.
+            // Playback never auto-pauses - cursor anchors what's shown.
             if (cfg.PlaybackMode && !_autoFollow) _autoFollow = true;
             if (cfg.PlaybackMode) _pauseOverlay.Visibility = Visibility.Collapsed;
             RebuildAllVisuals();
@@ -251,7 +251,7 @@ namespace MetadataDisplay.Client.Renderers
                 }
                 PruneToLimits();
                 ApplyHighlight();
-                // After a bulk reset, force-follow regardless of prior pause state —
+                // After a bulk reset, force-follow regardless of prior pause state -
                 // the buffer has been replaced.
                 _autoFollow = true;
                 _pauseOverlay.Visibility = Visibility.Collapsed;
@@ -298,7 +298,7 @@ namespace MetadataDisplay.Client.Renderers
         {
             if (_suppressScrollEvents) return;
             if (_cfg != null && _cfg.PlaybackMode) return;
-            // Newest row sits at offset 0 — pause when the user scrolls down to
+            // Newest row sits at offset 0 - pause when the user scrolls down to
             // inspect older rows, resume when they're back at the top.
             const double topEpsilon = 4.0;
             bool atTop = e.VerticalOffset <= topEpsilon;
@@ -324,7 +324,7 @@ namespace MetadataDisplay.Client.Renderers
                 if (firstStale < _rows.Count)
                     RemoveTrailing(_rows.Count - firstStale);
             }
-            // MaxRows hard cap — drop the oldest (tail) entries.
+            // MaxRows hard cap - drop the oldest (tail) entries.
             int over = _rows.Count - _cfg.MaxRows;
             if (over > 0) RemoveTrailing(over);
         }
@@ -388,7 +388,7 @@ namespace MetadataDisplay.Client.Renderers
 
             var valTb = new TextBlock
             {
-                Text = string.IsNullOrEmpty(row.Value) ? "—" : row.Value,
+                Text = string.IsNullOrEmpty(row.Value) ? "-" : row.Value,
                 Foreground = new SolidColorBrush(GetValueColor(row.Value)),
                 FontSize = fs,
                 FontWeight = FontWeights.SemiBold,
@@ -418,7 +418,7 @@ namespace MetadataDisplay.Client.Renderers
 
         // Newest row sits at index 0; the row "before" it in time lives at index+1.
         // Returns "" for the oldest row (no predecessor) or whenever either value
-        // can't be parsed as a number — text-based metadata simply yields a blank
+        // can't be parsed as a number - text-based metadata simply yields a blank
         // delta column instead of crashing or showing junk.
         private string ComputeDelta(int index)
         {

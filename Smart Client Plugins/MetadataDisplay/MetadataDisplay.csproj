@@ -18,7 +18,7 @@
     <!-- LiveCharts2 + SkiaSharp for the LineChart render type. LiveChartsCore* is
          ILRepacked /internalize'd into MetadataDisplay.dll (see MergeLiveCharts
          target below) because every LiveCharts2 rc/beta ships AssemblyVersion
-         2.0.0.0 with API drift between rcs — without internalization, two plugins
+         2.0.0.0 with API drift between rcs - without internalization, two plugins
          each carrying a different rc collide in Smart Client's AppDomain and the
          second one to need a type hits TypeLoadException. SkiaSharp/HarfBuzz stay
          external (large + native libSkiaSharp.dll / libHarfBuzzSharp.dll). -->

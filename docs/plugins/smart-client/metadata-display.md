@@ -82,16 +82,21 @@ Plain text passthrough. Use for string values like license plates, names, status
 
 ### Line Chart
 
-Time-series chart for numeric values. Plots a rolling history of the data key against time, with optional thresholds, an envelope (min/max band), zoom and pan, and an in-pane time-window picker.
+Time-series chart for numeric values. Plots a rolling history of the data key against time, with optional thresholds, an envelope (min/max band), zoom and pan, an in-pane time-window picker, and up to 8 series on the same chart.
 
 - **Time window** - choose how far back the chart looks. Presets cover **60 seconds**, **5 / 10 / 30 minutes**, **1 hour**, **6 hours**, and **24 hours**, plus a free-form **Custom** entry in seconds. The saved value is the default; the in-pane picker (top-right of the chart) lets viewers temporarily switch windows without going into Setup mode.
 - **Backfill from archive** - long windows (over 60 seconds) are seeded from recorded data when the chart appears, so a 6-hour view shows real history immediately instead of waiting 6 hours to fill. A loading spinner is shown while the seed query runs.
 - **Aggregation** - **Mean** (default), **Min**, or **Max**. The chart aggregates samples into time buckets sized for the chosen window so very wide windows still render quickly. With **Show envelope** enabled, the chart additionally draws a dashed min/max band around the aggregated line.
-- **Line type** - **Straight** (default), **Smooth** (curved), or **Step** (discrete level changes).
-- **Line color**, **thickness**, **fill area**, **show markers** - styling for the main series.
-- **Y-axis Min / Max** - clamps the value axis. Leave blank to auto-fit.
-- **Thresholds** - when **Enable thresholds** is on, warn (Min) and critical (Max) values are drawn as dashed horizontal lines (no filled bands - the line stays readable through them).
+- **Series 1** - the existing single-line settings (Topic / Data key / line color / thickness / line type / fill / markers / threshold) define the first series.
+- **Additional series** (up to 8 total) - a collapsible accordion under Series 1 lets you add more lines on the same chart. Each row has its own Topic / Source filters / Data key (for fanning out across multiple data keys in the same metadata stream), display name (legend label), color, thickness, Straight / Smooth / Step line type, fill / marker toggles, **Y axis** assignment (Left or Right - the right axis only renders when at least one series uses it), and an optional independent threshold sub-panel. Click "+ Add series" up to the cap; "Remove this series" deletes a row.
+- **Show series legend strip** - when enabled, the chart shows a strip of colored chips above the plot with each series's display name. Click a chip in the running widget to toggle that line on / off (session-only - the toggle is forgotten on reload).
+- **Line type** - **Straight** (default), **Smooth** (curved), or **Step** (discrete level changes). Per-series.
+- **Line color**, **thickness**, **fill area**, **show markers** - per-series styling.
+- **Y-axis Min / Max** - clamps the (left) value axis. Leave blank to auto-fit. The right axis (when used) always auto-fits.
+- **Thresholds** - when **Enable thresholds** is on, warn (Min) and critical (Max) values are drawn as dashed horizontal lines (no filled bands - the line stays readable through them). With multiple series, each line carries its own threshold band painted on its own axis.
 - **Zoom and pan** - mouse wheel zooms the time axis; drag pans. While zoomed in **Live** mode the chart auto-pauses (a small "Paused (click to resume live)" badge appears) so the view does not jump as new data arrives. Click the badge to resume the rolling window.
+
+> Multi-series widgets walk the metadata XML once per packet (one parse fans out to every matching series) and run a single archive scan per backfill - cost stays close to a single-line chart's. Existing single-series widgets auto-migrate; the saved JSON blob is empty until you add a second series.
 
 #### In-pane Window Picker
 
@@ -107,6 +112,19 @@ The override is **session only**: it is dropped when the configuration is saved 
 
 - **Live** - new samples stream in and the right edge advances. Auto-pause kicks in when you zoom or pan so you can study a region without it sliding away.
 - **Playback** - zoom and pan are always on (there is no live tail to fight with) and the auto-pause badge is suppressed. Moving the timeline cursor moves the chart's cursor line; jumping further than half the visible window triggers a fresh range scan from the archive. The chart seeds itself at the current playback time on entry, so you do not need to scrub once to populate it.
+
+### Trend (KPI)
+
+Compact KPI tile: a big current value, an arrow + Δ% versus a baseline, and an inline sparkline. Useful as a status indicator on dashboards where a full chart is too much (a wall of small panes that each answer "is this number up or down vs an hour ago").
+
+- **Lookback (seconds)** - how far back the sparkline reaches and the upper bound of the baseline reference. Defaults to 300 (5 min). Like Line Chart and Table, the in-pane window picker (top-right) lets viewers temporarily switch this without entering Setup mode.
+- **Baseline (seconds)** - how far back to compare against for the Δ%. The renderer takes the sample at-or-before `now − Baseline` and computes `(current − baseline) / baseline × 100`. A dashed vertical guide line on the sparkline marks the baseline timestamp.
+- **Value font size** - lets a Trend tile blend in on a tight wall (small) or read across the room (large).
+- **Sparkline color** - the color of the inline mini-chart. Defaults to the same blue as Line Chart's default.
+- **Show Δ%** / **Show arrow** / **Show sparkline** - any of the three secondary elements can be turned off; the value alone always renders.
+- **Threshold tinting + arrow direction** - re-uses the Number panel's Min / Max / High-is-bad / OK / Warn / Bad colors + Unit. The displayed value is tinted by `PickColor(current)` (same rules as the Number widget). The arrow color follows the threshold direction: with **High-is-bad off** (i.e. high-is-good) up is OK-color and down is Bad-color; with **High-is-bad on** the colors flip. A near-zero Δ shows the neutral horizontal "minus" glyph instead.
+- **Live archive backfill / playback** - same shared model as Line Chart and Table. The widget seeds its sample buffer from the archive on first appearance so the Δ% and sparkline are populated immediately. In playback the lookback anchors at the timeline cursor (not wall-clock now) and big jumps trigger a fresh range scan.
+- **Export to CSV** - in playback mode, the Export ⤓ badge produces a 2-column `timestamp, value` CSV like the other single-key renderers.
 
 ### Table
 
@@ -155,6 +173,33 @@ If you change the Topic or Data key, the preview re-runs against the most recent
 
 Optional. **Mark stale after (seconds)** - if no matching packet arrives within that window, the widget dims and a "stale" badge appears in the corner. Useful for catching dead channels: if the camera silently stops emitting metadata, the widget visibly fades instead of pretending the last value is still current. Set to 0 to disable.
 
+## Export to CSV
+
+
+<video controls width="100%">
+  <source src="../vids/metadata_export.mp4" type="video/mp4">
+</video>
+
+Every render type can save its archive history to a CSV file directly from the widget. Use it for shift reports, export to Excel for charting, or feeding analytics off the VMS.
+
+- **Enable / disable per widget** - **Enable Export to CSV** in the configuration window controls whether the **Export** badge appears on the widget. Default is **on**; turn it off on dashboards / video walls where the badge is just clutter.
+- **Where the badge appears** - top-right of the widget in **Playback** mode only. 
+
+
+### Export dialog
+
+Opens with a two-column layout. The left column is editable settings; the right column is a live preview of the rows that will land in the CSV.
+
+- **Time range** - **From** and **To**, the overall range to query data.
+- **Daily window (optional)** - turn on to keep only rows whose time-of-day falls inside a `Start` - `End` window. Set Start later than End for an **overnight** window (e.g. `22:00 → 06:00` keeps every night between 22:00 and 06:00 the next morning). Identical Start and End match nothing.
+- **Days** - combo with **Every day** (default), **Weekdays (Mon-Fri)**, **Weekends (Sat+Sun)**, and **Custom...** which reveals a row of 7 day checkboxes. At least one day must be selected.
+- **CSV format** - delimiter (Comma / Semicolon / Tab), decimal separator (Period / Comma).
+- **Live preview** - up to the first 200 matching rows are shown in a scrolling list as you tweak settings, with the full match count above the list (e.g. *showing 200 of 1,847 matching rows*). Updates 500 ms after the last keystroke so rapid edits do not pile up scans. A spinner overlays the preview while the archive scan runs.
+
+For Lamp widgets the CSV gets an extra `label` column with the resolved Lamp-map label (raw value `0` becomes `Off`, `1` becomes `On`, etc.). Unmapped values fall back to the raw value so the column is never blank. Other render types produce a 2-column `timestamp, value` CSV.
+
+For multi-series Line Chart widgets the CSV is **wide-format**: one timestamp column followed by one value column per series, headers using each series's display name. Coincident timestamps across series collapse into a single row; missing values render as empty cells.
+
 ## No-Data and Loading Indicators
 
 A pulsing dot with a status line is shown:
@@ -187,6 +232,8 @@ The plugin stores all settings as MIP item properties on the view item. No exter
 | Channel does not appear in the configuration channel picker | Either the metadata stream is not enabled on the camera, the user has no rights on the channel, or the channel is in a folder you cannot browse. See Prerequisites. |
 | Playback view stays empty | The metadata channel exists but is not being recorded. Add or extend a recording rule so the metadata channel is included. |
 | Line Chart "Paused" badge keeps appearing | You are zoomed in or panned in Live mode, which auto-pauses to keep the view stable. Click the badge to resume the rolling live window. |
+| Export badge does not appear | The widget is in Live mode (badge is Playback-only), or **Enable Export to CSV** has been turned off in the widget configuration. |
+| Export CSV is empty / has fewer rows than expected | Time range too narrow, daily-window setting too aggressive, or the metadata channel was not recorded for that period (recordings are required for export — see Prerequisites). |
 | Table "Paused" badge keeps appearing | You scrolled down from the top to inspect older rows; auto-follow stops so the view does not jump while you are reading. Click the badge or scroll back to the top to resume following the newest row. |
 | Table Δ column is blank | The data key is text-based (or only one value has been seen so far). Δ is only computed when both adjacent rows parse as numbers; non-numeric values render blank rather than wrong. |
 | In-pane window picker change does not persist | This is by design - the picker is session-only. Open the configuration and change **Time window** there to make it permanent. |
