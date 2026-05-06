@@ -75,7 +75,7 @@ namespace MetadataDisplay.Client
         private const string LineSeriesJsonKey = "LineSeriesJson";   // JSON array of LineSeries
         private const string LineShowLegendKey = "LineShowLegend";   // "true" / "false"
 
-        // Trend (KPI tile + sparkline)
+        // Trend (tile + sparkline)
         private const string TrendLookbackSecondsKey = "TrendLookbackSeconds";
         private const string TrendBaselineSecondsKey = "TrendBaselineSeconds";
         private const string TrendShowDeltaKey = "TrendShowDelta";
@@ -461,7 +461,7 @@ namespace MetadataDisplay.Client
             set => SetProperty(TableValueColumnNameKey, value);
         }
 
-        // Sparkline + KPI tile lookback (seconds). Drives both the sparkline
+        // Sparkline + tile lookback (seconds). Drives both the sparkline
         // visible window and the upper bound of the baseline reference.
         public string TrendLookbackSeconds
         {

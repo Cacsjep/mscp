@@ -10,7 +10,7 @@ using FontAwesome5;
 
 namespace MetadataDisplay.Client.Renderers
 {
-    // How the Trend KPI computes its Δ% baseline. The baseline is always
+    // How the Trend computes its Δ% baseline. The baseline is always
     // fetched from the archive at the historical anchor time, with a window
     // around the anchor defined by the active LookbackSeconds (driven by the
     // in-pane window picker).
@@ -24,10 +24,10 @@ namespace MetadataDisplay.Client.Renderers
         SameTimeLastMonth = 2,
     }
 
-    // Trend / KPI tile config. Big current value, Δ% versus an archive
+    // Trend / tile config. Big current value, Δ% versus an archive
     // baseline (yesterday / last week / last month), arrow indicator, and
     // a sparkline. Reuses NumericConfig for thresholds + unit; Direction
-    // (HighIsBad) drives the arrow color so a "high is good" KPI shows
+    // (HighIsBad) drives the arrow color so a "high is good" shows
     // green-up / red-down and vice versa. PlaybackMode hints the renderer
     // to anchor at the cursor instead of "now".
     //
@@ -77,7 +77,7 @@ namespace MetadataDisplay.Client.Renderers
         }
     }
 
-    // KPI tile renderer. Shows the current value plus a Δ% (with arrow)
+    // tile renderer. Shows the current value plus a Δ% (with arrow)
     // versus an archive-fetched baseline at a historical anchor. Keeps a
     // rolling sample buffer for the current value only (the latest sample
     // wins); no sparkline is drawn.

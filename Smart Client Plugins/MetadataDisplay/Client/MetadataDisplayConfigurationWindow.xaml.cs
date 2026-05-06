@@ -235,7 +235,7 @@ namespace MetadataDisplay.Client
             _tableColorWarn.HexValue = _colorWarn.HexValue;
             _tableColorBad.HexValue = _colorBad.HexValue;
 
-            // Trend (KPI tile). Window seconds is the saved default; the
+            // Trend (tile). Window seconds is the saved default; the
             // in-pane window picker overrides it at runtime.
             trendWindowSecondsBox.Text = _vim.TrendLookbackSeconds ?? "300";
             SyncTrendWindowPresetCombo();
@@ -272,15 +272,11 @@ namespace MetadataDisplay.Client
 
         // Builds the extractor config from the WPF controls. MUST be called on the UI
         // thread; the resulting immutable snapshot is then safe to read from any thread.
-        // topicOverride lets the SelectionChanged handler pin the snapshot to
-        // the just-picked Topic (SelectedItem) before the editable Text
-        // property has caught up; every other caller passes null and we read
-        // Text directly.
-        private void RebuildExtractorSnapshot(string topicOverride = null)
+        private void RebuildExtractorSnapshot()
         {
             _extractorSnapshot = new ExtractorConfig
             {
-                Topic = topicOverride ?? topicCombo.Text ?? "",
+                Topic = topicCombo.Text ?? "",
                 TopicMatchMode = "Exact",
                 SourceFilters = ExtractorConfig.ParseSourceFilters(sourceFilterBox.Text ?? ""),
                 DataKey = dataKeyCombo.Text ?? "",
@@ -574,10 +570,15 @@ namespace MetadataDisplay.Client
             // Re-render when values that affect colors/labels/thresholds change.
             // Topic/Source/DataKey changes also re-extract from the cached XML so
             // the preview reflects the new selection without waiting for a fresh packet.
-            topicCombo.SelectionChanged += (s, e) => OnTopicChanged(TopicFromSelectionChanged());
+            // Hook only TextChanged for the editable combos. WPF updates
+            // ComboBox.Text whenever SelectedItem changes via dropdown pick,
+            // so TextChanged catches both typing and pick-from-dropdown.
+            // Hooking SelectionChanged on top doubles up work and adds a race
+            // where SelectionChanged sees the new SelectedItem but Text still
+            // holds the previous value, causing the Field dropdown to filter
+            // against the wrong topic.
             topicCombo.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
                 new TextChangedEventHandler((s, e) => OnTopicChanged(topicCombo.Text ?? string.Empty)));
-            dataKeyCombo.SelectionChanged += (s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); };
             dataKeyCombo.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
                 new TextChangedEventHandler((s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); }));
             sourceFilterBox.TextChanged += (s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); };
@@ -1132,17 +1133,6 @@ namespace MetadataDisplay.Client
             dataKeyCombo.Text = matchingKeys.Contains(current) ? current : (topicSelected ? "" : current);
         }
 
-        // SelectedItem is authoritative on SelectionChanged - it's set before
-        // the event fires regardless of whether the editable Text property has
-        // caught up yet. For every other context Text is correct (and
-        // SelectedItem may lag during free-form typing). Don't reuse this
-        // outside SelectionChanged handlers.
-        private string TopicFromSelectionChanged()
-        {
-            if (topicCombo.SelectedItem is string s && !string.IsNullOrEmpty(s)) return s;
-            return topicCombo.Text ?? string.Empty;
-        }
-
         private void RefreshLearnedSourceList(string topic)
         {
             var snap = _lastSnapshot;
@@ -1173,12 +1163,11 @@ namespace MetadataDisplay.Client
         }
 
         // Single entry point for "Topic changed - refresh everything that
-        // depends on Topic." Both event handlers funnel through this with
-        // the appropriate topic value (SelectedItem-resolved for
-        // SelectionChanged, Text for TextChanged).
+        // depends on Topic." The Topic.TextChanged handler funnels through
+        // this with the just-updated topic value.
         private void OnTopicChanged(string topic)
         {
-            RebuildExtractorSnapshot(topic);
+            RebuildExtractorSnapshot();
             RefreshDataKeyCombo(topic);
             RefreshLearnedSourceList(topic);
             ReExtractAndRender();

@@ -396,7 +396,7 @@
                                 <RadioButton x:Name="rtText" Content="Text" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
                                 <RadioButton x:Name="rtLine" Content="Line chart" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
                                 <RadioButton x:Name="rtTable" Content="Table" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
-                                <RadioButton x:Name="rtTrend" Content="Trend (KPI)" GroupName="rt" Margin="0,0,0,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtTrend" Content="Trend" GroupName="rt" Margin="0,0,0,6" Checked="OnRenderTypeChanged"/>
                             </WrapPanel>
 
                             <Grid x:Name="lampPanel" Visibility="Visible">
@@ -811,7 +811,7 @@
                             <Grid x:Name="trendPanel" Visibility="Collapsed">
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8" TextWrapping="Wrap"
-                                               Text="Compact KPI tile: a big current value, an arrow + Δ% versus the same time yesterday / last week / last month, and an inline sparkline. The Window below is the default; operators can override it from the in-pane window picker in live or playback mode."/>
+                                               Text="Compact tile: a big current value, an arrow + Δ% versus the same time yesterday / last week / last month, and an inline sparkline. The Window below is the default; operators can override it from the in-pane window picker in live or playback mode."/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>

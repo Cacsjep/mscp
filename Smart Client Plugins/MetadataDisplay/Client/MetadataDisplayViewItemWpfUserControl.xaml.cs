@@ -650,7 +650,7 @@ namespace MetadataDisplay.Client
             return cfg;
         }
 
-        // Period-over-period baseline scanner for the Trend KPI. For all
+        // Period-over-period baseline scanner for the Trend. For all
         // ComparisonModes other than RollingLookback, computes a list of
         // target UTC instants (yesterday, last week, etc.), scans the archive
         // for each ±AverageHalfWindow, averages samples per anchor, then

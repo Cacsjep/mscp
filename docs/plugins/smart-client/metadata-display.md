@@ -7,7 +7,7 @@ description: "Metadata Display plugin for Milestone XProtect Smart Client - turn
 
 # Metadata Display
 
-Render any value from a Milestone metadata channel as a dashboard widget in the Smart Client. One widget per value, seven render styles (Lamp, Number, Gauge, Text, Line Chart, Table, Trend KPI).
+Render any value from a Milestone metadata channel as a dashboard widget in the Smart Client. One widget per value, seven render styles (Lamp, Number, Gauge, Text, Line Chart, Table, Trend).
 
 Built for ONVIF metadata like: Axis `CameraApplicationPlatform` analytics (area occupancy, line crossing, object counts), digital I/O port states, vendor counters - anything emitted as `tt:Message` over the metadata stream.
 
@@ -32,7 +32,7 @@ If the configuration's **Inspect packet...** button shows fresh XML and Learn di
 2. Click **Open configuration...**
 3. **Select channel...** -> pick a metadata channel
 4. Click **Start Learn** to discover the topics and data keys flowing through the stream, then pick from the dropdowns
-5. Choose a render type (Lamp / Number / Gauge / Text / Line Chart / Table / Trend KPI), tune the options, hit **Save**
+5. Choose a render type (Lamp / Number / Gauge / Text / Line Chart / Table / Trend), tune the options, hit **Save**
 6. Switch to **Live** - the widget starts displaying as soon as a matching packet arrives
 
 ## Render Types
@@ -61,7 +61,7 @@ Five styles, all driven by the same numeric/threshold settings as the Number wid
 
 | Style | When to use |
 |---|---|
-| **Modern - Half arc (180°)** | Compact KPI tile, single quick-glance value |
+| **Modern - Half arc (180°)** | Compact tile, single quick-glance value |
 | **Modern - Three-quarter arc (270°)** | More resolution per unit of arc; bigger needles |
 | **Classic - Half arc (180°)** | Traditional speedometer with three colored bands and needle |
 | **Classic - Three-quarter arc (270°)** | Classic style with extra range |
@@ -117,9 +117,9 @@ The override is **session only**: it is dropped when the configuration is saved 
 - **Live** - new samples stream in and the right edge advances. Auto-pause kicks in when you zoom or pan so you can study a region without it sliding away.
 - **Playback** - zoom and pan are always on (there is no live tail to fight with) and the auto-pause badge is suppressed. Moving the timeline cursor moves the chart's cursor line; jumping further than half the visible window triggers a fresh range scan from the archive. The chart seeds itself at the current playback time on entry, so you do not need to scrub once to populate it.
 
-### Trend (KPI)
+### Trend
 
-Compact KPI tile: a big current value plus an arrow and a Δ% (percent change) versus the same time yesterday, last week, or last month. Useful as a status indicator on dashboards where a full chart is too much - a wall of small tiles that each answer "is this number up or down compared to a normal day".
+Compact tile: a big current value plus an arrow and a Δ% (percent change) versus the same time yesterday, last week, or last month. Useful as a status indicator on dashboards where a full chart is too much - a wall of small tiles that each answer "is this number up or down compared to a normal day".
 
 - **Window** - how far back the value averages and how wide the comparison sample is. Defaults to 5 min. Like Line Chart and Table, the in-pane window picker (top-right) lets viewers temporarily change it without going into Setup.
 - **Compare to** - **Same time yesterday**, **Same time last week**, or **Same time last month**. The widget reads recorded values from that period and compares them to the live value to compute the Δ%.
