@@ -11,8 +11,14 @@ Render any value from a Milestone metadata channel as a dashboard widget in the 
 
 Built for ONVIF metadata like: Axis `CameraApplicationPlatform` analytics (area occupancy, line crossing, object counts), digital I/O port states, vendor counters - anything emitted as `tt:Message` over the metadata stream.
 
+Part-1
 <video controls width="100%">
-  <source src="../vids/metadata_display.mp4" type="video/mp4">
+  <source src="../vids/mpart1.mp4" type="video/mp4">
+</video>
+
+Part-2
+<video controls width="100%">
+  <source src="../vids/mpart2.mp4" type="video/mp4">
 </video>
 
 ## Prerequisites
