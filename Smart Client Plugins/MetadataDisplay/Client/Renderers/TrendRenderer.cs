@@ -90,6 +90,7 @@ namespace MetadataDisplay.Client.Renderers
         private readonly StackPanel _deltaRow;
         private readonly ImageAwesome _arrowIcon;
         private readonly TextBlock _deltaText;
+        private readonly TextBlock _windowText;
 
         private readonly List<(DateTime Utc, double Value)> _samples = new List<(DateTime, double)>(512);
         private TrendConfig _cfg;
@@ -99,6 +100,11 @@ namespace MetadataDisplay.Client.Renderers
         // target time and pushes the average value here. Null until the
         // first scan completes.
         private double? _externalBaseline;
+        // Time window the host scanned for the baseline. Surfaced in the UI
+        // when the scan returns no samples so the operator can see exactly
+        // which historical period is empty.
+        private DateTime? _comparisonWindowFromUtc;
+        private DateTime? _comparisonWindowToUtc;
 
         public TrendRenderer()
         {
@@ -150,6 +156,18 @@ namespace MetadataDisplay.Client.Renderers
             _deltaRow.Children.Add(_arrowIcon);
             _deltaRow.Children.Add(_deltaText);
 
+            _windowText = new TextBlock
+            {
+                Text = "",
+                FontSize = 11,
+                Foreground = new SolidColorBrush(WidgetTheme.UnitColor),
+                Opacity = 0.85,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextAlignment = TextAlignment.Center,
+                Margin = new Thickness(0, 2, 0, 0),
+                Visibility = Visibility.Collapsed,
+            };
+
             var stack = new StackPanel
             {
                 Orientation = Orientation.Vertical,
@@ -158,6 +176,7 @@ namespace MetadataDisplay.Client.Renderers
             };
             stack.Children.Add(_valueRow);
             stack.Children.Add(_deltaRow);
+            stack.Children.Add(_windowText);
 
             _root = new Grid();
             _root.Children.Add(stack);
@@ -224,7 +243,27 @@ namespace MetadataDisplay.Client.Renderers
         // returned no samples in the comparison window).
         public void SetComparisonBaseline(double? value)
         {
+            SetComparisonBaseline(value, null, null);
+        }
+
+        // Variant that also records the UTC window the host scanned, so the
+        // renderer can surface it in the "no data to compare" state.
+        public void SetComparisonBaseline(double? value, DateTime? windowFromUtc, DateTime? windowToUtc)
+        {
             _externalBaseline = value;
+            _comparisonWindowFromUtc = windowFromUtc;
+            _comparisonWindowToUtc = windowToUtc;
+            PruneAndRefresh();
+        }
+
+        // Pre-populates the window the host is about to scan, before the scan
+        // returns. Lets the operator see which historical period is being
+        // checked even during the brief wait before SetComparisonBaseline
+        // arrives, and stays visible if that scan ultimately returns null.
+        public void SetComparisonWindow(DateTime? windowFromUtc, DateTime? windowToUtc)
+        {
+            _comparisonWindowFromUtc = windowFromUtc;
+            _comparisonWindowToUtc = windowToUtc;
             PruneAndRefresh();
         }
 
@@ -232,11 +271,18 @@ namespace MetadataDisplay.Client.Renderers
         {
             _samples.Clear();
             _externalBaseline = null;
+            _comparisonWindowFromUtc = null;
+            _comparisonWindowToUtc = null;
             _valueRun.Text = "-";
             _valueRun.Foreground = new SolidColorBrush(WidgetTheme.ValueColor);
             _deltaText.Text = "";
             _arrowIcon.Icon = EFontAwesomeIcon.Solid_Minus;
             _arrowIcon.Foreground = new SolidColorBrush(WidgetTheme.UnitColor);
+            if (_windowText != null)
+            {
+                _windowText.Text = "";
+                _windowText.Visibility = Visibility.Collapsed;
+            }
         }
 
         private DateTime AnchorUtc()
@@ -292,8 +338,22 @@ namespace MetadataDisplay.Client.Renderers
                 _deltaText.Foreground = new SolidColorBrush(WidgetTheme.UnitColor);
                 _arrowIcon.Icon = EFontAwesomeIcon.Solid_InfoCircle;
                 _arrowIcon.Foreground = new SolidColorBrush(WidgetTheme.UnitColor);
-                _deltaRow.ToolTip = "There are no recorded samples for the comparison period (" + DescribeMode(_cfg?.ComparisonMode ?? TrendComparisonMode.SameTimeYesterday) + "), so we can't calculate a percentage change yet.";
+                string windowText = FormatComparisonWindow(_comparisonWindowFromUtc, _comparisonWindowToUtc);
+                if (_windowText != null)
+                {
+                    _windowText.Text = windowText;
+                    _windowText.Visibility = string.IsNullOrEmpty(windowText) ? Visibility.Collapsed : Visibility.Visible;
+                }
+                string mode = DescribeMode(_cfg?.ComparisonMode ?? TrendComparisonMode.SameTimeYesterday);
+                _deltaRow.ToolTip = string.IsNullOrEmpty(windowText)
+                    ? "There are no recorded samples for the comparison period (" + mode + "), so we can't calculate a percentage change yet."
+                    : "No recorded samples for the comparison window (" + mode + "): " + windowText;
                 return;
+            }
+            if (_windowText != null)
+            {
+                _windowText.Text = "";
+                _windowText.Visibility = Visibility.Collapsed;
             }
             if (baseline.Value == 0)
             {
@@ -337,6 +397,24 @@ namespace MetadataDisplay.Client.Renderers
             _arrowIcon.Icon = up ? EFontAwesomeIcon.Solid_ArrowUp : EFontAwesomeIcon.Solid_ArrowDown;
             _arrowIcon.Foreground = new SolidColorBrush(c);
             _deltaText.Foreground = new SolidColorBrush(c);
+        }
+
+        // Renders the historical scan window in the operator's local time
+        // zone. Collapses to a single date when both ends fall on the same
+        // calendar day so the display stays compact in narrow tiles.
+        private static string FormatComparisonWindow(DateTime? fromUtc, DateTime? toUtc)
+        {
+            if (!fromUtc.HasValue || !toUtc.HasValue) return string.Empty;
+            var fromLocal = fromUtc.Value.ToLocalTime();
+            var toLocal = toUtc.Value.ToLocalTime();
+            string fromStr = fromLocal.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+            if (fromLocal.Date == toLocal.Date)
+            {
+                string toTime = toLocal.ToString("HH:mm", CultureInfo.InvariantCulture);
+                return fromStr + " - " + toTime;
+            }
+            string toFull = toLocal.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+            return fromStr + " - " + toFull;
         }
 
         private static string DescribeMode(TrendComparisonMode mode)

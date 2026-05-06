@@ -74,6 +74,7 @@ namespace MetadataDisplay.Client
         private ColorPickerControl _gaugeColorOk, _gaugeColorWarn, _gaugeColorBad;
         private ColorPickerControl _lineColor, _lineColorOk, _lineColorWarn, _lineColorBad;
         private ColorPickerControl _tableColorOk, _tableColorWarn, _tableColorBad;
+        private ColorPickerControl _trendColorOk, _trendColorWarn, _trendColorBad;
         private ColorPickerControl _titleColor;
 
         public MetadataDisplayConfigurationWindow(MetadataDisplayViewItemManager viewItemManager)
@@ -108,6 +109,9 @@ namespace MetadataDisplay.Client
             _tableColorOk = MountColorPicker(tableColorOkPickerHost);
             _tableColorWarn = MountColorPicker(tableColorWarnPickerHost);
             _tableColorBad = MountColorPicker(tableColorBadPickerHost);
+            _trendColorOk = MountColorPicker(trendColorOkPickerHost);
+            _trendColorWarn = MountColorPicker(trendColorWarnPickerHost);
+            _trendColorBad = MountColorPicker(trendColorBadPickerHost);
             _titleColor = MountColorPicker(titleColorPickerHost);
 
             // Title section
@@ -152,6 +156,7 @@ namespace MetadataDisplay.Client
             thresholdsEnabledCheckGauge.IsChecked = thresholdsOn;
             thresholdsEnabledCheckLine.IsChecked = thresholdsOn;
             thresholdsEnabledCheckTable.IsChecked = thresholdsOn;
+            thresholdsEnabledCheckTrend.IsChecked = thresholdsOn;
 
             numMinBox.Text = _vim.NumMin ?? "";
             numMaxBox.Text = _vim.NumMax ?? "";
@@ -238,6 +243,15 @@ namespace MetadataDisplay.Client
             trendShowDeltaCheck.IsChecked = !string.Equals(_vim.TrendShowDelta, "false", StringComparison.OrdinalIgnoreCase);
             trendShowArrowCheck.IsChecked = !string.Equals(_vim.TrendShowArrow, "false", StringComparison.OrdinalIgnoreCase);
             SelectComboItem(trendComparisonModeCombo, _vim.TrendComparisonMode ?? "Yesterday");
+            // Trend uses the shared NumMin / NumMax / Direction / colors so the
+            // operator can configure thresholds in-place without switching to
+            // the Number panel.
+            trendNumMinBox.Text = _vim.NumMin ?? "";
+            trendNumMaxBox.Text = _vim.NumMax ?? "";
+            trendHighIsBadCheck.IsChecked = highIsBadCheck.IsChecked;
+            _trendColorOk.HexValue = _colorOk.HexValue;
+            _trendColorWarn.HexValue = _colorWarn.HexValue;
+            _trendColorBad.HexValue = _colorBad.HexValue;
 
             staleSecondsBox.Text = _vim.StaleSeconds ?? "0";
             enableExportCheck.IsChecked = !string.Equals(_vim.EnableExport, "false", StringComparison.OrdinalIgnoreCase);
@@ -413,6 +427,7 @@ namespace MetadataDisplay.Client
                 if (thresholdsEnabledCheckGauge  != source) thresholdsEnabledCheckGauge.IsChecked = on;
                 if (thresholdsEnabledCheckLine   != source) thresholdsEnabledCheckLine.IsChecked = on;
                 if (thresholdsEnabledCheckTable  != source) thresholdsEnabledCheckTable.IsChecked = on;
+                if (thresholdsEnabledCheckTrend  != source) thresholdsEnabledCheckTrend.IsChecked = on;
             }
             finally
             {
@@ -470,6 +485,7 @@ namespace MetadataDisplay.Client
             if (gaugeThresholdsBlock  != null) gaugeThresholdsBlock.Visibility  = on ? Visibility.Visible : Visibility.Collapsed;
             if (lineThresholdsBlock   != null) lineThresholdsBlock.Visibility   = on ? Visibility.Visible : Visibility.Collapsed;
             if (tableThresholdsBlock  != null) tableThresholdsBlock.Visibility  = on ? Visibility.Visible : Visibility.Collapsed;
+            if (trendThresholdsBlock  != null) trendThresholdsBlock.Visibility  = on ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void BuildPreviewHost()
@@ -522,7 +538,9 @@ namespace MetadataDisplay.Client
             else if (rtTrend.IsChecked == true)
             {
                 _previewTrend = new TrendRenderer();
-                _previewTrend.Configure(BuildTrendConfigFromUi());
+                var trendCfg = BuildTrendConfigFromUi();
+                _previewTrend.Configure(trendCfg);
+                ApplyTrendPreviewComparisonWindow(trendCfg);
                 visual = _previewTrend.Visual;
                 isChart = true;
             }
@@ -649,6 +667,18 @@ namespace MetadataDisplay.Client
             thresholdsEnabledCheckLine.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckLine);
             thresholdsEnabledCheckTable.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTable);
             thresholdsEnabledCheckTable.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTable);
+            thresholdsEnabledCheckTrend.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTrend);
+            thresholdsEnabledCheckTrend.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTrend);
+
+            // Trend threshold inputs feed into the trend live preview so the
+            // tile reflects the selected band as the operator types.
+            trendNumMinBox.TextChanged += (s, e) => ReconfigureTrendPreview();
+            trendNumMaxBox.TextChanged += (s, e) => ReconfigureTrendPreview();
+            trendHighIsBadCheck.Checked += (s, e) => ReconfigureTrendPreview();
+            trendHighIsBadCheck.Unchecked += (s, e) => ReconfigureTrendPreview();
+            _trendColorOk.ColorChanged += (s, e) => ReconfigureTrendPreview();
+            _trendColorWarn.ColorChanged += (s, e) => ReconfigureTrendPreview();
+            _trendColorBad.ColorChanged += (s, e) => ReconfigureTrendPreview();
 
             // Title section live preview
             showTitleCheck.Checked += (s, e) => { ApplyTitleEnabled(); UpdatePreviewTitle(); };
@@ -1502,18 +1532,18 @@ namespace MetadataDisplay.Client
             double fs = TryParseDouble(trendValueFontSizeBox.Text) ?? 48;
             if (fs <= 0) fs = 48;
 
-            // Reuse the Number panel's threshold + colors + unit for the
-            // value tinting and arrow direction. This mirrors how the runtime
-            // widget reads NumericConfig.FromManager(_viewItemManager).
+            // Pull the threshold inputs from the Trend panel's own controls so
+            // the operator sees instant feedback while typing. The Number /
+            // Trend panel inputs back the same shared MIP fields on save.
             var numeric = new NumericConfig
             {
-                Enabled = thresholdsEnabledCheckNumber?.IsChecked == true,
-                Min = TryParseDouble(numMinBox.Text),
-                Max = TryParseDouble(numMaxBox.Text),
-                HighIsBad = highIsBadCheck.IsChecked == true,
-                ColorOk = ColorUtil.Parse(_colorOk.HexValue, Color.FromRgb(0x3C, 0xB3, 0x71)),
-                ColorWarn = ColorUtil.Parse(_colorWarn.HexValue, Color.FromRgb(0xE6, 0x95, 0x00)),
-                ColorBad = ColorUtil.Parse(_colorBad.HexValue, Color.FromRgb(0xD8, 0x39, 0x2C)),
+                Enabled = thresholdsEnabledCheckTrend?.IsChecked == true,
+                Min = TryParseDouble(trendNumMinBox.Text),
+                Max = TryParseDouble(trendNumMaxBox.Text),
+                HighIsBad = trendHighIsBadCheck.IsChecked == true,
+                ColorOk = ColorUtil.Parse(_trendColorOk.HexValue, Color.FromRgb(0x3C, 0xB3, 0x71)),
+                ColorWarn = ColorUtil.Parse(_trendColorWarn.HexValue, Color.FromRgb(0xE6, 0x95, 0x00)),
+                ColorBad = ColorUtil.Parse(_trendColorBad.HexValue, Color.FromRgb(0xD8, 0x39, 0x2C)),
                 Unit = unitBoxNumber?.Text ?? string.Empty,
             };
 
@@ -1716,7 +1746,31 @@ namespace MetadataDisplay.Client
         private void ReconfigureTrendPreview()
         {
             if (!_uiReady) return;
-            _previewTrend?.Configure(BuildTrendConfigFromUi());
+            if (_previewTrend == null) return;
+            var cfg = BuildTrendConfigFromUi();
+            _previewTrend.Configure(cfg);
+            ApplyTrendPreviewComparisonWindow(cfg);
+        }
+
+        // The configuration window can't actually scan the archive for the
+        // baseline (the preview is decoupled from the live channel pump), but
+        // we can still publish the window the runtime widget WOULD scan so the
+        // operator sees a concrete date range under "no data to compare"
+        // instead of a bare placeholder. Anchored at "now" because the preview
+        // has no playback cursor.
+        private void ApplyTrendPreviewComparisonWindow(TrendConfig cfg)
+        {
+            if (_previewTrend == null || cfg == null) return;
+            var anchor = DateTime.UtcNow;
+            DateTime target;
+            switch (cfg.ComparisonMode)
+            {
+                case TrendComparisonMode.SameTimeLastWeek:  target = anchor.AddDays(-7); break;
+                case TrendComparisonMode.SameTimeLastMonth: target = anchor.AddMonths(-1); break;
+                default:                                    target = anchor.AddDays(-1); break;
+            }
+            int half = Math.Max(30, cfg.LookbackSeconds);
+            _previewTrend.SetComparisonWindow(target.AddSeconds(-half), target.AddSeconds(half));
         }
 
         private void UpdatePreviewAge()
@@ -1822,6 +1876,10 @@ namespace MetadataDisplay.Client
             yield return lineYMaxBox;
             yield return lineNumMinBox;
             yield return lineNumMaxBox;
+            yield return tableNumMinBox;
+            yield return tableNumMaxBox;
+            yield return trendNumMinBox;
+            yield return trendNumMaxBox;
             yield return lampIconSizeBox;
             yield return textFontSizeBox;
             yield return staleSecondsBox;
@@ -2110,6 +2168,16 @@ namespace MetadataDisplay.Client
                 _vim.ColorWarn = NormalizeColor(_tableColorWarn.HexValue);
                 _vim.ColorBad = NormalizeColor(_tableColorBad.HexValue);
                 // Table has no inline unit; leave any prior Unit untouched.
+            }
+            else if (rt == "Trend")
+            {
+                _vim.NumMin = trendNumMinBox.Text?.Trim() ?? "";
+                _vim.NumMax = trendNumMaxBox.Text?.Trim() ?? "";
+                _vim.NumDirection = (trendHighIsBadCheck.IsChecked == true) ? "HighIsBad" : "LowIsBad";
+                _vim.ColorOk = NormalizeColor(_trendColorOk.HexValue);
+                _vim.ColorWarn = NormalizeColor(_trendColorWarn.HexValue);
+                _vim.ColorBad = NormalizeColor(_trendColorBad.HexValue);
+                // Trend reads Unit from the shared field; preserve any prior value.
             }
             else
             {

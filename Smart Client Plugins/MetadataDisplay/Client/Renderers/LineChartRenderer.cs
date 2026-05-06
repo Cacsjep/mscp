@@ -201,6 +201,13 @@ namespace MetadataDisplay.Client.Renderers
             {
                 Labeler = ticks =>
                 {
+                    // LiveCharts2 sometimes probes the labeler with sentinel
+                    // tick values during initial layout (before the chart has
+                    // bounds). Clamp to the valid DateTime tick range so we
+                    // don't throw ArgumentOutOfRangeException into the WPF
+                    // task scheduler and pollute MIPLog.
+                    if (double.IsNaN(ticks) || ticks < DateTime.MinValue.Ticks || ticks > DateTime.MaxValue.Ticks)
+                        return string.Empty;
                     var t = new DateTime((long)ticks, DateTimeKind.Utc).ToLocalTime();
                     var span = TimeSpan.FromTicks((long)((_xAxis?.MaxLimit ?? 0) - (_xAxis?.MinLimit ?? 0)));
                     return span.TotalHours >= 1 ? t.ToString("HH:mm") : t.ToString("HH:mm:ss");
@@ -516,13 +523,19 @@ namespace MetadataDisplay.Client.Renderers
                 rt.MeanSeries = rt.MeanLine;
             }
 
-            // Envelope min/max - same hue, low opacity, thin dashed stroke.
-            // Always built; the chart only includes them when the chart-wide
-            // EnvelopeEnabled flag is on.
-            var envStroke = new SolidColorPaint(new SKColor(sk.Red, sk.Green, sk.Blue, 0x80))
+            // Envelope min/max - LIGHTENED tint of the series color, dashed
+            // stroke. Drawn on top of the mean line (see RebuildChartSeries) so
+            // the dashed pattern stays visible. The tint is critical: if the
+            // env used the same hue, then on low-variance series where Min ==
+            // Max == Mean per bucket the env line would draw exactly over the
+            // mean line in the same color and disappear entirely.
+            byte envR = (byte)((sk.Red + 255) / 2);
+            byte envG = (byte)((sk.Green + 255) / 2);
+            byte envB = (byte)((sk.Blue + 255) / 2);
+            var envStroke = new SolidColorPaint(new SKColor(envR, envG, envB, 0xE0))
             {
-                StrokeThickness = 1f,
-                PathEffect = new DashEffect(new float[] { 3, 3 }),
+                StrokeThickness = 1.4f,
+                PathEffect = new DashEffect(new float[] { 4, 3 }),
             };
             rt.EnvelopeMin = new LineSeries<DateTimePoint>
             {
@@ -566,18 +579,21 @@ namespace MetadataDisplay.Client.Renderers
         // EnvelopeEnabled is on we include both env lines per series; when a
         // series is hidden via the legend toggle its main line is omitted (so
         // the legend toggle has visible effect even on a single-series chart).
+        // Envelope lines are added AFTER the mean line so they render on top -
+        // for low-variance series (Min == Max == Mean per bucket) the mean
+        // line would otherwise completely hide the dashed envelope.
         private void RebuildChartSeries()
         {
             var list = new List<ISeries>();
             foreach (var rt in _runtimes)
             {
                 if (!rt.Visible) continue;
+                if (rt.MeanSeries != null) list.Add(rt.MeanSeries);
                 if (_cfg != null && _cfg.EnvelopeEnabled)
                 {
                     if (rt.EnvelopeMin != null) list.Add(rt.EnvelopeMin);
                     if (rt.EnvelopeMax != null) list.Add(rt.EnvelopeMax);
                 }
-                if (rt.MeanSeries != null) list.Add(rt.MeanSeries);
             }
             _chart.Series = list;
             ApplySections();

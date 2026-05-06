@@ -858,12 +858,43 @@
                                             <TextBox x:Name="trendValueFontSizeBox" Width="60" Tag="positiveNumber"/>
                                         </StackPanel>
                                     </Grid>
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
                                         <CheckBox x:Name="trendShowDeltaCheck" Content="Show Δ%" IsChecked="True" Margin="0,0,16,0"/>
                                         <CheckBox x:Name="trendShowArrowCheck" Content="Show arrow" IsChecked="True"/>
                                     </StackPanel>
+                                    <CheckBox x:Name="thresholdsEnabledCheckTrend" Content="Enable thresholds" Margin="0,0,0,10"/>
+                                    <StackPanel x:Name="trendThresholdsBlock">
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox  Grid.Column="1" x:Name="trendNumMinBox" Margin="0,0,16,0" Tag="number"/>
+                                            <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                            <TextBox  Grid.Column="3" x:Name="trendNumMaxBox" Tag="number"/>
+                                        </Grid>
+                                        <CheckBox x:Name="trendHighIsBadCheck" Content="High value is bad (red above Max)" IsChecked="True" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Colors" Style="{StaticResource FieldLabel}"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <TextBlock Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="trendColorOkPickerHost" Margin="0,0,16,0"/>
+                                                <TextBlock Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="trendColorWarnPickerHost" Margin="0,0,16,0"/>
+                                                <TextBlock Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="trendColorBadPickerHost"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
                                     <TextBlock Style="{StaticResource HintText}" Margin="0,8,0,0" TextWrapping="Wrap"
-                                               Text="Arrow + Δ% color follow the threshold direction. With High-is-bad off (high-is-good): up is green, down is red. With High-is-bad on: up is red, down is green. Thresholds + Min/Max + colors are configured under the Number panel; they tint the displayed value."/>
+                                               Text="Arrow + Δ% color follow the threshold direction. With High-is-bad off (high-is-good): up is green, down is red. With High-is-bad on: up is red, down is green."/>
                                 </StackPanel>
                             </Grid>
                         </StackPanel>

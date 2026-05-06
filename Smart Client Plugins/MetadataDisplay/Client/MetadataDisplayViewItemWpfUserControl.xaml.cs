@@ -675,6 +675,20 @@ namespace MetadataDisplay.Client
             // historical anchor, a 1h picker gets ±1h, etc.
             int halfWindow = Math.Max(30, trendCfg.LookbackSeconds);
 
+            // Pre-publish the scan window so the operator sees which
+            // historical period we're checking even during the brief wait
+            // before the archive returns. Spans the union of all targets.
+            DateTime? prePublishFrom = null;
+            DateTime? prePublishTo = null;
+            foreach (var target in targets)
+            {
+                var from = target.AddSeconds(-halfWindow);
+                var to = target.AddSeconds(halfWindow);
+                if (!prePublishFrom.HasValue || from < prePublishFrom.Value) prePublishFrom = from;
+                if (!prePublishTo.HasValue || to > prePublishTo.Value) prePublishTo = to;
+            }
+            _trendRenderer.SetComparisonWindow(prePublishFrom, prePublishTo);
+
             var scanPump = new MetadataPlaybackPump(_metadataItem,
                 _ => ExtractorConfig.FromManager(_viewItemManager),
                 (_, __) => { });
@@ -683,11 +697,15 @@ namespace MetadataDisplay.Client
             {
                 double sum = 0;
                 int countAnchors = 0;
+                DateTime? scanFromUtc = null;
+                DateTime? scanToUtc = null;
                 foreach (var target in targets)
                 {
                     if (ct.IsCancellationRequested) return;
                     var from = target.AddSeconds(-halfWindow);
                     var to = target.AddSeconds(halfWindow);
+                    if (!scanFromUtc.HasValue || from < scanFromUtc.Value) scanFromUtc = from;
+                    if (!scanToUtc.HasValue || to > scanToUtc.Value) scanToUtc = to;
                     List<(string Value, DateTime TimestampUtc)> raw = null;
                     try
                     {
@@ -718,7 +736,7 @@ namespace MetadataDisplay.Client
                 {
                     if (ct.IsCancellationRequested) return;
                     if (_trendRenderer == null) return;
-                    _trendRenderer.SetComparisonBaseline(baseline);
+                    _trendRenderer.SetComparisonBaseline(baseline, scanFromUtc, scanToUtc);
                     _log.Info($"[Trend] comparison baseline mode={trendCfg.ComparisonMode} anchors={countAnchors}/{targets.Count} value={(baseline.HasValue ? baseline.Value.ToString("0.###", CultureInfo.InvariantCulture) : "null")}");
                 }));
             }, ct);
