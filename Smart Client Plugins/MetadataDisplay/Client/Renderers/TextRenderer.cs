@@ -12,7 +12,7 @@ namespace MetadataDisplay.Client.Renderers
         {
             _text = new TextBlock
             {
-                Text = "—",
+                Text = "-",
                 Foreground = new SolidColorBrush(WidgetTheme.ValueColor),
                 FontSize = WidgetTheme.FontText,
                 TextAlignment = TextAlignment.Center,
@@ -24,7 +24,7 @@ namespace MetadataDisplay.Client.Renderers
 
         public UIElement Visual => _text;
 
-        // User-configured size — taken as-is, density doesn't override.
+        // User-configured size - taken as-is, density doesn't override.
         public double FontSize
         {
             get => _text.FontSize;
@@ -33,9 +33,9 @@ namespace MetadataDisplay.Client.Renderers
 
         public void Update(string value)
         {
-            _text.Text = string.IsNullOrEmpty(value) ? "—" : value;
+            _text.Text = string.IsNullOrEmpty(value) ? "-" : value;
         }
 
-        public void Clear() => _text.Text = "—";
+        public void Clear() => _text.Text = "-";
     }
 }

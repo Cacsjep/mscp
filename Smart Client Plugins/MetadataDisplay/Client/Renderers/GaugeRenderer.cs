@@ -78,7 +78,7 @@ namespace MetadataDisplay.Client.Renderers
 
         // Arc geometry constants (logical canvas size 320x200; outer Viewbox scales).
         // The arc is anchored near the top of the canvas so we don't waste vertical
-        // pixels — the value/unit labels sit in the lower portion below the hub.
+        // pixels - the value/unit labels sit in the lower portion below the hub.
         private const double LogicalW = 320;
         private const double LogicalH = 200;
 
@@ -96,7 +96,7 @@ namespace MetadataDisplay.Client.Renderers
             // style needs the unit below the bar, away from the top-mounted ticks.
             _valueText = new TextBlock
             {
-                Text = "—",
+                Text = "-",
                 Foreground = new SolidColorBrush(WidgetTheme.ValueColor),
                 FontSize = WidgetTheme.FontValue,
                 FontWeight = FontWeights.SemiBold,
@@ -122,7 +122,7 @@ namespace MetadataDisplay.Client.Renderers
 
         public UIElement Visual => _root;
 
-        // Density scales only the unit text — value font size is user-configured.
+        // Density scales only the unit text - value font size is user-configured.
         public string Density { get; set; } = "Comfortable";
 
         public void Update(string rawValue, GaugeConfig cfg)
@@ -137,7 +137,7 @@ namespace MetadataDisplay.Client.Renderers
                 ? Visibility.Visible : Visibility.Collapsed;
 
             double? v = ParseValue(rawValue);
-            _valueText.Text = v.HasValue ? FormatNumber(v.Value) : (rawValue ?? "—");
+            _valueText.Text = v.HasValue ? FormatNumber(v.Value) : (rawValue ?? "-");
 
             // Measure so we know the rendered text height when stacking value+unit.
             _valueText.Measure(new Size(LogicalW, double.PositiveInfinity));
@@ -153,7 +153,7 @@ namespace MetadataDisplay.Client.Renderers
                     Canvas.SetTop(_valueText, 8);
                     // Bar geometry mirrors DrawBar: top=70, bar height = trackThickness*2.5
                     // (or 36 fallback). Min/max scale labels sit on the row below the bar;
-                    // the unit shares that row, centered between them — keeps the dense
+                    // the unit shares that row, centered between them - keeps the dense
                     // ticks at the top of the bar from colliding with the unit label.
                     double barH = cfg.TrackThickness > 0 ? cfg.TrackThickness * 2.5 : 36;
                     double labelY = 70 + barH + 4;
@@ -193,7 +193,7 @@ namespace MetadataDisplay.Client.Renderers
         public void Clear()
         {
             ClearCanvasExceptLabels();
-            _valueText.Text = "—";
+            _valueText.Text = "-";
             _unitText.Text = "";
         }
 
@@ -212,8 +212,8 @@ namespace MetadataDisplay.Client.Renderers
         private void DrawArc(double? value, GaugeConfig cfg, double sweepDegrees)
         {
             // Centered arc in the upper portion of the canvas.
-            // Arc180 sweeps from 180° (left) to 360° (right) — top half.
-            // Arc270 sweeps from 135° to 405° — leaves a 90° opening at the bottom.
+            // Arc180 sweeps from 180° (left) to 360° (right) - top half.
+            // Arc270 sweeps from 135° to 405° - leaves a 90° opening at the bottom.
             double cx = LogicalW / 2.0;
             double cy = sweepDegrees >= 270 ? 80 : 92;
             double radius = sweepDegrees >= 270 ? 70 : 85;
@@ -250,7 +250,7 @@ namespace MetadataDisplay.Client.Renderers
             }
             else
             {
-                // Thresholds off — single neutral fill across the whole sweep.
+                // Thresholds off - single neutral fill across the whole sweep.
                 DrawArcSegment(cx, cy, radius, thickness, startAngle, endAngle, WidgetTheme.TrackColor);
             }
 
@@ -316,12 +316,12 @@ namespace MetadataDisplay.Client.Renderers
             double rmin = cfg.RangeMin;
             double rmax = cfg.RangeMax;
 
-            // Background track — full sweep, dim gray.
+            // Background track - full sweep, dim gray.
             DrawArcSegment(cx, cy, radius, trackThickness,
                 startAngle, endAngle,
                 WidgetTheme.TrackColor, rounded: true);
 
-            // Progress fill — startAngle to value angle.
+            // Progress fill - startAngle to value angle.
             if (value.HasValue)
             {
                 var v = Clamp(value.Value, rmin, rmax);
@@ -334,7 +334,7 @@ namespace MetadataDisplay.Client.Renderers
                 }
             }
 
-            // Tick labels at min/max — small + subtle. Pushed outward so the digits
+            // Tick labels at min/max - small + subtle. Pushed outward so the digits
             // don't crowd the rounded arc end caps.
             double modernLabelRadius = radius + progressThickness / 2 + 10;
             DrawScaleLabel(cx, cy, modernLabelRadius, startAngle, FormatNumber(rmin));
@@ -345,7 +345,7 @@ namespace MetadataDisplay.Client.Renderers
         }
 
         // Small radial tick marks across the arc, evenly spaced. Drawn INSIDE the
-        // arc (closer to center). Skip the very first and last tick — they share an
+        // arc (closer to center). Skip the very first and last tick - they share an
         // angle with the min/max scale labels and would collide with them.
         private void DrawArcTicks(double cx, double cy, double r, double thickness,
                                   double startAngle, double endAngle, int tickCount)
@@ -417,7 +417,7 @@ namespace MetadataDisplay.Client.Renderers
                 Foreground = new SolidColorBrush(WidgetTheme.SubtleColor),
                 FontSize = WidgetTheme.FontTickLabel,
             };
-            // Approximate centering — not measuring, fine for 1-3 char numbers.
+            // Approximate centering - not measuring, fine for 1-3 char numbers.
             Canvas.SetLeft(_canvas, 0);
             tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             Canvas.SetLeft(tb, x - tb.DesiredSize.Width / 2);

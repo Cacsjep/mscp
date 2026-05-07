@@ -106,8 +106,79 @@ namespace MetadataDisplay.Client
             try { doc = XDocument.Parse(xml); }
             catch { return null; }
 
-            ExtractedValue latest = null;
+            return TryExtractFromDoc(doc, cfg);
+        }
 
+        // Multi-key extraction. Walks the document ONCE and dispatches each
+        // matching message to every matching ExtractorConfig - so a packet that
+        // has speedkmh + objecttype + scenario can populate three series in a
+        // single XML parse instead of N. Returns a dictionary keyed by the
+        // configs's index in the input list; missing entries mean "no match
+        // for that series in this packet" (which is fine - series accumulate
+        // independently). For widgets with a single configured series this
+        // path costs the same as TryExtract.
+        public static Dictionary<int, ExtractedValue> TryExtractMany(string xml, IReadOnlyList<ExtractorConfig> cfgs)
+        {
+            var results = new Dictionary<int, ExtractedValue>();
+            if (string.IsNullOrEmpty(xml) || cfgs == null || cfgs.Count == 0) return results;
+
+            XDocument doc;
+            try { doc = XDocument.Parse(xml); }
+            catch { return results; }
+
+            foreach (var nm in doc.Descendants(NsWsnt + "NotificationMessage"))
+            {
+                var topic = ((string)nm.Element(NsWsnt + "Topic") ?? "").Trim();
+                var ttMessage = nm.Element(NsWsnt + "Message")?.Element(NsTt + "Message");
+                if (ttMessage == null) continue;
+
+                var op = (string)ttMessage.Attribute("PropertyOperation");
+                if (string.Equals(op, "Deleted", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var data = ttMessage.Element(NsTt + "Data");
+                if (data == null) continue;
+
+                DateTime ts = DateTime.UtcNow;
+                var utcAttr = (string)ttMessage.Attribute("UtcTime");
+                if (!string.IsNullOrEmpty(utcAttr)
+                    && DateTime.TryParse(utcAttr, CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsed))
+                {
+                    ts = parsed;
+                }
+
+                for (int i = 0; i < cfgs.Count; i++)
+                {
+                    var cfg = cfgs[i];
+                    if (cfg == null || string.IsNullOrEmpty(cfg.DataKey)) continue;
+                    if (!TopicMatches(topic, cfg.Topic, cfg.TopicMatchMode)) continue;
+                    if (!SourceMatches(ttMessage, cfg.SourceFilters)) continue;
+
+                    string value = null;
+                    foreach (var si in data.Elements(NsTt + "SimpleItem"))
+                    {
+                        if (string.Equals((string)si.Attribute("Name"), cfg.DataKey, StringComparison.OrdinalIgnoreCase))
+                        {
+                            value = (string)si.Attribute("Value");
+                            break;
+                        }
+                    }
+                    if (value == null) continue;
+
+                    if (!results.TryGetValue(i, out var prev) || ts >= prev.TimestampUtc)
+                    {
+                        results[i] = new ExtractedValue { Value = value, TimestampUtc = ts, Topic = topic };
+                    }
+                }
+            }
+            return results;
+        }
+
+        // Internal helper used by TryExtract. Kept separate so TryExtractMany
+        // doesn't have to rebuild XDocument when a caller already has one.
+        private static ExtractedValue TryExtractFromDoc(XDocument doc, ExtractorConfig cfg)
+        {
+            ExtractedValue latest = null;
             foreach (var nm in doc.Descendants(NsWsnt + "NotificationMessage"))
             {
                 var topic = ((string)nm.Element(NsWsnt + "Topic") ?? "").Trim();
@@ -149,7 +220,6 @@ namespace MetadataDisplay.Client
                     latest = new ExtractedValue { Value = value, TimestampUtc = ts, Topic = topic };
                 }
             }
-
             return latest;
         }
 

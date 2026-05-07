@@ -32,10 +32,29 @@
                 </Border>
             </Grid>
         </Viewbox>
+        <!-- Export badge for non-chart renderers (Lamp, Number, Gauge, Text).
+             Floats on the parent Grid OUTSIDE the Viewbox so it renders at native
+             DPI rather than getting bitmap-scaled. Visibility is gated by mode +
+             EnableExport in code-behind. -->
+        <Border x:Name="exportBadgeRender"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,8,8,0"
+                Background="#AA1F2528"
+                BorderBrush="#FF333E42"
+                BorderThickness="1"
+                CornerRadius="3"
+                Padding="6,2"
+                Cursor="Hand"
+                Visibility="Collapsed"
+                ToolTip="Export the current widget's data to a CSV file"
+                MouseLeftButtonUp="OnExportClick">
+            <TextBlock Text="Export" Foreground="#FFCFD7DA" FontSize="11"/>
+        </Border>
         <!-- Native-resolution host for renderers (LineChart) that draw with SkiaSharp.
              Bypasses the 320-wide Viewbox so Skia paints at the actual pane size
              instead of being bitmap-scaled and looking pixelated. The title bar
-             above doesn't apply here — chart renderers handle their own labels. -->
+             above doesn't apply here - chart renderers handle their own labels. -->
         <Grid x:Name="chartRoot" Margin="6" Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition x:Name="chartTitleRow" Height="Auto"/>
@@ -49,27 +68,48 @@
                        HorizontalAlignment="Center"
                        TextAlignment="Center"/>
             <Grid x:Name="chartHost" Grid.Row="1" Background="Transparent"/>
-            <!-- Session-only window quick-picker (Grafana-style). Visible only when
-                 the chart is shown; its popup lets the user temporarily switch the
-                 time window without touching the saved configuration. The asterisk
-                 in the badge label indicates an override is active; "Default" reverts. -->
-            <Border x:Name="windowPickerBadge"
-                    Grid.Row="1"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="0,4,8,0"
-                    Background="#AA1F2528"
-                    BorderBrush="#FF333E42"
-                    BorderThickness="1"
-                    CornerRadius="3"
-                    Padding="6,2"
-                    Cursor="Hand"
-                    MouseLeftButtonUp="OnWindowPickerClick">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="windowPickerText" Text="60s" Foreground="#FFCFD7DA" FontSize="11"/>
-                    <TextBlock Text=" ▾" Foreground="#FFCFD7DA" FontSize="11"/>
-                </StackPanel>
-            </Border>
+            <!-- Top-right action row for chart-style renderers. Layout: Export
+                 (visible only in Playback when EnableExport is true) sits to the
+                 LEFT of the WindowPicker. Both anchored to the right edge with the
+                 same vertical alignment. Per the table renderer's pause overlay
+                 living at the bottom of the scroll viewport, there's no collision. -->
+            <StackPanel x:Name="chartActionsPanel"
+                        Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,4,8,0">
+                <Border x:Name="exportBadgeChart"
+                        Background="#AA1F2528"
+                        BorderBrush="#FF333E42"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="6,2"
+                        Margin="0,0,6,0"
+                        Cursor="Hand"
+                        Visibility="Collapsed"
+                        ToolTip="Export the chart's archive data to a CSV file"
+                        MouseLeftButtonUp="OnExportClick">
+                    <TextBlock Text="Export" Foreground="#FFCFD7DA" FontSize="11"/>
+                </Border>
+                <!-- Session-only window quick-picker (Grafana-style). Visible only when
+                     the chart is shown; its popup lets the user temporarily switch the
+                     time window without touching the saved configuration. The asterisk
+                     in the badge label indicates an override is active; "Default" reverts. -->
+                <Border x:Name="windowPickerBadge"
+                        Background="#AA1F2528"
+                        BorderBrush="#FF333E42"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="6,2"
+                        Cursor="Hand"
+                        MouseLeftButtonUp="OnWindowPickerClick">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="windowPickerText" Text="60s" Foreground="#FFCFD7DA" FontSize="11"/>
+                        <TextBlock Text=" ▾" Foreground="#FFCFD7DA" FontSize="11"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
             <Popup x:Name="windowPickerPopup"
                    PlacementTarget="{Binding ElementName=windowPickerBadge}"
                    Placement="Bottom"
@@ -100,7 +140,8 @@
                         </EventTrigger>
                     </Ellipse.Triggers>
                 </Ellipse>
-                <TextBlock Text="Waiting for data..."
+                <TextBlock x:Name="noDataHeading"
+                           Text="Waiting for data..."
                            Foreground="#FFA9B5BB"
                            FontSize="13"
                            HorizontalAlignment="Center"/>

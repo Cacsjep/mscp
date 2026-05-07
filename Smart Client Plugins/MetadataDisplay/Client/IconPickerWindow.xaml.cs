@@ -244,7 +244,7 @@ namespace MetadataDisplay.Client
         private void UpdateSelectedText()
         {
             selectedText.Text = SelectedIcon == EFontAwesomeIcon.None
-                ? "Selected: (none — colored circle)"
+                ? "Selected: (none - colored circle)"
                 : "Selected: " + SelectedIcon;
         }
 

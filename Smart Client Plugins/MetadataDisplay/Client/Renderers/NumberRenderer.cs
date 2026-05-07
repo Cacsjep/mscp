@@ -25,11 +25,11 @@ namespace MetadataDisplay.Client.Renderers
         {
             // Both value and unit live as Runs inside a single TextBlock so they
             // share one true text baseline. StackPanel + VerticalAlignment doesn't
-            // do baseline alignment — the smaller font ends up on the bounding-box
+            // do baseline alignment - the smaller font ends up on the bounding-box
             // bottom, which sits below the larger font's baseline.
             _valueRun = new Run
             {
-                Text = "—",
+                Text = "-",
                 Foreground = new SolidColorBrush(WidgetTheme.ValueColor),
                 FontSize = WidgetTheme.FontDisplay,
                 FontWeight = FontWeights.SemiBold,
@@ -51,7 +51,7 @@ namespace MetadataDisplay.Client.Renderers
 
             // Warn-triangle for the warn boundary, critical-circle for the bad boundary.
             // Which threshold key (Min vs Max) maps to which severity flips with the
-            // HighIsBad direction — handled in ApplyChipColors.
+            // HighIsBad direction - handled in ApplyChipColors.
             _minChip = BuildChip(EFontAwesomeIcon.Solid_ExclamationTriangle, out _minChipText, out _minChipIcon);
             _maxChip = BuildChip(EFontAwesomeIcon.Solid_ExclamationCircle,   out _maxChipText, out _maxChipIcon);
             _minChip.Margin = new Thickness(0, 0, 6, 0);
@@ -96,7 +96,7 @@ namespace MetadataDisplay.Client.Renderers
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             row.Children.Add(iconImg);
             row.Children.Add(label);
-            // Pill-style outlined chip — color (border + icon + text) is set per-chip
+            // Pill-style outlined chip - color (border + icon + text) is set per-chip
             // by ApplyChipColors so it picks up the threshold palette.
             return new Border
             {
@@ -110,7 +110,7 @@ namespace MetadataDisplay.Client.Renderers
 
         private void ApplyChipColors(NumericConfig cfg)
         {
-            // The two threshold keys are the warn / critical boundaries — "OK" is
+            // The two threshold keys are the warn / critical boundaries - "OK" is
             // implicit (everything not flagged). With HighIsBad: Min = warn boundary,
             // Max = critical boundary. With LowIsBad it inverts so the chip with the
             // critical icon always names the harder boundary.
@@ -152,7 +152,7 @@ namespace MetadataDisplay.Client.Renderers
 
             if (rawValue == null || !double.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
             {
-                _valueRun.Text = "—";
+                _valueRun.Text = "-";
                 _valueRun.Foreground = new SolidColorBrush(WidgetTheme.ValueColor);
                 return;
             }
@@ -171,7 +171,7 @@ namespace MetadataDisplay.Client.Renderers
             _maxChip.Visibility = hasMax ? Visibility.Visible : Visibility.Collapsed;
             _chipsRow.Visibility = (hasMin || hasMax) ? Visibility.Visible : Visibility.Collapsed;
 
-            // Icon already says "min/max" — just print the value.
+            // Icon already says "min/max" - just print the value.
             if (hasMin) _minChipText.Text = FormatNumber(cfg.Min.Value);
             if (hasMax) _maxChipText.Text = FormatNumber(cfg.Max.Value);
             if (enabled) ApplyChipColors(cfg);
@@ -179,7 +179,7 @@ namespace MetadataDisplay.Client.Renderers
 
         public void Clear()
         {
-            _valueRun.Text = "—";
+            _valueRun.Text = "-";
             _valueRun.Foreground = new SolidColorBrush(WidgetTheme.ValueColor);
             _chipsRow.Visibility = Visibility.Collapsed;
         }
@@ -193,7 +193,7 @@ namespace MetadataDisplay.Client.Renderers
 
     internal sealed class NumericConfig
     {
-        public bool Enabled;       // master switch — when false, render neutral
+        public bool Enabled;       // master switch - when false, render neutral
         public double? Min;
         public double? Max;
         public bool HighIsBad;     // true → high values trip red
@@ -202,7 +202,7 @@ namespace MetadataDisplay.Client.Renderers
         public Color ColorBad;
         public string Unit;
 
-        // Neutral fill used everywhere a renderer wants "no threshold opinion" —
+        // Neutral fill used everywhere a renderer wants "no threshold opinion" -
         // the standard widget value color so disabled-thresholds doesn't reintroduce
         // a hidden green/red default.
         public static readonly Color NeutralColor = WidgetTheme.ValueColor;

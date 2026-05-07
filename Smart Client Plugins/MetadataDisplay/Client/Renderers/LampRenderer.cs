@@ -155,7 +155,7 @@ namespace MetadataDisplay.Client.Renderers
 
         public UIElement Visual => _root;
 
-        // User-configured icon size — density doesn't override.
+        // User-configured icon size - density doesn't override.
         public double IconSize
         {
             get => _lamp.Width;
@@ -198,13 +198,13 @@ namespace MetadataDisplay.Client.Renderers
 
             var color = hit != null ? ColorUtil.Parse(hit.ColorHex, Colors.Gray) : Color.FromRgb(0x77, 0x77, 0x77);
             ApplyGlyph(hit?.IconName, color);
-            _label.Text = hit != null ? (hit.Label ?? "") : (value ?? "—");
+            _label.Text = hit != null ? (hit.Label ?? "") : (value ?? "-");
         }
 
         public void Clear()
         {
             ApplyGlyph(null, Color.FromRgb(0x55, 0x55, 0x55));
-            _label.Text = "—";
+            _label.Text = "-";
         }
 
         private void ApplyGlyph(string iconName, Color color)

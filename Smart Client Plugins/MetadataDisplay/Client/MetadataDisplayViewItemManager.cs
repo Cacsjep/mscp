@@ -72,12 +72,33 @@ namespace MetadataDisplay.Client
         private const string LineZoomEnabledKey = "LineZoomEnabled";
         private const string LineAggregationKey = "LineAggregation"; // Mean | Last | Min | Max | Count
         private const string LineEnvelopeKey = "LineEnvelope";       // "true" / "false"
+        private const string LineSeriesJsonKey = "LineSeriesJson";   // JSON array of LineSeries
+        private const string LineShowLegendKey = "LineShowLegend";   // "true" / "false"
+
+        // Trend (tile + sparkline)
+        private const string TrendLookbackSecondsKey = "TrendLookbackSeconds";
+        private const string TrendBaselineSecondsKey = "TrendBaselineSeconds";
+        private const string TrendShowDeltaKey = "TrendShowDelta";
+        private const string TrendShowSparklineKey = "TrendShowSparkline";
+        private const string TrendShowArrowKey = "TrendShowArrow";
+        private const string TrendValueFontSizeKey = "TrendValueFontSize";
+        private const string TrendSparklineColorKey = "TrendSparklineColor";
+        // Period-over-period comparison: "Rolling" | "Yesterday" | "LastWeek"
+        // | "LastWeekSameHour" | "AvgLast4Weekdays". Default "Rolling" keeps
+        // the legacy in-buffer baseline behavior.
+        private const string TrendComparisonModeKey = "TrendComparisonMode";
+        // Half-window in seconds around the comparison anchor for averaging
+        // archive samples. 300 = ±5 minutes. Used by all non-rolling modes.
+        private const string TrendComparisonAverageHalfWindowSecondsKey = "TrendComparisonAverageHalfWindowSeconds";
 
         // Theme
         private const string WidgetDensityKey = "WidgetDensity";
 
         // Stale
         private const string StaleSecondsKey = "StaleSeconds";
+
+        // Export
+        private const string EnableExportKey = "EnableExport";
 
         public MetadataDisplayViewItemManager()
             : base("MetadataDisplayViewItemManager")
@@ -186,7 +207,7 @@ namespace MetadataDisplay.Client
             set => SetProperty(TextFontSizeKey, value);
         }
 
-        // "true" / "false". Default off — widgets show neutral coloring until the
+        // "true" / "false". Default off - widgets show neutral coloring until the
         // operator opts in (matches the principle that a fresh widget shouldn't
         // assert that 50 is "warning" when the user hasn't said what 50 means).
         public string ThresholdsEnabled
@@ -277,7 +298,7 @@ namespace MetadataDisplay.Client
             set => SetProperty(GaugeTickCountKey, value);
         }
 
-        // Returns null when the user hasn't set a value — callers (renderer + config
+        // Returns null when the user hasn't set a value - callers (renderer + config
         // window) substitute a style-specific default (Bar=2, others=6).
         public string GaugeTrackThickness
         {
@@ -368,6 +389,25 @@ namespace MetadataDisplay.Client
             set => SetProperty(LineEnvelopeKey, value);
         }
 
+        // JSON array describing every line series. When empty, callers should
+        // synthesize a one-element list from the legacy single-series fields
+        // (Topic / DataKey / LineColor / …) - see LegacyLineSeriesFromManager().
+        public string LineSeriesJson
+        {
+            get => GetProperty(LineSeriesJsonKey) ?? string.Empty;
+            set => SetProperty(LineSeriesJsonKey, value);
+        }
+
+        // "true" / "false". Adds a colored-chip strip above the chart with each
+        // series's name and color. Click a chip to toggle that series's
+        // visibility (session-only). Default off so single-series widgets and
+        // tight tile dashboards stay clean.
+        public string LineShowLegend
+        {
+            get => GetProperty(LineShowLegendKey) ?? "false";
+            set => SetProperty(LineShowLegendKey, value);
+        }
+
         public string TableMaxRows
         {
             get => GetProperty(TableMaxRowsKey) ?? "200";
@@ -421,6 +461,66 @@ namespace MetadataDisplay.Client
             set => SetProperty(TableValueColumnNameKey, value);
         }
 
+        // Sparkline + tile lookback (seconds). Drives both the sparkline
+        // visible window and the upper bound of the baseline reference.
+        public string TrendLookbackSeconds
+        {
+            get => GetProperty(TrendLookbackSecondsKey) ?? "300";
+            set => SetProperty(TrendLookbackSecondsKey, value);
+        }
+
+        // How far back to compare against for the Δ% indicator. Defaults to
+        // the lookback window so a fresh widget shows "change since the start
+        // of the visible sparkline".
+        public string TrendBaselineSeconds
+        {
+            get => GetProperty(TrendBaselineSecondsKey) ?? "300";
+            set => SetProperty(TrendBaselineSecondsKey, value);
+        }
+
+        // "true" / "false"
+        public string TrendShowDelta
+        {
+            get => GetProperty(TrendShowDeltaKey) ?? "true";
+            set => SetProperty(TrendShowDeltaKey, value);
+        }
+
+        public string TrendShowSparkline
+        {
+            get => GetProperty(TrendShowSparklineKey) ?? "true";
+            set => SetProperty(TrendShowSparklineKey, value);
+        }
+
+        public string TrendShowArrow
+        {
+            get => GetProperty(TrendShowArrowKey) ?? "true";
+            set => SetProperty(TrendShowArrowKey, value);
+        }
+
+        public string TrendValueFontSize
+        {
+            get => GetProperty(TrendValueFontSizeKey) ?? "48";
+            set => SetProperty(TrendValueFontSizeKey, value);
+        }
+
+        public string TrendSparklineColor
+        {
+            get => GetProperty(TrendSparklineColorKey) ?? "#FF4FC3F7";
+            set => SetProperty(TrendSparklineColorKey, value);
+        }
+
+        public string TrendComparisonMode
+        {
+            get => GetProperty(TrendComparisonModeKey) ?? "Rolling";
+            set => SetProperty(TrendComparisonModeKey, value);
+        }
+
+        public string TrendComparisonAverageHalfWindowSeconds
+        {
+            get => GetProperty(TrendComparisonAverageHalfWindowSecondsKey) ?? "300";
+            set => SetProperty(TrendComparisonAverageHalfWindowSecondsKey, value);
+        }
+
         // Compact | Comfortable | Spacious
         public string WidgetDensity
         {
@@ -432,6 +532,14 @@ namespace MetadataDisplay.Client
         {
             get => GetProperty(StaleSecondsKey) ?? "0";
             set => SetProperty(StaleSecondsKey, value);
+        }
+
+        // "true" / "false". Default on - exposes the Export-to-CSV badge in
+        // Playback mode. Operators can opt out per-widget on dashboard walls.
+        public string EnableExport
+        {
+            get => GetProperty(EnableExportKey) ?? "true";
+            set => SetProperty(EnableExportKey, value);
         }
 
         public void Save()
