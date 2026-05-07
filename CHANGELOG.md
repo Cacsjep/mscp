@@ -1,13 +1,16 @@
 # Changelog
 
-## [2.9.0] - 2026-05-05
+## [2.9.2] - 2026-05-07
+- Improve Timeline Jump: Add possibility (and setting) for auto switch to current time when entering playback, or on start.
+- Improve Carousel: Works now with all possible mip items that are not internal, Like Maps, Hotspot, Matrix, Alarm List, Alarm Preview - But with metadata display or other widget from us or other MIP defined one.
+
+## [2.9.0] - 2026-05-06
 - Add Metadata Display: **Export to CSV** for every render type (Lamp, Number, Gauge, Text, Line Chart, Table). 
 - Add Metadata Display: **Trend render type**. Compact tile that pairs a big current value with an up / down / neutral arrow, a Δ% versus a configurable baseline, and an inline sparkline of the recent history. 
 - Add Metadata Display: **Multi-series Line Chart**. A single Line Chart widget can now plot up to 8 series
 
 ## [2.8.0] - 2026-05-05
-- Add Metadata Display: **Table** render type. Scrolling time-ordered table of `(Time, Value)` rows for cases where reading the actual values in sequence is more useful than a curve. Newest row is always inserted at the top; older rows scroll down. Reuses the Line Chart's archive backfill, in-pane window picker, and playback cursor machinery, so a Table widget opens with real history (60 seconds up to 24 hours), highlights the row at-or-before the playback cursor, and triggers a fresh range scan on big timeline jumps. Configurable: time window, hard `Max rows` cap (default 200, max 5000), Time-column visibility and format, custom **Header name** for the value column, value font size and Left/Center/Right alignment, optional Δ column (numeric difference between consecutive rows; renders blank for non-numeric data), and the same shared Min/Max/Direction threshold model used by Number, Gauge and Line Chart.
-- Fix Metadata Display: Smart Client crash when toggling **Show Δ column** on a text-based metadata field. Δ computation is now bounds-guarded and parse-guarded — non-numeric or missing-predecessor rows render blank instead of throwing.
+- Add Metadata Display: **Table** render type. 
 
 ## [2.7.4] - 2026-05-05
 - Fix Web Viewer: Plugin was missing from CI ZIP artifacts and the unified MSI installer because it had no entry in `plugins.json` (the manifest that drives both the build matrix and `installer/generate-wix.ps1`). Added the WebViewer entry under the SmartClient category; the existing `bin/Release/net48` staging rule picks up the WebView2 native loaders (`runtimes/win-{x86,x64,arm64}/native/WebView2Loader.dll`) automatically, no extra staging directives needed.

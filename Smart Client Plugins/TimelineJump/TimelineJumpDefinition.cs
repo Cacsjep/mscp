@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using CommunitySDK;
 using FontAwesome5;
 using TimelineJump.Client;
@@ -42,17 +43,23 @@ namespace TimelineJump
                 _pluginIcon = new VideoOSIconBuiltInSource { Icon = VideoOSIconBuiltInSource.Icons.Selection_Hand };
             }
 
+            TimelineJumpConfig.Load();
             TimelineJump.ImageViewerHelper.Init();
+            PlaybackEntryJumper.Init();
             _toolbarPlugins.Add(new TimelineJumpToolbarPlugin());
             Log.Info("Plugin initialized");
         }
 
         public override void Close()
         {
+            PlaybackEntryJumper.Close();
             TimelineJump.ImageViewerHelper.Close();
             _toolbarPlugins.Clear();
         }
 
         public override List<WorkSpaceToolbarPlugin> WorkSpaceToolbarPlugins => _toolbarPlugins;
+
+        public override Collection<SettingsPanelPlugin> SettingsPanelPlugins
+            => new Collection<SettingsPanelPlugin> { new TimelineJumpSettingsPanel() };
     }
 }

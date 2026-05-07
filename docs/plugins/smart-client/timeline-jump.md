@@ -1,13 +1,13 @@
 ---
 title: "Timeline Jump Plugin for Milestone XProtect"
-description: "Timeline Jump plugin for Milestone XProtect Smart Client - jump the playback timeline backward or forward by a fixed increment (seconds, minutes, hours, days) without dragging the timeline."
+description: "Timeline Jump plugin for Milestone XProtect Smart Client - jump the playback timeline backward or forward by a fixed increment (seconds, minutes, hours, days) without dragging the timeline, and optionally snap the master timeline to the current date and time when entering Playback."
 ---
 
 <div class="show-title" markdown>
 
 # Timeline Jump
 
-Adds a **Jump** button to the toolbar that opens a small floating panel with one-click increments (`10s`, `30s`, `1m`, `10m`) and a custom Value/Unit picker so you can jump the playback timeline backward or forward by any amount of time without scrubbing.
+Adds a **Jump** button to the toolbar that opens a small floating panel with one-click increments (`10s`, `30s`, `1m`, `10m`) and a custom Value/Unit picker so you can jump the playback timeline backward or forward by any amount of time without scrubbing. Optionally snaps the master timeline to the current date and time every time the operator enters the Playback workspace.
 
 <video controls width="100%">
   <source src="../vids/timejump_usage.mp4" type="video/mp4">
@@ -73,6 +73,22 @@ Then press **Back** to subtract, **Forward** to add. Example: `Value = 15`, `Uni
 | **Playback** | Jump button always available. Master timeline by default; per-tile if that tile is in independent playback. |
 | **Live** | Jump button visible but disabled until a tile is put into independent playback. Once independent playback is active on any tile the button enables; clicking jumps the selected independent tile. |
 
+## Jump to current date on Playback entry
+
+<video controls width="100%">
+  <source src="../vids/timejump_now.mp4" type="video/mp4">
+</video>
+
+Smart Client opens the Playback workspace at whatever time the master timeline last had, which is rarely useful when an operator switches into Playback to review what is happening **right now**. Timeline Jump can do that automatically.
+
+**Setting:** *Settings -> Timeline Jump -> Jump to current date and time when entering Playback*
+
+**Default:** On.
+
+When the setting is on, the master timeline is sent a `Goto` command to the current wall-clock time every time the operator switches into the Playback workspace, including when the Smart Client is started directly in Playback. Tiles that are currently in independent playback are left alone, so per-tile review work is not interrupted. The toolbar Jump button is unaffected; it still does manual relative jumps as described above.
+
+The setting is stored at `%ProgramData%\Milestone\TimelineJump\config.xml` and applies to every operator on the machine.
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -81,5 +97,6 @@ Then press **Back** to subtract, **Forward** to add. Example: `Value = 15`, `Uni
 | Jump button is grayed in Live | Expected. Enable independent playback on a tile (the per-tile clock icon on the camera) and the button activates. |
 | Quick chip click does nothing visible | The camera has no recordings within 30 days of the target. Check `MIPLog.txt` under category `TimelineJump` to see what target time was sent. |
 | Flyout opens off-screen on multi-monitor | The flyout positions itself near the cursor and clamps to the working area; if it gets stuck, drag it from the title-bar area. |
+| Playback timeline does not snap to "now" on entry | Confirm *Settings -> Timeline Jump -> Jump to current date and time when entering Playback* is ticked. If it is off, switching into Playback leaves the timeline at its previous position. Tiles in independent playback are intentionally not moved. |
 
 </div>

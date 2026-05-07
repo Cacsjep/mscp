@@ -7,7 +7,7 @@ description: "View Carousel plugin for Milestone XProtect Smart Client — autom
 
 # View Carousel
 
-Cycle through views like the built-in camera carousel, but for entire views. Each view's full camera layout is rendered inside the plugin and switches automatically on a timer. Because it runs in a single view pane, you can place multiple View Carousel instances in one view - for example, two independent carousels side by side, each cycling through a different set of views.
+Cycles through entire views on a timer inside a single pane. Cameras and plugin tiles render live, and you can place multiple carousels in the same view to run them in parallel.
 
 <video controls width="100%">
   <source src="../vids/vc_usage.mp4" type="video/mp4">
@@ -36,6 +36,17 @@ Hover over the plugin to reveal playback controls:
 | **▶** | Jump to next view |
 
 The current view index and name are shown next to the controls.
+
+## What renders inside the carousel
+
+| In the original view | In the carousel |
+|---|---|
+| Camera | Renders live |
+| Plugin tiles (Notepad, WebViewer, MetadataDisplay, Weather, Timelapse, FlexView, RemoteManager, SnapReport, LPR, Sticky Notes, Adaptive View, Blurring, and most other plugins) | Renders live |
+| Empty slot | Standard empty pane |
+| Hotspot, Map, Smart Map, Matrix, Alarm List, Alarm Preview, HTML page, Image, Text, Image and text, System monitor, native Carousel | Pane shows a label like *Map - not supported in carousel* |
+
+When a pane shows the *not supported in carousel* label it means that view item is a built-in Smart Client item that can only be drawn by the main grid, not inside another pane. The rest of the view continues to cycle normally; only that one tile is replaced with the label so it's obvious instead of looking like a broken view.
 
 ## Playback & Setup Mode
 
