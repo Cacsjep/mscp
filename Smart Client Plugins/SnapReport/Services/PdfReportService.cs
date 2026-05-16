@@ -162,8 +162,8 @@ namespace SnapReport.Services
                 using (var stream = new MemoryStream(entry.ImageData))
                 {
                     var image = XImage.FromStream(stream);
-                    double maxWidth = page.Width.Point - XUnit.FromPoint(80).Point;
-                    double maxHeight = page.Height.Point - XUnit.FromPoint(120).Point;
+                    double maxWidth = page.Width.Point - 80;
+                    double maxHeight = page.Height.Point - 120;
                     double scale = Math.Min(maxWidth / image.PixelWidth, maxHeight / image.PixelHeight);
                     gfx.DrawImage(image, 40, 80, image.PixelWidth * scale, image.PixelHeight * scale);
                 }

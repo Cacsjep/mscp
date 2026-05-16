@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.9.5] - 2026-05-16
+- Improve Snap Reporter: Add PDF Split possibility
+- Improve Snap Reporter: Add Progress Bar 
+- Fix Snap Reporter: Aspect Ratio was not preserved
+
 ## [2.9.2] - 2026-05-07
 - Improve Timeline Jump: Add possibility (and setting) for auto switch to current time when entering playback, or on start.
 - Improve Carousel: Works now with all possible mip items that are not internal, Like Maps, Hotspot, Matrix, Alarm List, Alarm Preview - But with metadata display or other widget from us or other MIP defined one.
