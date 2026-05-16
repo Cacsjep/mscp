@@ -38,7 +38,22 @@
                     <Button x:Name="deselectAllButton" Content="Deselect All"
                             Background="#FF3A3F44" Foreground="White" BorderBrush="#FF555555"
                             Padding="12,6" MinHeight="28" Cursor="Hand" Click="OnDeselectAllClick"
-                            VerticalAlignment="Center" FontSize="12" Margin="0,0,6,0"/>
+                            VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0"/>
+                    <Border Background="#FF2A2F33" CornerRadius="3" Padding="8,4" Margin="0,0,6,0"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <CheckBox x:Name="splitToggle" Content="Split PDF"
+                                      Foreground="White" FontSize="12" VerticalAlignment="Center"
+                                      Checked="OnSplitToggleChanged" Unchecked="OnSplitToggleChanged"/>
+                            <TextBox x:Name="splitSizeBox" Text="100" Width="50" Margin="10,0,4,0"
+                                     Background="#FF1C2326" Foreground="White" BorderBrush="#FF555555"
+                                     Padding="4,2" VerticalContentAlignment="Center" FontSize="12"
+                                     IsEnabled="False" TextAlignment="Right"
+                                     ToolTip="Maximum size per part in megabytes"/>
+                            <TextBlock Text="MB" Foreground="#FF8B949E" FontSize="12"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                     <Button x:Name="generateButton" Content="&#128196; Generate PDF"
                             Background="#FF238636" Foreground="White" BorderBrush="#FF2EA043"
                             Padding="12,6" MinHeight="28" Cursor="Hand" Click="OnGenerateClick"
@@ -80,21 +95,77 @@
             <!-- Snapshot preview / progress area -->
             <DockPanel Grid.Column="2">
                 <Border DockPanel.Dock="Top" Background="#FF252A2E" Padding="12,6" BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Snapshots" Foreground="#FF8B949E" FontSize="12" FontWeight="SemiBold"/>
-                        <TextBlock x:Name="progressCount" Grid.Column="1" Foreground="#FF666666" FontSize="11"
-                                   VerticalAlignment="Center"/>
-                    </Grid>
+                    <TextBlock Text="Snapshots" Foreground="#FF8B949E" FontSize="12" FontWeight="SemiBold"/>
                 </Border>
 
-                <!-- Progress bar (docked at bottom of this panel) -->
-                <ProgressBar x:Name="progressBar" DockPanel.Dock="Bottom" Height="4"
-                             Background="#FF30363D" Foreground="#FF238636"
-                             Visibility="Collapsed" Minimum="0"/>
+                <!-- Progress panel (docked at top, below the header) -->
+                <Border x:Name="progressPanel" DockPanel.Dock="Top" Visibility="Collapsed"
+                        Background="#FF1F262C" BorderBrush="#FF30363D" BorderThickness="0,0,0,1"
+                        Padding="16,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Percentage -->
+                        <TextBlock x:Name="progressPercent" Grid.Column="0" Grid.RowSpan="3"
+                                   Text="0%" Foreground="#FF58A6FF" FontSize="20" FontWeight="Bold"
+                                   VerticalAlignment="Center" Margin="0,0,14,0"
+                                   MinWidth="48" TextAlignment="Left"/>
+
+                        <!-- Current camera / phase -->
+                        <TextBlock x:Name="progressCurrent" Grid.Column="1" Grid.Row="0"
+                                   Text="Preparing..." Foreground="#FFE6EDF3" FontSize="13"
+                                   FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                   Margin="0,0,0,6"/>
+
+                        <!-- Styled progress bar -->
+                        <Border x:Name="progressTrack" Grid.Column="1" Grid.Row="1" Background="#FF0D1117"
+                                CornerRadius="3" Height="5" ClipToBounds="True">
+                            <Grid>
+                                <Border x:Name="progressFill" HorizontalAlignment="Left"
+                                        CornerRadius="3" Width="0">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#FF1F6FEB" Offset="0"/>
+                                            <GradientStop Color="#FF58A6FF" Offset="0.5"/>
+                                            <GradientStop Color="#FF79C0FF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                                <!-- Shimmer overlay -->
+                                <Border x:Name="progressShimmer" HorizontalAlignment="Left"
+                                        Width="0" Opacity="0.45" IsHitTestVisible="False">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#00FFFFFF" Offset="0"/>
+                                            <GradientStop Color="#80FFFFFF" Offset="0.5"/>
+                                            <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Sub-status: count + elapsed -->
+                        <Grid Grid.Column="1" Grid.Row="2" Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="progressCount" Grid.Column="0"
+                                       Text="0 / 0" Foreground="#FF8B949E" FontSize="11"/>
+                            <TextBlock x:Name="progressElapsed" Grid.Column="1"
+                                       Text="" Foreground="#FF8B949E" FontSize="11"/>
+                        </Grid>
+                    </Grid>
+                </Border>
 
                 <!-- Scrollable snapshot gallery (visible during/after generation) -->
                 <ScrollViewer x:Name="snapshotScroll" DockPanel.Dock="Top" Visibility="Collapsed"

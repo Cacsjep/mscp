@@ -68,47 +68,113 @@ namespace SnapReport.Services
             _fontResolverSet = true;
         }
 
-        public static void GenerateReport(string outputPath, List<CameraReportEntry> entries)
+        /// <summary>
+        /// Generates the report. If <paramref name="maxBytesPerPart"/> is null, writes a single PDF
+        /// to <paramref name="outputPath"/>. Otherwise splits into numbered parts named
+        /// "<basename>.001.pdf", "<basename>.002.pdf", ... beside <paramref name="outputPath"/>.
+        /// Returns the list of files actually written.
+        /// </summary>
+        public static List<string> GenerateReport(string outputPath, List<CameraReportEntry> entries, long? maxBytesPerPart = null)
         {
             EnsureFontResolver();
 
-            var document = new PdfDocument();
-            document.Info.Title = "SnapReport - Camera Snapshot Report";
-            document.Info.Author = "SnapReport Plugin";
+            var written = new List<string>();
+
+            if (!maxBytesPerPart.HasValue)
+            {
+                var doc = NewDocument();
+                foreach (var entry in entries)
+                    AddEntryPage(doc, entry);
+                doc.Save(outputPath);
+                written.Add(outputPath);
+                return written;
+            }
+
+            // Split mode - size by estimation: each page contributes roughly (image bytes + per-page overhead).
+            // The image dominates; per-page overhead covers font references, drawing ops, page object.
+            const long PerPageOverhead = 2048;
+            const long DocOverhead = 8192;
+
+            string dir = Path.GetDirectoryName(outputPath) ?? "";
+            string baseName = Path.GetFileNameWithoutExtension(outputPath);
+            string ext = Path.GetExtension(outputPath);
+            if (string.IsNullOrEmpty(ext)) ext = ".pdf";
+
+            int partIndex = 1;
+            var current = NewDocument();
+            int pagesInCurrent = 0;
+            long estimated = DocOverhead;
 
             foreach (var entry in entries)
             {
-                var page = document.AddPage();
-                page.Size = PdfSharp.PageSize.A4;
-                var gfx = XGraphics.FromPdfPage(page);
+                long pageSize = PerPageOverhead + (entry.ImageData != null ? entry.ImageData.Length : 0);
 
-                // Header: camera name + timestamp
-                gfx.DrawString(entry.CameraName, new XFont("Arial", 16, XFontStyleEx.Bold),
-                               XBrushes.Black, new XPoint(40, 40));
-                gfx.DrawString(entry.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
-                               new XFont("Arial", 10), XBrushes.Gray, new XPoint(40, 60));
+                // If adding this page would overflow and the current part already has at least one
+                // page, finalize the part first so this entry starts the next part.
+                if (pagesInCurrent > 0 && estimated + pageSize > maxBytesPerPart.Value)
+                {
+                    string partPath = Path.Combine(dir, string.Format("{0}.{1:D3}{2}", baseName, partIndex, ext));
+                    current.Save(partPath);
+                    written.Add(partPath);
+                    partIndex++;
+                    current = NewDocument();
+                    pagesInCurrent = 0;
+                    estimated = DocOverhead;
+                }
 
-                if (entry.ImageData != null)
-                {
-                    using (var stream = new MemoryStream(entry.ImageData))
-                    {
-                        var image = XImage.FromStream(stream);
-                        double maxWidth = page.Width.Point - XUnit.FromPoint(80).Point;
-                        double maxHeight = page.Height.Point - XUnit.FromPoint(120).Point;
-                        double scale = Math.Min(maxWidth / image.PixelWidth, maxHeight / image.PixelHeight);
-                        gfx.DrawImage(image, 40, 80, image.PixelWidth * scale, image.PixelHeight * scale);
-                    }
-                }
-                else
-                {
-                    gfx.DrawString(entry.ErrorMessage ?? "Snapshot unavailable",
-                                   new XFont("Arial", 14), XBrushes.Red,
-                                   new XRect(0, 200, page.Width.Point, 100),
-                                   XStringFormats.Center);
-                }
+                AddEntryPage(current, entry);
+                pagesInCurrent++;
+                estimated += pageSize;
             }
 
-            document.Save(outputPath);
+            // Flush remaining
+            if (pagesInCurrent > 0 || written.Count == 0)
+            {
+                string partPath = Path.Combine(dir, string.Format("{0}.{1:D3}{2}", baseName, partIndex, ext));
+                current.Save(partPath);
+                written.Add(partPath);
+            }
+
+            return written;
+        }
+
+        private static PdfDocument NewDocument()
+        {
+            var document = new PdfDocument();
+            document.Info.Title = "SnapReport - Camera Snapshot Report";
+            document.Info.Author = "SnapReport Plugin";
+            return document;
+        }
+
+        private static void AddEntryPage(PdfDocument document, CameraReportEntry entry)
+        {
+            var page = document.AddPage();
+            page.Size = PdfSharp.PageSize.A4;
+            var gfx = XGraphics.FromPdfPage(page);
+
+            gfx.DrawString(entry.CameraName, new XFont("Arial", 16, XFontStyleEx.Bold),
+                           XBrushes.Black, new XPoint(40, 40));
+            gfx.DrawString(entry.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
+                           new XFont("Arial", 10), XBrushes.Gray, new XPoint(40, 60));
+
+            if (entry.ImageData != null)
+            {
+                using (var stream = new MemoryStream(entry.ImageData))
+                {
+                    var image = XImage.FromStream(stream);
+                    double maxWidth = page.Width.Point - XUnit.FromPoint(80).Point;
+                    double maxHeight = page.Height.Point - XUnit.FromPoint(120).Point;
+                    double scale = Math.Min(maxWidth / image.PixelWidth, maxHeight / image.PixelHeight);
+                    gfx.DrawImage(image, 40, 80, image.PixelWidth * scale, image.PixelHeight * scale);
+                }
+            }
+            else
+            {
+                gfx.DrawString(entry.ErrorMessage ?? "Snapshot unavailable",
+                               new XFont("Arial", 14), XBrushes.Red,
+                               new XRect(0, 200, page.Width.Point, 100),
+                               XStringFormats.Center);
+            }
         }
     }
 }
