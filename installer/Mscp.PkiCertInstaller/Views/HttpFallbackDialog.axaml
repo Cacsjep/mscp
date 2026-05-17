@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Mscp.PkiCertInstaller.Views.HttpFallbackDialog"
+        Title="HTTPS not available"
+        Width="440" SizeToContent="Height"
+        Background="#0F1115"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+  <Window.Resources>
+    <SolidColorBrush x:Key="TextDim"    Color="#9BA8BC" />
+    <SolidColorBrush x:Key="TextStrong" Color="#E6ECF5" />
+  </Window.Resources>
+
+  <Grid RowDefinitions="Auto,Auto,Auto" Margin="20">
+    <TextBlock Grid.Row="0"
+               Text="Server didn't accept HTTPS. Retry over HTTP?"
+               Foreground="{StaticResource TextStrong}"
+               FontSize="14" FontWeight="SemiBold"
+               TextWrapping="Wrap" Margin="0,0,0,8" />
+
+    <SelectableTextBlock Grid.Row="1" Name="UrlText"
+                         FontFamily="Consolas, monospace" FontSize="12"
+                         Foreground="{StaticResource TextDim}"
+                         TextWrapping="Wrap" Margin="0,0,0,16" />
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancelClick" />
+      <Button Content="Retry over HTTP" Classes="accent" Click="OnRetryClick" />
+    </StackPanel>
+  </Grid>
+</Window>

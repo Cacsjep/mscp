@@ -139,6 +139,50 @@ public sealed class MilestoneClient : IDisposable
         return null;
     }
 
+    // True when the exception looks like a "couldn't talk to the server"
+    // failure as opposed to a credential/IDP rejection. Drives the
+    // HTTP-fallback prompt: only worth offering when HTTPS failed at
+    // the transport layer (port closed, TLS handshake aborted, etc.),
+    // never when we DID connect and the server just rejected creds.
+    public static bool IsConnectionFailure(Exception ex)
+    {
+        var inner = ex;
+        while (inner.InnerException != null) inner = inner.InnerException;
+        var msg = (ex.Message ?? "") + " " + (inner.Message ?? "");
+        bool Has(string n) => msg.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0;
+
+        // Auth-layer rejections - we connected fine, falling back to
+        // HTTP would just re-send the same bad creds in plaintext.
+        if (Has("IDP 4") || Has("invalid_grant") || Has("invalid_client")
+            || Has("VMO61008")) return false;
+
+        // DNS failures aren't fixed by switching scheme.
+        if (Has("No such host") || Has("name resolution") || Has("getaddrinfo")
+            || Has("could not be resolved") || Has("Unknown host")) return false;
+
+        if (ex is System.Net.Sockets.SocketException
+            || inner is System.Net.Sockets.SocketException) return true;
+
+        return Has("actively refused") || Has("connection refused")
+            || Has("connection forcibly closed") || Has("connection reset")
+            || Has("Unable to connect") || Has("Network is unreachable")
+            || Has("SSL") || Has("TLS") || Has("HTTPS handshake");
+    }
+
+    // Rewrites a server URL string to use http://. Preserves host, port,
+    // and path. If the user typed no scheme we still treat it as HTTPS
+    // (matches NormalizeBase), so the fallback prepends http://.
+    public static string RewriteToHttp(string serverUrl)
+    {
+        var s = (serverUrl ?? "").Trim();
+        if (s.Length == 0) return s;
+        if (s.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return "http://" + s.Substring("https://".Length);
+        if (!s.Contains("://", StringComparison.Ordinal))
+            return "http://" + s;
+        return s;
+    }
+
     public async Task LoginBasicAsync(string username, string password, CancellationToken ct = default)
     {
         var body = new FormUrlEncodedContent(new[]

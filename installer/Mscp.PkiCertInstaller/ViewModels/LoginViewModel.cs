@@ -34,7 +34,21 @@ public partial class LoginViewModel : ObservableObject
         public TrustPromptArgs(UntrustedServerCertException ex) { Exception = ex; }
     }
 
+    // Bootstrap case: an XProtect server that doesn't have HTTPS turned
+    // on yet (because the operator is about to install the very first
+    // cert with this tool). HTTPS fails at the transport layer, we ask
+    // the operator whether to retry over HTTP, and on accept we recurse
+    // exactly once with the rewritten URL.
+    public event EventHandler<HttpFallbackPromptArgs>? HttpFallbackPromptRequested;
+    public sealed class HttpFallbackPromptArgs : EventArgs
+    {
+        public string ProposedHttpUrl { get; }
+        public TaskCompletionSource<bool> Result { get; } = new();
+        public HttpFallbackPromptArgs(string proposedHttpUrl) { ProposedHttpUrl = proposedHttpUrl; }
+    }
+
     private static readonly TrustStore _trustStore = new();
+    private bool _httpFallbackAttempted;
 
     partial void OnModeChanged(AuthMode value)
     {
@@ -64,6 +78,7 @@ public partial class LoginViewModel : ObservableObject
 
         ErrorMessage = null;
         IsBusy = true;
+        _httpFallbackAttempted = false;
         try
         {
             Log.Info($"Login attempt: server='{ServerUrl}', mode={Mode}, user='{(NeedsExplicitCreds ? Username : CurrentWindowsIdentity)}'");
@@ -128,6 +143,34 @@ public partial class LoginViewModel : ObservableObject
                 // If it fails again it falls into the normal error path.
                 return await TryLoginAsync();
             }
+
+            // HTTP fallback prompt: only when the URL we just tried was
+            // HTTPS, the failure is transport-level (not auth), and we
+            // haven't already fallen back this Connect click. We use the
+            // raw ServerUrl rather than client.BaseUri because the client
+            // may be null if construction itself threw.
+            if (!_httpFallbackAttempted
+                && HttpFallbackPromptRequested != null
+                && WasHttpsAttempt(ServerUrl)
+                && MilestoneClient.IsConnectionFailure(ex))
+            {
+                client?.Dispose();
+                client = null;
+                var httpUrl = MilestoneClient.RewriteToHttp(ServerUrl);
+                Log.Warn($"HTTPS connect failed ({ex.GetType().Name}); offering HTTP fallback to {httpUrl}.");
+                var args = new HttpFallbackPromptArgs(httpUrl);
+                HttpFallbackPromptRequested.Invoke(this, args);
+                var accepted = await args.Result.Task.ConfigureAwait(true);
+                if (accepted)
+                {
+                    ServerUrl = httpUrl;
+                    _httpFallbackAttempted = true;
+                    Log.Info($"Admin accepted HTTP fallback; retrying against {httpUrl}.");
+                    return await TryLoginAsync();
+                }
+                Log.Info("Admin declined HTTP fallback.");
+            }
+
             Log.Error("Login failed", ex);
             ErrorMessage = Humanize(ex);
             return false;
@@ -137,6 +180,12 @@ public partial class LoginViewModel : ObservableObject
             client?.Dispose();
         }
     }
+
+    // True when the user's typed URL did NOT explicitly start with http://
+    // (NormalizeBase prepends https:// in that case). Tells us whether
+    // offering an HTTP fallback even makes sense.
+    private static bool WasHttpsAttempt(string url)
+        => !(url ?? "").TrimStart().StartsWith("http://", StringComparison.OrdinalIgnoreCase);
 
     // Maps the raw exceptions HttpClient / IDP throw into single-line,
     // end-user-friendly messages. We deliberately avoid leaking the

@@ -163,6 +163,10 @@ hide:
     <div class="pi ap"><i class="mdi mdi-file-tree"></i></div>
     <div class="pt"><span class="pn">Metadata Viewer</span><span class="pd">Subscribe to a metadata channel in the Management Client and inspect the live ONVIF event stream with a syntax-highlighted XML preview</span></div>
   </a>
+  <a class="pr" href="admin/pki/">
+    <div class="pi ap"><i class="mdi mdi-key-chain-variant"></i></div>
+    <div class="pt"><span class="pn">PKI</span><span class="pd">Internal certificate authority and TLS vault: issue Root/Intermediate CAs, generate HTTPS/802.1X/Service certs, deploy with bundled Cert Installer</span></div>
+  </a>
   <a class="pr" href="admin/rtmp-streamer/">
     <div class="pi ap"><i class="mdi mdi-broadcast"></i></div>
     <div class="pt"><span class="pn">RTMP Streamer</span><span class="pd">Stream cameras to RTMP destinations (YouTube, Twitch, Facebook)</span></div>
