@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0] - 2026-05-16
+## [3.0.1] - 2026-05-16
 - Improve Snap Reporter: Add PDF Split possibility
 - Improve Snap Reporter: Add Progress Bar 
 - Fix Snap Reporter: Aspect Ratio was not preserved
