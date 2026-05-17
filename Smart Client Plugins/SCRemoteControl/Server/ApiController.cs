@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Web.Http;
 using System.Web.Http.Description;
 using SCRemoteControl.Api;
+using SCRemoteControl.Overlay;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
 using VideoOS.Platform.Messaging;
@@ -162,6 +164,125 @@ namespace SCRemoteControl.Server
             return Ok(new { success = true, windowIndex = request?.WindowIndex ?? 0 });
         }
 
+        // ── Overlays ──
+
+        /// <summary>
+        /// Upsert an SVG overlay on a camera. POSTing the same overlayId replaces the
+        /// existing overlay in place. The overlay renders on every viewport currently
+        /// showing the camera, and re-applies when the camera is brought back into view.
+        /// </summary>
+        [HttpPost, Route("overlays")]
+        [ResponseType(typeof(OverlayUpsertResponse))]
+        public IHttpActionResult UpsertOverlay(CreateOverlayRequest request)
+        {
+            if (request == null) return BadRequest("body required");
+            if (string.IsNullOrWhiteSpace(request.OverlayId)) return BadRequest("overlayId is required");
+            if (string.IsNullOrWhiteSpace(request.CameraId)) return BadRequest("cameraId is required");
+            if (string.IsNullOrWhiteSpace(request.Svg)) return BadRequest("svg is required");
+
+            if (!Guid.TryParse(request.CameraId, out var cameraGuid) || cameraGuid == Guid.Empty)
+                return BadRequest("cameraId is not a valid GUID");
+
+            // Validate that the camera actually exists in the configuration. This catches
+            // typos early; the overlay would otherwise just silently never display.
+            var fqid = SmartClientHelper.FindItemFqid(request.CameraId, Kind.Camera);
+            if (fqid == null) return Content(System.Net.HttpStatusCode.NotFound, new { error = "camera not found: " + request.CameraId });
+
+            try
+            {
+                var result = OverlayManager.Instance.Upsert(
+                    request.OverlayId,
+                    cameraGuid,
+                    request.Svg,
+                    request.TtlSeconds,
+                    request.ZOrder ?? 100);
+
+                var response = new OverlayUpsertResponse
+                {
+                    OverlayId = request.OverlayId,
+                    CameraId = request.CameraId,
+                    ShapeCount = result.ShapeCount,
+                    ZOrder = request.ZOrder ?? 100,
+                    ExpiresAt = result.ExpiresAt,
+                    Replaced = result.Replaced,
+                    Displayed = result.Displayed,
+                };
+                if (!result.Displayed)
+                    response.Warning = "camera is not currently displayed in any viewport, overlay queued";
+
+                return Content(result.Replaced ? System.Net.HttpStatusCode.OK : System.Net.HttpStatusCode.Created, (object)response);
+            }
+            catch (SvgParseException ex) { return BadRequest("svg parse failed: " + ex.Message); }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (InvalidOperationException ex) { return Content(System.Net.HttpStatusCode.Conflict, new { error = ex.Message }); }
+        }
+
+        /// <summary>List active overlays</summary>
+        [HttpGet, Route("overlays")]
+        [ResponseType(typeof(List<OverlayDto>))]
+        public IHttpActionResult ListOverlays()
+        {
+            var list = OverlayManager.Instance.List();
+            var dtos = list.Select(r => new OverlayDto
+            {
+                OverlayId = r.OverlayId,
+                CameraId = r.CameraId.ToString(),
+                ZOrder = r.ZOrder,
+                ExpiresAt = r.ExpiresAt,
+                ShapeCount = r.Parsed?.Shapes.Count ?? 0,
+                Displayed = OverlayManager.Instance.AnyAddOnShowsCamera(r.CameraId),
+            }).ToList();
+            return Ok(dtos);
+        }
+
+        /// <summary>Get one overlay including the original SVG body</summary>
+        [HttpGet, Route("overlays/{id}")]
+        [ResponseType(typeof(OverlayDetailDto))]
+        public IHttpActionResult GetOverlay(string id)
+        {
+            var r = OverlayManager.Instance.Get(id);
+            if (r == null) return NotFound();
+            return Ok(new OverlayDetailDto
+            {
+                OverlayId = r.OverlayId,
+                CameraId = r.CameraId.ToString(),
+                ZOrder = r.ZOrder,
+                ExpiresAt = r.ExpiresAt,
+                ShapeCount = r.Parsed?.Shapes.Count ?? 0,
+                Displayed = OverlayManager.Instance.AnyAddOnShowsCamera(r.CameraId),
+                Svg = r.Svg,
+            });
+        }
+
+        /// <summary>Remove one overlay</summary>
+        [HttpDelete, Route("overlays/{id}")]
+        public IHttpActionResult DeleteOverlay(string id)
+        {
+            var removed = OverlayManager.Instance.Remove(id);
+            if (!removed) return NotFound();
+            return Ok(new { success = true, overlayId = id });
+        }
+
+        /// <summary>
+        /// Bulk delete. Pass cameraId to clear only overlays for that camera, omit to
+        /// clear every overlay.
+        /// </summary>
+        [HttpDelete, Route("overlays")]
+        public IHttpActionResult DeleteOverlays([FromUri] string cameraId = null)
+        {
+            int count;
+            if (!string.IsNullOrWhiteSpace(cameraId))
+            {
+                if (!Guid.TryParse(cameraId, out var guid)) return BadRequest("cameraId is not a valid GUID");
+                count = OverlayManager.Instance.RemoveByCamera(guid);
+            }
+            else
+            {
+                count = OverlayManager.Instance.RemoveAll();
+            }
+            return Ok(new { success = true, removed = count });
+        }
+
         /// <summary>Clear/blank the view (optionally with delay)</summary>
         [HttpPost, Route("clear")]
         public IHttpActionResult ClearView(ClearRequest request)
@@ -276,5 +397,63 @@ namespace SCRemoteControl.Server
         public string Mode { get; set; }
         public string ListenUrl { get; set; }
         public string Version { get; set; }
+    }
+
+    // ── Overlay DTOs ──
+
+    /// <summary>Upsert request body. Same overlayId replaces an existing overlay in place.</summary>
+    public class CreateOverlayRequest
+    {
+        /// <summary>
+        /// Caller-supplied stable key (e.g. "alarm-12345"). Required.
+        /// POSTing the same id with a new body updates the overlay without flicker.
+        /// </summary>
+        public string OverlayId { get; set; }
+
+        /// <summary>Camera FQID from GET /api/cameras</summary>
+        public string CameraId { get; set; }
+
+        /// <summary>
+        /// SVG document. Supported elements: rect, circle, ellipse, line, polyline,
+        /// polygon, path, text, g. Default viewBox is "0 0 1000 1000" when absent.
+        /// </summary>
+        public string Svg { get; set; }
+
+        /// <summary>Optional expiry in seconds. Omit or 0 for "persist until DELETE".</summary>
+        public int? TtlSeconds { get; set; }
+
+        /// <summary>Z-order, higher draws on top. Default 100.</summary>
+        public int? ZOrder { get; set; }
+    }
+
+    public class OverlayUpsertResponse
+    {
+        public string OverlayId { get; set; }
+        public string CameraId { get; set; }
+        public int ShapeCount { get; set; }
+        public int ZOrder { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+        /// <summary>True if the same overlayId replaced an existing overlay.</summary>
+        public bool Replaced { get; set; }
+        /// <summary>True if at least one viewport currently shows the target camera.</summary>
+        public bool Displayed { get; set; }
+        /// <summary>Set when the target camera is not currently displayed anywhere.</summary>
+        public string Warning { get; set; }
+    }
+
+    public class OverlayDto
+    {
+        public string OverlayId { get; set; }
+        public string CameraId { get; set; }
+        public int ZOrder { get; set; }
+        public int ShapeCount { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+        public bool Displayed { get; set; }
+    }
+
+    public class OverlayDetailDto : OverlayDto
+    {
+        /// <summary>Original SVG document as posted.</summary>
+        public string Svg { get; set; }
     }
 }

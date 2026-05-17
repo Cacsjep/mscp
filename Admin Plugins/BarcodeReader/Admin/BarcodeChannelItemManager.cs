@@ -33,6 +33,13 @@ namespace BarcodeReader.Admin
 
         public override UserControl GenerateDetailUserControl()
         {
+            // Management Client occasionally re-creates the detail panel (e.g. after a
+            // ConfigurationChangedIndication tree refresh) without first calling
+            // ReleaseUserControl. The previous control would then leak its MessageBroker
+            // filter registrations for StatusUpdate/StatusResponse, and the new control's
+            // fresh registration would trip "Same messageId being registered multiple times".
+            ReleaseUserControl();
+
             _userControl = new ChannelConfigUserControl();
             _userControl.ConfigurationChangedByUser += ConfigurationChangedByUserHandler;
             return _userControl;
@@ -43,7 +50,8 @@ namespace BarcodeReader.Admin
             if (_userControl != null)
             {
                 _userControl.ConfigurationChangedByUser -= ConfigurationChangedByUserHandler;
-                _userControl.UnsubscribeLiveStatus();
+                try { _userControl.UnsubscribeLiveStatus(); } catch { }
+                try { _userControl.Dispose(); } catch { }
             }
             _userControl = null;
         }

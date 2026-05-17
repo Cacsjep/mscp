@@ -68,18 +68,27 @@ namespace Timelapse.Client
                 var h = i.ToString("D2");
                 startHourCombo.Items.Add(h);
                 endHourCombo.Items.Add(h);
+                dailyStartHourCombo.Items.Add(h);
+                dailyEndHourCombo.Items.Add(h);
             }
             // Minutes 00, 15, 30, 45
             foreach (var m in new[] { "00", "15", "30", "45" })
             {
                 startMinuteCombo.Items.Add(m);
                 endMinuteCombo.Items.Add(m);
+                dailyStartMinuteCombo.Items.Add(m);
+                dailyEndMinuteCombo.Items.Add(m);
             }
 
             startHourCombo.SelectedIndex = 8;  // 08:00
             startMinuteCombo.SelectedIndex = 0;
             endHourCombo.SelectedIndex = 17;   // 17:00
             endMinuteCombo.SelectedIndex = 0;
+
+            dailyStartHourCombo.SelectedIndex = 8;  // 08:00
+            dailyStartMinuteCombo.SelectedIndex = 0;
+            dailyEndHourCombo.SelectedIndex = 17;   // 17:00
+            dailyEndMinuteCombo.SelectedIndex = 0;
 
             startDatePicker.SelectedDate = DateTime.Today.AddDays(-1);
             endDatePicker.SelectedDate = DateTime.Today.AddDays(-1);
@@ -247,6 +256,46 @@ namespace Timelapse.Client
             startMinuteCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
             endHourCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
             endMinuteCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+
+            // Daily window: clipping is in-memory, so no need to re-query the server.
+            dailyWindowCheck.Checked += (s, e) =>
+            {
+                dailyWindowFields.Visibility = Visibility.Visible;
+                SchedulePreflight();
+                UpdateEstimate();
+            };
+            dailyWindowCheck.Unchecked += (s, e) =>
+            {
+                dailyWindowFields.Visibility = Visibility.Collapsed;
+                SchedulePreflight();
+                UpdateEstimate();
+            };
+            dailyStartHourCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+            dailyStartMinuteCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+            dailyEndHourCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+            dailyEndMinuteCombo.SelectionChanged += (s, e) => { SchedulePreflight(); UpdateEstimate(); };
+        }
+
+        private (TimeSpan Start, TimeSpan End)? GetDailyWindow()
+        {
+            if (dailyWindowCheck?.IsChecked != true) return null;
+            if (dailyStartHourCombo.SelectedItem == null || dailyStartMinuteCombo.SelectedItem == null) return null;
+            if (dailyEndHourCombo.SelectedItem == null || dailyEndMinuteCombo.SelectedItem == null) return null;
+            int sh = int.Parse((string)dailyStartHourCombo.SelectedItem);
+            int sm = int.Parse((string)dailyStartMinuteCombo.SelectedItem);
+            int eh = int.Parse((string)dailyEndHourCombo.SelectedItem);
+            int em = int.Parse((string)dailyEndMinuteCombo.SelectedItem);
+            var s = new TimeSpan(sh, sm, 0);
+            var e = new TimeSpan(eh, em, 0);
+            if (s == e) return null; // empty window -> ignore
+            return (s, e);
+        }
+
+        private IReadOnlyList<RecordingSegment> ApplyDailyWindow(IReadOnlyList<RecordingSegment> segs)
+        {
+            var w = GetDailyWindow();
+            if (w == null || segs == null || segs.Count == 0) return segs;
+            return TimestampGenerator.ClipToDailyWindow(segs, w.Value.Start, w.Value.End);
         }
 
         private void OnModeChanged(object sender, SelectionChangedEventArgs e)
@@ -388,6 +437,7 @@ namespace Timelapse.Client
 
             try
             {
+                var dailyWindow = GetDailyWindow();
                 await Task.Run(() =>
                 {
                     foreach (var cam in cameras)
@@ -395,7 +445,9 @@ namespace Timelapse.Client
                         token.ThrowIfCancellationRequested();
                         using (var q = new SequenceQuery(cam.Item))
                         {
-                            var segs = q.GetRecordingSegments(start, end);
+                            IReadOnlyList<RecordingSegment> segs = q.GetRecordingSegments(start, end);
+                            if (dailyWindow != null)
+                                segs = TimestampGenerator.ClipToDailyWindow(segs, dailyWindow.Value.Start, dailyWindow.Value.End);
                             perCam[cam.Item.FQID.ObjectId] = (cam.Name, segs);
                         }
                     }
@@ -532,9 +584,24 @@ namespace Timelapse.Client
 
             if (perCameraSegs.Count == 0)
             {
-                // Preflight not yet available - approximate with naive interval
+                // Preflight not yet available - approximate with naive interval, then apply
+                // the daily window if enabled so the estimate stays roughly truthful.
                 var interval = mode == TimelapseMode.Continuous ? GetSelectedInterval() : GetSelectedEventInterval();
-                return FrameGrabberService.GenerateTimestamps(start, end, interval);
+                var rough = FrameGrabberService.GenerateTimestamps(start, end, interval);
+                var w = GetDailyWindow();
+                if (w == null) return rough;
+
+                bool wraps = w.Value.End <= w.Value.Start;
+                var filtered = new List<DateTime>(rough.Count);
+                foreach (var ts in rough)
+                {
+                    var tod = ts.TimeOfDay;
+                    bool inside = wraps
+                        ? (tod >= w.Value.Start || tod < w.Value.End)
+                        : (tod >= w.Value.Start && tod < w.Value.End);
+                    if (inside) filtered.Add(ts);
+                }
+                return filtered;
             }
 
             var union = TimestampGenerator.Union(perCameraSegs);
@@ -584,6 +651,7 @@ namespace Timelapse.Client
             // Ensure preflight has run (fetch segments for cameras that don't have them yet).
             var cameras = _cameras.ToList();
             var perCameraSegs = new Dictionary<Guid, IReadOnlyList<RecordingSegment>>();
+            var dailyWindow = GetDailyWindow();
             try
             {
                 await Task.Run(() =>
@@ -592,12 +660,18 @@ namespace Timelapse.Client
                     {
                         if (_preflightSegments.TryGetValue(cam.Item.FQID.ObjectId, out var s))
                         {
+                            // _preflightSegments is already clipped (clipping happens in RunPreflightAsync).
                             perCameraSegs[cam.Item.FQID.ObjectId] = s;
                         }
                         else
                         {
                             using (var q = new SequenceQuery(cam.Item))
-                                perCameraSegs[cam.Item.FQID.ObjectId] = q.GetRecordingSegments(start, end);
+                            {
+                                IReadOnlyList<RecordingSegment> raw = q.GetRecordingSegments(start, end);
+                                if (dailyWindow != null)
+                                    raw = TimestampGenerator.ClipToDailyWindow(raw, dailyWindow.Value.Start, dailyWindow.Value.End);
+                                perCameraSegs[cam.Item.FQID.ObjectId] = raw;
+                            }
                         }
                     }
                 });

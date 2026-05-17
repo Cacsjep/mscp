@@ -1,0 +1,221 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="MetadataDisplay.Client.MetadataDisplayViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    PreviewMouseLeftButtonUp="OnMouseLeftUp"
+    PreviewMouseDoubleClick="OnMouseDoubleClick">
+    <Grid Background="#FF1C2326" ClipToBounds="True">
+        <Viewbox x:Name="renderViewbox" Stretch="Uniform" Margin="6">
+            <Grid x:Name="rootGrid" Width="320" Background="Transparent">
+                <Grid.RowDefinitions>
+                    <RowDefinition x:Name="titleRow" Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="titleText"
+                           Grid.Row="0"
+                           Foreground="#FFCFD7DA"
+                           FontSize="14"
+                           Margin="0,0,0,2"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"/>
+                <Grid x:Name="renderHost" Grid.Row="1" Background="Transparent"/>
+                <Border x:Name="staleBadge"
+                        Grid.Row="0"
+                        Background="#88000000"
+                        CornerRadius="3"
+                        Padding="6,2"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Visibility="Collapsed">
+                    <TextBlock Text="stale" Foreground="#FFCFD7DA" FontSize="10"/>
+                </Border>
+            </Grid>
+        </Viewbox>
+        <!-- Export badge for non-chart renderers (Lamp, Number, Gauge, Text).
+             Floats on the parent Grid OUTSIDE the Viewbox so it renders at native
+             DPI rather than getting bitmap-scaled. Visibility is gated by mode +
+             EnableExport in code-behind. -->
+        <Border x:Name="exportBadgeRender"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,8,8,0"
+                Background="#AA1F2528"
+                BorderBrush="#FF333E42"
+                BorderThickness="1"
+                CornerRadius="3"
+                Padding="6,2"
+                Cursor="Hand"
+                Visibility="Collapsed"
+                ToolTip="Export the current widget's data to a CSV file"
+                MouseLeftButtonUp="OnExportClick">
+            <TextBlock Text="Export" Foreground="#FFCFD7DA" FontSize="11"/>
+        </Border>
+        <!-- Native-resolution host for renderers (LineChart) that draw with SkiaSharp.
+             Bypasses the 320-wide Viewbox so Skia paints at the actual pane size
+             instead of being bitmap-scaled and looking pixelated. The title bar
+             above doesn't apply here - chart renderers handle their own labels. -->
+        <Grid x:Name="chartRoot" Margin="6" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="chartTitleRow" Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="chartTitleText"
+                       Grid.Row="0"
+                       Foreground="#FFCFD7DA"
+                       FontSize="14"
+                       Margin="0,0,0,2"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"/>
+            <Grid x:Name="chartHost" Grid.Row="1" Background="Transparent"/>
+            <!-- Top-right action row for chart-style renderers. Layout: Export
+                 (visible only in Playback when EnableExport is true) sits to the
+                 LEFT of the WindowPicker. Both anchored to the right edge with the
+                 same vertical alignment. Per the table renderer's pause overlay
+                 living at the bottom of the scroll viewport, there's no collision. -->
+            <StackPanel x:Name="chartActionsPanel"
+                        Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,4,8,0">
+                <Border x:Name="exportBadgeChart"
+                        Background="#AA1F2528"
+                        BorderBrush="#FF333E42"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="6,2"
+                        Margin="0,0,6,0"
+                        Cursor="Hand"
+                        Visibility="Collapsed"
+                        ToolTip="Export the chart's archive data to a CSV file"
+                        MouseLeftButtonUp="OnExportClick">
+                    <TextBlock Text="Export" Foreground="#FFCFD7DA" FontSize="11"/>
+                </Border>
+                <!-- Session-only window quick-picker (Grafana-style). Visible only when
+                     the chart is shown; its popup lets the user temporarily switch the
+                     time window without touching the saved configuration. The asterisk
+                     in the badge label indicates an override is active; "Default" reverts. -->
+                <Border x:Name="windowPickerBadge"
+                        Background="#AA1F2528"
+                        BorderBrush="#FF333E42"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="6,2"
+                        Cursor="Hand"
+                        MouseLeftButtonUp="OnWindowPickerClick">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="windowPickerText" Text="60s" Foreground="#FFCFD7DA" FontSize="11"/>
+                        <TextBlock Text=" ▾" Foreground="#FFCFD7DA" FontSize="11"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            <Popup x:Name="windowPickerPopup"
+                   PlacementTarget="{Binding ElementName=windowPickerBadge}"
+                   Placement="Bottom"
+                   StaysOpen="False"
+                   AllowsTransparency="True">
+                <Border Background="#FF1F2528" BorderBrush="#FF333E42" BorderThickness="1" CornerRadius="3" Padding="2">
+                    <StackPanel x:Name="windowPickerOptions" Orientation="Vertical"/>
+                </Border>
+            </Popup>
+        </Grid>
+        <Grid x:Name="noDataPanel"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Visibility="Collapsed">
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                <Ellipse Width="14" Height="14"
+                         Fill="#FFE69500"
+                         Margin="0,0,0,6"
+                         HorizontalAlignment="Center">
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="Ellipse.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                     From="0.25" To="1.0" Duration="0:0:0.9" AutoReverse="True"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+                <TextBlock x:Name="noDataHeading"
+                           Text="Waiting for data..."
+                           Foreground="#FFA9B5BB"
+                           FontSize="13"
+                           HorizontalAlignment="Center"/>
+                <TextBlock x:Name="noDataDetail"
+                           Text=""
+                           Foreground="#FF7A8388"
+                           FontSize="11"
+                           HorizontalAlignment="Center"
+                           Margin="0,4,0,0"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="320"/>
+            </StackPanel>
+        </Grid>
+        <Viewbox x:Name="setupPanel"
+                 Stretch="Uniform"
+                 StretchDirection="DownOnly"
+                 Margin="12"
+                 Visibility="Collapsed">
+        <StackPanel Orientation="Vertical"
+                    MaxWidth="480">
+            <TextBlock x:Name="setupHeader"
+                       Foreground="#FFE6EAEC"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Left"
+                       Margin="0,0,0,4"
+                       Text="Metadata Display"/>
+            <TextBlock x:Name="setupSubheader"
+                       Foreground="#FF7A8388"
+                       FontSize="11"
+                       HorizontalAlignment="Left"
+                       Margin="0,0,0,12"/>
+            <Grid x:Name="setupSummary" HorizontalAlignment="Left" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Channel"  Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,4"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="summaryChannel" Foreground="#FFCFD7DA" FontSize="12" Margin="0,0,0,4"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Render"   Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,4"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="summaryRender"  Foreground="#FFCFD7DA" FontSize="12" Margin="0,0,0,4"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Topic"    Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,4"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="summaryTopic"   Foreground="#FFCFD7DA" FontSize="12" Margin="0,0,0,4" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Data key" Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,0"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="summaryDataKey" Foreground="#FFCFD7DA" FontSize="12"/>
+            </Grid>
+            <Border x:Name="openConfigButton"
+                    Background="#FF2A2A2A"
+                    BorderBrush="#FF555555"
+                    BorderThickness="1"
+                    CornerRadius="3"
+                    Padding="16,8"
+                    Cursor="Hand"
+                    HorizontalAlignment="Left"
+                    MouseLeftButtonUp="OnOpenConfigClick">
+                <TextBlock Text="Open configuration..."
+                           Foreground="#FFD0D0D0"
+                           FontSize="13"/>
+            </Border>
+            <TextBlock x:Name="setupHint"
+                       Foreground="#FF7A8388"
+                       FontSize="11"
+                       HorizontalAlignment="Left"
+                       Margin="0,8,0,0"
+                       Visibility="Collapsed"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+        </Viewbox>
+    </Grid>
+</external:ViewItemWpfUserControl>

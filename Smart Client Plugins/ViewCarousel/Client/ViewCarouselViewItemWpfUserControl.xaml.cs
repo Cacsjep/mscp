@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -21,11 +22,26 @@ namespace ViewCarousel.Client
         private bool _paused;
 
         private readonly DispatcherTimer _carouselTimer = new DispatcherTimer();
-        private readonly List<ImageViewerWpfControl> _viewers = new List<ImageViewerWpfControl>();
-        private readonly List<FrameworkElement> _placeholders = new List<FrameworkElement>();
 
-        // Resolved view data: layout rectangles + camera FQIDs per view
+        // Live slot UI - rebuilt on every carousel tick. Cameras and plugin user
+        // controls need explicit teardown beyond removing them from the canvas, so
+        // they're tracked separately. Placeholders just go through Children.Clear.
+        private readonly List<ImageViewerWpfControl> _viewers = new List<ImageViewerWpfControl>();
+        private readonly List<ViewItemWpfUserControl> _pluginControls = new List<ViewItemWpfUserControl>();
+
+        // Resolved view data for each entry
         private List<ResolvedView> _resolvedViews;
+
+        // Cache of installed third-party ViewItemPlugins keyed on plugin Id
+        private Dictionary<Guid, ViewItemPlugin> _viewItemPluginsById;
+
+        // Plugin Ids that have thrown during Init - avoid retrying them every tick.
+        private readonly HashSet<Guid> _failedPluginIds = new HashSet<Guid>();
+
+        // Re-entrancy guard: WPF SizeChanged can fire mid-render when child controls
+        // alter their own measure pass and we don't want a render -> SizeChanged ->
+        // render feedback loop.
+        private bool _rendering;
 
         public ViewCarouselViewItemWpfUserControl(ViewCarouselViewItemManager viewItemManager)
         {
@@ -50,7 +66,7 @@ namespace ViewCarousel.Client
             _carouselTimer.Stop();
 
             StopCarousel();
-            DisposeAllViewers();
+            DisposeAll();
 
             if (_modeChangedReceiver != null)
             {
@@ -77,8 +93,8 @@ namespace ViewCarousel.Client
             if (mode == Mode.ClientSetup)
             {
                 StopCarousel();
-                DisposeAllViewers();
-                cameraCanvas.Visibility = Visibility.Collapsed;
+                DisposeAll();
+                slotCanvas.Visibility = Visibility.Collapsed;
                 playerControls.Visibility = Visibility.Hidden;
                 infoText.Visibility = Visibility.Collapsed;
                 setupOverlay.Visibility = Visibility.Visible;
@@ -95,7 +111,7 @@ namespace ViewCarousel.Client
             else if (mode == Mode.ClientLive)
             {
                 setupOverlay.Visibility = Visibility.Collapsed;
-                cameraCanvas.Visibility = Visibility.Visible;
+                slotCanvas.Visibility = Visibility.Visible;
 
                 LoadConfig();
 
@@ -107,6 +123,7 @@ namespace ViewCarousel.Client
                 else
                 {
                     infoText.Visibility = Visibility.Collapsed;
+                    BuildViewItemPluginCache();
                     ResolveViews();
                     StartCarousel();
                 }
@@ -115,8 +132,8 @@ namespace ViewCarousel.Client
             {
                 // Playback mode
                 StopCarousel();
-                DisposeAllViewers();
-                cameraCanvas.Visibility = Visibility.Collapsed;
+                DisposeAll();
+                slotCanvas.Visibility = Visibility.Collapsed;
                 playerControls.Visibility = Visibility.Hidden;
                 setupOverlay.Visibility = Visibility.Collapsed;
                 infoText.Text = "View Carousel is only active in Live mode.";
@@ -134,11 +151,39 @@ namespace ViewCarousel.Client
 
         #region View Resolution
 
+        private void BuildViewItemPluginCache()
+        {
+            var lookup = new Dictionary<Guid, ViewItemPlugin>();
+            try
+            {
+                var defs = EnvironmentManager.Instance.AllPluginDefinitions;
+                if (defs != null)
+                {
+                    foreach (var def in defs)
+                    {
+                        if (def.ViewItemPlugins == null) continue;
+                        foreach (var vp in def.ViewItemPlugins)
+                        {
+                            if (vp == null) continue;
+                            // Don't render the carousel inside itself - infinite recursion.
+                            if (vp.Id == new Guid("C4446629-E01B-402F-8C8E-2C3235BCD0E3")) continue;
+                            lookup[vp.Id] = vp;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ViewCarouselDefinition.Log.Error("Failed to enumerate ViewItemPlugins", ex);
+            }
+            _viewItemPluginsById = lookup;
+        }
+
         private void ResolveViews()
         {
             _resolvedViews = new List<ResolvedView>();
 
-            Dictionary<string, ViewAndLayoutItem> viewLookup = null;
+            Dictionary<string, ViewAndLayoutItem> viewLookup;
             try
             {
                 viewLookup = BuildViewLookup();
@@ -151,51 +196,136 @@ namespace ViewCarousel.Client
 
             foreach (var entry in _entries)
             {
-                if (viewLookup.TryGetValue(entry.ViewId, out var viewItem))
-                {
-                    var resolved = new ResolvedView
-                    {
-                        Name = entry.ViewName,
-                        Seconds = entry.CustomTime > 0 ? entry.CustomTime : _defaultTime,
-                        Layout = viewItem.Layout,
-                        CameraFQIDs = new List<FQID>()
-                    };
-
-                    var children = viewItem.GetChildren();
-                    if (children != null && resolved.Layout != null)
-                    {
-                        // Build slot index -> camera FQID mapping
-                        var slotMap = new Dictionary<int, FQID>();
-                        foreach (var child in children)
-                        {
-                            if (int.TryParse(child.FQID.ObjectIdString, out int slotIdx)
-                                && child.Properties.TryGetValue("CameraId", out string camIdStr)
-                                && Guid.TryParse(camIdStr, out Guid camId)
-                                && camId != Guid.Empty)
-                            {
-                                try
-                                {
-                                    var camItem = Configuration.Instance.GetItem(camId, Kind.Camera);
-                                    if (camItem != null)
-                                        slotMap[slotIdx] = camItem.FQID;
-                                }
-                                catch { }
-                            }
-                        }
-
-                        for (int i = 0; i < resolved.Layout.Length; i++)
-                        {
-                            resolved.CameraFQIDs.Add(slotMap.ContainsKey(i) ? slotMap[i] : null);
-                        }
-                    }
-
-                    _resolvedViews.Add(resolved);
-                }
-                else
+                if (!viewLookup.TryGetValue(entry.ViewId, out var viewItem))
                 {
                     ViewCarouselDefinition.Log.Info($"View '{entry.ViewName}' ({entry.ViewId}) not found, skipping.");
+                    continue;
                 }
+
+                if (viewItem.Layout == null || viewItem.Layout.Length == 0)
+                    continue;
+
+                var resolved = new ResolvedView
+                {
+                    Name = entry.ViewName,
+                    Seconds = entry.CustomTime > 0 ? entry.CustomTime : _defaultTime,
+                    Layout = viewItem.Layout,
+                    Slots = BuildSlots(viewItem)
+                };
+
+                _resolvedViews.Add(resolved);
             }
+        }
+
+        private List<ResolvedSlot> BuildSlots(ViewAndLayoutItem viewItem)
+        {
+            var slots = new List<ResolvedSlot>();
+
+            var children = viewItem.GetChildren();
+            if (children == null) return slots;
+
+            var emptyId = ViewAndLayoutItem.EmptyBuiltinId;
+            var cameraId = ViewAndLayoutItem.CameraBuiltinId;
+
+            foreach (var child in children)
+            {
+                if (child?.Properties == null) continue;
+
+                int slotIdx;
+                if (!child.Properties.TryGetValue("Index", out var idxStr)
+                    || !int.TryParse(idxStr, out slotIdx))
+                {
+                    if (!int.TryParse(child.FQID.ObjectIdString, out slotIdx)) continue;
+                }
+
+                if (!child.Properties.TryGetValue("ViewItemId", out var vidStr)
+                    || !Guid.TryParse(vidStr, out var viewItemId))
+                    continue;
+
+                // Empty slot - render as a clean empty pane.
+                if (viewItemId == emptyId)
+                {
+                    slots.Add(new ResolvedSlot { Index = slotIdx, Kind = SlotKind.Empty });
+                    continue;
+                }
+
+                if (viewItemId == cameraId)
+                {
+                    if (!child.Properties.TryGetValue("CameraId", out var camIdStr)
+                        || !Guid.TryParse(camIdStr, out var camId)
+                        || camId == Guid.Empty)
+                    {
+                        slots.Add(new ResolvedSlot { Index = slotIdx, Kind = SlotKind.Empty });
+                        continue;
+                    }
+                    try
+                    {
+                        var camItem = Configuration.Instance.GetItem(camId, Kind.Camera);
+                        if (camItem != null)
+                            slots.Add(new ResolvedSlot { Index = slotIdx, Kind = SlotKind.Camera, CameraFQID = camItem.FQID });
+                    }
+                    catch (Exception ex)
+                    {
+                        ViewCarouselDefinition.Log.Info($"Camera slot {slotIdx} resolve failed: {ex.Message}");
+                    }
+                    continue;
+                }
+
+                // Plugin item: look up the ViewItemPlugin and snapshot its properties.
+                // Pass through Index/Builtin since some bundled plugins (e.g. Alarm
+                // Preview) inspect them in PropertiesLoaded; only ViewItemId is dropped
+                // since it's the type marker, not state.
+                if (_viewItemPluginsById != null && _viewItemPluginsById.TryGetValue(viewItemId, out var plugin))
+                {
+                    var props = new Dictionary<string, string>();
+                    foreach (var kv in child.Properties)
+                    {
+                        if (kv.Key == "ViewItemId") continue;
+                        props[kv.Key] = kv.Value;
+                    }
+                    slots.Add(new ResolvedSlot
+                    {
+                        Index = slotIdx,
+                        Kind = SlotKind.Plugin,
+                        Plugin = plugin,
+                        Properties = props
+                    });
+                    continue;
+                }
+
+                // Built-in non-camera (HotSpot, Map, GisMap, Carousel, Matrix, HTML,
+                // Image, Text, SystemMonitor) cannot be standalone-instantiated without
+                // driving the workroom selection state. Show a labelled placeholder.
+                slots.Add(new ResolvedSlot
+                {
+                    Index = slotIdx,
+                    Kind = SlotKind.Unsupported,
+                    UnsupportedLabel = BuiltInName(viewItemId)
+                });
+            }
+
+            return slots;
+        }
+
+        // Image / Text builtin ids are deprecated in 2026 R1 but still appear in saved
+        // views from older versions, so match by literal guid to avoid pulling in the
+        // obsolete SDK constants.
+        private static readonly Guid LegacyImageBuiltInId = new Guid("3a8a7345-1d80-43eb-b556-8982bd3fc64e");
+        private static readonly Guid LegacyTextBuiltInId = new Guid("769457d3-1f67-4c61-8529-5a428689a7cf");
+
+        private static string BuiltInName(Guid viewItemId)
+        {
+            if (viewItemId == ViewAndLayoutItem.HotspotBuiltinId) return "Hotspot";
+            if (viewItemId == ViewAndLayoutItem.CarrouselBuiltinId) return "Carousel";
+            if (viewItemId == ViewAndLayoutItem.MatrixBuiltinId) return "Matrix";
+            if (viewItemId == ViewAndLayoutItem.HTMLBuiltinId) return "HTML page";
+            if (viewItemId == ViewAndLayoutItem.MapBuiltinId) return "Map";
+            if (viewItemId == ViewAndLayoutItem.GisMapBuiltinId) return "Smart Map";
+            if (viewItemId == ViewAndLayoutItem.SystemMonitorBuiltinId) return "System monitor";
+            if (viewItemId == ViewAndLayoutItem.ImageTextBuiltInId) return "Image and text";
+            if (viewItemId == LegacyImageBuiltInId) return "Image";
+            if (viewItemId == LegacyTextBuiltInId) return "Text";
+            return "Unknown view item";
         }
 
         private Dictionary<string, ViewAndLayoutItem> BuildViewLookup()
@@ -298,71 +428,75 @@ namespace ViewCarousel.Client
 
         private void RenderView(ResolvedView view)
         {
+            if (_rendering) return;
+            _rendering = true;
+            try
+            {
+                RenderViewCore(view);
+            }
+            finally
+            {
+                _rendering = false;
+            }
+        }
+
+        private void RenderViewCore(ResolvedView view)
+        {
+            // Tear down previous tick's UI completely - cheap enough at carousel cadence
+            // and avoids cross-talk between view items configured in different slots.
+            DisposeAll();
+
             if (view.Layout == null || view.Layout.Length == 0) return;
 
-            // Disconnect existing viewers
-            foreach (var viewer in _viewers)
-            {
-                try { viewer.Disconnect(); } catch { }
-                viewer.Visibility = Visibility.Collapsed;
-            }
-
-            // Hide all placeholders
-            foreach (var ph in _placeholders)
-                ph.Visibility = Visibility.Collapsed;
-
-            double canvasW = cameraCanvas.ActualWidth;
-            double canvasH = cameraCanvas.ActualHeight;
+            double canvasW = slotCanvas.ActualWidth;
+            double canvasH = slotCanvas.ActualHeight;
             if (canvasW <= 0 || canvasH <= 0) return;
 
-            int viewerIdx = 0;
-            int placeholderIdx = 0;
+            var slotsByIndex = view.Slots.ToDictionary(s => s.Index, s => s);
 
             for (int i = 0; i < view.Layout.Length; i++)
             {
                 var rect = view.Layout[i];
 
-                // Milestone layout uses 0-999 coordinate space
+                // Milestone layout uses a 0-999 coordinate space.
                 double x = (rect.X / 999.0) * canvasW;
                 double y = (rect.Y / 999.0) * canvasH;
-                double w = (rect.Width / 999.0) * canvasW;
-                double h = (rect.Height / 999.0) * canvasH;
+                double w = Math.Max((rect.Width / 999.0) * canvasW, 1);
+                double h = Math.Max((rect.Height / 999.0) * canvasH, 1);
 
-                bool hasCamera = i < view.CameraFQIDs.Count && view.CameraFQIDs[i] != null;
-
-                if (hasCamera)
+                if (slotsByIndex.TryGetValue(i, out var slot))
                 {
-                    EnsureViewerCount(viewerIdx + 1);
-                    var viewer = _viewers[viewerIdx++];
-
-                    viewer.Width = Math.Max(w, 1);
-                    viewer.Height = Math.Max(h, 1);
-                    System.Windows.Controls.Canvas.SetLeft(viewer, x);
-                    System.Windows.Controls.Canvas.SetTop(viewer, y);
-                    viewer.Visibility = Visibility.Visible;
-
-                    viewer.CameraFQID = view.CameraFQIDs[i];
-                    viewer.Initialize();
-                    viewer.Connect();
-                    viewer.ShowImageViewer = true;
+                    switch (slot.Kind)
+                    {
+                        case SlotKind.Camera:
+                            AddCamera(slot, x, y, w, h);
+                            continue;
+                        case SlotKind.Plugin:
+                            if (slot.Plugin != null && _failedPluginIds.Contains(slot.Plugin.Id))
+                            {
+                                AddUnsupported(slot.Plugin.Name ?? "Plugin", x, y, w, h);
+                                continue;
+                            }
+                            if (TryAddPlugin(slot, x, y, w, h)) continue;
+                            if (slot.Plugin != null) _failedPluginIds.Add(slot.Plugin.Id);
+                            AddUnsupported(slot.Plugin?.Name ?? "Plugin", x, y, w, h);
+                            continue;
+                        case SlotKind.Unsupported:
+                            AddUnsupported(slot.UnsupportedLabel ?? "View item", x, y, w, h);
+                            continue;
+                        case SlotKind.Empty:
+                            AddPlaceholder(x, y, w, h);
+                            continue;
+                    }
                 }
-                else
-                {
-                    EnsurePlaceholderCount(placeholderIdx + 1);
-                    var ph = _placeholders[placeholderIdx++];
 
-                    ph.Width = Math.Max(w, 1);
-                    ph.Height = Math.Max(h, 1);
-                    System.Windows.Controls.Canvas.SetLeft(ph, x);
-                    System.Windows.Controls.Canvas.SetTop(ph, y);
-                    ph.Visibility = Visibility.Visible;
-                }
+                AddPlaceholder(x, y, w, h);
             }
         }
 
-        private void EnsureViewerCount(int count)
+        private void AddCamera(ResolvedSlot slot, double x, double y, double w, double h)
         {
-            while (_viewers.Count < count)
+            try
             {
                 var viewer = new ImageViewerWpfControl
                 {
@@ -371,27 +505,136 @@ namespace ViewCarousel.Client
                     SuppressUpdateOnMotionOnly = true,
                     EnableMouseControlledPtz = false
                 };
+                var border = WrapInBorder(viewer, w, h);
+                System.Windows.Controls.Canvas.SetLeft(border, x);
+                System.Windows.Controls.Canvas.SetTop(border, y);
+
                 _viewers.Add(viewer);
-                cameraCanvas.Children.Add(viewer);
-            }
-        }
+                slotCanvas.Children.Add(border);
 
-        private void EnsurePlaceholderCount(int count)
-        {
-            while (_placeholders.Count < count)
+                viewer.CameraFQID = slot.CameraFQID;
+                viewer.Initialize();
+                viewer.Connect();
+                viewer.ShowImageViewer = true;
+            }
+            catch (Exception ex)
             {
-                var panel = new VideoOS.Platform.UI.Controls.VideoOSPanel
-                {
-                    BackgroundAppearance = VideoOS.Platform.UI.Controls.VideoOSPanel.BackgroundAppearances.EmptyState,
-                    IsBorderVisible = true
-                };
-
-                _placeholders.Add(panel);
-                cameraCanvas.Children.Add(panel);
+                ViewCarouselDefinition.Log.Info($"Camera slot {slot.Index} render failed: {ex.Message}");
+                AddPlaceholder(x, y, w, h);
             }
         }
 
-        private void DisposeAllViewers()
+        private bool TryAddPlugin(ResolvedSlot slot, double x, double y, double w, double h)
+        {
+            ViewItemWpfUserControl ctrl = null;
+            try
+            {
+                var manager = slot.Plugin.GenerateViewItemManager();
+                if (manager == null) return false;
+
+                // Hydrate saved state. We deliberately do NOT pre-set manager.FQID -
+                // some bundled plugins use FQID identity to register receivers and a
+                // pre-set value collides with their internal expectations.
+                if (slot.Properties != null)
+                {
+                    foreach (var kv in slot.Properties)
+                    {
+                        try { manager.SetProperty(kv.Key, kv.Value); } catch { }
+                    }
+                }
+
+                try { manager.PropertiesLoaded(); } catch { }
+
+                ctrl = manager.GenerateViewItemWpfUserControl();
+                if (ctrl == null) return false;
+
+                var border = WrapInBorder(ctrl, w, h);
+                System.Windows.Controls.Canvas.SetLeft(border, x);
+                System.Windows.Controls.Canvas.SetTop(border, y);
+
+                slotCanvas.Children.Add(border);
+                ctrl.Init();
+
+                _pluginControls.Add(ctrl);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ViewCarouselDefinition.Log.Info($"Plugin slot {slot.Index} (plugin {slot.Plugin?.Name}) render failed: {ex.Message}");
+                if (ctrl != null)
+                {
+                    try { ctrl.Close(); } catch { }
+                }
+                return false;
+            }
+        }
+
+        // Plain WPF Border around camera and plugin tiles - just paints a 1px
+        // separator without any VideoOSPanel internal behavior interference.
+        private static readonly System.Windows.Media.SolidColorBrush SlotBorderBrush
+            = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x40, 0x40, 0x40));
+
+        private static System.Windows.Controls.Border WrapInBorder(
+            System.Windows.UIElement content, double w, double h)
+        {
+            return new System.Windows.Controls.Border
+            {
+                BorderBrush = SlotBorderBrush,
+                BorderThickness = new System.Windows.Thickness(1),
+                Width = w,
+                Height = h,
+                Child = content
+            };
+        }
+
+        private void AddPlaceholder(double x, double y, double w, double h)
+        {
+            // Construction matches the original carousel exactly: no Content (which
+            // would override whatever VideoOSPanel paints natively for EmptyState),
+            // and size set after construction.
+            var panel = new VideoOS.Platform.UI.Controls.VideoOSPanel
+            {
+                BackgroundAppearance = VideoOS.Platform.UI.Controls.VideoOSPanel.BackgroundAppearances.EmptyState,
+                IsBorderVisible = true
+            };
+            panel.Width = Math.Max(w, 1);
+            panel.Height = Math.Max(h, 1);
+            System.Windows.Controls.Canvas.SetLeft(panel, x);
+            System.Windows.Controls.Canvas.SetTop(panel, y);
+
+            slotCanvas.Children.Add(panel);
+        }
+
+        private void AddUnsupported(string itemName, double x, double y, double w, double h)
+        {
+            var panel = new VideoOS.Platform.UI.Controls.VideoOSPanel
+            {
+                BackgroundAppearance = VideoOS.Platform.UI.Controls.VideoOSPanel.BackgroundAppearances.EmptyState,
+                IsBorderVisible = true,
+                Width = w,
+                Height = h
+            };
+
+            var label = new System.Windows.Controls.TextBlock
+            {
+                Text = $"{itemName}\nnot supported in carousel",
+                Foreground = System.Windows.Media.Brushes.Gray,
+                TextAlignment = System.Windows.TextAlignment.Center,
+                TextWrapping = System.Windows.TextWrapping.Wrap,
+                FontSize = 12,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Margin = new System.Windows.Thickness(8)
+            };
+            panel.Content = label;
+
+            System.Windows.Controls.Canvas.SetLeft(panel, x);
+            System.Windows.Controls.Canvas.SetTop(panel, y);
+
+            slotCanvas.Children.Add(panel);
+        }
+
+        private void DisposeAll()
         {
             foreach (var viewer in _viewers)
             {
@@ -401,14 +644,17 @@ namespace ViewCarousel.Client
             }
             _viewers.Clear();
 
-            _placeholders.Clear();
+            foreach (var ctrl in _pluginControls)
+            {
+                try { ctrl.Close(); } catch { }
+            }
+            _pluginControls.Clear();
 
-            cameraCanvas.Children.Clear();
+            slotCanvas.Children.Clear();
         }
 
-        private void CameraCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void SlotCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            // Re-layout current view if running
             if (_resolvedViews != null && _currentIndex >= 0 && _currentIndex < _resolvedViews.Count)
             {
                 RenderView(_resolvedViews[_currentIndex]);
@@ -456,13 +702,13 @@ namespace ViewCarousel.Client
             if (_paused)
             {
                 _paused = false;
-                btnPause.Content = "\u23F8";
+                btnPause.Content = "⏸";
                 _carouselTimer.Start();
             }
             else
             {
                 _paused = true;
-                btnPause.Content = "\u25B6";
+                btnPause.Content = "▶";
                 _carouselTimer.Stop();
             }
         }
@@ -488,11 +734,24 @@ namespace ViewCarousel.Client
         public override bool ShowToolbar => false;
     }
 
+    internal enum SlotKind { Camera, Plugin, Empty, Unsupported }
+
+    internal class ResolvedSlot
+    {
+        public int Index { get; set; }
+        public SlotKind Kind { get; set; }
+        public FQID CameraFQID { get; set; }
+        public ViewItemPlugin Plugin { get; set; }
+        public Dictionary<string, string> Properties { get; set; }
+        public string UnsupportedLabel { get; set; }
+    }
+
     internal class ResolvedView
     {
         public string Name { get; set; }
         public int Seconds { get; set; }
         public Rectangle[] Layout { get; set; }
-        public List<FQID> CameraFQIDs { get; set; }
+        public List<ResolvedSlot> Slots { get; set; }
     }
+
 }

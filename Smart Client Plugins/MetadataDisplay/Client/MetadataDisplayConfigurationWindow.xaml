@@ -1,0 +1,1006 @@
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:MetadataDisplay.Client"
+    x:Class="MetadataDisplay.Client.MetadataDisplayConfigurationWindow"
+    Title="Metadata Display - Configuration"
+    Width="1920" Height="900"
+    MinWidth="1900" MinHeight="900"
+    MaxWidth="1920" MaxHeight="900"
+    ResizeMode="CanMinimize"
+    WindowStartupLocation="CenterOwner"
+    Background="#FF1E1E1E"
+    Foreground="#FFD0D0D0"
+    FontSize="13">
+    <Window.Resources>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FFE6EAEC"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="SectionContainer" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="HintText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Opacity" Value="0.55"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+
+        <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CaretBrush" Value="#FFD0D0D0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource DarkTextBox}"/>
+
+        <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bd" Background="#FF2A2A2A"
+                                Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF3399FF"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <ControlTemplate x:Key="DarkComboBoxToggle" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="20"/>
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Border" Grid.ColumnSpan="2" Background="#FF2A2A2A"
+                        BorderBrush="#FF444444" BorderThickness="1" CornerRadius="0"/>
+                <Border Grid.Column="0" Background="#FF2A2A2A" Margin="1"/>
+                <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#FFD0D0D0"
+                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </ControlTemplate>
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItem}"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Template="{StaticResource DarkComboBoxToggle}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Focusable="False" ClickMode="Press"/>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="6,4,24,4" VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     Background="Transparent" Foreground="#FFD0D0D0"
+                                     BorderThickness="0" Margin="6,2,24,2" Padding="0"
+                                     CaretBrush="#FFD0D0D0"
+                                     Visibility="Collapsed"
+                                     IsReadOnly="{TemplateBinding IsReadOnly}"
+                                     VerticalContentAlignment="Center"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                                   Focusable="False" AllowsTransparency="True" PopupAnimation="Slide">
+                                <Grid MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                      SnapsToDevicePixels="True">
+                                    <Border Background="#FF2A2A2A" BorderBrush="#FF444444" BorderThickness="1">
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource DarkComboBox}"/>
+
+        <Style x:Key="SmallButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF363636"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF555555"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF404040"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Button" BasedOn="{StaticResource SmallButton}"/>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+        </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+        </Style>
+
+        <!-- TabControl dark theme -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#FF333333"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Background" Value="#FF252525"/>
+            <Setter Property="Foreground" Value="#FFA9B5BB"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="#FF333333"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="3,3,0,0"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="0,0,2,0">
+                            <ContentPresenter ContentSource="Header"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF1E2528"/>
+                                <Setter Property="Foreground" Value="#FFE6EAEC"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF2C2C2C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="#FF252525" Padding="12,10" BorderBrush="#FF333333" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock x:Name="statusText" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#FFA9B5BB"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="cancelButton" Content="Cancel" MinWidth="90" Margin="0,0,8,0" Click="OnCancel"/>
+                    <Button x:Name="okButton" Content="Save" MinWidth="90" IsDefault="True" Click="OnSave"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="500"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="*" MinWidth="420"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="500"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left column: data source + chrome -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <TextBlock Text="Metadata channel" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="channelLabel" Grid.Column="0" Text="(none selected)" VerticalAlignment="Center"/>
+                            <Button x:Name="pickChannelButton" Grid.Column="1" Content="Select channel..."
+                                    Margin="8,0,0,0" Click="OnPickChannel"/>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Text="What to read" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button x:Name="learnStartButton" Content="Start Learn"
+                                        Margin="0,0,8,0" Click="OnStartLearn"/>
+                                <Button x:Name="learnStopButton" Content="Stop"
+                                        Margin="0,0,12,0" IsEnabled="False" Click="OnStopLearn"/>
+                                <TextBlock x:Name="learnStatus" VerticalAlignment="Center"
+                                           Style="{StaticResource HintText}" TextWrapping="Wrap"
+                                           Text="Idle. Start Learn to discover topics and fields."/>
+                            </StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Topic" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="topicCombo" IsEditable="True"
+                                          ToolTip="{Binding Text, RelativeSource={RelativeSource Self}, TargetNullValue='(no topic configured)', FallbackValue='(no topic configured)'}"
+                                          ToolTipService.ShowOnDisabled="True"/>
+                                <Button Grid.Column="2" x:Name="inspectPacketButton" Content="Inspect packet..."
+                                        Margin="8,0,0,0" Click="OnInspectPacket"
+                                        ToolTip="Open a recent XML packet for the selected Topic"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Field" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="dataKeyCombo" IsEditable="True"/>
+                            </Grid>
+                            <Expander x:Name="sourceFilterExpander" Header="Advanced - Source filter (per Source SimpleItem)" Foreground="#FFD0D0D0" Margin="-6,0,0,0">
+                                <StackPanel Margin="0,8,0,0">
+                                    <TextBlock TextWrapping="Wrap" Style="{StaticResource HintText}" Margin="0,0,0,6"
+                                               Text="Restrict to Source/SimpleItem matches. Format: name1=value1;name2=value2"/>
+                                    <TextBox x:Name="sourceFilterBox" Margin="0,0,0,6"/>
+                                    <ItemsControl x:Name="learnedSourceList"/>
+                                </StackPanel>
+                            </Expander>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Title and density" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Density" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="densityCombo" SelectedIndex="1"
+                                          ToolTip="Multiplier applied to non-user-set sizes so widgets line up across panes.">
+                                    <ComboBoxItem Content="Compact"/>
+                                    <ComboBoxItem Content="Comfortable"/>
+                                    <ComboBoxItem Content="Spacious"/>
+                                </ComboBox>
+                            </Grid>
+                            <CheckBox x:Name="showTitleCheck" Content="Show title" IsChecked="True" Margin="0,0,0,10"/>
+                            <Grid x:Name="titleConfigPanel">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Text" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="titleBox"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Position" Style="{StaticResource FieldLabel}"/>
+                                        <ComboBox Grid.Column="1" x:Name="titlePositionCombo" SelectedIndex="1">
+                                            <ComboBoxItem Content="Left"/>
+                                            <ComboBoxItem Content="Center"/>
+                                            <ComboBoxItem Content="Right"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Font size" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="titleFontSizeBox" Tag="positiveNumber"/>
+                                        <TextBlock Grid.Column="2" Text="Color" Style="{StaticResource FieldLabel}" Margin="12,0,0,0"/>
+                                        <Grid Grid.Column="3" x:Name="titleColorPickerHost" HorizontalAlignment="Left"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Export (CSV)" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <CheckBox x:Name="enableExportCheck" Content="Enable Export to CSV (Playback only)" IsChecked="True"
+                                      ToolTip="Adds an Export badge in Playback mode. Operators pick a date range and save matching rows to CSV."/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Stale handling (optional)" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="240"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Mark stale after (seconds, 0 = off)" Style="{StaticResource FieldLabel}"
+                                           ToolTip="Dims the widget and shows a 'stale' badge if no matching packet arrives within N seconds. 0 disables."/>
+                                <TextBox  Grid.Column="1" x:Name="staleSecondsBox" Tag="nonNegativeInteger"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Middle column: render-type selection + per-renderer settings -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <TextBlock Text="How to display" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <WrapPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <RadioButton x:Name="rtLamp" Content="Lamp" GroupName="rt" IsChecked="True" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtNumber" Content="Number" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtGauge" Content="Gauge" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtText" Content="Text" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtLine" Content="Line chart" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtTable" Content="Table" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtTrend" Content="Trend" GroupName="rt" Margin="0,0,0,6" Checked="OnRenderTypeChanged"/>
+                            </WrapPanel>
+
+                            <Grid x:Name="lampPanel" Visibility="Visible">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Icon size" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="lampIconSizeBox" Tag="positiveNumber"/>
+                                    </Grid>
+                                    <TextBlock Text="Map raw values to a label, color and optional icon:" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
+                                    <ItemsControl x:Name="lampRows"/>
+                                    <Button x:Name="addLampRowButton" Content="+ Add row" HorizontalAlignment="Left" Margin="0,4,0,0" Click="OnAddLampRow"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="numberPanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <CheckBox x:Name="thresholdsEnabledCheckNumber" Content="Enable thresholds" Margin="0,0,0,10"/>
+                                    <StackPanel x:Name="numberThresholdsBlock">
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="numMinBox" Margin="0,0,16,0" Tag="number"/>
+                                        <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                        <TextBox  Grid.Column="3" x:Name="numMaxBox" Tag="number"/>
+                                    </Grid>
+                                    <CheckBox x:Name="highIsBadCheck" Content="High value is bad (red above Max)" IsChecked="True" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Colors" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="colorOkPickerHost" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="colorWarnPickerHost" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="colorBadPickerHost"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Unit suffix" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox Grid.Column="1" x:Name="unitBoxNumber"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="gaugePanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8"
+                                               Text="Scale range = the gauge's left to right ends. Threshold colors split it into bands."/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Scale Min" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="gaugeRangeMinBox" Margin="0,0,16,0" Tag="number"/>
+                                        <TextBlock Grid.Column="2" Text="Scale Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                        <TextBox  Grid.Column="3" x:Name="gaugeRangeMaxBox" Tag="number"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Style" Style="{StaticResource FieldLabel}"/>
+                                        <ComboBox Grid.Column="1" x:Name="gaugeStyleCombo" SelectedIndex="0">
+                                            <ComboBoxItem Content="Modern - Half arc (180°)" Tag="Modern180"/>
+                                            <ComboBoxItem Content="Modern - Three-quarter arc (270°)" Tag="Modern270"/>
+                                            <ComboBoxItem Content="Classic - Half arc (180°)" Tag="Arc180"/>
+                                            <ComboBoxItem Content="Classic - Three-quarter arc (270°)" Tag="Arc270"/>
+                                            <ComboBoxItem Content="Bar" Tag="Bar"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Value" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <CheckBox x:Name="gaugeShowValueCheck" Content="Show value" IsChecked="True" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Font size" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="gaugeValueFontSizeBox" Width="80" Tag="positiveNumber"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Track" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="Thickness" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="gaugeTrackThicknessBox" Width="80" Margin="0,0,16,0" Tag="positiveNumber"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Ticks" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <CheckBox x:Name="gaugeShowTicksCheck" Content="Show ticks" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Count" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="gaugeTickCountBox" Width="80" Tag="nonNegativeInteger"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <CheckBox x:Name="thresholdsEnabledCheckGauge" Content="Enable thresholds" Margin="0,8,0,6"/>
+                                    <StackPanel x:Name="gaugeThresholdsBlock">
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="gaugeNumMinBox" Margin="0,0,16,0" Tag="number"/>
+                                        <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                        <TextBox  Grid.Column="3" x:Name="gaugeNumMaxBox" Tag="number"/>
+                                    </Grid>
+                                    <CheckBox x:Name="gaugeHighIsBadCheck" Content="High value is bad" IsChecked="True" Margin="0,0,0,10"/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Colors" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="gaugeColorOkPickerHost" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="gaugeColorWarnPickerHost" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="gaugeColorBadPickerHost"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Unit suffix" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox Grid.Column="1" x:Name="unitBoxGauge"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="textPanel" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Font size" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox  Grid.Column="1" x:Name="textFontSizeBox" Tag="positiveNumber"/>
+                                </Grid>
+                            </Grid>
+
+                            <Grid x:Name="linePanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8"
+                                               Text="Plots numeric metadata over time. Live mode keeps a rolling window; in playback the cursor walks the buffer."/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Window" Style="{StaticResource FieldLabel}"/>
+                                        <ComboBox Grid.Column="1" x:Name="lineWindowPresetCombo" Margin="0,0,12,0">
+                                            <ComboBoxItem Content="Last 60 sec" Tag="60"/>
+                                            <ComboBoxItem Content="Last 5 min" Tag="300"/>
+                                            <ComboBoxItem Content="Last 10 min" Tag="600"/>
+                                            <ComboBoxItem Content="Last 30 min" Tag="1800"/>
+                                            <ComboBoxItem Content="Last 1 hour" Tag="3600"/>
+                                            <ComboBoxItem Content="Last 6 hours" Tag="21600"/>
+                                            <ComboBoxItem Content="Last 24 hours" Tag="86400"/>
+                                            <ComboBoxItem Content="Custom (seconds)" Tag="custom"/>
+                                        </ComboBox>
+                                        <TextBox  Grid.Column="2" x:Name="lineWindowSecondsBox" Margin="0,0,16,0" Tag="positiveNumber"/>
+                                        <TextBlock Grid.Column="3" Text="Aggregation" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                        <ComboBox Grid.Column="4" x:Name="lineAggregationCombo" SelectedIndex="0" Margin="0,0,16,0">
+                                            <ComboBoxItem Content="Mean" Tag="Mean"/>
+                                            <ComboBoxItem Content="Min" Tag="Min"/>
+                                            <ComboBoxItem Content="Max" Tag="Max"/>
+                                        </ComboBox>
+                                        <CheckBox Grid.Column="5" x:Name="lineEnvelopeCheck" Content="Show min/max envelope" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*" MinWidth="160"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Series name" Style="{StaticResource FieldLabel}"
+                                                   ToolTip="Label shown in the legend strip and in the Trend / table headers. Defaults to the Field when empty."/>
+                                        <TextBox  Grid.Column="1" x:Name="lineDisplayNameBox" Margin="0,0,12,0"/>
+                                        <TextBlock Grid.Column="2" Text="Y min" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                        <TextBox  Grid.Column="3" x:Name="lineYMinBox" Margin="0,0,12,0" Tag="number"/>
+                                        <TextBlock Grid.Column="4" Text="Y max" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                        <TextBox  Grid.Column="5" x:Name="lineYMaxBox" Margin="0,0,12,0" Tag="number"/>
+                                        <TextBlock Grid.Column="6" Text="Line" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                        <ComboBox Grid.Column="7" x:Name="lineTypeCombo" SelectedIndex="0" Margin="0,0,12,0">
+                                            <ComboBoxItem Content="Straight" Tag="Straight"/>
+                                            <ComboBoxItem Content="Smooth" Tag="Smooth"/>
+                                            <ComboBoxItem Content="Step" Tag="Step"/>
+                                        </ComboBox>
+                                        <TextBlock Grid.Column="8" Text="Thickness" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                        <TextBox  Grid.Column="9" x:Name="lineThicknessBox" Tag="positiveNumber"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Line" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="Color" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <Grid x:Name="lineColorPickerHost" Margin="0,0,16,0"/>
+                                            <CheckBox x:Name="lineFillCheck" Content="Filled" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                            <CheckBox x:Name="lineMarkerCheck" Content="Markers" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                            <CheckBox x:Name="lineZoomCheck" Content="Zoom + pan (auto-pause)" IsChecked="True" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <CheckBox x:Name="lineShowLegendCheck" Content="Show series legend strip" Margin="0,4,0,0"/>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,2,0,8"
+                                               Text="When more than one series is configured, the legend chip strip lets the operator toggle individual lines on/off (session-only)."/>
+                                    <CheckBox x:Name="thresholdsEnabledCheckLine" Content="Enable thresholds" Margin="0,8,0,6"/>
+                                    <StackPanel x:Name="lineThresholdsBlock">
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8"
+                                               Text="Splits the Y range into colored bands behind the line."/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Threshold Min/Max" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="lineNumMinBox" Margin="0,0,8,0" Tag="number"/>
+                                        <TextBlock Grid.Column="2" Text="-" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                        <TextBox  Grid.Column="3" x:Name="lineNumMaxBox" Margin="0,0,16,0" Tag="number"/>
+                                        <TextBlock Grid.Column="4" Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                        <Grid Grid.Column="5" x:Name="lineColorOkPickerHost" Margin="0,0,12,0"/>
+                                        <TextBlock Grid.Column="6" Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                        <Grid Grid.Column="7" x:Name="lineColorWarnPickerHost" Margin="0,0,12,0"/>
+                                        <TextBlock Grid.Column="8" Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                        <Grid Grid.Column="9" x:Name="lineColorBadPickerHost" Margin="0,0,16,0"/>
+                                        <CheckBox Grid.Column="10" x:Name="lineHighIsBadCheck" Content="High value is bad" IsChecked="True" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid Visibility="Collapsed">
+                                        <StackPanel Orientation="Horizontal">
+                                        </StackPanel>
+                                    </Grid>
+                                    </StackPanel>
+                                    <Border BorderBrush="#FF333B40" BorderThickness="0,1,0,0" Margin="0,12,0,0"/>
+                                    <TextBlock Text="Additional series" FontWeight="SemiBold" Margin="0,12,0,8"/>
+                                    <StackPanel x:Name="additionalSeriesList"/>
+                                    <Button x:Name="addSeriesButton" Content="+ Add series" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="tablePanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8"
+                                               Text="Scrolling table of (Time, Value) rows. Live mode keeps the newest N rows in a rolling window; in playback the row at-or-before the cursor is highlighted."/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Window" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="tableWindowSecondsBox" Tag="positiveNumber"/>
+                                        <TextBlock Grid.Column="2" Text="seconds" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="6,0,16,0"/>
+                                        <ComboBox Grid.Column="3" x:Name="tableWindowPresetCombo" SelectedIndex="2" HorizontalAlignment="Left" Width="180">
+                                            <ComboBoxItem Content="Last 60 seconds"  Tag="60"/>
+                                            <ComboBoxItem Content="Last 5 minutes"   Tag="300"/>
+                                            <ComboBoxItem Content="Last 10 minutes"  Tag="600"/>
+                                            <ComboBoxItem Content="Last 30 minutes" Tag="1800"/>
+                                            <ComboBoxItem Content="Last 1 hour"     Tag="3600"/>
+                                            <ComboBoxItem Content="Last 6 hours"    Tag="21600"/>
+                                            <ComboBoxItem Content="Last 24 hours"   Tag="86400"/>
+                                            <ComboBoxItem Content="Custom"          Tag="custom"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Max rows" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox  Grid.Column="1" x:Name="tableMaxRowsBox" Tag="positiveNumber"/>
+                                        <TextBlock Grid.Column="2" Text="hard cap on stored rows; oldest are dropped first" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Timestamp" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <CheckBox x:Name="tableShowTimestampCheck" Content="Show column" IsChecked="True" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Format" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="tableTimestampFormatBox" Width="120"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Header name" Style="{StaticResource FieldLabel}"
+                                                   ToolTip="Header text for the value column. Leave blank to use 'Value'."/>
+                                        <TextBox  Grid.Column="1" x:Name="tableValueColumnNameBox"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Value" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="Font size" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="tableFontSizeBox" Width="60" Tag="positiveNumber" Margin="0,0,16,0"/>
+                                            <TextBlock Text="Align" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <ComboBox x:Name="tableValueAlignCombo" Width="100" SelectedIndex="0">
+                                                <ComboBoxItem Content="Left"   Tag="Left"/>
+                                                <ComboBoxItem Content="Center" Tag="Center"/>
+                                                <ComboBoxItem Content="Right"  Tag="Right"/>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Grid>
+                                    <CheckBox x:Name="tableShowDeltaCheck" Content="Show Δ column (numeric difference between consecutive rows)" Margin="0,0,0,10"/>
+                                    <CheckBox x:Name="thresholdsEnabledCheckTable" Content="Enable thresholds" Margin="0,0,0,6"/>
+                                    <StackPanel x:Name="tableThresholdsBlock">
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox  Grid.Column="1" x:Name="tableNumMinBox" Margin="0,0,16,0" Tag="number"/>
+                                            <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                            <TextBox  Grid.Column="3" x:Name="tableNumMaxBox" Tag="number"/>
+                                        </Grid>
+                                        <CheckBox x:Name="tableHighIsBadCheck" Content="High value is bad" IsChecked="True" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Colors" Style="{StaticResource FieldLabel}"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <TextBlock Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="tableColorOkPickerHost" Margin="0,0,16,0"/>
+                                                <TextBlock Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="tableColorWarnPickerHost" Margin="0,0,16,0"/>
+                                                <TextBlock Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="tableColorBadPickerHost"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid x:Name="trendPanel" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                               Text="Compact tile: a big current value, an arrow + Δ% versus the same time yesterday / last week / last month, and an inline sparkline. The Window below is the default; operators can override it from the in-pane window picker in live or playback mode."/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Window" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <ComboBox x:Name="trendWindowPresetCombo" Width="160" Margin="0,0,12,0">
+                                                <ComboBoxItem Content="Last 60 sec" Tag="60"/>
+                                                <ComboBoxItem Content="Last 5 min" Tag="300"/>
+                                                <ComboBoxItem Content="Last 10 min" Tag="600"/>
+                                                <ComboBoxItem Content="Last 30 min" Tag="1800"/>
+                                                <ComboBoxItem Content="Last 1 hour" Tag="3600"/>
+                                                <ComboBoxItem Content="Last 6 hours" Tag="21600"/>
+                                                <ComboBoxItem Content="Last 24 hours" Tag="86400"/>
+                                                <ComboBoxItem Content="Custom (seconds)" Tag="custom"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="trendWindowSecondsBox" Width="80" Tag="positiveNumber" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="220"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Compare to" Style="{StaticResource FieldLabel}"
+                                                   ToolTip="Reference value the current sample is compared against for the Δ% indicator."/>
+                                        <ComboBox Grid.Column="1" x:Name="trendComparisonModeCombo" SelectedIndex="0">
+                                            <ComboBoxItem Content="Same time yesterday" Tag="Yesterday"/>
+                                            <ComboBoxItem Content="Same time last week" Tag="LastWeek"/>
+                                            <ComboBoxItem Content="Same time last month" Tag="LastMonth"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Value" Style="{StaticResource FieldLabel}"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="Font size" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="trendValueFontSizeBox" Width="60" Tag="positiveNumber"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
+                                        <CheckBox x:Name="trendShowDeltaCheck" Content="Show Δ%" IsChecked="True" Margin="0,0,16,0"/>
+                                        <CheckBox x:Name="trendShowArrowCheck" Content="Show arrow" IsChecked="True"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="thresholdsEnabledCheckTrend" Content="Enable thresholds" Margin="0,0,0,10"/>
+                                    <StackPanel x:Name="trendThresholdsBlock">
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Threshold Min" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox  Grid.Column="1" x:Name="trendNumMinBox" Margin="0,0,16,0" Tag="number"/>
+                                            <TextBlock Grid.Column="2" Text="Threshold Max" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                            <TextBox  Grid.Column="3" x:Name="trendNumMaxBox" Tag="number"/>
+                                        </Grid>
+                                        <CheckBox x:Name="trendHighIsBadCheck" Content="High value is bad (red above Max)" IsChecked="True" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Colors" Style="{StaticResource FieldLabel}"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <TextBlock Text="OK" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="trendColorOkPickerHost" Margin="0,0,16,0"/>
+                                                <TextBlock Text="Warn" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="trendColorWarnPickerHost" Margin="0,0,16,0"/>
+                                                <TextBlock Text="Bad" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                                                <Grid x:Name="trendColorBadPickerHost"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource HintText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                               Text="Arrow + Δ% color follow the threshold direction. With High-is-bad off (high-is-good): up is green, down is red. With High-is-bad on: up is red, down is green."/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Right column: live preview -->
+            <Border Grid.Column="4" Background="Transparent" BorderBrush="#FF333333" BorderThickness="0" Padding="14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="64"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0"
+                               Text="Live preview"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="#FFE6EAEC"
+                               Margin="0,0,0,8"/>
+                    <Grid Grid.Row="1">
+                        <Viewbox x:Name="previewViewbox" Stretch="Uniform">
+                            <Grid Width="320" Background="Transparent">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition x:Name="previewTitleRow" Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0"
+                                           x:Name="previewTitleText"
+                                           Foreground="#FFCFD7DA"
+                                           FontSize="14"
+                                           Margin="0,0,0,2"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           Visibility="Collapsed"/>
+                                <Grid x:Name="previewHost" Grid.Row="1" Background="Transparent"/>
+                            </Grid>
+                        </Viewbox>
+                        <!-- Native-resolution host for chart-style previews - bypasses
+                             the 320-wide Viewbox so SkiaSharp paints crisply. Anchored
+                             to the top with a 16:9 aspect cap so the preview matches
+                             a typical pane shape instead of stretching to fill the
+                             whole column. -->
+                        <Viewbox x:Name="previewChartViewbox"
+                                 Stretch="Uniform"
+                                 StretchDirection="DownOnly"
+                                 VerticalAlignment="Top"
+                                 HorizontalAlignment="Stretch"
+                                 Visibility="Collapsed">
+                            <Grid x:Name="previewChartHost"
+                                  Background="Transparent"
+                                  Width="640"
+                                  Height="360"/>
+                        </Viewbox>
+                        <!-- Empty-state overlay - mirrors the live ViewItem's
+                             "Waiting for data..." UI so the config preview matches
+                             what the user sees in production. Hidden once a sample
+                             arrives. -->
+                        <StackPanel x:Name="previewWaitingPanel"
+                                    Orientation="Vertical"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                            <Ellipse Width="14" Height="14"
+                                     Fill="#FFE69500"
+                                     Margin="0,0,0,6"
+                                     HorizontalAlignment="Center">
+                                <Ellipse.Triggers>
+                                    <EventTrigger RoutedEvent="Ellipse.Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever">
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                 From="0.25" To="1.0" Duration="0:0:0.9" AutoReverse="True"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </Ellipse.Triggers>
+                            </Ellipse>
+                            <TextBlock x:Name="previewWaitingText"
+                                       Text="Waiting for data..."
+                                       Foreground="#FFA9B5BB"
+                                       FontSize="13"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="previewWaitingDetail"
+                                       Text=""
+                                       Foreground="#FF7A8388"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       Margin="0,4,0,0"
+                                       TextWrapping="Wrap"
+                                       MaxWidth="360"/>
+                        </StackPanel>
+                    </Grid>
+                    <!-- Hidden status sinks: kept so existing diagnostic code-paths
+                         (channel/source errors, packet counts) still compile. The
+                         user-visible state is conveyed through previewWaitingPanel
+                         instead. -->
+                    <StackPanel Grid.Row="2" Visibility="Collapsed">
+                        <TextBlock x:Name="previewMetaText" Text=""/>
+                        <TextBlock x:Name="previewAgeText" Text=""/>
+                        <TextBlock x:Name="previewStatusText" Text=""/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+        </Grid>
+    </DockPanel>
+</Window>

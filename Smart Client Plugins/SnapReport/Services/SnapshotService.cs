@@ -25,8 +25,13 @@ namespace SnapReport.Services
             {
                 src = new JPEGLiveSource(cameraItem)
                 {
-                    SendInitialImage = false
+                    SendInitialImage = false,
+                    // Width/Height = 0 = deliver at the camera's native size.
+                    Width = 0,
+                    Height = 0,
                 };
+                // Must be called before Init. Tells the transcoder to keep source aspect.
+                src.SetKeepAspectRatio(true, false);
 
                 src.LiveContentEvent += (sender, e) =>
                 {
@@ -44,6 +49,14 @@ namespace SnapReport.Services
                             {
                                 result = data;
                                 timestamp = content.EndTime;
+                                try
+                                {
+                                    EnvironmentManager.Instance.Log(false, "SnapReport",
+                                        $"Snapshot {cameraItem.Name}: {data.Length} bytes, " +
+                                        $"reported {content.Width}x{content.Height}, " +
+                                        $"crop={content.CroppingDefined}");
+                                }
+                                catch { }
                                 signal.Set();
                             }
                         }

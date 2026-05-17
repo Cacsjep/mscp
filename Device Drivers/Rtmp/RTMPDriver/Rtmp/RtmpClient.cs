@@ -36,6 +36,8 @@ namespace RTMPDriver.Rtmp
         private string _appName; // from connect command (e.g., "live" or "stream1")
         private int _naluLengthSize = 4; // from AVCDecoderConfigurationRecord
         private DateTime _rtmpEpoch; // wall-clock time corresponding to RTMP timestamp 0
+        private DateTime _lastFrameWallTs; // monotonic guard for emitted frame timestamps
+        private long _futureClampCount;
         private Timer _publishTimer;
         private Timer _videoDataTimer;
 
@@ -604,15 +606,43 @@ namespace RTMPDriver.Rtmp
 
         private int _videoMsgCount;
 
+        // Re-anchor _rtmpEpoch when a frame's derived wall-clock would land more than this
+        // far in the future. Some publishers (slow encoder catching up, lavfi+-re drift) emit
+        // rtmpTs that races ahead of real time; forwarding those poisons the recording-server
+        // pipeline ("Frames received back or equal in time") for as long as wall-clock takes
+        // to catch up, dropping every legitimate frame in between.
+        private const int FutureClampSlackMs = 100;
+
         /// <summary>
         /// Convert RTMP timestamp (ms since stream start) to wall-clock DateTime.
         /// The epoch is set on the first video message so timestamps are properly spaced.
+        /// If the publisher's rtmpTs runs ahead of real time we clamp to UtcNow and
+        /// re-anchor the epoch so subsequent frames continue monotonically from now.
         /// </summary>
         private DateTime RtmpTimestampToDateTime(uint rtmpTs)
         {
+            DateTime now = DateTime.UtcNow;
             if (_rtmpEpoch == DateTime.MinValue)
-                _rtmpEpoch = DateTime.UtcNow - TimeSpan.FromMilliseconds(rtmpTs);
-            return _rtmpEpoch + TimeSpan.FromMilliseconds(rtmpTs);
+                _rtmpEpoch = now - TimeSpan.FromMilliseconds(rtmpTs);
+
+            DateTime frameTime = _rtmpEpoch + TimeSpan.FromMilliseconds(rtmpTs);
+            DateTime ceiling = now + TimeSpan.FromMilliseconds(FutureClampSlackMs);
+            if (frameTime > ceiling)
+            {
+                long n = Interlocked.Increment(ref _futureClampCount);
+                if (n == 1 || (n % 300) == 0)
+                {
+                    Toolbox.Log.Trace("RtmpClient: {0} rtmpTs {1} ms drifted {2:0} ms ahead of wall-clock; re-anchoring (clamp #{3})",
+                        _remoteEndPoint, rtmpTs, (frameTime - now).TotalMilliseconds, n);
+                }
+                frameTime = now;
+                _rtmpEpoch = now - TimeSpan.FromMilliseconds(rtmpTs);
+            }
+
+            if (_lastFrameWallTs != DateTime.MinValue && frameTime <= _lastFrameWallTs)
+                frameTime = _lastFrameWallTs.AddTicks(TimeSpan.TicksPerMillisecond);
+            _lastFrameWallTs = frameTime;
+            return frameTime;
         }
 
         private void HandleVideoData(byte[] payload, uint rtmpTimestamp)

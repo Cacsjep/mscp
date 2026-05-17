@@ -118,8 +118,22 @@ The decoded text is attached to the event via `CustomTag` (bare text). Use these
 | Status stuck on `Error:NoFrames` | Stall watchdog tripped. Check camera health; reconnect is automatic |
 | `Helper exe not found` | Ensure `BarcodeReaderHelper.exe` lives next to `BarcodeReader.dll` in `MIPPlugins\BarcodeReader` |
 | `Helper died (exit=255 NativeCrash)` in the Event Server log | Native dependency missing (typically a Media SDK / VC++ runtime DLL). Check the per-channel helper log under `C:\ProgramData\Milestone\BarcodeReader\` for the last stderr lines, then run Process Monitor on `BarcodeReaderHelper.exe` filtering `Result = NAME NOT FOUND` to find the missing DLL. Common cause: Recording Server not co-located with Event Server |
+| `Helper died (exit=6 NativeDepsMissing)` or helper log says `Event Server Dir not found` | The helper could not locate the Milestone Event Server install dir on this host. Happens on OEM rebrands or non-default install paths where neither the registry probe (`HKLM\SOFTWARE\VideoOS\Server\InstallationPath`) nor the standard `C:\Program Files\Milestone\XProtect Event Server` path resolves. Fix: add the Event Server install dir to the **Machine** `PATH` environment variable, then restart `MilestoneEventServerService`. See [OEM / non-default installs](#oem--non-default-installs) below |
 | `Helper died (exit=4 ManagedException)` | A managed exception escaped the helper. Full stack trace is in the per-channel helper log |
 | Bookmarks not appearing | Verify **Create bookmarks for detections** is checked; check the Event Server log for `BookmarkCreate failed` |
 | QR Code Matched not firing | Remember match is exact + case-sensitive. Compare the `DETECT` log line payload against the stored QR Code item |
+
+### OEM / non-default installs
+
+The helper process delay-loads native Milestone DLLs (`CoreToolkits.dll`, `IMV1.dll`, FFmpeg `avcodec-*.dll` etc.) from the Event Server install directory. The helper auto-discovers that directory via, in order:
+
+1. The path passed in by the plugin host (`milestoneDir`)
+2. Walking up from the helper exe location (`...\MIPPlugins\BarcodeReader\` &rarr; parent service install dir)
+3. Registry: `HKLM\SOFTWARE\VideoOS\Server\InstallationPath`, `HKLM\SOFTWARE\VideoOS\Recorder\InstallationPath`, `HKLM\SOFTWARE\VideoOS\Platform\InstallationPath`
+4. Hardcoded defaults: `C:\Program Files\Milestone\XProtect Event Server` and siblings
+
+OEM rebrands ship under their own vendor folder and may omit the `HKLM\SOFTWARE\VideoOS` keys entirely. If steps 1-4 all fail, the helper fails fast with exit code `6 NativeDepsMissing` and writes `Event Server Dir not found` to its log.
+
+**Fix on OEM hosts:** add the Event Server install dir to the **Machine** `PATH` environment variable, then restart `MilestoneEventServerService`. The Windows native loader picks up `PATH` after its default search list, so the delay-load resolves once the directory is reachable that way. (https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/)
 
 </div>

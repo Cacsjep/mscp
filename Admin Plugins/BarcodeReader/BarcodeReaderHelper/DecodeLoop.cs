@@ -129,14 +129,23 @@ namespace BarcodeReaderHelper
 
         public void Start()
         {
+            // Native delay-load DLLs in Milestone's media stack are bound on first use of
+            // JPEGLiveSource. If one is missing the process is killed by SEH (0xc06d007e)
+            // before any managed handler can run  the only forensic trail is which line
+            // logged last. Keep these traces until we have a confirmed root cause.
+            _log.Info("DecodeLoop.Start: enter");
             Interlocked.Exchange(ref _lastFrameTicks, DateTime.UtcNow.Ticks);
             Interlocked.Exchange(ref _reconnectSettleUntilTicks, DateTime.UtcNow.AddMilliseconds(ReconnectSettleMs).Ticks);
+            _log.Info("DecodeLoop.Start: pre-OpenSource");
             OpenSource();
+            _log.Info("DecodeLoop.Start: post-OpenSource");
 
             _worker = new Thread(WorkerLoop) { IsBackground = true, Name = "BarcodeDecode" };
             _worker.Start();
+            _log.Info("DecodeLoop.Start: worker thread started");
 
             _statsTimer = new Timer(_ => OnStatsTick(), null, StatsIntervalMs, StatsIntervalMs);
+            _log.Info("DecodeLoop.Start: stats timer armed, returning");
         }
 
         public void Stop()
@@ -154,11 +163,16 @@ namespace BarcodeReaderHelper
                 if (_stopping) return;
                 try
                 {
+                    _log.Info("OpenSource: ctor JPEGLiveSource");
                     _src = new JPEGLiveSource(_cameraItem) { SendInitialImage = false };
+                    _log.Info("OpenSource: subscribing events");
                     _src.LiveContentEvent += OnLiveContent;
                     _src.LiveStatusEvent  += OnLiveStatus;
+                    _log.Info("OpenSource: Init() begin");
                     _src.Init();
+                    _log.Info("OpenSource: Init() returned");
                     _src.LiveModeStart = true;
+                    _log.Info("OpenSource: LiveModeStart=true returned");
                     UpdateStatus("Running");
                 }
                 catch (Exception ex)

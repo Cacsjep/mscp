@@ -160,5 +160,26 @@
     "extraStagingFiles": [
       "Installer/Mscp.PkiCertInstaller/bin/Release/net9.0-windows/win-x64/publish/Mscp.PkiCertInstaller.exe"
     ]
+  },
+  {
+    "name": "TimelineJump",
+    "displayName": "Timeline Jump",
+    "path": "Smart Client Plugins/TimelineJump",
+    "category": "SmartClient",
+    "description": "Toolbar flyout to jump the playback timeline backward or forward by configurable increments (seconds, minutes, hours, days)"
+  },
+  {
+    "name": "MetadataDisplay",
+    "displayName": "Metadata Display",
+    "path": "Smart Client Plugins/MetadataDisplay",
+    "category": "SmartClient",
+    "description": "Display ONVIF metadata values as live and playback dashboard widgets (lamp, number with thresholds, gauge, text) in Smart Client view items"
+  },
+  {
+    "name": "WebViewer",
+    "displayName": "Web Viewer",
+    "path": "Smart Client Plugins/WebViewer",
+    "category": "SmartClient",
+    "description": "Embed a single web page in a Smart Client view item via Microsoft Edge WebView2 (per-item URL, optional title, HTTP Basic credentials)"
   }
 ]

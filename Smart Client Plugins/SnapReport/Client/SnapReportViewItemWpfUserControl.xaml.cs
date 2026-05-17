@@ -9,7 +9,9 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using SnapReport.Services;
 using VideoOS.Platform;
@@ -21,6 +23,8 @@ namespace SnapReport.Client
     public partial class SnapReportViewItemWpfUserControl : ViewItemWpfUserControl
     {
         private List<CameraTreeNode> _rootNodes;
+        private Stopwatch _generationTimer;
+        private DispatcherTimer _elapsedTimer;
 
         public SnapReportViewItemWpfUserControl()
         {
@@ -266,6 +270,12 @@ namespace SnapReport.Client
             return bmp;
         }
 
+        private void OnSplitToggleChanged(object sender, RoutedEventArgs e)
+        {
+            if (splitSizeBox != null)
+                splitSizeBox.IsEnabled = splitToggle.IsChecked == true;
+        }
+
         private async void OnGenerateClick(object sender, RoutedEventArgs e)
         {
             var cameras = GetCheckedCameras();
@@ -274,6 +284,20 @@ namespace SnapReport.Client
                 MessageBox.Show("Please select at least one camera.", "SnapReport",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
+            }
+
+            // Resolve split settings
+            long? maxBytesPerPart = null;
+            bool splitEnabled = splitToggle.IsChecked == true;
+            if (splitEnabled)
+            {
+                if (!int.TryParse(splitSizeBox.Text, out int mb) || mb < 1)
+                {
+                    MessageBox.Show("Split size must be a whole number of megabytes (1 or higher).",
+                        "SnapReport", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                maxBytesPerPart = mb * 1024L * 1024L;
             }
 
             var dlg = new SaveFileDialog
@@ -293,10 +317,7 @@ namespace SnapReport.Client
             snapshotList.ItemsSource = previews;
             idlePlaceholder.Visibility = Visibility.Collapsed;
             snapshotScroll.Visibility = Visibility.Visible;
-            progressBar.Visibility = Visibility.Visible;
-            progressBar.Maximum = cameras.Count;
-            progressBar.Value = 0;
-            progressCount.Text = $"0 / {cameras.Count}";
+            StartProgress(cameras.Count);
 
             var entries = new List<CameraReportEntry>();
             string tempDir = Path.Combine(Path.GetTempPath(), "SnapReport_" + Guid.NewGuid());
@@ -357,17 +378,18 @@ namespace SnapReport.Client
                         HasImage = thumbnail != null,
                         HasError = error != null,
                     });
-                    progressBar.Value = completed;
-                    progressCount.Text = $"{completed} / {total}";
+                    UpdateProgress(completed, total, cam.Name);
                     statusText.Text = $"Captured: {cam.Name}";
                     snapshotScroll.ScrollToEnd();
                 }
 
                 statusText.Text = "Generating PDF...";
+                progressCurrent.Text = "Generating PDF...";
 
+                List<string> producedFiles;
                 try
                 {
-                    await Task.Run(() => PdfReportService.GenerateReport(outputPath, entries));
+                    producedFiles = await Task.Run(() => PdfReportService.GenerateReport(outputPath, entries, maxBytesPerPart));
                 }
                 catch (Exception ex)
                 {
@@ -377,19 +399,40 @@ namespace SnapReport.Client
                     return;
                 }
 
-                statusText.Text = $"Saved: {outputPath}";
-                progressCount.Text = $"{total} / {total} - Done";
-
-                try
+                if (producedFiles.Count == 1)
                 {
-                    var result = MessageBox.Show("Report generated successfully!\n\nOpen the PDF now?",
-                        "SnapReport", MessageBoxButton.YesNo, MessageBoxImage.Information);
-                    if (result == MessageBoxResult.Yes)
+                    statusText.Text = $"Saved: {producedFiles[0]}";
+                    progressCount.Text = $"{total} / {total} - Done";
+
+                    try
                     {
-                        Process.Start(new ProcessStartInfo(outputPath) { UseShellExecute = true });
+                        var result = MessageBox.Show("Report generated successfully!\n\nOpen the PDF now?",
+                            "SnapReport", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            Process.Start(new ProcessStartInfo(producedFiles[0]) { UseShellExecute = true });
+                        }
                     }
+                    catch { }
                 }
-                catch { }
+                else
+                {
+                    string folder = Path.GetDirectoryName(producedFiles[0]);
+                    statusText.Text = $"Saved {producedFiles.Count} files to {folder}";
+                    progressCount.Text = $"{total} / {total} - Done ({producedFiles.Count} parts)";
+
+                    try
+                    {
+                        var result = MessageBox.Show(
+                            $"Report split into {producedFiles.Count} files.\n\nOpen output folder?",
+                            "SnapReport", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                        if (result == MessageBoxResult.Yes && folder != null)
+                        {
+                            Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
+                        }
+                    }
+                    catch { }
+                }
             }
             catch (Exception ex)
             {
@@ -407,8 +450,108 @@ namespace SnapReport.Client
                 catch { }
 
                 generateButton.IsEnabled = true;
-                progressBar.Visibility = Visibility.Collapsed;
+                StopProgress();
             }
+        }
+
+        private void StartProgress(int total)
+        {
+            progressPanel.Visibility = Visibility.Visible;
+            progressPercent.Text = "0%";
+            progressCurrent.Text = "Starting capture...";
+            progressCount.Text = $"0 / {total}";
+            progressElapsed.Text = "0s";
+            progressFill.Width = 0;
+
+            _generationTimer = Stopwatch.StartNew();
+            _elapsedTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _elapsedTimer.Tick += (s, e) =>
+            {
+                if (_generationTimer == null) return;
+                var sec = (int)_generationTimer.Elapsed.TotalSeconds;
+                progressElapsed.Text = sec < 60
+                    ? $"{sec}s"
+                    : $"{sec / 60}m {sec % 60:D2}s";
+            };
+            _elapsedTimer.Start();
+
+            StartShimmer();
+        }
+
+        private void UpdateProgress(int completed, int total, string currentCamera)
+        {
+            double ratio = total > 0 ? (double)completed / total : 0;
+            int pct = (int)Math.Round(ratio * 100);
+            progressPercent.Text = $"{pct}%";
+            progressCount.Text = $"{completed} / {total}";
+            progressCurrent.Text = currentCamera;
+
+            double trackWidth = progressTrack.ActualWidth;
+            if (trackWidth <= 0) return;
+
+            var anim = new DoubleAnimation
+            {
+                To = trackWidth * ratio,
+                Duration = TimeSpan.FromMilliseconds(220),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            progressFill.BeginAnimation(WidthProperty, anim);
+        }
+
+        private void StartShimmer()
+        {
+            // The shimmer block (~30% of the track) slides repeatedly across the bar
+            // so the progress feels live even when no per-camera tick has come in yet.
+            progressTrack.SizeChanged -= OnTrackSizeChanged;
+            progressTrack.SizeChanged += OnTrackSizeChanged;
+            ApplyShimmerSize();
+
+            var trans = new System.Windows.Media.TranslateTransform();
+            progressShimmer.RenderTransform = trans;
+            ApplyShimmerAnimation(trans);
+        }
+
+        private void OnTrackSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            ApplyShimmerSize();
+            if (progressShimmer.RenderTransform is System.Windows.Media.TranslateTransform t)
+                ApplyShimmerAnimation(t);
+        }
+
+        private void ApplyShimmerSize()
+        {
+            if (progressTrack.ActualWidth > 0)
+                progressShimmer.Width = progressTrack.ActualWidth * 0.3;
+        }
+
+        private void ApplyShimmerAnimation(System.Windows.Media.TranslateTransform trans)
+        {
+            double w = progressTrack.ActualWidth;
+            if (w <= 0) return;
+
+            var anim = new DoubleAnimation
+            {
+                From = -w * 0.3,
+                To = w,
+                Duration = TimeSpan.FromSeconds(1.6),
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            trans.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, anim);
+        }
+
+        private void StopProgress()
+        {
+            progressPanel.Visibility = Visibility.Collapsed;
+            _elapsedTimer?.Stop();
+            _elapsedTimer = null;
+            _generationTimer?.Stop();
+            _generationTimer = null;
+
+            progressTrack.SizeChanged -= OnTrackSizeChanged;
+            if (progressShimmer?.RenderTransform is System.Windows.Media.TranslateTransform t)
+                t.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
+            progressFill.BeginAnimation(WidthProperty, null);
+            progressFill.Width = 0;
         }
     }
 

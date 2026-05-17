@@ -332,6 +332,61 @@ namespace Timelapse.Services
         }
 
         /// <summary>
+        /// Clips each segment to a per-day time window. <paramref name="dailyStart"/> and
+        /// <paramref name="dailyEnd"/> are wall-clock times-of-day. If dailyEnd &lt;= dailyStart,
+        /// the window wraps midnight (e.g. 22:00-06:00 means 22:00 -> next day 06:00).
+        /// A segment that spans multiple days is split into one piece per day.
+        /// </summary>
+        public static List<RecordingSegment> ClipToDailyWindow(
+            IReadOnlyList<RecordingSegment> segments,
+            TimeSpan dailyStart,
+            TimeSpan dailyEnd)
+        {
+            var result = new List<RecordingSegment>();
+            if (segments == null || segments.Count == 0) return result;
+            if (dailyStart < TimeSpan.Zero) dailyStart = TimeSpan.Zero;
+            if (dailyEnd < TimeSpan.Zero) dailyEnd = TimeSpan.Zero;
+            if (dailyStart >= TimeSpan.FromDays(1)) dailyStart = TimeSpan.FromDays(1) - TimeSpan.FromMinutes(1);
+            if (dailyEnd > TimeSpan.FromDays(1)) dailyEnd = TimeSpan.FromDays(1);
+
+            // Build the list of [windowStart, windowEnd] intervals that cover any segment.
+            // Day 'd' contributes one interval; if wrapping, day 'd' contributes
+            //   [d + dailyStart, d+1 + dailyEnd]
+            // otherwise [d + dailyStart, d + dailyEnd].
+            bool wraps = dailyEnd <= dailyStart;
+
+            foreach (var seg in segments)
+            {
+                // Iterate over each calendar day touched by [seg.Start, seg.End], plus one
+                // day before to catch a wrapping window that started the previous day.
+                var firstDay = seg.Start.Date.AddDays(wraps ? -1 : 0);
+                var lastDay = seg.End.Date;
+
+                for (var day = firstDay; day <= lastDay; day = day.AddDays(1))
+                {
+                    DateTime winStart, winEnd;
+                    if (wraps)
+                    {
+                        winStart = day + dailyStart;
+                        winEnd = day.AddDays(1) + dailyEnd;
+                    }
+                    else
+                    {
+                        winStart = day + dailyStart;
+                        winEnd = day + dailyEnd;
+                    }
+
+                    var s = seg.Start > winStart ? seg.Start : winStart;
+                    var e = seg.End < winEnd ? seg.End : winEnd;
+                    if (e > s) result.Add(new RecordingSegment(s, e));
+                }
+            }
+
+            result.Sort((a, b) => a.Start.CompareTo(b.Start));
+            return result;
+        }
+
+        /// <summary>
         /// True if <paramref name="ts"/> falls inside any segment. O(log n) via binary search.
         /// </summary>
         public static bool Covers(IReadOnlyList<RecordingSegment> segments, DateTime ts)

@@ -1,0 +1,2387 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+using System.Xml;
+using System.Xml.Linq;
+using CommunitySDK;
+using FontAwesome5;
+using MetadataDisplay.Client.Renderers;
+using VideoOS.Platform;
+using VideoOS.Platform.Live;
+using VideoOS.Platform.UI;
+
+namespace MetadataDisplay.Client
+{
+    public partial class MetadataDisplayConfigurationWindow : Window
+    {
+        private static readonly PluginLog _log = new PluginLog("MetadataDisplay");
+
+        private readonly MetadataDisplayViewItemManager _vim;
+
+        private Item _metadataItem;
+        private string _metadataIdString = "";
+        private string _metadataNameString = "";
+
+        // Single shared MetadataLiveSource: feeds both preview render and learn aggregator.
+        private MetadataLiveSource _source;
+        private int _packetsSeen;
+
+        // Snapshot of the extractor config built on the UI thread; read lock-free from
+        // the background LiveContentEvent callback to avoid touching WPF controls there.
+        private volatile ExtractorConfig _extractorSnapshot;
+
+        // Learn is just an aggregator now; the source is shared.
+        private readonly MetadataLearnSession _learn = new MetadataLearnSession();
+
+        private DateTime? _lastPreviewUtc;
+        private string _lastPreviewValue;
+        private DispatcherTimer _ageTicker;
+        private bool _uiReady;
+
+        // Tracks the gauge style at last hydrate / style-change so we can swap the
+        // thickness textbox between style defaults (Bar=2, others=6) only when the
+        // user hadn't typed a custom value.
+        private GaugeStyle _prevGaugeStyle;
+
+        // Live preview renderers (mirror the actual ViewItem widget)
+        private LampRenderer _previewLamp;
+        private NumberRenderer _previewNumber;
+        private GaugeRenderer _previewGauge;
+        private TextRenderer _previewText;
+        private LineChartRenderer _previewLine;
+        private TableRenderer _previewTable;
+        private TrendRenderer _previewTrend;
+
+        // Additional line series rows (Series 2..N - Series 1 lives in the
+        // legacy line-panel fields). Cap is LineSeriesParser.MaxSeries - 1.
+        private readonly List<AdditionalLineSeriesRow> _additionalSeriesRows = new List<AdditionalLineSeriesRow>();
+        // Immutable per-row ExtractorConfig snapshot rebuilt on the UI thread
+        // whenever a row's Topic / Field / Source filter changes. The source
+        // callback reads this list off-thread, so the reference is replaced
+        // wholesale rather than mutated in place.
+        private volatile IReadOnlyList<ExtractorConfig> _additionalExtractorSnapshots = new List<ExtractorConfig>();
+
+        // Color pickers (one per color slot)
+        private ColorPickerControl _colorOk, _colorWarn, _colorBad;
+        private ColorPickerControl _gaugeColorOk, _gaugeColorWarn, _gaugeColorBad;
+        private ColorPickerControl _lineColor, _lineColorOk, _lineColorWarn, _lineColorBad;
+        private ColorPickerControl _tableColorOk, _tableColorWarn, _tableColorBad;
+        private ColorPickerControl _trendColorOk, _trendColorWarn, _trendColorBad;
+        private ColorPickerControl _titleColor;
+
+        public MetadataDisplayConfigurationWindow(MetadataDisplayViewItemManager viewItemManager)
+        {
+            _vim = viewItemManager;
+            InitializeComponent();
+            _learn.Updated += OnLearnUpdated;
+            Loaded += (s, e) =>
+            {
+                _log.Info("[ConfigWindow] Loaded");
+                _uiReady = true;
+                Hydrate();
+            };
+            Closed += (s, e) => { _log.Info("[ConfigWindow] Closed"); Teardown(); };
+        }
+
+        // ───────── Hydrate ─────────
+
+        private void Hydrate()
+        {
+            // Color pickers - instantiate once and host them in the placeholder Grids.
+            _colorOk = MountColorPicker(colorOkPickerHost);
+            _colorWarn = MountColorPicker(colorWarnPickerHost);
+            _colorBad = MountColorPicker(colorBadPickerHost);
+            _gaugeColorOk = MountColorPicker(gaugeColorOkPickerHost);
+            _gaugeColorWarn = MountColorPicker(gaugeColorWarnPickerHost);
+            _gaugeColorBad = MountColorPicker(gaugeColorBadPickerHost);
+            _lineColor = MountColorPicker(lineColorPickerHost);
+            _lineColorOk = MountColorPicker(lineColorOkPickerHost);
+            _lineColorWarn = MountColorPicker(lineColorWarnPickerHost);
+            _lineColorBad = MountColorPicker(lineColorBadPickerHost);
+            _tableColorOk = MountColorPicker(tableColorOkPickerHost);
+            _tableColorWarn = MountColorPicker(tableColorWarnPickerHost);
+            _tableColorBad = MountColorPicker(tableColorBadPickerHost);
+            _trendColorOk = MountColorPicker(trendColorOkPickerHost);
+            _trendColorWarn = MountColorPicker(trendColorWarnPickerHost);
+            _trendColorBad = MountColorPicker(trendColorBadPickerHost);
+            _titleColor = MountColorPicker(titleColorPickerHost);
+
+            // Title section
+            SelectComboItem(densityCombo, _vim.WidgetDensity ?? "Comfortable");
+            showTitleCheck.IsChecked = !string.Equals(_vim.ShowTitle, "false", StringComparison.OrdinalIgnoreCase);
+            titleBox.Text = _vim.Title ?? "";
+            SelectComboItem(titlePositionCombo, _vim.TitlePosition ?? "Left");
+            titleFontSizeBox.Text = _vim.TitleFontSize ?? "14";
+            _titleColor.HexValue = _vim.TitleColor ?? "#FFCFD7DA";
+            ApplyTitleEnabled();
+
+            _metadataIdString = _vim.MetadataId ?? "";
+            _metadataNameString = _vim.MetadataName ?? "";
+            ResolveMetadataItem();
+            UpdateChannelLabel();
+
+            topicCombo.Text = _vim.Topic ?? "";
+            dataKeyCombo.Text = _vim.DataKey ?? "";
+            sourceFilterBox.Text = _vim.SourceFilters ?? "";
+            sourceFilterExpander.IsExpanded = !string.IsNullOrEmpty(_vim.SourceFilters);
+
+            switch ((_vim.RenderType ?? "Lamp"))
+            {
+                case "Number":    rtNumber.IsChecked = true; break;
+                case "Gauge":     rtGauge.IsChecked = true; break;
+                case "Text":      rtText.IsChecked = true; break;
+                case "LineChart": rtLine.IsChecked = true; break;
+                case "Table":     rtTable.IsChecked = true; break;
+                case "Trend":     rtTrend.IsChecked = true; break;
+                default:          rtLamp.IsChecked = true; break;
+            }
+
+            RebuildLampRowsFromManager();
+            lampIconSizeBox.Text = _vim.LampIconSize ?? "96";
+            textFontSizeBox.Text = _vim.TextFontSize ?? "28";
+
+            // Master enable for the shared Number/Gauge/LineChart threshold model.
+            // Mirror the same checked state into all three panel checkboxes so the UI
+            // stays consistent regardless of which render type the user opens with.
+            bool thresholdsOn = string.Equals(_vim.ThresholdsEnabled, "true", StringComparison.OrdinalIgnoreCase);
+            thresholdsEnabledCheckNumber.IsChecked = thresholdsOn;
+            thresholdsEnabledCheckGauge.IsChecked = thresholdsOn;
+            thresholdsEnabledCheckLine.IsChecked = thresholdsOn;
+            thresholdsEnabledCheckTable.IsChecked = thresholdsOn;
+            thresholdsEnabledCheckTrend.IsChecked = thresholdsOn;
+
+            numMinBox.Text = _vim.NumMin ?? "";
+            numMaxBox.Text = _vim.NumMax ?? "";
+            highIsBadCheck.IsChecked = !string.Equals(_vim.NumDirection, "LowIsBad", StringComparison.OrdinalIgnoreCase);
+            _colorOk.HexValue = _vim.ColorOk ?? "#3CB371";
+            _colorWarn.HexValue = _vim.ColorWarn ?? "#E69500";
+            _colorBad.HexValue = _vim.ColorBad ?? "#D8392C";
+            unitBoxNumber.Text = _vim.Unit ?? "";
+
+            gaugeRangeMinBox.Text = _vim.GaugeRangeMin ?? "0";
+            gaugeRangeMaxBox.Text = _vim.GaugeRangeMax ?? "100";
+            SelectComboItem(gaugeStyleCombo, _vim.GaugeStyle ?? "Arc180");
+            gaugeNumMinBox.Text = _vim.NumMin ?? "";
+            gaugeNumMaxBox.Text = _vim.NumMax ?? "";
+            gaugeHighIsBadCheck.IsChecked = highIsBadCheck.IsChecked;
+            _gaugeColorOk.HexValue = _colorOk.HexValue;
+            _gaugeColorWarn.HexValue = _colorWarn.HexValue;
+            _gaugeColorBad.HexValue = _colorBad.HexValue;
+            unitBoxGauge.Text = _vim.Unit ?? "";
+            gaugeShowValueCheck.IsChecked = !string.Equals(_vim.GaugeShowValue, "false", StringComparison.OrdinalIgnoreCase);
+            gaugeValueFontSizeBox.Text = _vim.GaugeValueFontSize ?? "34";
+            gaugeShowTicksCheck.IsChecked = string.Equals(_vim.GaugeShowTicks, "true", StringComparison.OrdinalIgnoreCase);
+            gaugeTickCountBox.Text = _vim.GaugeTickCount ?? "10";
+            // Stored value wins; otherwise show the style-specific default (Bar=2, others=6).
+            gaugeTrackThicknessBox.Text = _vim.GaugeTrackThickness ?? FormatNumber(GaugeConfig.DefaultTrackThickness(CurrentGaugeStyle()));
+            _prevGaugeStyle = CurrentGaugeStyle();
+
+            // LineChart
+            lineWindowSecondsBox.Text = _vim.LineWindowSeconds ?? "60";
+            SyncLineWindowPresetCombo();
+            SelectComboItem(lineAggregationCombo, _vim.LineAggregation ?? "Mean");
+            lineEnvelopeCheck.IsChecked = string.Equals(_vim.LineEnvelope, "true", StringComparison.OrdinalIgnoreCase);
+            lineYMinBox.Text = _vim.LineYMin ?? "";
+            lineYMaxBox.Text = _vim.LineYMax ?? "";
+            _lineColor.HexValue = _vim.LineColor ?? "#FF4FC3F7";
+            lineFillCheck.IsChecked = string.Equals(_vim.LineFill, "true", StringComparison.OrdinalIgnoreCase);
+            lineMarkerCheck.IsChecked = string.Equals(_vim.LineShowMarker, "true", StringComparison.OrdinalIgnoreCase);
+            lineZoomCheck.IsChecked = !string.Equals(_vim.LineZoomEnabled, "false", StringComparison.OrdinalIgnoreCase);
+            // LineType wins over the older LineSmoothing flag; if LineType isn't set
+            // yet (legacy widget), promote LineSmoothing="true" to "Smooth".
+            string storedType = _vim.LineType;
+            if (string.IsNullOrEmpty(storedType))
+                storedType = string.Equals(_vim.LineSmoothing, "true", StringComparison.OrdinalIgnoreCase) ? "Smooth" : "Straight";
+            SelectComboItem(lineTypeCombo, storedType);
+            lineThicknessBox.Text = _vim.LineThickness ?? "2";
+            // Reuse the shared NumMin/NumMax/Direction + colors for thresholds.
+            lineNumMinBox.Text = _vim.NumMin ?? "";
+            lineNumMaxBox.Text = _vim.NumMax ?? "";
+            lineHighIsBadCheck.IsChecked = highIsBadCheck.IsChecked;
+            _lineColorOk.HexValue = _colorOk.HexValue;
+            _lineColorWarn.HexValue = _colorWarn.HexValue;
+            _lineColorBad.HexValue = _colorBad.HexValue;
+            lineShowLegendCheck.IsChecked = string.Equals(_vim.LineShowLegend, "true", StringComparison.OrdinalIgnoreCase);
+            // The display-name lives on the first LineSeries in LineSeriesJson
+            // (multi-series widgets) and isn't a separate manager property.
+            lineDisplayNameBox.Text = ResolveSeries1DisplayName();
+
+            HydrateAdditionalSeries();
+            UpdateAddSeriesButtonState();
+            addSeriesButton.Click += (s, e) => OnAddSeriesClick();
+
+            // Table
+            tableWindowSecondsBox.Text = _vim.TableWindowSeconds ?? "300";
+            SyncTableWindowPresetCombo();
+            tableMaxRowsBox.Text = _vim.TableMaxRows ?? "200";
+            tableShowTimestampCheck.IsChecked = !string.Equals(_vim.TableShowTimestamp, "false", StringComparison.OrdinalIgnoreCase);
+            tableTimestampFormatBox.Text = _vim.TableTimestampFormat ?? "HH:mm:ss";
+            tableShowDeltaCheck.IsChecked = string.Equals(_vim.TableShowDelta, "true", StringComparison.OrdinalIgnoreCase);
+            tableFontSizeBox.Text = _vim.TableFontSize ?? "12";
+            SelectComboItem(tableValueAlignCombo, _vim.TableValueAlignment ?? "Left");
+            tableValueColumnNameBox.Text = _vim.TableValueColumnName ?? string.Empty;
+            tableNumMinBox.Text = _vim.NumMin ?? "";
+            tableNumMaxBox.Text = _vim.NumMax ?? "";
+            tableHighIsBadCheck.IsChecked = highIsBadCheck.IsChecked;
+            _tableColorOk.HexValue = _colorOk.HexValue;
+            _tableColorWarn.HexValue = _colorWarn.HexValue;
+            _tableColorBad.HexValue = _colorBad.HexValue;
+
+            // Trend (tile). Window seconds is the saved default; the
+            // in-pane window picker overrides it at runtime.
+            trendWindowSecondsBox.Text = _vim.TrendLookbackSeconds ?? "300";
+            SyncTrendWindowPresetCombo();
+            trendValueFontSizeBox.Text = _vim.TrendValueFontSize ?? "48";
+            trendShowDeltaCheck.IsChecked = !string.Equals(_vim.TrendShowDelta, "false", StringComparison.OrdinalIgnoreCase);
+            trendShowArrowCheck.IsChecked = !string.Equals(_vim.TrendShowArrow, "false", StringComparison.OrdinalIgnoreCase);
+            SelectComboItem(trendComparisonModeCombo, _vim.TrendComparisonMode ?? "Yesterday");
+            // Trend uses the shared NumMin / NumMax / Direction / colors so the
+            // operator can configure thresholds in-place without switching to
+            // the Number panel.
+            trendNumMinBox.Text = _vim.NumMin ?? "";
+            trendNumMaxBox.Text = _vim.NumMax ?? "";
+            trendHighIsBadCheck.IsChecked = highIsBadCheck.IsChecked;
+            _trendColorOk.HexValue = _colorOk.HexValue;
+            _trendColorWarn.HexValue = _colorWarn.HexValue;
+            _trendColorBad.HexValue = _colorBad.HexValue;
+
+            staleSecondsBox.Text = _vim.StaleSeconds ?? "0";
+            enableExportCheck.IsChecked = !string.Equals(_vim.EnableExport, "false", StringComparison.OrdinalIgnoreCase);
+
+            ApplyRenderTypeVisibility();
+            ApplyThresholdsEnabledVisibility();
+            BuildPreviewHost();
+            RebuildExtractorSnapshot();
+            InstallNumericValidation();
+            StartSourceIfReady();
+            EnsureAgeTicker();
+
+            // Re-render whenever fields that affect the preview change.
+            HookFieldChangeHandlers();
+
+            UpdatePreviewTitle();
+        }
+
+        // Builds the extractor config from the WPF controls. MUST be called on the UI
+        // thread; the resulting immutable snapshot is then safe to read from any thread.
+        private void RebuildExtractorSnapshot()
+        {
+            _extractorSnapshot = new ExtractorConfig
+            {
+                Topic = topicCombo.Text ?? "",
+                TopicMatchMode = "Exact",
+                SourceFilters = ExtractorConfig.ParseSourceFilters(sourceFilterBox.Text ?? ""),
+                DataKey = dataKeyCombo.Text ?? "",
+            };
+        }
+
+        private ColorPickerControl MountColorPicker(Grid host)
+        {
+            var picker = new ColorPickerControl();
+            host.Children.Clear();
+            host.Children.Add(picker);
+            picker.ColorChanged += (s, e) => ReRenderPreview();
+            return picker;
+        }
+
+        private void ApplyTitleEnabled()
+        {
+            bool show = showTitleCheck.IsChecked == true;
+            titleConfigPanel.IsEnabled = show;
+            titleConfigPanel.Opacity = show ? 1.0 : 0.5;
+        }
+
+        private void UpdatePreviewTitle()
+        {
+            bool show = showTitleCheck.IsChecked == true;
+            var text = titleBox.Text ?? "";
+            if (!show || string.IsNullOrEmpty(text))
+            {
+                previewTitleText.Visibility = Visibility.Collapsed;
+                return;
+            }
+            previewTitleText.Visibility = Visibility.Visible;
+            previewTitleText.Text = text;
+
+            // Position
+            switch ((titlePositionCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Left")
+            {
+                case "Center": previewTitleText.HorizontalAlignment = HorizontalAlignment.Center; previewTitleText.TextAlignment = TextAlignment.Center; break;
+                case "Right":  previewTitleText.HorizontalAlignment = HorizontalAlignment.Right;  previewTitleText.TextAlignment = TextAlignment.Right;  break;
+                default:       previewTitleText.HorizontalAlignment = HorizontalAlignment.Left;   previewTitleText.TextAlignment = TextAlignment.Left;   break;
+            }
+            // Font size - density scales the title alongside the rest of the widget.
+            double baseFs = 14;
+            if (double.TryParse(titleFontSizeBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var fs) && fs > 0)
+                baseFs = fs;
+            string density = (densityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Comfortable";
+            previewTitleText.FontSize = baseFs * Renderers.WidgetTheme.DensityScale(density);
+            // Color
+            try
+            {
+                var c = (Color)ColorConverter.ConvertFromString(_titleColor.HexValue);
+                previewTitleText.Foreground = new SolidColorBrush(c);
+            }
+            catch { }
+        }
+
+        // ───────── Channel ─────────
+
+        private void OnPickChannel(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var picker = new ItemPickerWpfWindow
+                {
+                    Items = Configuration.Instance.GetItemsByKind(Kind.Metadata),
+                    KindsFilter = new List<Guid> { Kind.Metadata },
+                    SelectionMode = SelectionModeOptions.AutoCloseOnSelect,
+                };
+                if (picker.ShowDialog() == true && picker.SelectedItems != null && picker.SelectedItems.Any())
+                {
+                    StopSource();
+                    _learn.Reset();
+                    _learn.Stop();
+                    learnStartButton.IsEnabled = true;
+                    learnStopButton.IsEnabled = false;
+                    learnStatus.Text = "Idle. Pick a Topic + Data key from the discovered list, or click Start Learn.";
+
+                    _metadataItem = picker.SelectedItems.First();
+                    _metadataIdString = _metadataItem.FQID.ObjectId.ToString();
+                    _metadataNameString = _metadataItem.Name ?? "";
+                    UpdateChannelLabel();
+                    StartSourceIfReady();
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Pick channel failed: {ex.Message}", ex);
+                MessageBox.Show(this, "Could not open the channel picker:\n" + ex.Message, "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ResolveMetadataItem()
+        {
+            _metadataItem = null;
+            if (Guid.TryParse(_metadataIdString, out var id) && id != Guid.Empty)
+            {
+                try { _metadataItem = Configuration.Instance.GetItem(id, Kind.Metadata); }
+                catch (Exception ex) { _log.Error($"Resolve metadata item failed: {ex.Message}"); }
+            }
+        }
+
+        private void UpdateChannelLabel()
+        {
+            if (_metadataItem != null)
+                channelLabel.Text = _metadataItem.Name;
+            else if (!string.IsNullOrEmpty(_metadataNameString))
+                channelLabel.Text = _metadataNameString + "  (not found)";
+            else
+                channelLabel.Text = "(none selected)";
+        }
+
+        // ───────── Render type sub-panels ─────────
+
+        private void OnRenderTypeChanged(object sender, RoutedEventArgs e)
+        {
+            if (!_uiReady) return;
+            ApplyRenderTypeVisibility();
+            BuildPreviewHost();
+            ReRenderPreview();
+        }
+
+        private void ApplyRenderTypeVisibility()
+        {
+            if (lampPanel == null || numberPanel == null || gaugePanel == null || textPanel == null || linePanel == null || tablePanel == null || trendPanel == null) return;
+            lampPanel.Visibility   = rtLamp.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
+            numberPanel.Visibility = rtNumber.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            gaugePanel.Visibility  = rtGauge.IsChecked  == true ? Visibility.Visible : Visibility.Collapsed;
+            textPanel.Visibility   = rtText.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
+            linePanel.Visibility   = rtLine.IsChecked   == true ? Visibility.Visible : Visibility.Collapsed;
+            tablePanel.Visibility  = rtTable.IsChecked  == true ? Visibility.Visible : Visibility.Collapsed;
+            trendPanel.Visibility  = rtTrend.IsChecked  == true ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private bool _syncingThresholdsToggles;
+
+        // Threshold-enable is a single shared setting. The three checkboxes on the
+        // three panels mirror each other so the user sees the same answer no matter
+        // which render type they're configuring.
+        private void OnThresholdsToggled(CheckBox source)
+        {
+            if (!_uiReady || _syncingThresholdsToggles) return;
+            _syncingThresholdsToggles = true;
+            try
+            {
+                bool on = source.IsChecked == true;
+                if (thresholdsEnabledCheckNumber != source) thresholdsEnabledCheckNumber.IsChecked = on;
+                if (thresholdsEnabledCheckGauge  != source) thresholdsEnabledCheckGauge.IsChecked = on;
+                if (thresholdsEnabledCheckLine   != source) thresholdsEnabledCheckLine.IsChecked = on;
+                if (thresholdsEnabledCheckTable  != source) thresholdsEnabledCheckTable.IsChecked = on;
+                if (thresholdsEnabledCheckTrend  != source) thresholdsEnabledCheckTrend.IsChecked = on;
+            }
+            finally
+            {
+                _syncingThresholdsToggles = false;
+            }
+            ApplyThresholdsEnabledVisibility();
+            ReconfigureLinePreview();
+            ReconfigureTablePreview();
+            ReRenderPreview();
+        }
+
+        // Show "Waiting for data..." overlay when no value has arrived yet (matches
+        // the live ViewItem behaviour). Hide once we render an actual value. The
+        // detail line piggybacks on the existing previewStatusText so error / channel
+        // diagnostics still surface to the user without the verbose packet-counter UI.
+        // While the overlay is visible we also collapse the renderer hosts so their
+        // placeholder glyphs (e.g. the "-" stub of Number/Lamp/Text) don't bleed
+        // through underneath the overlay text.
+        private void ApplyWaitingPanelVisibility()
+        {
+            if (previewWaitingPanel == null) return;
+            bool hasValue = _lastPreviewValue != null;
+            // Line chart accumulates samples - once one's in the buffer we treat it
+            // as "has value" even if the latest packet didn't extract this tick.
+            if (!hasValue && _previewLine != null) hasValue = false;
+            previewWaitingPanel.Visibility = hasValue ? Visibility.Collapsed : Visibility.Visible;
+            if (!hasValue && previewWaitingDetail != null)
+                previewWaitingDetail.Text = previewStatusText?.Text ?? "";
+
+            bool isChart = _previewLine != null || _previewTable != null || _previewTrend != null;
+            if (hasValue)
+            {
+                if (isChart)
+                {
+                    if (previewChartViewbox != null) previewChartViewbox.Visibility = Visibility.Visible;
+                    if (previewViewbox != null) previewViewbox.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    if (previewChartViewbox != null) previewChartViewbox.Visibility = Visibility.Collapsed;
+                    if (previewViewbox != null) previewViewbox.Visibility = Visibility.Visible;
+                }
+            }
+            else
+            {
+                if (previewChartViewbox != null) previewChartViewbox.Visibility = Visibility.Collapsed;
+                if (previewViewbox != null) previewViewbox.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void ApplyThresholdsEnabledVisibility()
+        {
+            bool on = thresholdsEnabledCheckNumber?.IsChecked == true;
+            if (numberThresholdsBlock != null) numberThresholdsBlock.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            if (gaugeThresholdsBlock  != null) gaugeThresholdsBlock.Visibility  = on ? Visibility.Visible : Visibility.Collapsed;
+            if (lineThresholdsBlock   != null) lineThresholdsBlock.Visibility   = on ? Visibility.Visible : Visibility.Collapsed;
+            if (tableThresholdsBlock  != null) tableThresholdsBlock.Visibility  = on ? Visibility.Visible : Visibility.Collapsed;
+            if (trendThresholdsBlock  != null) trendThresholdsBlock.Visibility  = on ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void BuildPreviewHost()
+        {
+            if (previewHost == null) return;
+            previewHost.Children.Clear();
+            previewChartHost.Children.Clear();
+            _previewLamp = null;
+            _previewNumber = null;
+            _previewGauge = null;
+            _previewText = null;
+            _previewLine = null;
+            _previewTable = null;
+            _previewTrend = null;
+
+            UIElement visual;
+            bool isChart = false;
+            if (rtNumber.IsChecked == true)
+            {
+                _previewNumber = new NumberRenderer();
+                visual = _previewNumber.Visual;
+                _previewNumber.Clear();
+            }
+            else if (rtGauge.IsChecked == true)
+            {
+                _previewGauge = new GaugeRenderer();
+                visual = _previewGauge.Visual;
+                _previewGauge.Clear();
+            }
+            else if (rtText.IsChecked == true)
+            {
+                _previewText = new TextRenderer();
+                visual = _previewText.Visual;
+                _previewText.Clear();
+            }
+            else if (rtLine.IsChecked == true)
+            {
+                _previewLine = new LineChartRenderer();
+                _previewLine.Configure(BuildLineChartConfigFromUi());
+                visual = _previewLine.Visual;
+                isChart = true;
+            }
+            else if (rtTable.IsChecked == true)
+            {
+                _previewTable = new TableRenderer();
+                _previewTable.Configure(BuildTableConfigFromUi());
+                visual = _previewTable.Visual;
+                isChart = true;
+            }
+            else if (rtTrend.IsChecked == true)
+            {
+                _previewTrend = new TrendRenderer();
+                var trendCfg = BuildTrendConfigFromUi();
+                _previewTrend.Configure(trendCfg);
+                ApplyTrendPreviewComparisonWindow(trendCfg);
+                visual = _previewTrend.Visual;
+                isChart = true;
+            }
+            else
+            {
+                _previewLamp = new LampRenderer();
+                visual = _previewLamp.Visual;
+                _previewLamp.Clear();
+            }
+
+            if (isChart)
+            {
+                previewChartHost.Children.Add(visual);
+                previewChartViewbox.Visibility = Visibility.Visible;
+                previewViewbox.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                previewHost.Children.Add(visual);
+                previewChartViewbox.Visibility = Visibility.Collapsed;
+                previewViewbox.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void HookFieldChangeHandlers()
+        {
+            // Re-render when values that affect colors/labels/thresholds change.
+            // Topic/Source/DataKey changes also re-extract from the cached XML so
+            // the preview reflects the new selection without waiting for a fresh packet.
+            // Hook only TextChanged for the editable combos. WPF updates
+            // ComboBox.Text whenever SelectedItem changes via dropdown pick,
+            // so TextChanged catches both typing and pick-from-dropdown.
+            // Hooking SelectionChanged on top doubles up work and adds a race
+            // where SelectionChanged sees the new SelectedItem but Text still
+            // holds the previous value, causing the Field dropdown to filter
+            // against the wrong topic.
+            topicCombo.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
+                new TextChangedEventHandler((s, e) => OnTopicChanged(topicCombo.Text ?? string.Empty)));
+            dataKeyCombo.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
+                new TextChangedEventHandler((s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); }));
+            sourceFilterBox.TextChanged += (s, e) => { RebuildExtractorSnapshot(); ReExtractAndRender(); };
+            numMinBox.TextChanged += (s, e) => ReRenderPreview();
+            numMaxBox.TextChanged += (s, e) => ReRenderPreview();
+            unitBoxNumber.TextChanged += (s, e) => ReRenderPreview();
+            gaugeRangeMinBox.TextChanged += (s, e) => ReRenderPreview();
+            gaugeRangeMaxBox.TextChanged += (s, e) => ReRenderPreview();
+            gaugeNumMinBox.TextChanged += (s, e) => ReRenderPreview();
+            gaugeNumMaxBox.TextChanged += (s, e) => ReRenderPreview();
+            unitBoxGauge.TextChanged += (s, e) => ReRenderPreview();
+            gaugeStyleCombo.SelectionChanged += (s, e) => { OnGaugeStyleChanged(); BuildPreviewHost(); ReRenderPreview(); };
+            highIsBadCheck.Checked += (s, e) => ReRenderPreview();
+            highIsBadCheck.Unchecked += (s, e) => ReRenderPreview();
+            gaugeHighIsBadCheck.Checked += (s, e) => ReRenderPreview();
+            gaugeHighIsBadCheck.Unchecked += (s, e) => ReRenderPreview();
+            gaugeShowValueCheck.Checked += (s, e) => ReRenderPreview();
+            gaugeShowValueCheck.Unchecked += (s, e) => ReRenderPreview();
+            gaugeValueFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
+            gaugeShowTicksCheck.Checked += (s, e) => ReRenderPreview();
+            gaugeShowTicksCheck.Unchecked += (s, e) => ReRenderPreview();
+            gaugeTickCountBox.TextChanged += (s, e) => ReRenderPreview();
+            gaugeTrackThicknessBox.TextChanged += (s, e) => ReRenderPreview();
+            lampIconSizeBox.TextChanged += (s, e) => ReRenderPreview();
+            textFontSizeBox.TextChanged += (s, e) => ReRenderPreview();
+            // Line chart fields trigger a full preview rebuild so the chart picks up
+            // axis-range / color / threshold changes (configure-only, no extra samples).
+            lineWindowSecondsBox.TextChanged += (s, e) => { SyncLineWindowPresetCombo(); ReconfigureLinePreview(); };
+            lineDisplayNameBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineWindowPresetCombo.SelectionChanged += (s, e) => OnLineWindowPresetChanged();
+            lineAggregationCombo.SelectionChanged += (s, e) => ReconfigureLinePreview();
+            lineEnvelopeCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineEnvelopeCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineShowLegendCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineShowLegendCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineYMinBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineYMaxBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineFillCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineFillCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineMarkerCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineMarkerCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineZoomCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineZoomCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            lineTypeCombo.SelectionChanged += (s, e) => ReconfigureLinePreview();
+            lineThicknessBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineNumMinBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineNumMaxBox.TextChanged += (s, e) => ReconfigureLinePreview();
+            lineHighIsBadCheck.Checked += (s, e) => ReconfigureLinePreview();
+            lineHighIsBadCheck.Unchecked += (s, e) => ReconfigureLinePreview();
+            _lineColor.ColorChanged += (s, e) => ReconfigureLinePreview();
+            _lineColorOk.ColorChanged += (s, e) => ReconfigureLinePreview();
+            _lineColorWarn.ColorChanged += (s, e) => ReconfigureLinePreview();
+            _lineColorBad.ColorChanged += (s, e) => ReconfigureLinePreview();
+            // Table chart fields
+            tableWindowSecondsBox.TextChanged += (s, e) => { SyncTableWindowPresetCombo(); ReconfigureTablePreview(); };
+            tableWindowPresetCombo.SelectionChanged += (s, e) => OnTableWindowPresetChanged();
+            tableMaxRowsBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableShowTimestampCheck.Checked += (s, e) => ReconfigureTablePreview();
+            tableShowTimestampCheck.Unchecked += (s, e) => ReconfigureTablePreview();
+            tableTimestampFormatBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableShowDeltaCheck.Checked += (s, e) => ReconfigureTablePreview();
+            tableShowDeltaCheck.Unchecked += (s, e) => ReconfigureTablePreview();
+            tableFontSizeBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableValueAlignCombo.SelectionChanged += (s, e) => ReconfigureTablePreview();
+            tableValueColumnNameBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableNumMinBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableNumMaxBox.TextChanged += (s, e) => ReconfigureTablePreview();
+            tableHighIsBadCheck.Checked += (s, e) => ReconfigureTablePreview();
+            tableHighIsBadCheck.Unchecked += (s, e) => ReconfigureTablePreview();
+            _tableColorOk.ColorChanged += (s, e) => ReconfigureTablePreview();
+            _tableColorWarn.ColorChanged += (s, e) => ReconfigureTablePreview();
+            _tableColorBad.ColorChanged += (s, e) => ReconfigureTablePreview();
+            // Trend live preview hooks
+            trendValueFontSizeBox.TextChanged += (s, e) => ReconfigureTrendPreview();
+            trendShowDeltaCheck.Checked += (s, e) => ReconfigureTrendPreview();
+            trendShowDeltaCheck.Unchecked += (s, e) => ReconfigureTrendPreview();
+            trendShowArrowCheck.Checked += (s, e) => ReconfigureTrendPreview();
+            trendShowArrowCheck.Unchecked += (s, e) => ReconfigureTrendPreview();
+            trendComparisonModeCombo.SelectionChanged += (s, e) => ReconfigureTrendPreview();
+            trendWindowSecondsBox.TextChanged += (s, e) => { SyncTrendWindowPresetCombo(); ReconfigureTrendPreview(); };
+            trendWindowPresetCombo.SelectionChanged += (s, e) => OnTrendWindowPresetChanged();
+            densityCombo.SelectionChanged += (s, e) => { UpdatePreviewTitle(); ReRenderPreview(); };
+
+            // Threshold master toggle - keep all panel checkboxes in sync, gate
+            // the threshold input blocks, and re-render the preview / line config.
+            thresholdsEnabledCheckNumber.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckNumber);
+            thresholdsEnabledCheckNumber.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckNumber);
+            thresholdsEnabledCheckGauge.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckGauge);
+            thresholdsEnabledCheckGauge.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckGauge);
+            thresholdsEnabledCheckLine.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckLine);
+            thresholdsEnabledCheckLine.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckLine);
+            thresholdsEnabledCheckTable.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTable);
+            thresholdsEnabledCheckTable.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTable);
+            thresholdsEnabledCheckTrend.Checked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTrend);
+            thresholdsEnabledCheckTrend.Unchecked += (s, e) => OnThresholdsToggled(thresholdsEnabledCheckTrend);
+
+            // Trend threshold inputs feed into the trend live preview so the
+            // tile reflects the selected band as the operator types.
+            trendNumMinBox.TextChanged += (s, e) => ReconfigureTrendPreview();
+            trendNumMaxBox.TextChanged += (s, e) => ReconfigureTrendPreview();
+            trendHighIsBadCheck.Checked += (s, e) => ReconfigureTrendPreview();
+            trendHighIsBadCheck.Unchecked += (s, e) => ReconfigureTrendPreview();
+            _trendColorOk.ColorChanged += (s, e) => ReconfigureTrendPreview();
+            _trendColorWarn.ColorChanged += (s, e) => ReconfigureTrendPreview();
+            _trendColorBad.ColorChanged += (s, e) => ReconfigureTrendPreview();
+
+            // Title section live preview
+            showTitleCheck.Checked += (s, e) => { ApplyTitleEnabled(); UpdatePreviewTitle(); };
+            showTitleCheck.Unchecked += (s, e) => { ApplyTitleEnabled(); UpdatePreviewTitle(); };
+            titleBox.TextChanged += (s, e) => UpdatePreviewTitle();
+            titlePositionCombo.SelectionChanged += (s, e) => UpdatePreviewTitle();
+            titleFontSizeBox.TextChanged += (s, e) => UpdatePreviewTitle();
+            _titleColor.ColorChanged += (s, e) => UpdatePreviewTitle();
+        }
+
+        // ───────── Lamp rows ─────────
+
+        private sealed class LampRowControls
+        {
+            public Grid Container;
+            public TextBox ValueBox;
+            public TextBox LabelBox;
+            public ColorPickerControl ColorPicker;
+            public Button IconButton;
+            public string IconName;
+        }
+
+        private readonly List<LampRowControls> _lampRowControls = new List<LampRowControls>();
+
+        private void RebuildLampRowsFromManager()
+        {
+            _lampRowControls.Clear();
+            var rows = LampMapParser.Parse(_vim.LampMap);
+            lampRows.Items.Clear();
+            if (rows.Count == 0)
+            {
+                lampRows.Items.Add(BuildLampRow("0", "Off", "#777777", "").Container);
+                lampRows.Items.Add(BuildLampRow("1", "On", "#3CB371", "").Container);
+            }
+            else
+            {
+                foreach (var r in rows)
+                    lampRows.Items.Add(BuildLampRow(r.Value, r.Label, r.ColorHex, r.IconName).Container);
+            }
+        }
+
+        private LampRowControls BuildLampRow(string value, string label, string color, string iconName)
+        {
+            var grid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(180) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var valueBox = new TextBox { Text = value, Padding = new Thickness(3, 2, 3, 2), Margin = new Thickness(0, 0, 6, 0) };
+            var labelBox = new TextBox { Text = label, Padding = new Thickness(3, 2, 3, 2), Margin = new Thickness(0, 0, 6, 0) };
+
+            var picker = new ColorPickerControl { Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center };
+            picker.HexValue = color;
+
+            var ctrls = new LampRowControls
+            {
+                Container = grid,
+                ValueBox = valueBox,
+                LabelBox = labelBox,
+                ColorPicker = picker,
+                IconName = iconName ?? "",
+            };
+
+            var iconButton = new Button
+            {
+                Content = BuildIconButtonContent(ctrls.IconName),
+                Padding = new Thickness(6, 2, 6, 2),
+                Margin = new Thickness(0, 0, 6, 0),
+                ToolTip = "Pick icon",
+                Width = 60,
+            };
+            ctrls.IconButton = iconButton;
+            iconButton.Click += (s, e) => OpenIconPickerForRow(ctrls);
+
+            valueBox.TextChanged += (s, e) => ReRenderPreview();
+            labelBox.TextChanged += (s, e) => ReRenderPreview();
+            picker.ColorChanged += (s, e) => ReRenderPreview();
+
+            var removeButton = new Button { Content = "Remove", Padding = new Thickness(8, 2, 8, 2) };
+            removeButton.Click += (s, e) =>
+            {
+                lampRows.Items.Remove(grid);
+                _lampRowControls.Remove(ctrls);
+                ReRenderPreview();
+            };
+
+            Grid.SetColumn(valueBox, 0);
+            Grid.SetColumn(labelBox, 1);
+            Grid.SetColumn(picker, 2);
+            Grid.SetColumn(iconButton, 3);
+            Grid.SetColumn(removeButton, 4);
+            grid.Children.Add(valueBox);
+            grid.Children.Add(labelBox);
+            grid.Children.Add(picker);
+            grid.Children.Add(iconButton);
+            grid.Children.Add(removeButton);
+
+            _lampRowControls.Add(ctrls);
+            return ctrls;
+        }
+
+        private static UIElement BuildIconButtonContent(string iconName)
+        {
+            if (LampMapParser.TryParseIcon(iconName, out var fa))
+            {
+                return new ImageAwesome
+                {
+                    Icon = fa,
+                    Width = 16,
+                    Height = 16,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0)),
+                };
+            }
+            return new TextBlock { Text = "Icon", Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0)) };
+        }
+
+        private void OpenIconPickerForRow(LampRowControls ctrls)
+        {
+            var initial = EFontAwesomeIcon.None;
+            LampMapParser.TryParseIcon(ctrls.IconName, out initial);
+            var dlg = new IconPickerWindow(initial) { Owner = this };
+            if (dlg.ShowDialog() == true)
+            {
+                ctrls.IconName = dlg.SelectedIcon == EFontAwesomeIcon.None ? "" : dlg.SelectedIcon.ToString();
+                ctrls.IconButton.Content = BuildIconButtonContent(ctrls.IconName);
+                ReRenderPreview();
+            }
+        }
+
+        private void OnAddLampRow(object sender, RoutedEventArgs e)
+        {
+            var row = BuildLampRow("", "", "#3CB371", "");
+            lampRows.Items.Add(row.Container);
+        }
+
+        private string SerializeLampRows()
+        {
+            var entries = new List<LampMapEntry>();
+            foreach (var ctrls in _lampRowControls)
+            {
+                var v = ctrls.ValueBox.Text?.Trim() ?? "";
+                if (string.IsNullOrEmpty(v)) continue;
+                entries.Add(new LampMapEntry
+                {
+                    Value = v,
+                    Label = ctrls.LabelBox.Text?.Trim() ?? "",
+                    ColorHex = ctrls.ColorPicker.HexValue,
+                    IconName = ctrls.IconName ?? "",
+                });
+            }
+            return LampMapParser.Serialize(entries);
+        }
+
+        // ───────── Single shared MetadataLiveSource ─────────
+
+        private DateTime _sourceStartedUtc;
+        private DispatcherTimer _diagTicker;
+
+        private void StartSourceIfReady()
+        {
+            StopSource();
+            if (_metadataItem == null)
+            {
+                previewStatusText.Text = "Pick a metadata channel to start streaming.";
+                _log.Info("[ConfigWindow] StartSource skipped (no channel)");
+                return;
+            }
+
+            try
+            {
+                _packetsSeen = 0;
+                _sourceStartedUtc = DateTime.UtcNow;
+                _log.Info($"[ConfigWindow] StartSource channel='{_metadataItem.Name}' id={_metadataItem.FQID.ObjectId}");
+                _source = new MetadataLiveSource(_metadataItem) { LiveModeStart = true };
+                _source.Init();
+                _source.LiveContentEvent += OnSourceContent;
+                _source.ErrorEvent += OnSourceError;
+                _log.Info("[ConfigWindow] Source subscribed");
+                previewStatusText.Text = $"Subscribed to '{_metadataItem.Name}'. Waiting for first packet...";
+
+                EnsureDiagTicker();
+                SeedPreviewFromCache();
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"[ConfigWindow] StartSource failed: {ex.Message}", ex);
+                _source = null;
+                previewStatusText.Text = "Could not subscribe: " + ex.Message;
+            }
+        }
+
+        private void EnsureDiagTicker()
+        {
+            if (_diagTicker != null) return;
+            _diagTicker = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _diagTicker.Tick += (s, e) => RefreshDiagStatus();
+            _diagTicker.Start();
+        }
+
+        private void RefreshDiagStatus()
+        {
+            if (_source == null) return;
+            if (_packetsSeen > 0) return; // healthy stream messaging is handled in OnSourceContent
+
+            var elapsed = (int)(DateTime.UtcNow - _sourceStartedUtc).TotalSeconds;
+            previewStatusText.Text =
+                $"Subscribed to '{_metadataItem?.Name}'. No packets received in {elapsed}s. " +
+                "If your camera publishes events sparsely (loitering, IO change), this is normal until something happens. " +
+                "Check the channel is enabled and recording metadata.";
+        }
+
+        private void StopSource()
+        {
+            if (_source == null) return;
+            _log.Info($"[ConfigWindow] StopSource packets={_packetsSeen}");
+            try
+            {
+                _source.LiveContentEvent -= OnSourceContent;
+                _source.ErrorEvent -= OnSourceError;
+                _source.Close();
+            }
+            catch { }
+            _source = null;
+            _diagTicker?.Stop();
+            _diagTicker = null;
+        }
+
+        private void SeedPreviewFromCache()
+        {
+            if (_metadataItem == null) { _log.Info("[ConfigWindow] Seed skipped (no item)"); return; }
+            if (!LastXmlCache.TryGet(_metadataItem.FQID.ObjectId, out var xml, out var cachedAt))
+            {
+                _log.Info("[ConfigWindow] Seed: no cached XML available");
+                return;
+            }
+
+            if (_learn.IsActive) _learn.Observe(xml);
+            foreach (var r in _additionalSeriesRows) if (r.LearnSession.IsActive) r.LearnSession.Observe(xml);
+
+            var cfg = BuildExtractorCfgFromUi();
+            if (string.IsNullOrEmpty(cfg.DataKey))
+            {
+                _log.Info("[ConfigWindow] Seed: cached XML found but DataKey is empty");
+                return;
+            }
+            var hit = MetadataExtractor.TryExtract(xml, cfg);
+            if (hit == null)
+            {
+                _log.Info($"[ConfigWindow] Seed: cached XML found but no match for topic='{cfg.Topic}' key='{cfg.DataKey}'");
+                return;
+            }
+
+            _log.Info($"[ConfigWindow] Seed: rendered cached value '{hit.Value}'");
+            _lastPreviewUtc = hit.TimestampUtc;
+            _lastPreviewValue = hit.Value;
+            previewStatusText.Text =
+                $"Showing cached value from {FormatAge(DateTime.UtcNow - cachedAt)} ago - waiting for next packet...";
+            ReRenderPreview();
+        }
+
+        private void OnSourceContent(MetadataLiveSource source, MetadataLiveContent content)
+        {
+            try
+            {
+                _packetsSeen++;
+                string xml = content?.Content?.GetMetadataString();
+                if (string.IsNullOrEmpty(xml))
+                {
+                    _log.Info($"[ConfigWindow] Packet #{_packetsSeen} empty");
+                    return;
+                }
+
+                if (_metadataItem != null)
+                    LastXmlCache.Put(_metadataItem.FQID.ObjectId, xml);
+
+                if (_packetsSeen <= 3 || _packetsSeen % 50 == 0)
+                    _log.Info($"[ConfigWindow] Packet #{_packetsSeen} bytes={xml.Length}");
+
+                // Learn aggregation (main + per-row independent sessions)
+                if (_learn.IsActive) _learn.Observe(xml);
+                foreach (var r in _additionalSeriesRows) if (r.LearnSession.IsActive) r.LearnSession.Observe(xml);
+
+                // Per-row extraction first - run regardless of whether the
+                // main series has a Data key, so additional series can still
+                // render before the operator finishes configuring series 1.
+                var rowHits = new System.Collections.Generic.List<(int SeriesIndex, ExtractedValue Hit)>();
+                var rowSnaps = _additionalExtractorSnapshots;
+                if (rowSnaps != null)
+                {
+                    for (int i = 0; i < rowSnaps.Count; i++)
+                    {
+                        var rowCfg = rowSnaps[i];
+                        if (rowCfg == null || string.IsNullOrEmpty(rowCfg.DataKey)) continue;
+                        var rowHit = MetadataExtractor.TryExtract(xml, rowCfg);
+                        if (rowHit != null) rowHits.Add((i + 1, rowHit));
+                    }
+                }
+
+                // Preview extraction - read the UI-thread-built snapshot, NOT the controls.
+                var cfg = _extractorSnapshot;
+                ExtractedValue hit = null;
+                if (cfg != null && !string.IsNullOrEmpty(cfg.DataKey))
+                {
+                    hit = MetadataExtractor.TryExtract(xml, cfg);
+                    if (hit == null && (_packetsSeen <= 3 || _packetsSeen % 50 == 0))
+                    {
+                        var dump = DumpXmlContents(xml);
+                        _log.Info($"[ConfigWindow] No match for topic='{cfg.Topic}' mode={cfg.TopicMatchMode} key='{cfg.DataKey}'. Packet contains: {dump}");
+                    }
+                }
+
+                bool mainConfigured = cfg != null && !string.IsNullOrEmpty(cfg.DataKey);
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (!mainConfigured)
+                    {
+                        previewStatusText.Text = $"Streaming - {_packetsSeen} packet(s) received. Pick a Data key to render.";
+                    }
+                    else if (hit != null)
+                    {
+                        _lastPreviewUtc = hit.TimestampUtc;
+                        _lastPreviewValue = hit.Value;
+                        previewStatusText.Text = $"Streaming - {_packetsSeen} packet(s).";
+                        ReRenderPreview();
+                    }
+                    else
+                    {
+                        previewStatusText.Text =
+                            $"Streaming - {_packetsSeen} packet(s). No match yet for current Topic/Source/Data key.";
+                    }
+                    if (_previewLine != null)
+                    {
+                        foreach (var rh in rowHits)
+                        {
+                            if (double.TryParse(rh.Hit.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var rv))
+                                _previewLine.AddSample(rh.SeriesIndex, rv, rh.Hit.TimestampUtc);
+                        }
+                    }
+                }));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"OnSourceContent threw: {ex.Message}", ex);
+            }
+        }
+
+        private void OnSourceError(MetadataLiveSource source, Exception ex)
+        {
+            _log.Error($"[ConfigWindow] Source error: {ex?.GetType().Name}: {ex?.Message}");
+            Dispatcher.BeginInvoke(new Action(() =>
+                previewStatusText.Text = "Stream error: " + (ex?.Message ?? "(unknown)")));
+        }
+
+        // ───────── Learn ─────────
+
+        private void OnStartLearn(object sender, RoutedEventArgs e)
+        {
+            if (_metadataItem == null)
+            {
+                MessageBox.Show(this, "Pick a metadata channel first.", "Learn",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            // Learn just toggles aggregation on the shared source; if no source yet, start one.
+            if (_source == null) StartSourceIfReady();
+
+            _learn.Reset();
+            _learn.Start();
+            learnStartButton.IsEnabled = false;
+            learnStopButton.IsEnabled = true;
+            learnStatus.Text = "Listening - waiting for first packet...";
+        }
+
+        private void OnStopLearn(object sender, RoutedEventArgs e)
+        {
+            _learn.Stop();
+            learnStartButton.IsEnabled = true;
+            learnStopButton.IsEnabled = false;
+        }
+
+        private void OnLearnUpdated(LearnSnapshot snap)
+        {
+            Dispatcher.BeginInvoke(new Action(() => ApplyLearnSnapshot(snap)));
+        }
+
+        // Last received learn snapshot - kept so we can re-filter the Data key dropdown
+        // whenever the user changes Topic / TopicMatchMode without needing a fresh packet.
+        private LearnSnapshot _lastSnapshot;
+
+        private void ApplyLearnSnapshot(LearnSnapshot snap)
+        {
+            _lastSnapshot = snap;
+
+            int topicCount = snap.Topics.Count;
+            int keyCount = 0;
+            int srcCount = 0;
+            foreach (var t in snap.Topics)
+            {
+                keyCount += t.DataKeyExamples.Count;
+                foreach (var sv in t.SourceValues) srcCount += sv.Value.Count;
+            }
+            learnStatus.Text =
+                $"Captured {snap.PacketsReceived} packet(s) - {topicCount} topic(s), {keyCount} key(s), {srcCount} source value(s).";
+
+            string currentTopic = topicCombo.Text;
+            topicCombo.Items.Clear();
+            foreach (var t in snap.Topics.OrderBy(x => x.Topic, StringComparer.OrdinalIgnoreCase))
+                topicCombo.Items.Add(t.Topic);
+            if (!string.IsNullOrEmpty(currentTopic))
+                topicCombo.Text = currentTopic;
+
+            RefreshDataKeyCombo(currentTopic ?? string.Empty);
+            RefreshLearnedSourceList(currentTopic ?? string.Empty);
+
+            // Fan the snapshot out to additional-series rows so each row's
+            // Topic / Source filter / Data key dropdowns get the same picks.
+            foreach (var row in _additionalSeriesRows)
+                row.ApplyLearnSnapshot(snap);
+        }
+
+        // Re-filters the Data key dropdown to keys observed for the supplied
+        // Topic. Clears the typed Field when it doesn't belong to that
+        // Topic so the operator can't keep a stale key from a previously
+        // selected topic. Caller passes the authoritative Topic - see
+        // TopicFromSelectionChanged for the SelectionChanged-handler quirk.
+        private void RefreshDataKeyCombo(string topic)
+        {
+            var snap = _lastSnapshot;
+            bool topicSelected = !string.IsNullOrEmpty(topic);
+            var matchingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (snap != null)
+            {
+                foreach (var t in snap.Topics)
+                {
+                    if (!topicSelected || string.Equals(t.Topic, topic, StringComparison.OrdinalIgnoreCase))
+                        foreach (var dk in t.DataKeyExamples.Keys) matchingKeys.Add(dk);
+                }
+            }
+
+            string current = dataKeyCombo.Text ?? "";
+            dataKeyCombo.Items.Clear();
+            foreach (var k in matchingKeys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                dataKeyCombo.Items.Add(k);
+            dataKeyCombo.Text = matchingKeys.Contains(current) ? current : (topicSelected ? "" : current);
+        }
+
+        private void RefreshLearnedSourceList(string topic)
+        {
+            var snap = _lastSnapshot;
+            learnedSourceList.Items.Clear();
+            if (snap == null) return;
+
+            bool topicSelected = !string.IsNullOrEmpty(topic);
+            int distinct = 0;
+            foreach (var t in snap.Topics)
+            {
+                if (topicSelected && !string.Equals(t.Topic, topic, StringComparison.OrdinalIgnoreCase)) continue;
+                foreach (var sv in t.SourceValues)
+                {
+                    foreach (var v in sv.Value)
+                    {
+                        learnedSourceList.Items.Add(new TextBlock
+                        {
+                            Text = $"{sv.Key} = {v}",
+                            Foreground = new SolidColorBrush(Color.FromRgb(0xCF, 0xD7, 0xDA)),
+                            Margin = new Thickness(0, 1, 0, 1),
+                        });
+                        distinct++;
+                    }
+                }
+            }
+            if (distinct >= 2 && !sourceFilterExpander.IsExpanded)
+                sourceFilterExpander.IsExpanded = true;
+        }
+
+        // Single entry point for "Topic changed - refresh everything that
+        // depends on Topic." The Topic.TextChanged handler funnels through
+        // this with the just-updated topic value.
+        private void OnTopicChanged(string topic)
+        {
+            RebuildExtractorSnapshot();
+            RefreshDataKeyCombo(topic);
+            RefreshLearnedSourceList(topic);
+            ReExtractAndRender();
+        }
+
+        // ───────── Preview render ─────────
+
+        private ExtractorConfig BuildExtractorCfgFromUi()
+        {
+            return new ExtractorConfig
+            {
+                Topic = topicCombo.Text ?? "",
+                TopicMatchMode = "Exact",
+                SourceFilters = ExtractorConfig.ParseSourceFilters(sourceFilterBox.Text ?? ""),
+                DataKey = dataKeyCombo.Text ?? "",
+            };
+        }
+
+        private void EnsureAgeTicker()
+        {
+            if (_ageTicker != null) return;
+            _ageTicker = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _ageTicker.Tick += (s, e) => UpdatePreviewAge();
+            _ageTicker.Start();
+        }
+
+        private void ReExtractAndRender()
+        {
+            // Pull the most recent XML from the cache and extract with the current
+            // form state so combo edits are reflected without waiting for a packet.
+            if (_metadataItem != null
+                && LastXmlCache.TryGet(_metadataItem.FQID.ObjectId, out var xml, out _))
+            {
+                var cfg = BuildExtractorCfgFromUi();
+                if (!string.IsNullOrEmpty(cfg.DataKey))
+                {
+                    var hit = MetadataExtractor.TryExtract(xml, cfg);
+                    if (hit != null)
+                    {
+                        _lastPreviewUtc = hit.TimestampUtc;
+                        _lastPreviewValue = hit.Value;
+                    }
+                    else
+                    {
+                        _lastPreviewValue = null;
+                    }
+                }
+            }
+            ReRenderPreview();
+        }
+
+        private void ReRenderPreview()
+        {
+            if (!_uiReady) return;
+            if (_lastPreviewValue == null)
+            {
+                _previewLamp?.Clear();
+                _previewNumber?.Clear();
+                _previewGauge?.Clear();
+                _previewText?.Clear();
+                // Don't clear the line chart on missing value - its accumulated history
+                // is its whole point. Just leave the existing buffer.
+                previewMetaText.Text = "";
+                ApplyWaitingPanelVisibility();
+                UpdatePreviewAge();
+                return;
+            }
+
+            previewMetaText.Text = $"key={dataKeyCombo.Text}  value={_lastPreviewValue}";
+            ApplyWaitingPanelVisibility();
+
+            string density = (densityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Comfortable";
+
+            if (_previewLamp != null)
+            {
+                var rows = LampMapParser.Parse(SerializeLampRows());
+                _previewLamp.Density = density;
+                _previewLamp.IconSize = TryParseDouble(lampIconSizeBox.Text) ?? 96;
+                _previewLamp.Update(_lastPreviewValue, rows);
+            }
+            else if (_previewNumber != null)
+            {
+                _previewNumber.Density = density;
+                _previewNumber.Update(_lastPreviewValue, BuildNumericConfigFromUi(false));
+            }
+            else if (_previewGauge != null)
+            {
+                _previewGauge.Density = density;
+                _previewGauge.Update(_lastPreviewValue, BuildGaugeConfigFromUi());
+            }
+            else if (_previewText != null)
+            {
+                _previewText.FontSize = TryParseDouble(textFontSizeBox.Text) ?? 28;
+                _previewText.Update(_lastPreviewValue);
+            }
+            else if (_previewLine != null)
+            {
+                if (double.TryParse(_lastPreviewValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                {
+                    var ts = _lastPreviewUtc ?? DateTime.UtcNow;
+                    _previewLine.AddSample(v, ts);
+                }
+            }
+            else if (_previewTable != null)
+            {
+                var ts = _lastPreviewUtc ?? DateTime.UtcNow;
+                _previewTable.AddSample(_lastPreviewValue, ts);
+            }
+            else if (_previewTrend != null)
+            {
+                if (double.TryParse(_lastPreviewValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                {
+                    var ts = _lastPreviewUtc ?? DateTime.UtcNow;
+                    _previewTrend.AddSample(v, ts);
+                }
+            }
+
+            UpdatePreviewAge();
+        }
+
+        private NumericConfig BuildNumericConfigFromUi(bool fromGaugePanel)
+        {
+            string min = fromGaugePanel ? gaugeNumMinBox.Text : numMinBox.Text;
+            string max = fromGaugePanel ? gaugeNumMaxBox.Text : numMaxBox.Text;
+            bool highBad = fromGaugePanel ? (gaugeHighIsBadCheck.IsChecked == true) : (highIsBadCheck.IsChecked == true);
+            string ok = fromGaugePanel ? _gaugeColorOk.HexValue : _colorOk.HexValue;
+            string warn = fromGaugePanel ? _gaugeColorWarn.HexValue : _colorWarn.HexValue;
+            string bad = fromGaugePanel ? _gaugeColorBad.HexValue : _colorBad.HexValue;
+            string unit = fromGaugePanel ? unitBoxGauge.Text : unitBoxNumber.Text;
+
+            return new NumericConfig
+            {
+                Enabled = thresholdsEnabledCheckNumber?.IsChecked == true,
+                Min = TryParseDouble(min),
+                Max = TryParseDouble(max),
+                HighIsBad = highBad,
+                ColorOk = ColorUtil.Parse(ok, Color.FromRgb(0x3C, 0xB3, 0x71)),
+                ColorWarn = ColorUtil.Parse(warn, Color.FromRgb(0xE6, 0x95, 0x00)),
+                ColorBad = ColorUtil.Parse(bad, Color.FromRgb(0xD8, 0x39, 0x2C)),
+                Unit = unit ?? "",
+            };
+        }
+
+        private GaugeConfig BuildGaugeConfigFromUi()
+        {
+            var rmin = TryParseDouble(gaugeRangeMinBox.Text) ?? 0;
+            var rmax = TryParseDouble(gaugeRangeMaxBox.Text) ?? 100;
+            if (rmax <= rmin) rmax = rmin + 1;
+
+            var styleText = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Modern180";
+            var style = GaugeStyle.Modern180;
+            if (string.Equals(styleText, "Arc270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Arc270;
+            else if (string.Equals(styleText, "Arc180", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Arc180;
+            else if (string.Equals(styleText, "Bar", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Bar;
+            else if (string.Equals(styleText, "Modern270", StringComparison.OrdinalIgnoreCase)) style = GaugeStyle.Modern270;
+
+            int tc = 10;
+            if (int.TryParse(gaugeTickCountBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ptc) && ptc >= 0)
+                tc = ptc;
+
+            double thickness = TryParseDouble(gaugeTrackThicknessBox.Text) ?? GaugeConfig.DefaultTrackThickness(style);
+            if (thickness > GaugeConfig.MaxTrackThickness) thickness = GaugeConfig.MaxTrackThickness;
+            if (thickness < 0) thickness = 0;
+
+            return new GaugeConfig
+            {
+                RangeMin = rmin,
+                RangeMax = rmax,
+                Style = style,
+                ShowValue = gaugeShowValueCheck.IsChecked == true,
+                ValueFontSize = TryParseDouble(gaugeValueFontSizeBox.Text) ?? 34,
+                ShowTicks = gaugeShowTicksCheck.IsChecked == true,
+                TickCount = tc,
+                TrackThickness = thickness,
+                Numeric = BuildNumericConfigFromUi(true),
+            };
+        }
+
+        private static double? TryParseDouble(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? (double?)v : null;
+        }
+
+        // The first series's display name is stored inside LineSeriesJson
+        // (alongside the rest of the series array). This pulls it out so the
+        // configuration window can hydrate the "Display name" textbox.
+        private string ResolveSeries1DisplayName()
+        {
+            var json = _vim.LineSeriesJson;
+            if (string.IsNullOrWhiteSpace(json)) return string.Empty;
+            var parsed = LineSeriesParser.Deserialize(json);
+            if (parsed == null || parsed.Count == 0) return string.Empty;
+            return parsed[0].Name ?? string.Empty;
+        }
+
+        // Hydrate the "Additional series" accordion from the manager. If the
+        // saved JSON blob has multiple entries, series 2..N populate accordion
+        // rows here (series 1 already populated the legacy single-line fields
+        // via the standard hydrate above).
+        private void HydrateAdditionalSeries()
+        {
+            additionalSeriesList.Children.Clear();
+            _additionalSeriesRows.Clear();
+
+            var json = _vim.LineSeriesJson;
+            if (string.IsNullOrWhiteSpace(json)) return;
+            var parsed = LineSeriesParser.Deserialize(json);
+            if (parsed == null || parsed.Count <= 1) return;
+            for (int i = 1; i < parsed.Count; i++) AddSeriesRow(parsed[i]);
+        }
+
+        private void OnAddSeriesClick()
+        {
+            // Series 1 is the legacy single-line fields; cap at MaxSeries total.
+            if (_additionalSeriesRows.Count >= LineSeriesParser.MaxSeries - 1) return;
+            AddSeriesRow(new LineSeries
+            {
+                TopicMatchMode = "Exact",
+            });
+            UpdateAddSeriesButtonState();
+            ReconfigureLinePreview();
+        }
+
+        private void AddSeriesRow(LineSeries seed)
+        {
+            var row = new AdditionalLineSeriesRow(seed);
+            row.OnChanged = ReconfigureLinePreview;
+            row.OnRemove = r =>
+            {
+                r.LearnSession.Stop();
+                _additionalSeriesRows.Remove(r);
+                additionalSeriesList.Children.Remove(r.RootExpander);
+                UpdateAddSeriesButtonState();
+                RebuildAdditionalExtractorSnapshots();
+                ReconfigureLinePreview();
+            };
+            row.OnExtractorChanged = RebuildAdditionalExtractorSnapshots;
+            // Row-owned learn session needs the metadata source to be running
+            // before it'll receive any packets - this callback ensures that.
+            row.OnStartLearnRequested = () =>
+            {
+                if (_metadataItem == null)
+                {
+                    MessageBox.Show(this, "Pick a metadata channel first.", "Learn",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return false;
+                }
+                if (_source == null) StartSourceIfReady();
+                return true;
+            };
+            _additionalSeriesRows.Add(row);
+            additionalSeriesList.Children.Add(row.RootExpander);
+            // Pre-populate with the most recent learn snapshot so a new row
+            // gets the same dropdown content the main series has.
+            if (_lastSnapshot != null) row.ApplyLearnSnapshot(_lastSnapshot);
+            RebuildAdditionalExtractorSnapshots();
+        }
+
+        // UI-thread-only: rebuild the immutable per-row ExtractorConfig list
+        // consumed by the source-callback thread. Cheap to run on every text
+        // change since it just reads ComboBox.Text and parses source filters.
+        private void RebuildAdditionalExtractorSnapshots()
+        {
+            var list = new List<ExtractorConfig>(_additionalSeriesRows.Count);
+            foreach (var r in _additionalSeriesRows)
+                list.Add(r.BuildExtractorConfig());
+            _additionalExtractorSnapshots = list;
+        }
+
+        private void UpdateAddSeriesButtonState()
+        {
+            int total = 1 + _additionalSeriesRows.Count;
+            bool atCap = total >= LineSeriesParser.MaxSeries;
+            addSeriesButton.IsEnabled = !atCap;
+            addSeriesButton.Content = atCap
+                ? $"Maximum of {LineSeriesParser.MaxSeries} series reached"
+                : "+ Add series";
+        }
+
+        // Builds a LineChartConfig from the UI without going through the manager -
+        // the manager only updates on Save, but the preview needs live values.
+        // The configuration UI is currently single-series, so this synthesizes a
+        // one-element Series list. The accordion (task #16) replaces this with N.
+        private LineChartConfig BuildLineChartConfigFromUi()
+        {
+            int win = (int)(TryParseDouble(lineWindowSecondsBox.Text) ?? 60);
+            if (win <= 0) win = 60;
+
+            // Pull threshold inputs onto the synthesized series.
+            var threshold = new LineSeriesThreshold
+            {
+                Enabled = thresholdsEnabledCheckLine?.IsChecked == true,
+                Min = TryParseDouble(lineNumMinBox.Text),
+                Max = TryParseDouble(lineNumMaxBox.Text),
+                HighIsBad = lineHighIsBadCheck.IsChecked == true,
+                ColorOk = NormalizeColor(_lineColorOk.HexValue),
+                ColorWarn = NormalizeColor(_lineColorWarn.HexValue),
+                ColorBad = NormalizeColor(_lineColorBad.HexValue),
+            };
+
+            var series = new LineSeries
+            {
+                Topic = topicCombo?.Text ?? string.Empty,
+                TopicMatchMode = "Exact",
+                SourceFilters = sourceFilterBox?.Text ?? string.Empty,
+                DataKey = dataKeyCombo?.Text ?? string.Empty,
+                Name = lineDisplayNameBox?.Text ?? string.Empty,
+                Color = NormalizeColor(_lineColor.HexValue),
+                Thickness = TryParseDouble(lineThicknessBox.Text) ?? 2,
+                LineType = (lineTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Straight",
+                YAxis = LineSeriesAxis.Left,
+                FillEnabled = lineFillCheck.IsChecked == true,
+                ShowMarker = lineMarkerCheck.IsChecked == true,
+                Threshold = threshold,
+            };
+
+            // Include every row regardless of IsExtractable so each row's
+            // chart slot stays at index (1 + rowIndex). Filtering would shift
+            // seriesIndex when an earlier row has a blank Field, and packets
+            // for later rows would land on the wrong line.
+            var allSeries = new System.Collections.Generic.List<LineSeries> { series };
+            foreach (var row in _additionalSeriesRows)
+            {
+                var s = row.ToLineSeries();
+                if (s != null) allSeries.Add(s);
+                if (allSeries.Count >= LineSeriesParser.MaxSeries) break;
+            }
+
+            return new LineChartConfig
+            {
+                WindowSeconds = win,
+                YMin = TryParseDouble(lineYMinBox.Text),
+                YMax = TryParseDouble(lineYMaxBox.Text),
+                ZoomEnabled = lineZoomCheck.IsChecked == true,
+                Aggregation = ParseLineAggregation((lineAggregationCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()),
+                EnvelopeEnabled = lineEnvelopeCheck.IsChecked == true,
+                ShowLegend = lineShowLegendCheck?.IsChecked == true,
+                Series = allSeries,
+            };
+        }
+
+        private static LineChartType ParseLineType(string s)
+        {
+            if (string.Equals(s, "Smooth", StringComparison.OrdinalIgnoreCase)) return LineChartType.Smooth;
+            if (string.Equals(s, "Step",   StringComparison.OrdinalIgnoreCase)) return LineChartType.Step;
+            return LineChartType.Straight;
+        }
+
+        // Builds a TrendConfig from the live UI for the preview pane. Mirrors
+        // TrendConfig.FromManager but reads the on-screen text/check controls
+        // so the operator sees changes without saving first.
+        private TrendConfig BuildTrendConfigFromUi()
+        {
+            int lookback = (int)(TryParseDouble(trendWindowSecondsBox.Text) ?? 300);
+            if (lookback <= 0) lookback = 300;
+            double fs = TryParseDouble(trendValueFontSizeBox.Text) ?? 48;
+            if (fs <= 0) fs = 48;
+
+            // Pull the threshold inputs from the Trend panel's own controls so
+            // the operator sees instant feedback while typing. The Number /
+            // Trend panel inputs back the same shared MIP fields on save.
+            var numeric = new NumericConfig
+            {
+                Enabled = thresholdsEnabledCheckTrend?.IsChecked == true,
+                Min = TryParseDouble(trendNumMinBox.Text),
+                Max = TryParseDouble(trendNumMaxBox.Text),
+                HighIsBad = trendHighIsBadCheck.IsChecked == true,
+                ColorOk = ColorUtil.Parse(_trendColorOk.HexValue, Color.FromRgb(0x3C, 0xB3, 0x71)),
+                ColorWarn = ColorUtil.Parse(_trendColorWarn.HexValue, Color.FromRgb(0xE6, 0x95, 0x00)),
+                ColorBad = ColorUtil.Parse(_trendColorBad.HexValue, Color.FromRgb(0xD8, 0x39, 0x2C)),
+                Unit = unitBoxNumber?.Text ?? string.Empty,
+            };
+
+            string cmpTag = (trendComparisonModeCombo?.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Rolling";
+
+            return new TrendConfig
+            {
+                LookbackSeconds = lookback,
+                ShowDelta = trendShowDeltaCheck.IsChecked == true,
+                ShowArrow = trendShowArrowCheck.IsChecked == true,
+                ValueFontSize = fs,
+                Numeric = numeric,
+                ComparisonMode = TrendConfig.ParseComparisonMode(cmpTag),
+            };
+        }
+
+        // Same preset/custom-textbox sync pattern as Line, scoped to Trend.
+        private bool _syncingTrendWindow;
+        private void SyncTrendWindowPresetCombo()
+        {
+            if (_syncingTrendWindow) return;
+            _syncingTrendWindow = true;
+            try
+            {
+                string secs = (trendWindowSecondsBox.Text ?? "").Trim();
+                bool matched = false;
+                foreach (var item in trendWindowPresetCombo.Items)
+                {
+                    var ci = item as ComboBoxItem;
+                    if (ci?.Tag?.ToString() == secs) { trendWindowPresetCombo.SelectedItem = ci; matched = true; break; }
+                }
+                if (!matched)
+                {
+                    foreach (var item in trendWindowPresetCombo.Items)
+                    {
+                        var ci = item as ComboBoxItem;
+                        if (ci?.Tag?.ToString() == "custom") { trendWindowPresetCombo.SelectedItem = ci; break; }
+                    }
+                }
+            }
+            finally { _syncingTrendWindow = false; }
+        }
+
+        private void OnTrendWindowPresetChanged()
+        {
+            if (_syncingTrendWindow) return;
+            var tag = (trendWindowPresetCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.IsNullOrEmpty(tag) || tag == "custom") return;
+            _syncingTrendWindow = true;
+            try { trendWindowSecondsBox.Text = tag; }
+            finally { _syncingTrendWindow = false; }
+        }
+
+        private static LineAggregation ParseLineAggregation(string s)
+        {
+            if (string.Equals(s, "Min", StringComparison.OrdinalIgnoreCase)) return LineAggregation.Min;
+            if (string.Equals(s, "Max", StringComparison.OrdinalIgnoreCase)) return LineAggregation.Max;
+            return LineAggregation.Mean;
+        }
+
+        // Match the seconds textbox to one of the preset items (or to "Custom" when
+        // it doesn't match any preset). Suppress the recursive event so editing the
+        // textbox doesn't fire OnLineWindowPresetChanged in a loop.
+        private bool _syncingLineWindow;
+        private void SyncLineWindowPresetCombo()
+        {
+            if (_syncingLineWindow) return;
+            _syncingLineWindow = true;
+            try
+            {
+                string secs = (lineWindowSecondsBox.Text ?? "").Trim();
+                bool matched = false;
+                foreach (var item in lineWindowPresetCombo.Items)
+                {
+                    var ci = item as ComboBoxItem;
+                    if (ci?.Tag?.ToString() == secs) { lineWindowPresetCombo.SelectedItem = ci; matched = true; break; }
+                }
+                if (!matched)
+                {
+                    foreach (var item in lineWindowPresetCombo.Items)
+                    {
+                        var ci = item as ComboBoxItem;
+                        if (ci?.Tag?.ToString() == "custom") { lineWindowPresetCombo.SelectedItem = ci; break; }
+                    }
+                }
+            }
+            finally { _syncingLineWindow = false; }
+        }
+
+        private void OnLineWindowPresetChanged()
+        {
+            if (_syncingLineWindow) return;
+            var tag = (lineWindowPresetCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.IsNullOrEmpty(tag) || tag == "custom") return;
+            _syncingLineWindow = true;
+            try { lineWindowSecondsBox.Text = tag; }
+            finally { _syncingLineWindow = false; }
+            ReconfigureLinePreview();
+        }
+
+        // Reconfigure existing line preview without losing accumulated samples.
+        private void ReconfigureLinePreview()
+        {
+            if (!_uiReady) return;
+            _previewLine?.Configure(BuildLineChartConfigFromUi());
+        }
+
+        private bool _syncingTableWindow;
+        private void SyncTableWindowPresetCombo()
+        {
+            if (_syncingTableWindow) return;
+            _syncingTableWindow = true;
+            try
+            {
+                string secs = (tableWindowSecondsBox.Text ?? "").Trim();
+                bool matched = false;
+                foreach (var item in tableWindowPresetCombo.Items)
+                {
+                    var ci = item as ComboBoxItem;
+                    if (ci?.Tag?.ToString() == secs) { tableWindowPresetCombo.SelectedItem = ci; matched = true; break; }
+                }
+                if (!matched)
+                {
+                    foreach (var item in tableWindowPresetCombo.Items)
+                    {
+                        var ci = item as ComboBoxItem;
+                        if (ci?.Tag?.ToString() == "custom") { tableWindowPresetCombo.SelectedItem = ci; break; }
+                    }
+                }
+            }
+            finally { _syncingTableWindow = false; }
+        }
+
+        private void OnTableWindowPresetChanged()
+        {
+            if (_syncingTableWindow) return;
+            var tag = (tableWindowPresetCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.IsNullOrEmpty(tag) || tag == "custom") return;
+            _syncingTableWindow = true;
+            try { tableWindowSecondsBox.Text = tag; }
+            finally { _syncingTableWindow = false; }
+            ReconfigureTablePreview();
+        }
+
+        // Builds a TableConfig from the UI without going through the manager so
+        // unsaved changes preview immediately.
+        private TableConfig BuildTableConfigFromUi()
+        {
+            int maxRows = 200;
+            if (int.TryParse(tableMaxRowsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var mr) && mr > 0)
+                maxRows = Math.Min(mr, 5000);
+            int win = 300;
+            if (int.TryParse(tableWindowSecondsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var w) && w > 0)
+                win = w;
+            double fs = 12;
+            if (double.TryParse(tableFontSizeBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var f) && f > 0)
+                fs = f;
+
+            var alignTag = (tableValueAlignCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Left";
+            TextAlignment align = TextAlignment.Left;
+            if (string.Equals(alignTag, "Right", StringComparison.OrdinalIgnoreCase)) align = TextAlignment.Right;
+            else if (string.Equals(alignTag, "Center", StringComparison.OrdinalIgnoreCase)) align = TextAlignment.Center;
+
+            return new TableConfig
+            {
+                MaxRows = maxRows,
+                WindowSeconds = win,
+                ShowTimestamp = tableShowTimestampCheck.IsChecked == true,
+                TimestampFormat = string.IsNullOrEmpty(tableTimestampFormatBox.Text) ? "HH:mm:ss" : tableTimestampFormatBox.Text,
+                ShowDelta = tableShowDeltaCheck.IsChecked == true,
+                FontSize = fs,
+                ValueAlignment = align,
+                ValueColumnName = tableValueColumnNameBox.Text ?? string.Empty,
+                Numeric = new NumericConfig
+                {
+                    Enabled = thresholdsEnabledCheckTable.IsChecked == true,
+                    Min = ParseNullableDouble(tableNumMinBox.Text),
+                    Max = ParseNullableDouble(tableNumMaxBox.Text),
+                    HighIsBad = tableHighIsBadCheck.IsChecked == true,
+                    ColorOk = ColorUtil.Parse(_tableColorOk.HexValue, Color.FromRgb(0x3C, 0xB3, 0x71)),
+                    ColorWarn = ColorUtil.Parse(_tableColorWarn.HexValue, Color.FromRgb(0xE6, 0x95, 0x00)),
+                    ColorBad = ColorUtil.Parse(_tableColorBad.HexValue, Color.FromRgb(0xD8, 0x39, 0x2C)),
+                    Unit = "",
+                },
+            };
+        }
+
+        private static double? ParseNullableDouble(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? (double?)v : null;
+        }
+
+        private void ReconfigureTablePreview()
+        {
+            if (!_uiReady) return;
+            _previewTable?.Configure(BuildTableConfigFromUi());
+        }
+
+        private void ReconfigureTrendPreview()
+        {
+            if (!_uiReady) return;
+            if (_previewTrend == null) return;
+            var cfg = BuildTrendConfigFromUi();
+            _previewTrend.Configure(cfg);
+            ApplyTrendPreviewComparisonWindow(cfg);
+        }
+
+        // The configuration window can't actually scan the archive for the
+        // baseline (the preview is decoupled from the live channel pump), but
+        // we can still publish the window the runtime widget WOULD scan so the
+        // operator sees a concrete date range under "no data to compare"
+        // instead of a bare placeholder. Anchored at "now" because the preview
+        // has no playback cursor.
+        private void ApplyTrendPreviewComparisonWindow(TrendConfig cfg)
+        {
+            if (_previewTrend == null || cfg == null) return;
+            var anchor = DateTime.UtcNow;
+            DateTime target;
+            switch (cfg.ComparisonMode)
+            {
+                case TrendComparisonMode.SameTimeLastWeek:  target = anchor.AddDays(-7); break;
+                case TrendComparisonMode.SameTimeLastMonth: target = anchor.AddMonths(-1); break;
+                default:                                    target = anchor.AddDays(-1); break;
+            }
+            int half = Math.Max(30, cfg.LookbackSeconds);
+            _previewTrend.SetComparisonWindow(target.AddSeconds(-half), target.AddSeconds(half));
+        }
+
+        private void UpdatePreviewAge()
+        {
+            if (_lastPreviewUtc.HasValue)
+            {
+                var age = DateTime.UtcNow - _lastPreviewUtc.Value;
+                if (age < TimeSpan.Zero) age = TimeSpan.Zero;
+                previewAgeText.Text = $"updated {FormatAge(age)} ago";
+            }
+            else
+            {
+                previewAgeText.Text = "";
+            }
+        }
+
+        private static string FormatAge(TimeSpan span)
+        {
+            if (span.TotalSeconds < 1) return "just now";
+            if (span.TotalSeconds < 90) return $"{(int)span.TotalSeconds}s";
+            if (span.TotalMinutes < 90) return $"{(int)span.TotalMinutes}m";
+            return $"{(int)span.TotalHours}h";
+        }
+
+        // ───────── Save / Cancel ─────────
+
+        private void OnSave(object sender, RoutedEventArgs e)
+        {
+            if (!ValidateForSave(out var error))
+            {
+                statusText.Text = error;
+                return;
+            }
+            WriteToManager();
+            DialogResult = true;
+            Close();
+        }
+
+        private void OnCancel(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
+
+        private bool ValidateForSave(out string error)
+        {
+            if (string.IsNullOrEmpty(_metadataIdString))
+            {
+                error = "Pick a metadata channel.";
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(dataKeyCombo.Text))
+            {
+                error = "Set a Data key.";
+                return false;
+            }
+
+            foreach (var box in EnumerateValidatedTextBoxes())
+            {
+                if (!IsTextBoxValid(box, out var err))
+                {
+                    error = err;
+                    box.Focus();
+                    return false;
+                }
+            }
+            error = null;
+            return true;
+        }
+
+        // ───────── Numeric input validation ─────────
+
+        // Tag values: "number" (any double), "positiveNumber" (> 0), "nonNegativeInteger" (>= 0 integer).
+        private static readonly Regex NumberAllowedChars = new Regex(@"^[\-0-9\.,]+$");
+        private static readonly Regex IntegerAllowedChars = new Regex(@"^[0-9]+$");
+
+        private void InstallNumericValidation()
+        {
+            foreach (var tb in EnumerateValidatedTextBoxes())
+            {
+                tb.PreviewTextInput += OnNumericPreviewTextInput;
+                DataObject.AddPastingHandler(tb, OnNumericPaste);
+                tb.TextChanged += (s, e) => UpdateValidationStyle((TextBox)s);
+                UpdateValidationStyle(tb);
+            }
+        }
+
+        private IEnumerable<TextBox> EnumerateValidatedTextBoxes()
+        {
+            yield return numMinBox;
+            yield return numMaxBox;
+            yield return gaugeRangeMinBox;
+            yield return gaugeRangeMaxBox;
+            yield return gaugeNumMinBox;
+            yield return gaugeNumMaxBox;
+            yield return titleFontSizeBox;
+            yield return gaugeValueFontSizeBox;
+            yield return gaugeTickCountBox;
+            yield return gaugeTrackThicknessBox;
+            yield return lineWindowSecondsBox;
+            yield return lineThicknessBox;
+            yield return lineYMinBox;
+            yield return lineYMaxBox;
+            yield return lineNumMinBox;
+            yield return lineNumMaxBox;
+            yield return tableNumMinBox;
+            yield return tableNumMaxBox;
+            yield return trendNumMinBox;
+            yield return trendNumMaxBox;
+            yield return lampIconSizeBox;
+            yield return textFontSizeBox;
+            yield return staleSecondsBox;
+        }
+
+        private static string TagOf(TextBox tb) => tb?.Tag as string ?? "number";
+
+        private void OnNumericPreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            var tb = (TextBox)sender;
+            var tag = TagOf(tb);
+            var ch = e.Text;
+            if (tag == "nonNegativeInteger")
+            {
+                if (!IntegerAllowedChars.IsMatch(ch)) e.Handled = true;
+            }
+            else
+            {
+                if (!NumberAllowedChars.IsMatch(ch)) e.Handled = true;
+            }
+        }
+
+        private void OnNumericPaste(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!e.SourceDataObject.GetDataPresent(DataFormats.Text)) { e.CancelCommand(); return; }
+            var s = e.SourceDataObject.GetData(DataFormats.Text) as string;
+            var tag = TagOf((TextBox)sender);
+            var allowed = tag == "nonNegativeInteger" ? IntegerAllowedChars : NumberAllowedChars;
+            if (string.IsNullOrEmpty(s) || !allowed.IsMatch(s)) e.CancelCommand();
+        }
+
+        private void UpdateValidationStyle(TextBox tb)
+        {
+            tb.BorderBrush = IsTextBoxValid(tb, out _)
+                ? new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x44))
+                : new SolidColorBrush(Color.FromRgb(0xD8, 0x39, 0x2C));
+        }
+
+        private static bool IsTextBoxValid(TextBox tb, out string error)
+        {
+            var tag = TagOf(tb);
+            var s = tb.Text ?? "";
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                // Empty values are tolerated (treated as "use default") for thresholds/scale.
+                // Only positiveNumber and nonNegativeInteger require a value.
+                if (tag == "positiveNumber" || tag == "nonNegativeInteger")
+                {
+                    error = $"'{tb.Name}': value required.";
+                    return false;
+                }
+                error = null;
+                return true;
+            }
+            if (tag == "nonNegativeInteger")
+            {
+                if (!int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var iv) || iv < 0)
+                {
+                    error = $"'{tb.Name}': must be a non-negative integer.";
+                    return false;
+                }
+            }
+            else
+            {
+                if (!double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var dv))
+                {
+                    error = $"'{tb.Name}': must be a number.";
+                    return false;
+                }
+                if (tag == "positiveNumber" && dv <= 0)
+                {
+                    error = $"'{tb.Name}': must be greater than 0.";
+                    return false;
+                }
+            }
+            error = null;
+            return true;
+        }
+
+        // ───────── Packet inspector ─────────
+
+        private void OnInspectPacket(object sender, RoutedEventArgs e)
+        {
+            if (_metadataItem == null)
+            {
+                MessageBox.Show(this,
+                    "No packet captured yet. Pick a metadata channel and wait for the first packet.",
+                    "Inspect packet", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Try to find a recent packet matching the Topic the operator
+            // currently has selected so the dialog reflects their choice.
+            // Cameras interleave several topics, so the "latest" packet often
+            // doesn't match the selected one.
+            string xml = null;
+            bool fallback = false;
+            // Inspect uses Text directly: by the time the operator clicks the
+            // button, any pending SelectionChanged has long since settled and
+            // Text reflects the displayed Topic.
+            string selectedTopic = (topicCombo.Text ?? string.Empty).Trim();
+            Guid itemId = _metadataItem.FQID.ObjectId;
+
+            if (!string.IsNullOrEmpty(selectedTopic))
+            {
+                bool Matches(string candidate)
+                {
+                    if (string.IsNullOrEmpty(candidate)) return false;
+                    foreach (var msg in MetadataExtractor.Observe(candidate))
+                    {
+                        if (string.Equals(msg.Topic, selectedTopic, StringComparison.OrdinalIgnoreCase))
+                            return true;
+                    }
+                    return false;
+                }
+                if (LastXmlCache.TryGetMatching(itemId, Matches, out var matched, out _))
+                    xml = matched;
+            }
+            if (string.IsNullOrEmpty(xml))
+            {
+                if (LastXmlCache.TryGet(itemId, out var latest, out _))
+                {
+                    xml = latest;
+                    fallback = !string.IsNullOrEmpty(selectedTopic);
+                }
+            }
+
+            if (string.IsNullOrEmpty(xml))
+            {
+                MessageBox.Show(this,
+                    "No packet captured yet. Pick a metadata channel and wait for the first packet.",
+                    "Inspect packet", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string pretty;
+            try
+            {
+                var filtered = MetadataExtractor.FilterHiddenTopics(xml);
+                pretty = XDocument.Parse(filtered).ToString(SaveOptions.None);
+            }
+            catch { pretty = xml; }
+
+            string title = string.IsNullOrEmpty(selectedTopic)
+                ? "Latest packet (XML)"
+                : (fallback
+                    ? $"Latest packet (XML) - no recent packet for topic '{selectedTopic}'"
+                    : $"Packet for topic '{selectedTopic}' (XML)");
+
+            var win = new Window
+            {
+                Title = title,
+                Width = 900,
+                Height = 700,
+                Owner = this,
+                Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x1E)),
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            };
+            var rtb = new RichTextBox
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A)),
+                Foreground = new SolidColorBrush(Color.FromRgb(0xE6, 0xEA, 0xEC)),
+                BorderThickness = new Thickness(0),
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 12,
+                IsReadOnly = true,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            };
+            var para = new Paragraph { Margin = new Thickness(0) };
+            HighlightXmlInto(para, pretty);
+            rtb.Document = new System.Windows.Documents.FlowDocument(para)
+            {
+                PageWidth = 4000,
+            };
+            win.Content = rtb;
+            win.ShowDialog();
+        }
+
+        private static string DumpXmlContents(string xml)
+        {
+            try
+            {
+                var msgs = MetadataExtractor.Observe(xml).ToList();
+                if (msgs.Count == 0) return "(no NotificationMessages)";
+                var sb = new System.Text.StringBuilder();
+                int i = 0;
+                foreach (var m in msgs)
+                {
+                    if (i++ >= 4) { sb.Append("..."); break; }
+                    sb.Append("Topic=").Append(m.Topic);
+                    if (m.Data != null && m.Data.Count > 0)
+                    {
+                        sb.Append(" Data[");
+                        bool first = true;
+                        foreach (var kv in m.Data)
+                        {
+                            if (!first) sb.Append(',');
+                            sb.Append(kv.Key).Append('=').Append(kv.Value);
+                            first = false;
+                        }
+                        sb.Append(']');
+                    }
+                    sb.Append("; ");
+                }
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return "(dump failed: " + ex.Message + ")";
+            }
+        }
+
+        // Coloring rules (mirrors Admin/MetadataViewer style):
+        //   <,>,/  : dim gray
+        //   element name      : light blue
+        //   attribute name    : salmon
+        //   attribute value   : light orange
+        //   text content      : default foreground
+        private static readonly SolidColorBrush BrushBracket = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+        private static readonly SolidColorBrush BrushElement = new SolidColorBrush(Color.FromRgb(0x6B, 0xB6, 0xFF));
+        private static readonly SolidColorBrush BrushAttr = new SolidColorBrush(Color.FromRgb(0xE6, 0x95, 0x80));
+        private static readonly SolidColorBrush BrushAttrValue = new SolidColorBrush(Color.FromRgb(0xE6, 0xB8, 0x6B));
+        private static readonly SolidColorBrush BrushText = new SolidColorBrush(Color.FromRgb(0xE6, 0xEA, 0xEC));
+
+        private static readonly Regex XmlTokenRegex = new Regex(
+            @"(?<tag><(?<close>/?)(?<elname>[\w:.\-]+)(?<attrs>(\s+[\w:.\-]+\s*=\s*""[^""]*"")*)\s*(?<self>/?)>)|(?<text>[^<]+)",
+            RegexOptions.Compiled | RegexOptions.Singleline);
+
+        private static readonly Regex AttrRegex = new Regex(
+            @"(?<name>[\w:.\-]+)\s*=\s*""(?<value>[^""]*)""",
+            RegexOptions.Compiled);
+
+        private static void HighlightXmlInto(Paragraph para, string xml)
+        {
+            int i = 0;
+            foreach (Match m in XmlTokenRegex.Matches(xml))
+            {
+                if (m.Index > i)
+                    para.Inlines.Add(new Run(xml.Substring(i, m.Index - i)) { Foreground = BrushText });
+
+                if (m.Groups["text"].Success)
+                {
+                    para.Inlines.Add(new Run(m.Value) { Foreground = BrushText });
+                }
+                else
+                {
+                    para.Inlines.Add(new Run("<" + m.Groups["close"].Value) { Foreground = BrushBracket });
+                    para.Inlines.Add(new Run(m.Groups["elname"].Value) { Foreground = BrushElement });
+                    var attrs = m.Groups["attrs"].Value;
+                    if (!string.IsNullOrEmpty(attrs))
+                    {
+                        int last = 0;
+                        foreach (Match am in AttrRegex.Matches(attrs))
+                        {
+                            if (am.Index > last)
+                                para.Inlines.Add(new Run(attrs.Substring(last, am.Index - last)) { Foreground = BrushBracket });
+                            para.Inlines.Add(new Run(am.Groups["name"].Value) { Foreground = BrushAttr });
+                            para.Inlines.Add(new Run("=\"") { Foreground = BrushBracket });
+                            para.Inlines.Add(new Run(am.Groups["value"].Value) { Foreground = BrushAttrValue });
+                            para.Inlines.Add(new Run("\"") { Foreground = BrushBracket });
+                            last = am.Index + am.Length;
+                        }
+                        if (last < attrs.Length)
+                            para.Inlines.Add(new Run(attrs.Substring(last)) { Foreground = BrushBracket });
+                    }
+                    var selfClose = m.Groups["self"].Value;
+                    para.Inlines.Add(new Run(selfClose + ">") { Foreground = BrushBracket });
+                }
+
+                i = m.Index + m.Length;
+            }
+            if (i < xml.Length)
+                para.Inlines.Add(new Run(xml.Substring(i)) { Foreground = BrushText });
+        }
+
+        private void WriteToManager()
+        {
+            _vim.Title = titleBox.Text?.Trim() ?? "";
+            _vim.ShowTitle = (showTitleCheck.IsChecked == true) ? "true" : "false";
+            _vim.TitlePosition = (titlePositionCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Left";
+            _vim.TitleFontSize = NormalizeNumberText(titleFontSizeBox.Text, "14");
+            _vim.TitleColor = NormalizeColor(_titleColor.HexValue);
+
+            _vim.MetadataId = _metadataIdString ?? "";
+            _vim.MetadataName = _metadataNameString ?? "";
+
+            _vim.Topic = topicCombo.Text?.Trim() ?? "";
+            _vim.TopicMatchMode = "Exact";
+            _vim.SourceFilters = sourceFilterBox.Text?.Trim() ?? "";
+            _vim.DataKey = dataKeyCombo.Text?.Trim() ?? "";
+
+            string rt = "Lamp";
+            if (rtNumber.IsChecked == true) rt = "Number";
+            else if (rtGauge.IsChecked == true) rt = "Gauge";
+            else if (rtText.IsChecked == true) rt = "Text";
+            else if (rtLine.IsChecked == true) rt = "LineChart";
+            else if (rtTable.IsChecked == true) rt = "Table";
+            else if (rtTrend.IsChecked == true) rt = "Trend";
+            _vim.RenderType = rt;
+
+            _vim.LampMap = SerializeLampRows();
+            _vim.LampIconSize = NormalizeNumberText(lampIconSizeBox.Text, "96");
+            _vim.TextFontSize = NormalizeNumberText(textFontSizeBox.Text, "28");
+
+            if (rt == "Gauge")
+            {
+                _vim.NumMin = gaugeNumMinBox.Text?.Trim() ?? "";
+                _vim.NumMax = gaugeNumMaxBox.Text?.Trim() ?? "";
+                _vim.NumDirection = (gaugeHighIsBadCheck.IsChecked == true) ? "HighIsBad" : "LowIsBad";
+                _vim.ColorOk = NormalizeColor(_gaugeColorOk.HexValue);
+                _vim.ColorWarn = NormalizeColor(_gaugeColorWarn.HexValue);
+                _vim.ColorBad = NormalizeColor(_gaugeColorBad.HexValue);
+                _vim.Unit = unitBoxGauge.Text?.Trim() ?? "";
+            }
+            else if (rt == "LineChart")
+            {
+                _vim.NumMin = lineNumMinBox.Text?.Trim() ?? "";
+                _vim.NumMax = lineNumMaxBox.Text?.Trim() ?? "";
+                _vim.NumDirection = (lineHighIsBadCheck.IsChecked == true) ? "HighIsBad" : "LowIsBad";
+                _vim.ColorOk = NormalizeColor(_lineColorOk.HexValue);
+                _vim.ColorWarn = NormalizeColor(_lineColorWarn.HexValue);
+                _vim.ColorBad = NormalizeColor(_lineColorBad.HexValue);
+                // Line chart has no inline unit; leave any prior Unit untouched.
+            }
+            else if (rt == "Table")
+            {
+                _vim.NumMin = tableNumMinBox.Text?.Trim() ?? "";
+                _vim.NumMax = tableNumMaxBox.Text?.Trim() ?? "";
+                _vim.NumDirection = (tableHighIsBadCheck.IsChecked == true) ? "HighIsBad" : "LowIsBad";
+                _vim.ColorOk = NormalizeColor(_tableColorOk.HexValue);
+                _vim.ColorWarn = NormalizeColor(_tableColorWarn.HexValue);
+                _vim.ColorBad = NormalizeColor(_tableColorBad.HexValue);
+                // Table has no inline unit; leave any prior Unit untouched.
+            }
+            else if (rt == "Trend")
+            {
+                _vim.NumMin = trendNumMinBox.Text?.Trim() ?? "";
+                _vim.NumMax = trendNumMaxBox.Text?.Trim() ?? "";
+                _vim.NumDirection = (trendHighIsBadCheck.IsChecked == true) ? "HighIsBad" : "LowIsBad";
+                _vim.ColorOk = NormalizeColor(_trendColorOk.HexValue);
+                _vim.ColorWarn = NormalizeColor(_trendColorWarn.HexValue);
+                _vim.ColorBad = NormalizeColor(_trendColorBad.HexValue);
+                // Trend reads Unit from the shared field; preserve any prior value.
+            }
+            else
+            {
+                _vim.NumMin = numMinBox.Text?.Trim() ?? "";
+                _vim.NumMax = numMaxBox.Text?.Trim() ?? "";
+                _vim.NumDirection = (highIsBadCheck.IsChecked == true) ? "HighIsBad" : "LowIsBad";
+                _vim.ColorOk = NormalizeColor(_colorOk.HexValue);
+                _vim.ColorWarn = NormalizeColor(_colorWarn.HexValue);
+                _vim.ColorBad = NormalizeColor(_colorBad.HexValue);
+                _vim.Unit = unitBoxNumber.Text?.Trim() ?? "";
+            }
+
+            _vim.GaugeRangeMin = NormalizeNumberText(gaugeRangeMinBox.Text, "0");
+            _vim.GaugeRangeMax = NormalizeNumberText(gaugeRangeMaxBox.Text, "100");
+            _vim.GaugeStyle = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Modern180";
+            _vim.GaugeShowValue = (gaugeShowValueCheck.IsChecked == true) ? "true" : "false";
+            _vim.GaugeValueFontSize = NormalizeNumberText(gaugeValueFontSizeBox.Text, "34");
+            _vim.GaugeShowTicks = (gaugeShowTicksCheck.IsChecked == true) ? "true" : "false";
+            _vim.GaugeTickCount = NormalizeNumberText(gaugeTickCountBox.Text, "10");
+            // Default fallback follows the selected style; clamp to documented max of 20.
+            var styleDefault = FormatNumber(GaugeConfig.DefaultTrackThickness(CurrentGaugeStyle()));
+            var thicknessText = NormalizeNumberText(gaugeTrackThicknessBox.Text, styleDefault);
+            if (double.TryParse(thicknessText, NumberStyles.Float, CultureInfo.InvariantCulture, out var thicknessNum)
+                && thicknessNum > GaugeConfig.MaxTrackThickness)
+            {
+                thicknessText = FormatNumber(GaugeConfig.MaxTrackThickness);
+            }
+            _vim.GaugeTrackThickness = thicknessText;
+
+            _vim.ThresholdsEnabled = (thresholdsEnabledCheckNumber.IsChecked == true) ? "true" : "false";
+
+            _vim.LineWindowSeconds = NormalizeNumberText(lineWindowSecondsBox.Text, "60");
+            _vim.LineYMin = lineYMinBox.Text?.Trim() ?? "";
+            _vim.LineYMax = lineYMaxBox.Text?.Trim() ?? "";
+            _vim.LineColor = NormalizeColor(_lineColor.HexValue);
+            _vim.LineFill = (lineFillCheck.IsChecked == true) ? "true" : "false";
+            _vim.LineShowMarker = (lineMarkerCheck.IsChecked == true) ? "true" : "false";
+            _vim.LineType = (lineTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Straight";
+            _vim.LineThickness = NormalizeNumberText(lineThicknessBox.Text, "2");
+            _vim.LineZoomEnabled = (lineZoomCheck.IsChecked == true) ? "true" : "false";
+            _vim.LineAggregation = (lineAggregationCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Mean";
+            _vim.LineEnvelope = (lineEnvelopeCheck.IsChecked == true) ? "true" : "false";
+            // Keep the legacy LineSmoothing flag in sync so older renderers see the
+            // same effective behaviour.
+            _vim.LineSmoothing = string.Equals(_vim.LineType, "Smooth", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
+            _vim.LineShowLegend = (lineShowLegendCheck?.IsChecked == true) ? "true" : "false";
+
+            // Serialize the series list. When only the single legacy series is
+            // configured we leave LineSeriesJson empty so older callers / older
+            // builds keep working off the legacy fields; the loader migrates on
+            // demand. If the operator added accordion rows we persist the full
+            // list (including a re-synthesized series 1) to lock the order.
+            if (_additionalSeriesRows.Count == 0)
+            {
+                _vim.LineSeriesJson = string.Empty;
+            }
+            else
+            {
+                var list = new System.Collections.Generic.List<LineSeries>();
+                list.Add(LineSeriesParser.LegacyFromManager(_vim));
+                foreach (var row in _additionalSeriesRows)
+                {
+                    var s = row.ToLineSeries();
+                    if (s != null) list.Add(s);
+                    if (list.Count >= LineSeriesParser.MaxSeries) break;
+                }
+                _vim.LineSeriesJson = LineSeriesParser.Serialize(list);
+            }
+
+            _vim.TableWindowSeconds = NormalizeNumberText(tableWindowSecondsBox.Text, "300");
+            _vim.TableMaxRows = NormalizeNumberText(tableMaxRowsBox.Text, "200");
+            _vim.TableShowTimestamp = (tableShowTimestampCheck.IsChecked == true) ? "true" : "false";
+            _vim.TableTimestampFormat = string.IsNullOrWhiteSpace(tableTimestampFormatBox.Text) ? "HH:mm:ss" : tableTimestampFormatBox.Text.Trim();
+            _vim.TableShowDelta = (tableShowDeltaCheck.IsChecked == true) ? "true" : "false";
+            _vim.TableFontSize = NormalizeNumberText(tableFontSizeBox.Text, "12");
+            _vim.TableValueAlignment = (tableValueAlignCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Left";
+            _vim.TableValueColumnName = tableValueColumnNameBox.Text?.Trim() ?? string.Empty;
+
+            _vim.TrendLookbackSeconds = NormalizeNumberText(trendWindowSecondsBox.Text, "300");
+            _vim.TrendValueFontSize = NormalizeNumberText(trendValueFontSizeBox.Text, "48");
+            _vim.TrendShowDelta = (trendShowDeltaCheck.IsChecked == true) ? "true" : "false";
+            _vim.TrendShowArrow = (trendShowArrowCheck.IsChecked == true) ? "true" : "false";
+            _vim.TrendComparisonMode = (trendComparisonModeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Yesterday";
+
+            _vim.StaleSeconds = NormalizeNumberText(staleSecondsBox.Text, "0");
+            _vim.EnableExport = (enableExportCheck.IsChecked == true) ? "true" : "false";
+
+            _vim.WidgetDensity = (densityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Comfortable";
+        }
+
+        private static string NormalizeColor(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return "#777777";
+            var t = s.Trim();
+            return t.StartsWith("#") ? t : "#" + t;
+        }
+
+        private static string NormalizeNumberText(string s, string fallback)
+        {
+            if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                return v.ToString(CultureInfo.InvariantCulture);
+            return fallback;
+        }
+
+        private static string FormatNumber(double v)
+        {
+            if (v == (long)v) return ((long)v).ToString(CultureInfo.InvariantCulture);
+            return v.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private GaugeStyle CurrentGaugeStyle()
+        {
+            var styleText = (gaugeStyleCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            if (string.Equals(styleText, "Arc270", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Arc270;
+            if (string.Equals(styleText, "Bar", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Bar;
+            if (string.Equals(styleText, "Modern270", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Modern270;
+            if (string.Equals(styleText, "Modern180", StringComparison.OrdinalIgnoreCase)) return GaugeStyle.Modern180;
+            return GaugeStyle.Arc180;
+        }
+
+        // When the user picks a different gauge style and the thickness textbox still
+        // holds the previous style's default, swap to the new style's default. A custom
+        // value the user typed (anything that doesn't match the prior default) is left
+        // alone so we don't trash deliberate edits.
+        private void OnGaugeStyleChanged()
+        {
+            if (!_uiReady) return;
+            var newStyle = CurrentGaugeStyle();
+            var prevDefault = FormatNumber(GaugeConfig.DefaultTrackThickness(_prevGaugeStyle));
+            if (string.Equals((gaugeTrackThicknessBox.Text ?? "").Trim(), prevDefault, StringComparison.Ordinal))
+            {
+                gaugeTrackThicknessBox.Text = FormatNumber(GaugeConfig.DefaultTrackThickness(newStyle));
+            }
+            _prevGaugeStyle = newStyle;
+        }
+
+        // ───────── Helpers ─────────
+
+        private static void SelectComboItem(ComboBox combo, string text)
+        {
+            for (int i = 0; i < combo.Items.Count; i++)
+            {
+                var item = combo.Items[i] as ComboBoxItem;
+                if (item == null) continue;
+                if (string.Equals(item.Tag?.ToString(), text, StringComparison.Ordinal)
+                    || string.Equals(item.Content?.ToString(), text, StringComparison.Ordinal))
+                {
+                    combo.SelectedIndex = i;
+                    return;
+                }
+            }
+            if (combo.Items.Count > 0) combo.SelectedIndex = 0;
+        }
+
+        private void Teardown()
+        {
+            _learn.Stop();
+            foreach (var r in _additionalSeriesRows) r.LearnSession.Stop();
+            StopSource();
+            _ageTicker?.Stop();
+            _ageTicker = null;
+            _diagTicker?.Stop();
+            _diagTicker = null;
+        }
+    }
+}

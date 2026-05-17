@@ -400,10 +400,30 @@ namespace BarcodeReader.Admin
                 MessageCommunicationManager.Start(serverId);
                 _mc = MessageCommunicationManager.Get(serverId);
 
-                _statusUpdateFilter = _mc.RegisterCommunicationFilter(
-                    OnStatusMessage, new CommunicationIdFilter(BarcodeMessageIds.StatusUpdate));
-                _statusResponseFilter = _mc.RegisterCommunicationFilter(
-                    OnStatusMessage, new CommunicationIdFilter(BarcodeMessageIds.StatusResponse));
+                // Defensive: if Register throws (e.g. broker rejects a stale duplicate
+                // from a previous control instance that wasn't torn down cleanly), undo
+                // any partial registration so we don't leak a half-registered pair.
+                try
+                {
+                    _statusUpdateFilter = _mc.RegisterCommunicationFilter(
+                        OnStatusMessage, new CommunicationIdFilter(BarcodeMessageIds.StatusUpdate));
+                    _statusResponseFilter = _mc.RegisterCommunicationFilter(
+                        OnStatusMessage, new CommunicationIdFilter(BarcodeMessageIds.StatusResponse));
+                }
+                catch
+                {
+                    if (_statusUpdateFilter != null)
+                    {
+                        try { _mc.UnRegisterCommunicationFilter(_statusUpdateFilter); } catch { }
+                        _statusUpdateFilter = null;
+                    }
+                    if (_statusResponseFilter != null)
+                    {
+                        try { _mc.UnRegisterCommunicationFilter(_statusResponseFilter); } catch { }
+                        _statusResponseFilter = null;
+                    }
+                    throw;
+                }
 
                 _responseTimer = new Timer { Interval = 3000 };
                 _responseTimer.Tick += OnResponseTimeout;
@@ -445,8 +465,24 @@ namespace BarcodeReader.Admin
 
             if (_mc != null)
             {
-                if (_statusUpdateFilter != null) { _mc.UnRegisterCommunicationFilter(_statusUpdateFilter); _statusUpdateFilter = null; }
-                if (_statusResponseFilter != null) { _mc.UnRegisterCommunicationFilter(_statusResponseFilter); _statusResponseFilter = null; }
+                if (_statusUpdateFilter != null)
+                {
+                    try { _mc.UnRegisterCommunicationFilter(_statusUpdateFilter); } catch { }
+                    _statusUpdateFilter = null;
+                }
+                if (_statusResponseFilter != null)
+                {
+                    try { _mc.UnRegisterCommunicationFilter(_statusResponseFilter); } catch { }
+                    _statusResponseFilter = null;
+                }
+            }
+            else
+            {
+                // _mc is null but a stale handle could still be sitting on the singleton
+                // MessageCommunication if Subscribe was interrupted before storing _mc.
+                // Drop the handles unconditionally so the next Subscribe starts clean.
+                _statusUpdateFilter = null;
+                _statusResponseFilter = null;
             }
             _mc = null;
         }

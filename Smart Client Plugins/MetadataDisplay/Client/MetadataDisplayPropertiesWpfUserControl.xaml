@@ -1,0 +1,46 @@
+<external:PropertiesWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="MetadataDisplay.Client.MetadataDisplayPropertiesWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Margin="10">
+        <GroupBox Header="Metadata Display" Foreground="White">
+            <StackPanel Margin="8">
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Channel:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="summaryChannel" Text="(not set)" Foreground="White" TextTrimming="CharacterEllipsis"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Topic:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="summaryTopic" Text="(not set)" Foreground="White" TextTrimming="CharacterEllipsis"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Data key:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="summaryKey" Text="(not set)" Foreground="White"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Filter:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="summaryFilter" Text="(none)" Foreground="White" TextTrimming="CharacterEllipsis"/>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Render:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="4" Grid.Column="1" x:Name="summaryRender" Text="Lamp" Foreground="White"/>
+                </Grid>
+
+                <Button x:Name="openConfigButton"
+                        Content="Open configuration..."
+                        Padding="10,4"
+                        HorizontalAlignment="Left"
+                        Click="OnOpenConfigClick"/>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</external:PropertiesWpfUserControl>

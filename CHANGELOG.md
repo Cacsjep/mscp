@@ -1,8 +1,63 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [3.0.0] - 2026-05-16
+- Improve Snap Reporter: Add PDF Split possibility
+- Improve Snap Reporter: Add Progress Bar 
+- Fix Snap Reporter: Aspect Ratio was not preserved
+- Add SC Remote Control: **SVG Overlay API** - External systems can now draw complex overlays via HTTP API. 
 
-## [2.3.0] - 2026-04-29
+## [2.9.2] - 2026-05-07
+- Improve Timeline Jump: Add possibility (and setting) for auto switch to current time when entering playback, or on start.
+- Improve Carousel: Works now with all possible mip items that are not internal, Like Maps, Hotspot, Matrix, Alarm List, Alarm Preview - But with metadata display or other widget from us or other MIP defined one.
+
+## [2.9.0] - 2026-05-06
+- Add Metadata Display: **Export to CSV** for every render type (Lamp, Number, Gauge, Text, Line Chart, Table). 
+- Add Metadata Display: **Trend render type**. Compact tile that pairs a big current value with an up / down / neutral arrow, a Δ% versus a configurable baseline, and an inline sparkline of the recent history. 
+- Add Metadata Display: **Multi-series Line Chart**. A single Line Chart widget can now plot up to 8 series
+
+## [2.8.0] - 2026-05-05
+- Add Metadata Display: **Table** render type. 
+
+## [2.7.4] - 2026-05-05
+- Fix Web Viewer: Plugin was missing from CI ZIP artifacts and the unified MSI installer because it had no entry in `plugins.json` (the manifest that drives both the build matrix and `installer/generate-wix.ps1`). Added the WebViewer entry under the SmartClient category; the existing `bin/Release/net48` staging rule picks up the WebView2 native loaders (`runtimes/win-{x86,x64,arm64}/native/WebView2Loader.dll`) automatically, no extra staging directives needed.
+- Improve BarcodeReader: Quieter helper assembly-resolve logging. Successful resolves no longer write an `AssemblyResolve hit` info line, and `.resources` satellite-assembly probes (e.g. `VideoOS.Platform.resources`) are excluded from the miss-error filter — those are CLR localization lookups expected to miss on unlocalized binaries. Real misses for `VideoOS.*`, `ZXing.*` and `CommunitySDK` still fire as errors.
+
+## [2.7.3] - 2026-05-05
+- Fix Barcode Helper crash: The issue of helper crash, was that the helper was unable to find the correct decoding dll that are in event server folder.
+
+## [2.7.2] - 2026-05-04
+- Fix Metadata Display: `TypeLoadException` for `LiveChartsCore.CoreAxis`2` `LiveChartsCore`, `LiveChartsCore.SkiaSharpView` and `LiveChartsCore.SkiaSharpView.WPF` are now ILRepacked /internalize'd into `MetadataDisplay.dll` so the chart code resolves against its own private copy regardless of what other plugins ship. SkiaSharp / HarfBuzz remain external (large + native libs).
+
+## [2.7.0] - 2026-05-04
+- Add Web Viewer: New Smart Client view item plugin that embeds a single web page in a view item using Microsoft Edge WebView2. One URL per view item with optional title, HTTP Basic credentials (DPAPI-encrypted under the current Windows user), auto-accept of invalid TLS certificates (default on, for in-house dashboards with self-signed certs), and one-shot auto-fill of the basic-auth prompt (default on). For multi-tab / folder-tree usage with both web pages and RDP, use the existing Remote Manager plugin.
+
+## [2.6.6] - 2026-05-04
+- Add Metadata Display: **Line Chart** render type. Time-series view of any numeric data key with selectable window (60 seconds up to 24 hours), Mean / Min / Max aggregation into time buckets, optional min/max envelope band, Straight / Smooth / Step line types, configurable color, thickness, fill area and markers, optional dashed warn / critical threshold lines, and zoom and pan (mouse wheel and drag).
+- Add Metadata Display: **Live archive backfill** for Line Chart. When the chart appears with a window longer than 60 seconds it is seeded from recorded metadata so the user sees real history immediately instead of waiting for the window to fill from live samples. Switching between Live and Playback or changing the window no longer wipes the visible history.
+- Add Metadata Display: **Playback support** for Line Chart. The chart seeds itself at the current playback time on entry (no scrub needed), the cursor line tracks the timeline position, and large jumps trigger a fresh range scan around the new cursor. Zoom and pan are always enabled in playback and the live "Paused" badge is suppressed.
+- Add Metadata Display: **In-pane time window picker** for Line Chart (top-right of the chart). Lets viewers temporarily switch the window (60 seconds, 5 / 10 / 30 minutes, 1 / 6 / 24 hours) without entering Setup mode. A **Default** entry reverts to the saved value; an asterisk on the badge label flags an active session override. Override is session-only and never modifies the saved configuration.
+- Add Metadata Display: **Loading indicators** while archive backfill runs (cold-start in both Live and Playback, plus after window picker switches).
+- Add Metadata Display: **Threshold enable toggle** for Number, Gauge and Line Chart, mirrored across all three render panels. When off, gauges show a single neutral track and the chart hides its threshold lines.
+- Improve Metadata Display: **Number widget** value and unit now share a true text baseline so readouts like `43.99 km/h` look like a single piece of typography.
+- Improve Metadata Display: **Min / Max chips** redesigned with warn-triangle (lower bound) and critical-circle (upper bound) icons, color-coded to the threshold direction.
+- Improve Metadata Display: **Bar gauge** layout - value, unit, and Min/Max scale labels share one row under the bar; ticks moved above; thinner value indicator that does not hide the scale.
+- Improve Metadata Display: Default **track thickness** of 6 for arc gauges and 2 for bar gauges (max 20) for a cleaner default look.
+- Improve Metadata Display: Setup mode panel scales properly on small panes.
+- Improve Metadata Display: Live preview now uses the same "Waiting for data..." indicator as the runtime widget instead of a key=value status line; Line Chart preview is sized 16:9 so the configured shape matches the runtime pane.
+- Improve Metadata Display: Configuration window capped at 1280px wide.
+- Improve Metadata Display: Diagnostic logging under the `MetadataDisplay` category for chart backfill (start, sample counts, cancellations, faults), playback seeding, and window-picker overrides.
+
+## [2.6.0] - 2026-05-02
+- Add Metadata Display: A new Smart Client plugin (View Item Plugin) to display metadata contained data in live and also recording mode.
+
+## [2.5.0] - 2026-05-01
+- Add Timeline Jump: New Smart Client toolbar plugin (partner request) for jumping the playback timeline backward or forward by a chosen increment without dragging or scrubbing. 
+
+## [2.4.2] - 2026-04-30
+- Fix RTMP Driver: Stuttering / dropped recording when the publisher's RTMP timestamps drift ahead of wall-clock.
+- Add Timelapse: **Apply time window per day** option restricts frames to a daily time-of-day window across the full date range. Use for daylight-only timelapses (e.g. 2 weeks, 08:00 to 17:00 each day) or night-only timelapses with wrap-around windows (e.g. 22:00 to 06:00). Segments are clipped in memory after the server query, so the Recording Sequences card and Output Estimate update without extra round-trips.
+
+## [2.3.1] - 2026-04-29
 - Add Colored Timeline: New per-camera selectable-event ribbon plugin (successor to EdgeMotionTimeline). Includes icon picker, marker support, display-name aware rule UI with reduced table footprint, and demo video in the docs.
 - Fix BarcodeReader (#84): Structured diagnostics for helper failures. Last-chance `UnhandledException` and `UnobservedTaskException` handlers, chatty `OnAssemblyResolve` (logs hits, load failures, and our-dep misses plus the full search-dir list), per-channel on-disk helper log mirrored to `C:\ProgramData\Milestone\BarcodeReader\helper-{itemId}.log` with 5 MB rotation, and typed exit codes (`BackgroundPlugin.MapExitCode` decodes 255 as `NativeCrash`, dumps the last stderr lines and the on-disk log path on death).
 - Fix Installer: Management Client process kill targets the actual EXE name. Old image name `VideoOS.Platform.Administration.exe` does not match modern Milestone builds where Management Client runs as `VideoOS.Administration.exe`, so the kill silently no-opped and left the client holding plugin DLLs. Both names are now killed.

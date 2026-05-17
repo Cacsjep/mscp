@@ -7,9 +7,9 @@
     PreviewMouseLeftButtonUp="OnMouseLeftUp"
     PreviewMouseDoubleClick="OnMouseDoubleClick">
     <Grid Background="#FF1C2326">
-        <!-- Camera grid canvas (live mode) -->
-        <Canvas x:Name="cameraCanvas" ClipToBounds="True"
-                SizeChanged="CameraCanvas_SizeChanged"/>
+        <!-- Slot canvas (live mode) - hosts cameras, plugin user controls, and placeholders -->
+        <Canvas x:Name="slotCanvas" ClipToBounds="True"
+                SizeChanged="SlotCanvas_SizeChanged"/>
 
         <!-- Info overlay -->
         <TextBlock x:Name="infoText" Text="" Foreground="#FFB0B0B0" FontSize="14"

@@ -73,6 +73,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-grid"></i></div>
     <div class="pt"><span class="pn">Flex View</span><span class="pd">Design custom view layouts beyond the standard view templates.</span></div>
   </a>
+  <a class="pr" href="smart-client/metadata-display/">
+    <div class="pi sc"><i class="mdi mdi-gauge"></i></div>
+    <div class="pt"><span class="pn">Metadata Display</span><span class="pd">Render any value from a metadata channel as a dashboard widget - lamp, number, gauge, or text.</span></div>
+  </a>
   <a class="pr" href="smart-client/monitor-rtmp-streamer/">
     <div class="pi sc"><i class="mdi mdi-monitor-share"></i></div>
     <div class="pt"><span class="pn">Monitor RTMP Streamer</span><span class="pd">Capture desktop monitors and stream via RTMP</span></div>
@@ -101,6 +105,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-timelapse"></i></div>
     <div class="pt"><span class="pn">Timelapse</span><span class="pd">Generate timelapse videos from recorded cameras with multi-camera stitch support</span></div>
   </a>
+  <a class="pr" href="smart-client/timeline-jump/">
+    <div class="pi sc"><i class="mdi mdi-skip-forward"></i></div>
+    <div class="pt"><span class="pn">Timeline Jump</span><span class="pd">Toolbar flyout to jump the playback timeline backward or forward by configurable increments (seconds, minutes, hours, days)</span></div>
+  </a>
   <a class="pr" href="smart-client/view-carousel/">
     <div class="pi sc"><i class="mdi mdi-view-carousel"></i></div>
     <div class="pt"><span class="pn">View Carousel</span><span class="pd">Cycle through Smart Client views inside a single view item slot</span></div>
@@ -108,6 +116,10 @@ hide:
   <a class="pr" href="smart-client/weather/">
     <div class="pi sc"><i class="mdi mdi-weather-partly-cloudy"></i></div>
     <div class="pt"><span class="pn">Weather</span><span class="pd">Live weather display powered by Open-Meteo</span></div>
+  </a>
+  <a class="pr" href="smart-client/web-viewer/">
+    <div class="pi sc"><i class="mdi mdi-web"></i></div>
+    <div class="pt"><span class="pn">Web Viewer</span><span class="pd">Embed any web page (dashboard, status board, intranet site) in a view item with optional credentials and self-signed cert tolerance</span></div>
   </a>
 </div>
 

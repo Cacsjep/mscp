@@ -1,0 +1,385 @@
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Class="MetadataDisplay.Client.Export.ExportDialog"
+    x:ClassModifier="internal"
+    Title="Metadata Display - Export to CSV"
+    Width="1180" Height="820"
+    MinWidth="1000" MinHeight="640"
+    MaxWidth="1280"
+    WindowStartupLocation="CenterOwner"
+    Background="#FF1E1E1E"
+    Foreground="#FFD0D0D0"
+    FontSize="13">
+    <Window.Resources>
+        <!-- Reuse the configuration window's section / field / hint styles so the
+             dialog feels like part of the same family. Defined inline (rather than
+             cross-referenced) so this window stays self-contained. -->
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FFE6EAEC"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="SectionContainer" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="14"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="HintText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Opacity" Value="0.55"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+
+        <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CaretBrush" Value="#FFD0D0D0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource DarkTextBox}"/>
+
+        <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bd" Background="#FF2A2A2A" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF3399FF"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <ControlTemplate x:Key="DarkComboBoxToggle" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="20"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.ColumnSpan="2" Background="#FF2A2A2A" BorderBrush="#FF444444" BorderThickness="1"/>
+                <Border Grid.Column="0" Background="#FF2A2A2A" Margin="1"/>
+                <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#FFD0D0D0"
+                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </ControlTemplate>
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItem}"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Template="{StaticResource DarkComboBoxToggle}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Focusable="False" ClickMode="Press"/>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="6,4,24,4" VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                                   Focusable="False" AllowsTransparency="True" PopupAnimation="Slide">
+                                <Grid MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border Background="#FF2A2A2A" BorderBrush="#FF444444" BorderThickness="1">
+                                        <ScrollViewer>
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource DarkComboBox}"/>
+
+        <Style x:Key="SmallButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="BorderBrush" Value="#FF444444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF363636"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#FF555555"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FF404040"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Button" BasedOn="{StaticResource SmallButton}"/>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="#FF252525" Padding="12,10" BorderBrush="#FF333333" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock x:Name="statusText" DockPanel.Dock="Left" VerticalAlignment="Center" Foreground="#FFA9B5BB"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="cancelButton" Content="Cancel" MinWidth="90" Margin="0,0,8,0" Click="OnCancelClick"/>
+                    <Button x:Name="loadButton" Content="Load Data" MinWidth="120" Margin="0,0,8,0" Click="OnLoadDataClick"/>
+                    <Button x:Name="saveButton" Content="Save as..." MinWidth="120" IsEnabled="False" Click="OnSaveAsClick"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="520"/>
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="Time range" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                       Text="Pick the date and time-of-day for the start and end of the export window. Both ends are inclusive and use local time."/>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="From date" Style="{StaticResource FieldLabel}" Margin="0,0,0,2"/>
+                                    <DatePicker x:Name="fromDatePicker" Background="#FF2D333B" BorderBrush="#FF444C56"
+                                                FontSize="12" Margin="0,0,0,6"/>
+                                    <TextBlock Text="From time" Style="{StaticResource FieldLabel}" Margin="0,0,0,2"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="fromHourCombo"/>
+                                        <ComboBox x:Name="fromMinuteCombo" Grid.Column="2"/>
+                                    </Grid>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="To date" Style="{StaticResource FieldLabel}" Margin="0,0,0,2"/>
+                                    <DatePicker x:Name="toDatePicker" Background="#FF2D333B" BorderBrush="#FF444C56"
+                                                FontSize="12" Margin="0,0,0,6"/>
+                                    <TextBlock Text="To time" Style="{StaticResource FieldLabel}" Margin="0,0,0,2"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="4"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="toHourCombo"/>
+                                        <ComboBox x:Name="toMinuteCombo" Grid.Column="2"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Quick:" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                <Button x:Name="rangeLastHourButton"  Content="Last hour"  Margin="0,0,6,0" Click="OnQuickRangeClick" Tag="3600"/>
+                                <Button x:Name="rangeLast6hButton"    Content="Last 6 h"   Margin="0,0,6,0" Click="OnQuickRangeClick" Tag="21600"/>
+                                <Button x:Name="rangeLast24hButton"   Content="Last 24 h"  Margin="0,0,6,0" Click="OnQuickRangeClick" Tag="86400"/>
+                                <Button x:Name="rangeTodayButton"     Content="Today"      Margin="0,0,6,0" Click="OnQuickRangeClick" Tag="today"/>
+                                <Button x:Name="rangeYesterdayButton" Content="Yesterday"  Margin="0,0,6,0" Click="OnQuickRangeClick" Tag="yesterday"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Daily window (optional)" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <CheckBox x:Name="dailyWindowCheck" Content="Restrict to time of day each day" Margin="0,0,0,8"/>
+                            <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                       Text="Format: HH:mm (24-hour). Set Start later than End for an overnight window (e.g. 22:00 to 06:00 keeps every night between 22:00 and 06:00 the next morning). Identical Start and End matches nothing."/>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Start" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                <TextBox  Grid.Column="1" x:Name="dailyStartBox" Margin="0,0,12,0"/>
+                                <TextBlock Grid.Column="2" Text="End" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                <TextBox  Grid.Column="3" x:Name="dailyEndBox"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Days" Style="{StaticResource FieldLabel}" Margin="0,0,8,0"/>
+                                <ComboBox Grid.Column="1" x:Name="weekdayCombo" SelectedIndex="0">
+                                    <ComboBoxItem Content="Every day"            Tag="all"/>
+                                    <ComboBoxItem Content="Weekdays (Mon-Fri)"   Tag="weekdays"/>
+                                    <ComboBoxItem Content="Weekends (Sat+Sun)"   Tag="weekends"/>
+                                    <ComboBoxItem Content="Custom..."            Tag="custom"/>
+                                </ComboBox>
+                            </Grid>
+                            <StackPanel x:Name="weekdayCustomPanel" Orientation="Horizontal" Margin="80,8,0,0" Visibility="Collapsed">
+                                <CheckBox x:Name="dayMonCheck" Content="Mon" Margin="0,0,8,0" IsChecked="True"/>
+                                <CheckBox x:Name="dayTueCheck" Content="Tue" Margin="0,0,8,0" IsChecked="True"/>
+                                <CheckBox x:Name="dayWedCheck" Content="Wed" Margin="0,0,8,0" IsChecked="True"/>
+                                <CheckBox x:Name="dayThuCheck" Content="Thu" Margin="0,0,8,0" IsChecked="True"/>
+                                <CheckBox x:Name="dayFriCheck" Content="Fri" Margin="0,0,8,0" IsChecked="True"/>
+                                <CheckBox x:Name="daySatCheck" Content="Sat" Margin="0,0,8,0" IsChecked="True"/>
+                                <CheckBox x:Name="daySunCheck" Content="Sun" IsChecked="True"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="CSV format" Style="{StaticResource SectionTitle}"/>
+                    <Border Style="{StaticResource SectionContainer}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Delimiter" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="delimiterCombo" SelectedIndex="0">
+                                    <ComboBoxItem Content="Comma (,)"     Tag=","/>
+                                    <ComboBoxItem Content="Semicolon (;)" Tag=";"/>
+                                    <ComboBoxItem Content="Tab"           Tag="\t"/>
+                                </ComboBox>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Decimal separator" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox Grid.Column="1" x:Name="decimalCombo" SelectedIndex="0">
+                                    <ComboBoxItem Content="Period (.)"  Tag="."/>
+                                    <ComboBoxItem Content="Comma (,)"   Tag=","/>
+                                </ComboBox>
+                            </Grid>
+                            <CheckBox x:Name="includeHeaderCheck" Content="Include header row" IsChecked="True" Margin="0,0,0,4"/>
+                            <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap"
+                                       Text="Timestamps are written as local time in the format yyyy-MM-dd HH:mm:ss. The decimal separator only changes how numeric values are written; non-numeric values pass through verbatim."/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Border Grid.Column="2" Background="Transparent" BorderBrush="#FF333333" BorderThickness="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock DockPanel.Dock="Left" Text="Preview" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock x:Name="previewCountText" DockPanel.Dock="Right" HorizontalAlignment="Right" Foreground="#FFA9B5BB" FontSize="11" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <Border Grid.Row="1" Background="#FF1A1A1A" BorderBrush="#FF333333" BorderThickness="1" CornerRadius="3">
+                        <Grid>
+                            <Grid x:Name="previewTable">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Background="#FF222A2D" BorderBrush="#FF333E42" BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition x:Name="previewLabelHeaderCol" Width="0"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Time"  Foreground="#FFA9B5BB" FontSize="11" FontWeight="SemiBold" Margin="8,4,8,4"/>
+                                        <TextBlock Grid.Column="1" Text="Value" Foreground="#FFA9B5BB" FontSize="11" FontWeight="SemiBold" Margin="8,4,8,4"/>
+                                        <TextBlock Grid.Column="2" x:Name="previewLabelHeader" Text="Label" Foreground="#FFA9B5BB" FontSize="11" FontWeight="SemiBold" Margin="8,4,8,4" Visibility="Collapsed"/>
+                                    </Grid>
+                                </Border>
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <StackPanel x:Name="previewRowsPanel" Orientation="Vertical"/>
+                                </ScrollViewer>
+                            </Grid>
+                            <StackPanel x:Name="previewSpinnerPanel"
+                                        Orientation="Vertical"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Visibility="Collapsed">
+                                <Ellipse Width="14" Height="14" Fill="#FFE69500" Margin="0,0,0,6" HorizontalAlignment="Center">
+                                    <Ellipse.Triggers>
+                                        <EventTrigger RoutedEvent="Ellipse.Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.25" To="1.0" Duration="0:0:0.9" AutoReverse="True"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Ellipse.Triggers>
+                                </Ellipse>
+                                <TextBlock Text="Scanning archive..." Foreground="#FFA9B5BB" FontSize="13" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel x:Name="previewEmptyPanel"
+                                        Orientation="Vertical"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Visibility="Collapsed">
+                                <TextBlock x:Name="previewEmptyText" Text="No matching rows in this range." Foreground="#FF7A8388" FontSize="13" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="previewEmptyDetail" Text="" Foreground="#FF7A8388" FontSize="11" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap" MaxWidth="380"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <TextBlock Grid.Row="2" Style="{StaticResource HintText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                               Text="Preview shows up to 200 rows. The full match count is displayed above. The CSV file contains every matching row, not just the previewed sample."/>
+                </Grid>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

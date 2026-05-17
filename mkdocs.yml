@@ -48,6 +48,7 @@ nav:
       - RTMP Streamer: plugins/admin/rtmp-streamer.md
     - Smart Client:
       - Flex Viewer: plugins/smart-client/flexview.md
+      - Metadata Display: plugins/smart-client/metadata-display.md
       - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
       - Notepad: plugins/smart-client/notepad.md
       - Remote Control: plugins/smart-client/sc-remote-control.md
@@ -55,8 +56,10 @@ nav:
       - Smart Bar: plugins/smart-client/smartbar.md
       - Snapshot Report: plugins/smart-client/snapreport.md
       - Timelapse: plugins/smart-client/timelapse.md
+      - Timeline Jump: plugins/smart-client/timeline-jump.md
       - View Carousel: plugins/smart-client/view-carousel.md
       - Weather: plugins/smart-client/weather.md
+      - Web Viewer: plugins/smart-client/web-viewer.md
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md
     - RTSP Driver: plugins/device-drivers/rtsp.md

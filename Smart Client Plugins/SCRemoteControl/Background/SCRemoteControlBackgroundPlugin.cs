@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SCRemoteControl.Overlay;
 using SCRemoteControl.Server;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
@@ -19,6 +20,9 @@ namespace SCRemoteControl.Background
             try
             {
                 SCRemoteControlConfig.Load();
+                // Start the overlay tracker before the HTTP server so any early
+                // POST /api/overlays request sees a live AddOn registry.
+                OverlayManager.Instance.Start();
                 RemoteControlServer.Instance.Start();
                 SCRemoteControlDefinition.Log.Info("Background plugin initialized, server started");
             }
@@ -33,6 +37,7 @@ namespace SCRemoteControl.Background
             try
             {
                 RemoteControlServer.Instance.Stop();
+                OverlayManager.Instance.Stop();
                 SCRemoteControlDefinition.Log.Info("Background plugin closed, server stopped");
             }
             catch (Exception ex)

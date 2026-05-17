@@ -1,0 +1,349 @@
+<Window x:Class="TimelineJump.Client.JumpFlyoutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Jump in timeline"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ShowInTaskbar="True"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        Background="Transparent"
+        Topmost="True"
+        FontFamily="Segoe UI"
+        WindowStartupLocation="Manual"
+        MouseLeftButtonDown="OnHeaderMouseDown">
+
+    <Window.Resources>
+        <!-- Smart Client palette -->
+        <SolidColorBrush x:Key="ScBg"        Color="#FF1B1B1B"/>
+        <SolidColorBrush x:Key="ScSurface"   Color="#FF2A2A2A"/>
+        <SolidColorBrush x:Key="ScSurfaceHi" Color="#FF353535"/>
+        <SolidColorBrush x:Key="ScBorder"    Color="#FF3C3C3C"/>
+        <SolidColorBrush x:Key="ScText"      Color="#FFE6E6E6"/>
+        <SolidColorBrush x:Key="ScSubtle"    Color="#FF8C8C8C"/>
+        <SolidColorBrush x:Key="ScAccent"    Color="#FF2A8FE0"/>
+        <SolidColorBrush x:Key="ScAccentHi"  Color="#FF3FA0EF"/>
+
+        <!-- Quick chip button -->
+        <Style x:Key="ChipButton" TargetType="Button">
+            <Setter Property="Background"      Value="{StaticResource ScSurface}"/>
+            <Setter Property="Foreground"      Value="{StaticResource ScText}"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource ScBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize"        Value="12"/>
+            <Setter Property="Padding"         Value="3,7"/>
+            <Setter Property="Margin"          Value="3"/>
+            <Setter Property="MinWidth"        Value="40"/>
+            <Setter Property="MinHeight"       Value="30"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment"   Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScSurfaceHi}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource ScAccent}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScAccent}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource ScAccent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary action button -->
+        <Style x:Key="ActionButton" TargetType="Button" BasedOn="{StaticResource ChipButton}">
+            <Setter Property="Background"  Value="{StaticResource ScAccent}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource ScAccent}"/>
+            <Setter Property="Foreground"  Value="White"/>
+            <Setter Property="FontWeight"  Value="SemiBold"/>
+            <Setter Property="Padding"     Value="18,9"/>
+            <Setter Property="MinHeight"   Value="36"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScAccentHi}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource ScAccentHi}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBox toggle (chevron button on the right edge) -->
+        <ControlTemplate x:Key="ScComboToggle" TargetType="ToggleButton">
+            <Border x:Name="bd"
+                    Background="{StaticResource ScSurface}"
+                    BorderBrush="{StaticResource ScBorder}"
+                    BorderThickness="1"
+                    SnapsToDevicePixels="True">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="22"/>
+                    </Grid.ColumnDefinitions>
+                    <Path Grid.Column="1"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Fill="{StaticResource ScText}"
+                          Data="M 0,0 L 8,0 L 4,5 Z"/>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="bd" Property="Background" Value="{StaticResource ScSurfaceHi}"/>
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource ScAccent}"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource ScAccent}"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- ComboBoxItem: dark hover/selection -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="{StaticResource ScText}"/>
+            <Setter Property="Padding"     Value="8,5"/>
+            <Setter Property="FontSize"    Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScAccent}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScSurfaceHi}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBox -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Background"     Value="{StaticResource ScSurface}"/>
+            <Setter Property="Foreground"     Value="{StaticResource ScText}"/>
+            <Setter Property="BorderBrush"    Value="{StaticResource ScBorder}"/>
+            <Setter Property="FontSize"       Value="12"/>
+            <Setter Property="Padding"        Value="10,6"/>
+            <Setter Property="MinHeight"      Value="32"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Template="{StaticResource ScComboToggle}"
+                                          Focusable="False"
+                                          ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
+                            <ContentPresenter x:Name="ContentSite"
+                                              IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Center"/>
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Fade">
+                                <Grid x:Name="DropDown"
+                                      MinWidth="{TemplateBinding ActualWidth}"
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                      SnapsToDevicePixels="True">
+                                    <Border x:Name="DropDownBorder"
+                                            Background="{StaticResource ScSurface}"
+                                            BorderBrush="{StaticResource ScAccent}"
+                                            BorderThickness="1">
+                                        <ScrollViewer Margin="0" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True"
+                                                        KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Close button (header X) -->
+        <Style x:Key="CloseButton" TargetType="Button">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="{StaticResource ScSubtle}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize"    Value="14"/>
+            <Setter Property="Cursor"      Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScSurfaceHi}"/>
+                                <Setter Property="Foreground" Value="{StaticResource ScText}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource ScBorder}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HeaderText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource ScText}"/>
+            <Setter Property="FontSize"   Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="LabelText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource ScSubtle}"/>
+            <Setter Property="FontSize"   Value="11"/>
+            <Setter Property="Margin"     Value="0,0,0,6"/>
+        </Style>
+        <Style x:Key="StatusText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource ScText}"/>
+            <Setter Property="FontSize"   Value="12"/>
+        </Style>
+        <Style x:Key="StatusSubText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource ScSubtle}"/>
+            <Setter Property="FontSize"   Value="11"/>
+            <Setter Property="Margin"     Value="0,2,0,0"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="{StaticResource ScBg}"
+            BorderBrush="{StaticResource ScBorder}"
+            BorderThickness="1"
+            Padding="16"
+            MinWidth="440">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.6" Color="Black"/>
+        </Border.Effect>
+        <StackPanel>
+
+            <!-- Header (drag handle) -->
+            <Border x:Name="headerBar"
+                    Background="Transparent"
+                    Margin="0,0,0,12"
+                    Cursor="SizeAll">
+                <DockPanel>
+                    <TextBlock Text="Jump in timeline"
+                               Style="{StaticResource HeaderText}"
+                               DockPanel.Dock="Left"
+                               VerticalAlignment="Center"/>
+                    <Button x:Name="closeButton"
+                            Content="&#x2715;"
+                            Width="28" Height="28"
+                            Padding="0"
+                            DockPanel.Dock="Right"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource CloseButton}"
+                            Click="OnCloseClick"
+                            ToolTip="Close (Esc)"/>
+                </DockPanel>
+            </Border>
+
+            <!-- Quick jumps: two columns (left = backward, right = forward) -->
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="BACKWARD" Style="{StaticResource LabelText}"/>
+                    <UniformGrid x:Name="quickPanelBack" Rows="1" Columns="4" Margin="-3,0,-3,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="FORWARD" Style="{StaticResource LabelText}"/>
+                    <UniformGrid x:Name="quickPanelFwd" Rows="1" Columns="4" Margin="-3,0,-3,0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Custom -->
+            <TextBlock Text="CUSTOM" Style="{StaticResource LabelText}"/>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Value" Style="{StaticResource LabelText}" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="valueCombo"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Unit" Style="{StaticResource LabelText}" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="unitCombo"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid Margin="0,4,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0"
+                        x:Name="customBackButton"
+                        Content="&#x25C0;  Back"
+                        Style="{StaticResource ActionButton}"
+                        Margin="0"
+                        Click="OnCustomBackClick"/>
+                <Button Grid.Column="2"
+                        x:Name="customFwdButton"
+                        Content="Forward  &#x25B6;"
+                        Style="{StaticResource ActionButton}"
+                        Margin="0"
+                        Click="OnCustomFwdClick"/>
+            </Grid>
+
+        </StackPanel>
+    </Border>
+</Window>

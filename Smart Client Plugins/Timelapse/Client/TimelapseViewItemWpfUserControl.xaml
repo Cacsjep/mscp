@@ -375,6 +375,52 @@
                             </StackPanel>
                         </Grid>
 
+                        <!-- Daily window: restrict frames to a time-of-day window per day -->
+                        <CheckBox x:Name="dailyWindowCheck" Content="Apply time window per day"
+                                  Foreground="#FFD0D0D0" FontSize="12" Margin="0,4,0,4"
+                                  IsChecked="False"
+                                  ToolTipService.ShowDuration="60000" ToolTipService.InitialShowDelay="150">
+                            <CheckBox.ToolTip>
+                                <ToolTip Style="{StaticResource RichToolTip}">
+                                    <TextBlock TextWrapping="Wrap" MaxWidth="340">When checked, only frames whose time-of-day falls inside <Run FontWeight="Bold">Daily Start</Run> .. <Run FontWeight="Bold">Daily End</Run> are included, repeated every day across the date range. Useful for daylight-only timelapses (e.g. 2 weeks, 08:00-17:00 each day). Wrapping windows like 22:00-06:00 are supported for night-only timelapses.</TextBlock>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
+
+                        <Grid x:Name="dailyWindowFields" Margin="0,0,0,0" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Daily Start" Style="{StaticResource LabelText}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="4"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="dailyStartHourCombo" Style="{StaticResource DarkComboBox}"/>
+                                    <ComboBox x:Name="dailyStartMinuteCombo" Grid.Column="2" Style="{StaticResource DarkComboBox}"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Daily End" Style="{StaticResource LabelText}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="4"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="dailyEndHourCombo" Style="{StaticResource DarkComboBox}"/>
+                                    <ComboBox x:Name="dailyEndMinuteCombo" Grid.Column="2" Style="{StaticResource DarkComboBox}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+
                         <Separator Background="#FF30363D" Margin="0,12"/>
 
                         <!-- Settings - two column -->
