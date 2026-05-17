@@ -37,3 +37,4 @@ installer/wix/Components.wxs
 installer/wix/Components.wxs
 build.log
 *.log
+/Smart Client Plugins/SCRemoteControl/__pycache__
