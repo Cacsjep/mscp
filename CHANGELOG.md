@@ -1,10 +1,11 @@
 # Changelog
 
-## [3.0.0] - 2026-05-16
+## [3.0.1] - 2026-05-16
 - Improve Snap Reporter: Add PDF Split possibility
 - Improve Snap Reporter: Add Progress Bar 
 - Fix Snap Reporter: Aspect Ratio was not preserved
 - Add SC Remote Control: **SVG Overlay API** - External systems can now draw complex overlays via HTTP API. 
+- Add PKI Plugin: Encryption is now easy as hell =)
 
 ## [2.9.2] - 2026-05-07
 - Improve Timeline Jump: Add possibility (and setting) for auto switch to current time when entering playback, or on start.

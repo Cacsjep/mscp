@@ -1,0 +1,95 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             x:Class="Mscp.PkiCertInstaller.App"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <!-- Milestone-style brand blue. We override the Fluent system
+             accent so every Classes="accent" button picks up the
+             corporate palette automatically. -->
+        <ResourceDictionary x:Key="Dark">
+          <Color x:Key="SystemAccentColor">#FF0099DA</Color>
+          <Color x:Key="SystemAccentColorDark1">#FF0085BE</Color>
+          <Color x:Key="SystemAccentColorDark2">#FF0072A2</Color>
+          <Color x:Key="SystemAccentColorDark3">#FF005E86</Color>
+          <Color x:Key="SystemAccentColorLight1">#FF1FA9E2</Color>
+          <Color x:Key="SystemAccentColorLight2">#FF40B7E8</Color>
+          <Color x:Key="SystemAccentColorLight3">#FF66C7EE</Color>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://FluentAvalonia/Styling/FluentAvaloniaTheme.axaml" />
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+
+    <!-- Force white text on every Classes="accent" button. Without this
+         FluentAvalonia auto-picks black for the WCAG contrast on a
+         medium-bright accent like Milestone blue, which the brand
+         guidelines (and the user) specifically reject. -->
+    <Style Selector="Button.accent">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.accent /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <!-- ─────────────────── DataGrid: no selection visuals ───────────────────
+         Layered defenses to nuke every "selected" / "current" / "focus"
+         visual. Selection is driven entirely by the leftmost checkbox
+         column. Stylings alone weren't enough because the Fluent theme
+         re-asserts Stroke / Fill / Opacity on the per-cell CurrencyVisual
+         rectangle under the :current pseudo at the same specificity, so
+         a brief flash leaked through on click. We replace the cell
+         template entirely with a Border + ContentPresenter, dropping the
+         CurrencyVisual / FocusVisual rectangles outright. The row
+         BackgroundRectangle is also zeroed for :selected; hover keeps a
+         4% white tint as a feedback cue. -->
+    <Style Selector="DataGridCell">
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="IsTabStop" Value="False" />
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="CellBorder"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}">
+            <ContentPresenter Name="PART_ContentPresenter"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Padding="{TemplateBinding Padding}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="DataGridCell:focus, DataGridCell:focus-within, DataGridCell:current, DataGridCell:selected, DataGridCell:pressed, DataGridCell:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!-- Row-level selection visual. -->
+    <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+      <Setter Property="Fill" Value="Transparent" />
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+      <Setter Property="Opacity" Value="0.04" />
+    </Style>
+    <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+      <Setter Property="Fill" Value="White" />
+      <Setter Property="Opacity" Value="0.04" />
+    </Style>
+  </Application.Styles>
+</Application>
+

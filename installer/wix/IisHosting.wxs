@@ -71,6 +71,7 @@
       <ComponentRef Id="cmpMscpIndexHtml" />
       <ComponentRef Id="cmpMscpWebConfig" />
       <ComponentRef Id="cmpMscpVdir" />
+      <ComponentRef Id="cmpMscpPkiCertInstallerExe" />
       <!-- Pull in every plugin's ZIP component. The same components are
            referenced from each Feature_<Name> in Components.wxs, so MSI
            reference counts the file: enabling either path causes the ZIP
@@ -95,6 +96,21 @@
                Condition="IIS_PRESENT">
       <File Id="MscpWebConfig" Name="web.config"
             Source="!(bindpath.publicroot)\web.config" KeyPath="yes" />
+    </Component>
+
+    <!-- Standalone PKI Cert Installer EXE, downloadable directly from the
+         /mscp/ download page. Versioned filename so multiple builds can
+         coexist on disk during a Major Upgrade hand-off. The same EXE
+         is also bundled inside PKI.zip via build.ps1, so admins who
+         install the PKI plugin get a copy next to PKI.dll - the public
+         download here is for deploying it on remote XProtect servers
+         that don't have the plugin. -->
+    <Component Id="cmpMscpPkiCertInstallerExe" Directory="MSCP_PUBLIC"
+               Guid="D2A1F4E5-7B6C-4D8E-9A0B-1C2D3E4F5A6B" Condition="IIS_PRESENT">
+      <File Id="MscpPkiCertInstallerExe"
+            Name="Mscp.PkiCertInstaller-v$(var.Version).exe"
+            Source="!(bindpath.zips)\Mscp.PkiCertInstaller-v$(var.Version).exe"
+            KeyPath="yes" />
     </Component>
 
     <!-- The vdir component. CreateFolder lets WiX track the physical folder

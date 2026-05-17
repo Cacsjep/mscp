@@ -4,12 +4,40 @@
     Unified build script for MSC Community Plugins.
     Reads plugins.json for the plugin list. Builds all plugins in Release,
     creates per-plugin ZIPs and a WiX MSI installer.
+
+.PARAMETER Fast
+    Skip the per-plugin ZIPs and the WiX MSI. Useful when iterating on the
+    plugin or agent code; just produces the binaries under each project's
+    bin/Release/ folder. Stages files into build/staging/ so generated
+    WiX fragments still pick them up next full build.
+
+.PARAMETER OnlyPki
+    Build only PKI-related projects (Pki.Messages, Pki.Agent, Pki.Tray,
+    PKI plugin) via `dotnet build`. Skips the full solution, ZIPs, and
+    MSI. Fastest path when you're only changing agent or plugin code.
+    Implies -Fast.
+
+.PARAMETER MaxCpuCount
+    msbuild /m value. Default 0 = use all logical cores. Set to 1 for
+    serial builds (e.g. when diagnosing parallel-build flakiness).
+
 .EXAMPLE
-    .\build.ps1
+    .\build.ps1                # full build, MSI included
+    .\build.ps1 -Fast          # skip ZIPs + MSI
+    .\build.ps1 -OnlyPki       # PKI-only, fastest dev loop
 #>
+
+param(
+    [switch]$Fast,
+    [switch]$OnlyPki,
+    [int]$MaxCpuCount = 0
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# OnlyPki implies Fast.
+if ($OnlyPki) { $Fast = $true }
 
 $root = $PSScriptRoot
 # Auto-increment build number so MSI always upgrades without uninstall.
@@ -75,23 +103,49 @@ $platforms = $plugins | ForEach-Object {
     if ($_ | Get-Member -Name platform -MemberType NoteProperty) { $_.platform } else { 'AnyCPU' }
 } | Sort-Object -Unique
 
-$stepNum = 2
-foreach ($plat in $platforms) {
-    $platDisplay = if ($plat -eq 'AnyCPU') { 'Any CPU' } else { $plat }
-    Write-Host "`n[$stepNum/6] Building Release|$platDisplay..." -ForegroundColor Yellow
-    & $msbuildPath $slnPath `
-        /p:Configuration=Release `
-        "/p:Platform=$platDisplay" `
-        /p:CIBuild=true `
-        /t:Rebuild `
-        /v:minimal
-    if ($LASTEXITCODE -ne 0) { Write-Error "Build ($platDisplay) failed"; exit 1 }
+$mFlag = if ($MaxCpuCount -gt 0) { "/m:$MaxCpuCount" } else { '/m' }
+
+if ($OnlyPki) {
+    # PKI-only fast path: dotnet build the four PKI projects in dependency
+    # order. Skips MSBuild on the rest of the sln for big wins on dev loops.
+    $stepNum = 2
+    Write-Host "`n[$stepNum/3] Building PKI suite (Pki.Messages -> Pki.Agent / Pki.Tray / PKI)..." -ForegroundColor Yellow
+    $pkiProjects = @(
+        'Agent\Pki.Messages\Pki.Messages.csproj',
+        'Agent\Pki.Agent\Pki.Agent.csproj',
+        'Agent\Pki.Tray\Pki.Tray.csproj',
+        'Admin Plugins\PKI\PKI.csproj'
+    )
+    foreach ($p in $pkiProjects) {
+        $proj = Join-Path $root $p
+        & dotnet build $proj -c Release -v minimal $mFlag
+        if ($LASTEXITCODE -ne 0) { Write-Error "Build of $p failed"; exit 1 }
+    }
     $stepNum++
+} else {
+    $stepNum = 2
+    foreach ($plat in $platforms) {
+        $platDisplay = if ($plat -eq 'AnyCPU') { 'Any CPU' } else { $plat }
+        Write-Host "`n[$stepNum/6] Building Release|$platDisplay (parallel: $mFlag)..." -ForegroundColor Yellow
+        & $msbuildPath $slnPath `
+            /p:Configuration=Release `
+            "/p:Platform=$platDisplay" `
+            /p:CIBuild=true `
+            /t:Build `
+            /v:minimal `
+            $mFlag
+        if ($LASTEXITCODE -ne 0) { Write-Error "Build ($platDisplay) failed"; exit 1 }
+        $stepNum++
+    }
 }
 
 # ── Stage files ──
-Write-Host "`n[4/6] Staging release files..." -ForegroundColor Yellow
 $staging = Join-Path $buildDir 'staging'
+
+if ($OnlyPki) {
+    Write-Host "`n[4/6] Skipping staging (-OnlyPki)." -ForegroundColor DarkGray
+} else {
+    Write-Host "`n[4/6] Staging release files..." -ForegroundColor Yellow
 
 foreach ($p in $plugins) {
     $hasPlatform = $p | Get-Member -Name platform -MemberType NoteProperty
@@ -106,6 +160,37 @@ foreach ($p in $plugins) {
     $srcPath = Join-Path $root "$($p.path)\$outputPath"
     Copy-Item -Path "$srcPath\*" -Destination $stageDir -Recurse
     Write-Host "  Staged: $($p.name) <- $($p.path)\$outputPath"
+
+    # PKI plugin ships the standalone Cert Installer EXE alongside it.
+    # Publish the .NET 9 single-file self-contained binary, drop a copy
+    # into the PKI staging dir (so PKI.zip carries it), and keep a
+    # versioned copy in $buildDir for the WiX File component used by
+    # the IISHosting download page.
+    if ($p.name -eq 'PKI') {
+        $installerProj = Join-Path $root 'Installer\Mscp.PkiCertInstaller\Mscp.PkiCertInstaller.csproj'
+        Write-Host "    Publishing single-file PKI Cert Installer..."
+        & dotnet publish $installerProj `
+            -c Release `
+            -r win-x64 `
+            --self-contained `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -v minimal | Out-Null
+        if ($LASTEXITCODE -ne 0) { Write-Error "PKI Cert Installer publish failed"; exit 1 }
+        $publishedExe = Join-Path $root 'Installer\Mscp.PkiCertInstaller\bin\Release\net9.0-windows\win-x64\publish\Mscp.PkiCertInstaller.exe'
+        if (-not (Test-Path $publishedExe)) {
+            Write-Error "Expected published EXE not found at: $publishedExe"
+            exit 1
+        }
+        # Inside the PKI plugin folder so the ZIP / installed plugin
+        # carries the EXE next to PKI.dll - admins find it where they
+        # look for the plugin.
+        Copy-Item $publishedExe (Join-Path $stageDir 'Mscp.PkiCertInstaller.exe') -Force
+        # Versioned copy in $buildDir for the WiX File source.
+        Copy-Item $publishedExe (Join-Path $buildDir "Mscp.PkiCertInstaller-v$version.exe") -Force
+        Write-Host "    + bundled Mscp.PkiCertInstaller.exe (single-file, self-contained)"
+    }
 
     # Extra staging directories
     if (($p | Get-Member -Name extraStagingDirs -MemberType NoteProperty) -and $p.extraStagingDirs) {
@@ -125,17 +210,29 @@ foreach ($p in $plugins) {
         }
     }
 }
+}  # end if (-not $OnlyPki)
 
 # ── Create ZIPs ──
-Write-Host "`n[5/6] Creating release ZIPs..." -ForegroundColor Yellow
-foreach ($p in $plugins) {
-    $zipPath = Join-Path $buildDir "$($p.name)-v$version.zip"
-    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-    Compress-Archive -Path (Join-Path $staging $p.name) -DestinationPath $zipPath
-    Write-Host "  -> $zipPath"
+if (-not $Fast) {
+    Write-Host "`n[5/6] Creating release ZIPs..." -ForegroundColor Yellow
+    foreach ($p in $plugins) {
+        $zipPath = Join-Path $buildDir "$($p.name)-v$version.zip"
+        if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+        Compress-Archive -Path (Join-Path $staging $p.name) -DestinationPath $zipPath
+        Write-Host "  -> $zipPath"
+    }
+} else {
+    Write-Host "`n[5/6] Skipping per-plugin ZIPs (-Fast)." -ForegroundColor DarkGray
 }
 
 # ── Build WiX MSI installer ──
+if ($Fast) {
+    Write-Host "`n[6/6] Skipping MSI build (-Fast)." -ForegroundColor DarkGray
+    Write-Host "`n== Build complete (fast) ==" -ForegroundColor Green
+    Write-Host "Output: $buildDir\staging\<plugin>"
+    return
+}
+
 Write-Host "`n[6/6] Building WiX MSI installer..." -ForegroundColor Yellow
 
 $wixCmd = Get-Command wix -ErrorAction SilentlyContinue

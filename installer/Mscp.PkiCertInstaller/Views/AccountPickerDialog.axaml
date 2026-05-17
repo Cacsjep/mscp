@@ -1,0 +1,46 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Mscp.PkiCertInstaller.ViewModels"
+        x:Class="Mscp.PkiCertInstaller.Views.AccountPickerDialog"
+        x:DataType="vm:AccountPickerViewModel"
+        Title="Pick a Windows account"
+        Icon="/Assets/app.ico"
+        Width="520" Height="540"
+        Background="#0F1115"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <Border Background="#1A1D24">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20">
+      <TextBlock Grid.Row="0" Text="Pick a Windows account"
+                 FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4" />
+      <TextBlock Grid.Row="0" Text="Select one of the existing built-in identities, local users / groups, or per-service virtual accounts on this machine."
+                 Foreground="#8A93A6" FontSize="11" TextWrapping="Wrap" Margin="0,22,0,12" />
+
+      <TextBox Grid.Row="1" Text="{Binding SearchText}"
+               Watermark="Search..." Margin="0,8,0,8" />
+
+      <Border Grid.Row="2" Background="#22262E" CornerRadius="4" Padding="0">
+        <ListBox ItemsSource="{Binding Items}"
+                 SelectedItem="{Binding Selected, Mode=TwoWay}"
+                 DoubleTapped="OnDoubleTap"
+                 Background="Transparent" BorderThickness="0">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Kind}" Foreground="#8A93A6" FontSize="11" VerticalAlignment="Center" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Border>
+
+      <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"
+                  Spacing="8" Margin="0,16,0,0">
+        <Button Content="Cancel" Click="OnCancel" />
+        <Button Content="Add" Classes="accent" Click="OnConfirm"
+                IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

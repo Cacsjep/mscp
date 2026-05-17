@@ -45,6 +45,7 @@ nav:
       - Colored Timeline: plugins/admin/colored-timeline.md
       - HTTP Requests: plugins/admin/http-requests.md
       - Metadata Viewer: plugins/admin/metadata-viewer.md
+      - PKI: plugins/admin/pki.md
       - RTMP Streamer: plugins/admin/rtmp-streamer.md
     - Smart Client:
       - Flex Viewer: plugins/smart-client/flexview.md

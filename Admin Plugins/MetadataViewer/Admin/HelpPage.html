@@ -1,47 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>Metadata Viewer</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Metadata Viewer Plugin</title>
     <style>
-        body { font-family: Segoe UI, sans-serif; margin: 20px; color: #222; }
-        h1 { font-size: 18pt; }
-        h2 { font-size: 12pt; margin-top: 20px; }
-        code { background: #f0f0f0; padding: 2px 4px; border-radius: 3px; }
-        th, td { text-align: left; padding: 4px 10px 4px 0; vertical-align: top; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #222;
+            padding: 0px 28px;
+            line-height: 1.55;
+        }
+        h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; color: #1a1a1a; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        h2 { font-size: 14px; font-weight: 600; margin: -4px 0 8px; color: #333; }
+        h3 { font-size: 13px; font-weight: 600; margin: 12px 0 6px; color: #444; }
+        ul { margin: 0 0 0 20px; padding: 0; }
+        li { margin-bottom: 4px; }
+        p { margin-bottom: 10px; }
+        .card {
+            background: #fff; border: 1px solid #dde0e4; border-radius: 6px;
+            padding: 16px 20px; margin-bottom: 14px;
+        }
+        .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+        .chip-amber { display: inline-block; background: #fdf6ec; border: 1px solid #e0b96a;
+            border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500;
+            color: #7a5a1a; white-space: nowrap; margin-right: 3px; }
+        .chip-blue { display: inline-block; background: #eef4fb; border: 1px solid #a3c4e4;
+            border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500;
+            color: #2a5a96; white-space: nowrap; margin-right: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+        th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+        th { font-weight: 600; color: #444; background: #fafafa; }
+        code { font-family: Consolas, monospace; font-size: 12px;
+            background: #f4f5f7; border: 1px solid #e1e3e6; padding: 1px 5px; border-radius: 3px; }
+        ol.steps {
+            counter-reset: step; list-style: none; margin-left: 0;
+        }
+        ol.steps li {
+            counter-increment: step; padding-left: 28px; position: relative; margin-bottom: 8px;
+        }
+        ol.steps li::before {
+            content: counter(step); position: absolute; left: 0; top: 0;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: #2868b8; color: #fff; font-size: 11px; font-weight: 600;
+            text-align: center; line-height: 20px;
+        }
     </style>
 </head>
 <body>
-    <h1>Metadata Viewer</h1>
-    <p>Subscribe to a metadata channel and inspect the live ONVIF event stream.</p>
+    <div class="header-row">
+        Subscribe to a metadata channel and inspect the live ONVIF event stream
+        <div class="chips">
+            <span class="chip-amber" title="Independent open-source project provided as-is under the MIT License, with no warranty. Not affiliated with Milestone Systems.">Open source - no warranty, use at own risk</span>
+            <span class="chip-blue">Mgmt Client only</span>
+        </div>
+    </div>
 
-    <h2>Usage</h2>
-    <ol>
-        <li>Right-click <strong>Metadata Viewer</strong> and choose <em>Create New</em>.</li>
-        <li>Name the viewer and pick a metadata channel.</li>
-        <li>Click <strong>Start</strong> to subscribe. Each incoming ONVIF <code>NotificationMessage</code> becomes a row; newest appears on top.</li>
-        <li>Click a row to see the pretty-printed, syntax-highlighted XML in the preview pane below.</li>
-        <li>Click <strong>Stop</strong> when done, or <strong>Clear</strong> to empty the table.</li>
-    </ol>
+    <div class="card">
+        <h2>What this plugin does</h2>
+        <p>
+            Metadata Viewer is a debugging tool for ONVIF metadata streams. Pick any
+            metadata channel exposed by your XProtect site, subscribe live, and watch
+            each <code>NotificationMessage</code> arrive as a row with parsed topic,
+            timestamps, and pretty-printed XML for inspection.
+        </p>
+        <p>
+            Use it when you're wiring up analytic events from a camera, validating an
+            ONVIF integration, or trying to figure out which topic a device actually
+            publishes on.
+        </p>
+    </div>
 
-    <h2>Columns</h2>
-    <table>
-        <tr><th>Seq#</th><td>Per-viewer sequence number, assigned on arrival.</td></tr>
-        <tr><th>Capture Time (UTC)</th><td>From the ONVIF <code>tt:Message/@UtcTime</code>. A trailing <code>*</code> means the attribute was missing and the column shows the receive time instead.</td></tr>
-        <tr><th>Event Topic Tree</th><td>The <code>wsnt:Topic</code> value, e.g. <code>tnsaxis:CameraApplicationPlatform/ALPV.Update</code>.</td></tr>
-        <tr><th>Data</th><td>Compact XML of the <code>NotificationMessage</code>. Click the row to see the full payload highlighted below.</td></tr>
-        <tr><th>Info</th><td><code>Name=Value</code> pairs extracted from <code>tt:SimpleItem</code> entries. Items found under <code>tt:Source</code> are shown in square brackets, e.g. <code>[channel=1]</code>.</td></tr>
-    </table>
+    <div class="card">
+        <h2>Usage</h2>
+        <ol class="steps">
+            <li>Right-click <strong>Metadata Viewer</strong> in the tree and choose <em>Create New</em>.</li>
+            <li>Name the viewer and pick a metadata channel from the picker.</li>
+            <li>Click <strong>Start</strong> to subscribe. Each incoming ONVIF <code>NotificationMessage</code> becomes a row; newest appears on top.</li>
+            <li>Click a row to see the pretty-printed, syntax-highlighted XML in the preview pane below.</li>
+            <li>Click <strong>Stop</strong> when done, or <strong>Clear</strong> to empty the table.</li>
+        </ol>
+    </div>
 
-    <h2>Filter</h2>
-    <p>Type a substring and press <em>Apply</em> (or Enter). Matches <code>Topic</code>, <code>Data</code>, and <code>Info</code> case-insensitively. <em>Clear</em> empties the filter.</p>
+    <div class="card">
+        <h2>Columns</h2>
+        <table>
+            <tr><th>Column</th><th>Description</th></tr>
+            <tr><td>Seq#</td><td>Per-viewer sequence number, assigned on arrival.</td></tr>
+            <tr><td>Capture Time (UTC)</td><td>From the ONVIF <code>tt:Message/@UtcTime</code>. A trailing <code>*</code> means the attribute was missing and the column shows the receive time instead.</td></tr>
+            <tr><td>Event Topic Tree</td><td>The <code>wsnt:Topic</code> value, e.g. <code>tnsaxis:CameraApplicationPlatform/ALPV.Update</code>.</td></tr>
+            <tr><td>Data</td><td>Compact XML of the <code>NotificationMessage</code>. Click the row to see the full payload highlighted below.</td></tr>
+            <tr><td>Info</td><td><code>Name=Value</code> pairs extracted from <code>tt:SimpleItem</code> entries. Items found under <code>tt:Source</code> are shown in square brackets, e.g. <code>[channel=1]</code>.</td></tr>
+        </table>
+    </div>
 
-    <h2>Notes</h2>
-    <ul>
-        <li>Payloads that aren't ONVIF <code>NotificationMessage</code> events (or fail to parse) are dropped into a single row with the raw XML in the <em>Data</em> column so nothing is lost.</li>
-        <li>The viewer runs in the Management Client only; no Event Server component, no Rules integration.</li>
-        <li>If the <strong>Start</strong> button stays disabled after picking a channel, the selected item is not a valid metadata source.</li>
-        <li>Diagnostic messages (subscribe details, heartbeats, status flags, errors) go to <code>%ProgramData%\Milestone\XProtect Management Client\Logs\MIPtrace.log</code>; search for <code>MetadataViewer</code>.</li>
-    </ul>
+    <div class="card">
+        <h2>Filter</h2>
+        <p>
+            Type a substring and press <em>Apply</em> (or Enter). Matches
+            <code>Topic</code>, <code>Data</code>, and <code>Info</code> case-insensitively.
+            <em>Clear</em> empties the filter.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Notes</h2>
+        <ul>
+            <li>Payloads that aren't ONVIF <code>NotificationMessage</code> events (or fail to parse) are dropped into a single row with the raw XML in the <em>Data</em> column so nothing is lost.</li>
+            <li>The viewer runs in the Management Client only; no Event Server component, no Rules integration.</li>
+            <li>If the <strong>Start</strong> button stays disabled after picking a channel, the selected item is not a valid metadata source.</li>
+            <li>Diagnostic messages (subscribe details, heartbeats, status flags, errors) go to <code>%ProgramData%\Milestone\XProtect Management Client\Logs\MIPtrace.log</code>; search for <code>MetadataViewer</code>.</li>
+        </ul>
+    </div>
+
+    <div class="card" style="font-size:12px; line-height:1.5;">
+        <h2>Legal</h2>
+        <p>
+            Independent open-source project, not affiliated with, endorsed by, or
+            supported by Milestone Systems. XProtect&reg; is a registered trademark of
+            Milestone Systems A/S.
+        </p>
+        <p>
+            This software is provided &ldquo;as is&rdquo;, without warranty of any kind,
+            express or implied. In no event shall the authors be liable for any claim,
+            damages, or other liability. Use at your own risk - always test in a
+            non-production environment first. MIT License.
+        </p>
+    </div>
 </body>
 </html>

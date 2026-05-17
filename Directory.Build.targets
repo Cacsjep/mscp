@@ -18,8 +18,14 @@
 
   <!-- Milestone SDK: don't copy any of its DLLs/content to output (already on target machines).
        The SDK NuGet .targets copies ~240 MB of native deps via None+CopyToOutputDirectory.
-       We strip those items plus managed ReferenceCopyLocalPaths from Milestone packages. -->
-  <Target Name="RemoveMilestoneFromOutput" BeforeTargets="AssignTargetPaths;ResolveAssemblyReferences">
+       We strip those items plus managed ReferenceCopyLocalPaths from Milestone packages.
+
+       Standalone EXEs that aren't loaded by a MIP host (e.g. Pki.Agent.exe,
+       Pki.Tray.exe) DO need the Milestone runtime alongside the EXE; they
+       set <KeepMilestoneRuntime>true</KeepMilestoneRuntime> in their csproj
+       to opt out of this strip step. -->
+  <Target Name="RemoveMilestoneFromOutput" BeforeTargets="AssignTargetPaths;ResolveAssemblyReferences"
+          Condition="'$(KeepMilestoneRuntime)' != 'true'">
     <ItemGroup>
       <!-- Remove native/content files copied by MilestoneSystems.VideoOS.Platform.SDK .targets -->
       <None Remove="@(None)"

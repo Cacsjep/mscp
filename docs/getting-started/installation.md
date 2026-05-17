@@ -102,6 +102,8 @@ When enabled, it publishes the MSI and every per-plugin ZIP to `http://this-serv
 The feature is **off by default**. It is hidden entirely on machines without IIS.
 
 After install, browse to `http://<management-server>/mscp/`. If the management server has an encryption enabled, `https://...` works automatically with the same certificate.
+
+The page also hosts the **PKI Cert Installer** (`Mscp.PkiCertInstaller-vX.X.exe`), a single-file EXE for deploying certificates issued by the [PKI plugin](../plugins/admin/pki.md) onto remote XProtect servers that don't have the plugin installed. No MIP SDK runtime needed; just download, run as Administrator on the target server, and sign in.
 <script>
 fetch("https://api.github.com/repos/Cacsjep/mscp/releases/latest")
   .then(function(r) { return r.json(); })
