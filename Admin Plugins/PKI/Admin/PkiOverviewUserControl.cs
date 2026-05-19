@@ -7,6 +7,7 @@ using System.Linq;
 using System.Windows.Forms;
 using PKI.Crypto;
 using VideoOS.Platform;
+using VideoOS.Platform.Util;
 
 namespace PKI.Admin
 {
@@ -244,18 +245,19 @@ namespace PKI.Admin
 
                 foreach (var (kind, label) in EnumerateLeafKinds())
                 {
-                    // Per-folder permission gate: a role with read on
-                    // HTTPS but not on Root CA sees HTTPS certs here
-                    // and never sees Root CA certs.
-                    var actionId = PKIDefinition.ActionFor(kind);
-                    if (actionId != null && !PKIDefinition.HasReadPermission(actionId))
-                        continue;
-
                     var items = Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, kind);
                     if (items == null) continue;
                     foreach (var item in items)
                     {
                         if (string.IsNullOrEmpty(GetProp(item, "Thumbprint"))) continue;
+
+                        // Per-item permission gate: a role with read
+                        // on HTTPS but not on Root CA sees HTTPS certs
+                        // here and never sees Root CA certs. Mirrors
+                        // what the Configuration API enforces.
+                        try { SecurityAccess.CheckPermission(item, "GENERIC_READ"); }
+                        catch (NotAuthorizedMIPException) { continue; }
+
                         _allItems.Add(item);
                         _kindByItem[item] = kind;
                         _labelByItem[item] = label;

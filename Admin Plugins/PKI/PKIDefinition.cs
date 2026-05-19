@@ -43,74 +43,70 @@ namespace PKI
 
         internal static readonly PluginLog Log = new PluginLog("PKI");
 
-        // Role-based security, ONE entry per folder so admins can grant
-        // narrow access (e.g. give the camera-installer team read on
-        // 802.1X without exposing Root CA private keys). The Mgmt
-        // Client surfaces these under Security > Roles > [Role] > MIP
-        // > PKI > <Read Root CA, Read Intermediate, ...>. Any role that
-        // has not been explicitly granted the matching action is denied;
-        // the ItemManager short-circuits GetItems / GetItem to an empty
-        // list, which simultaneously hides the certs in the tree AND
-        // stops the REST /api/rest/v1/mipKinds/{kindId}/mipItems
-        // endpoint from leaking PFX bytes. The Overview pane filters
-        // per cert based on which folder the cert lives in, so a
-        // mixed-grant role sees exactly the certs it can access.
-        public const string ActionReadRoot         = "READ_ROOT_CA";
-        public const string ActionReadIntermediate = "READ_INTERMEDIATE_CA";
-        public const string ActionReadHttps        = "READ_HTTPS";
-        public const string ActionReadDot1x        = "READ_DOT1X";
-        public const string ActionReadService      = "READ_SERVICE";
-
-        private readonly List<SecurityAction> _securityActions = new List<SecurityAction>
+        // Per-kind security is wired into each leaf ItemNode below via
+        // GENERIC_READ / GENERIC_WRITE. That is what the Management
+        // Server uses to gate the Configuration API (REST mipItems,
+        // Get-ConfigurationItem in MIP SDK PowerShell, etc.). Without
+        // those, any authenticated user could pull the base64 PFX
+        // (cert + private key) out of any PKI item even with no role
+        // permissions granted - the ItemManager UI check alone does
+        // NOT propagate to the server. See VideoOS.Platform.xml docs
+        // on ItemNode.SecurityActions: "If the list is null, no
+        // authorization is done for this kind of item."
+        //
+        // Role UI surfaces one Read + Edit pair per kind under
+        // Security > Roles > [Role] > MIP > PKI > <Root Certificate /
+        // Intermediate / HTTPS / 802.1X / Service>. Admins keep
+        // per-folder granularity without any custom action IDs.
+        private static readonly List<SecurityAction> KindSecurityActions = new List<SecurityAction>
         {
-            new SecurityAction(ActionReadRoot,         "Read Root Certificates"),
-            new SecurityAction(ActionReadIntermediate, "Read Intermediate Certificates"),
-            new SecurityAction(ActionReadHttps,        "Read HTTPS Certificates"),
-            new SecurityAction(ActionReadDot1x,        "Read 802.1X Certificates"),
-            new SecurityAction(ActionReadService,      "Read Service Certificates"),
+            new SecurityAction("GENERIC_READ",  "Read"),
+            new SecurityAction("GENERIC_WRITE", "Edit"),
         };
-        public override List<SecurityAction> SecurityActions => _securityActions;
 
-        // Helper used by every ItemManager in this plugin. Throws are
-        // expected (NotAuthorizedMIPException is the framework's "no"
-        // signal); we translate them to a bool so callers can pick a
-        // clean fall-through (return empty list / null) instead of
-        // bubbling a stack trace into the Mgmt Client UI.
-        internal static bool HasReadPermission(string actionId)
+        // True when the current user can read at least one cert across
+        // any of the leaf kinds. Used by the Overview ItemManager to
+        // decide whether to surface the node at all. Implemented via
+        // per-item CheckPermission so it always matches what the
+        // server-side Config API will actually return.
+        internal static bool HasAnyReadAccess()
         {
-            try
+            foreach (var kind in LeafKinds)
             {
-                SecurityAccess.CheckPermission(PluginId, actionId);
-                return true;
+                List<Item> items;
+                try
+                {
+                    items = Configuration.Instance.GetItemConfigurations(PluginId, null, kind);
+                }
+                catch (NotAuthorizedMIPException) { continue; }
+                catch (Exception ex)
+                {
+                    Log.Error($"HasAnyReadAccess: GetItemConfigurations({kind}) failed: {ex.Message}");
+                    continue;
+                }
+                if (items == null) continue;
+                foreach (var item in items)
+                {
+                    try
+                    {
+                        SecurityAccess.CheckPermission(item, "GENERIC_READ");
+                        return true;
+                    }
+                    catch (NotAuthorizedMIPException) { }
+                    catch (Exception) { }
+                }
             }
-            catch (NotAuthorizedMIPException) { return false; }
-            catch (Exception ex)
-            {
-                Log.Error($"PKI security check ({actionId}) failed: " + ex.Message);
-                return false;
-            }
+            return false;
         }
 
-        // Maps a folder/kind to its action ID. Used by the Overview
-        // pane to filter certs by per-folder permission.
-        internal static string ActionFor(Guid kind)
+        internal static readonly Guid[] LeafKinds =
         {
-            if (kind == PkiRootCertKindId)     return ActionReadRoot;
-            if (kind == PkiIntermediateKindId) return ActionReadIntermediate;
-            if (kind == PkiHttpsKindId)        return ActionReadHttps;
-            if (kind == PkiDot1xKindId)        return ActionReadDot1x;
-            if (kind == PkiServiceKindId)      return ActionReadService;
-            return null;
-        }
-
-        // True when the user can see at least one folder. Used by the
-        // Overview ItemManager to decide whether to surface the node.
-        internal static bool HasAnyReadPermission()
-            => HasReadPermission(ActionReadRoot)
-            || HasReadPermission(ActionReadIntermediate)
-            || HasReadPermission(ActionReadHttps)
-            || HasReadPermission(ActionReadDot1x)
-            || HasReadPermission(ActionReadService);
+            PkiRootCertKindId,
+            PkiIntermediateKindId,
+            PkiHttpsKindId,
+            PkiDot1xKindId,
+            PkiServiceKindId,
+        };
 
         public override Guid Id => PluginId;
         public override string Name => "PKI";
@@ -166,14 +162,16 @@ namespace PKI
                     "Root Certificate",  _caIcon,
                     "Root Certificates", _folderIcon,
                     Category.Text, true, ItemsAllowed.Many,
-                    new RootCertItemManager(PkiRootCertKindId), null);
+                    new RootCertItemManager(PkiRootCertKindId), null,
+                    new List<SecurityAction>(KindSecurityActions));
 
                 var intermediateNode = new ItemNode(
                     PkiIntermediateKindId, PkiCAFolderKindId,
                     "Intermediate Certificate",  _caIcon,
                     "Intermediate Certificates", _folderIcon,
                     Category.Text, true, ItemsAllowed.Many,
-                    new IntermediateCertItemManager(PkiIntermediateKindId), null);
+                    new IntermediateCertItemManager(PkiIntermediateKindId), null,
+                    new List<SecurityAction>(KindSecurityActions));
 
                 var caFolderNode = new ItemNode(
                     PkiCAFolderKindId, Guid.Empty,
@@ -188,21 +186,24 @@ namespace PKI
                     "HTTPS Certificate",  _certIcon,
                     "HTTPS Certificates", _folderIcon,
                     Category.Text, true, ItemsAllowed.Many,
-                    new HttpsCertItemManager(PkiHttpsKindId), null);
+                    new HttpsCertItemManager(PkiHttpsKindId), null,
+                    new List<SecurityAction>(KindSecurityActions));
 
                 var dot1xNode = new ItemNode(
                     PkiDot1xKindId, PkiClientFolderKindId,
                     "802.1X Certificate",  _certIcon,
                     "802.1X Certificates", _folderIcon,
                     Category.Text, true, ItemsAllowed.Many,
-                    new Dot1xCertItemManager(PkiDot1xKindId), null);
+                    new Dot1xCertItemManager(PkiDot1xKindId), null,
+                    new List<SecurityAction>(KindSecurityActions));
 
                 var serviceNode = new ItemNode(
                     PkiServiceKindId, PkiClientFolderKindId,
                     "Service Certificate",  _certIcon,
                     "Service Certificates", _folderIcon,
                     Category.Text, true, ItemsAllowed.Many,
-                    new ServiceCertItemManager(PkiServiceKindId), null);
+                    new ServiceCertItemManager(PkiServiceKindId), null,
+                    new List<SecurityAction>(KindSecurityActions));
 
                 var clientFolderNode = new ItemNode(
                     PkiClientFolderKindId, Guid.Empty,

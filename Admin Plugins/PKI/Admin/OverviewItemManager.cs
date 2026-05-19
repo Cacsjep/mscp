@@ -61,11 +61,12 @@ namespace PKI.Admin
         public override void SetItemName(string name) { /* immutable */ }
 
         // The Overview node is visible if the role has read on at least
-        // ONE of the five folders. The Overview UI then filters the cert
-        // list per folder using the same per-folder action checks.
+        // ONE of the five leaf kinds. The Overview UI then filters the
+        // cert grid per item using SecurityAccess.CheckPermission so a
+        // mixed-grant role sees exactly the certs it can access.
         public override List<Item> GetItems()
         {
-            if (!PKIDefinition.HasAnyReadPermission()) return new List<Item>();
+            if (!PKIDefinition.HasAnyReadAccess()) return new List<Item>();
             var list = Configuration.Instance.GetItemConfigurations(PKIDefinition.PluginId, null, _kind);
             if (list == null || list.Count == 0)
             {
@@ -79,7 +80,7 @@ namespace PKI.Admin
 
         public override Item GetItem(FQID fqid)
         {
-            if (!PKIDefinition.HasAnyReadPermission()) return null;
+            if (!PKIDefinition.HasAnyReadAccess()) return null;
             return Configuration.Instance.GetItemConfiguration(PKIDefinition.PluginId, _kind, fqid.ObjectId);
         }
 

@@ -7,6 +7,5 @@ namespace PKI.Admin
         public IntermediateCertItemManager(Guid kind) : base(kind) { }
         public override RolePreset RolePreset => RolePreset.IntermediateCA;
         protected override string HelpFileName => "HelpPage_IntermediateCA.html";
-        protected override string ReadActionId => PKIDefinition.ActionReadIntermediate;
     }
 }
