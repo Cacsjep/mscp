@@ -1,5 +1,8 @@
 # Changelog
 
+## [3.0.2] - 2026-05-19
+- Fix PKI: Security Issue - Any milestone user was able to extract key material, role permission was in place but was not correctly applied. Thanks to Josh for this finding.
+  
 ## [3.0.1] - 2026-05-16
 - Improve Snap Reporter: Add PDF Split possibility
 - Improve Snap Reporter: Add Progress Bar 
