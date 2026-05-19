@@ -32,6 +32,11 @@
         .chip-blue { display: inline-block; background: #eef4fb; border: 1px solid #a3c4e4;
             border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 500;
             color: #2a5a96; white-space: nowrap; margin-right: 3px; }
+        .warning {
+            background: #fdf2f2; border: 1px solid #e0a5a5; border-left: 4px solid #c44141;
+            padding: 12px 16px; margin-bottom: 14px; border-radius: 4px;
+        }
+        .warning h2 { color: #8a2222; margin-bottom: 6px; }
         table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
         th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e8e8e8; }
         th { font-weight: 600; color: #444; background: #fafafa; }
@@ -46,6 +51,17 @@
             <span class="chip-amber" title="Independent open-source project provided as-is under the MIT License, with no warranty. Not affiliated with Milestone Systems.">Open source - no warranty, use at own risk</span>
             <span class="chip-blue">Stores certs in MIP item config</span>
         </div>
+    </div>
+
+    <div class="warning">
+        <h2>Restrict who can read these items</h2>
+        <p>
+            Every certificate item stores its PKCS#12 bundle (cert + private key) on
+            the Management Server. A user that can read a PKI item can extract the
+            private key. Grant Read only to admin-level operators, and use the
+            per-kind Read permission to keep Root CA private keys away from anyone
+            who only needs to deploy leaf certs.
+        </p>
     </div>
 
     <div class="card">
@@ -116,24 +132,35 @@
     <div class="card">
         <h2>Role permissions</h2>
         <p>
-            Each PKI folder has its own read permission that admins grant
-            per role under <strong>Security &gt; Roles &gt; [Role] &gt; MIP &gt; PKI</strong>.
+            Each PKI folder has its own <strong>Read</strong> and <strong>Edit</strong>
+            permission, granted per role under
+            <strong>Security &gt; Roles &gt; [Role] &gt; MIP &gt; PKI &gt; [kind]</strong>.
+            Without Read on the matching kind, items are hidden in the Mgmt Client AND
+            inaccessible via the Configuration API (PowerShell <code>Get-ConfigurationItem</code>,
+            REST <code>mipItems</code>, MIP SDK clients), so private keys cannot be
+            extracted by users who lack the grant.
         </p>
         <table>
-            <tr><th>Permission</th><th>Effect when granted</th></tr>
-            <tr><td>Read Root Certificates</td><td>See and read certs in the Root CA folder.</td></tr>
-            <tr><td>Read Intermediate Certificates</td><td>See and read certs in the Intermediate CA folder.</td></tr>
-            <tr><td>Read HTTPS Certificates</td><td>See and read certs in the HTTPS folder.</td></tr>
-            <tr><td>Read 802.1X Certificates</td><td>See and read certs in the 802.1X folder.</td></tr>
-            <tr><td>Read Service Certificates</td><td>See and read certs in the Service folder.</td></tr>
+            <tr><th>Kind</th><th>Read grants...</th><th>Edit grants...</th></tr>
+            <tr><td>Root Certificate</td><td>Read certs and private keys in the Root CA folder.</td><td>Create, modify, and delete Root CAs.</td></tr>
+            <tr><td>Intermediate Certificate</td><td>Read certs and private keys in the Intermediate folder.</td><td>Create, modify, and delete Intermediates.</td></tr>
+            <tr><td>HTTPS Certificate</td><td>Read certs and private keys in the HTTPS folder.</td><td>Create, modify, and delete HTTPS certs.</td></tr>
+            <tr><td>802.1X Certificate</td><td>Read certs and private keys in the 802.1X folder.</td><td>Create, modify, and delete 802.1X certs.</td></tr>
+            <tr><td>Service Certificate</td><td>Read certs and private keys in the Service folder.</td><td>Create, modify, and delete Service certs.</td></tr>
         </table>
         <p>
             The <strong>Overview</strong> node is visible as long as the role
-            has read on <em>at least one</em> folder; the cert list in
-            Overview filters per-row by the same per-folder permissions.
-            The PKI Cert Installer EXE talks to the same REST surface, so
-            the same permissions decide which certs an installer operator
-            can deploy on a given XProtect&trade; server.
+            has Read on <em>at least one</em> kind; the cert grid filters
+            per-row by the same per-kind permissions. The PKI Cert Installer
+            EXE talks to the same REST surface, so the same permissions decide
+            which certs an installer operator can deploy on a given
+            XProtect&trade; server.
+        </p>
+        <p>
+            Treat Root CA Read as the most sensitive grant: anyone with it can
+            export the private key that signs your entire chain. A common pattern
+            is to grant Root Read only to the security team, Intermediate Read to
+            cert operators, and Service / HTTPS / 802.1X Read to installer operators.
         </p>
     </div>
 
@@ -141,7 +168,8 @@
         <h2>Storage and security notes</h2>
         <ul>
             <li>Cert and key bytes are stored as PKCS#12 (PFX) on the MIP item, base64-encoded.
-                Anyone with read access to the Management Server config can extract them.</li>
+                Any user with Read on the matching kind can export the private key, so keep
+                that grant tight (see <strong>Role permissions</strong> above).</li>
             <li>The plugin does not auto-renew. Watch <strong>Remaining</strong> in the Overview;
                 generate a fresh cert before expiry and re-deploy with the Cert Installer.</li>
             <li>Deleting a CA item is blocked while other certs in the vault still reference its

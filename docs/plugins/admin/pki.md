@@ -11,6 +11,9 @@ Run a small internal certificate authority for your XProtect&trade; site without
 
 Every certificate (and private key, where present) is stored as a MIP item on the Management Server, so the entire vault travels with your XProtect configuration backups.
 
+!!! danger "Restrict who can read these items"
+    Each certificate item stores its PKCS#12 bundle (cert + private key) on the Management Server. **A user that can read a PKI item can extract the private key.** Grant Read only to admin-level operators, and use the per-kind Read permission to keep Root CA private keys away from anyone who only needs to deploy leaf certs. See [Role permissions](#role-permissions) below.
+
 <video controls width="100%">
   <source src="../vids/pki_usage.mp4" type="video/mp4">
 </video>
@@ -56,21 +59,24 @@ Select certs in the Overview pane and click **Export**. PFX includes the private
 
 ## Role permissions
 
-Each folder has its own read permission, granted per role under **Security > Roles > [Role] > MIP > PKI**.
+Each PKI kind has its own **Read** and **Edit** permission, granted per role under **Security > Roles > [Role] > MIP > PKI > [kind]**. Without Read on the matching kind, items are hidden in the Mgmt Client AND inaccessible via the Configuration API (PowerShell `Get-ConfigurationItem`, REST `mipItems`, MIP SDK clients), so private keys cannot be extracted by users who lack the grant.
 
-| Permission | Effect when granted |
-|---|---|
-| Read Root Certificates | See and read certs in the Root CA folder. |
-| Read Intermediate Certificates | See and read certs in the Intermediate CA folder. |
-| Read HTTPS Certificates | See and read certs in the HTTPS folder. |
-| Read 802.1X Certificates | See and read certs in the 802.1X folder. |
-| Read Service Certificates | See and read certs in the Service folder. |
+| Kind | Read grants... | Edit grants... |
+|---|---|---|
+| Root Certificate | Read certs and private keys in the Root CA folder. | Create, modify, and delete Root CAs. |
+| Intermediate Certificate | Read certs and private keys in the Intermediate folder. | Create, modify, and delete Intermediates. |
+| HTTPS Certificate | Read certs and private keys in the HTTPS folder. | Create, modify, and delete HTTPS certs. |
+| 802.1X Certificate | Read certs and private keys in the 802.1X folder. | Create, modify, and delete 802.1X certs. |
+| Service Certificate | Read certs and private keys in the Service folder. | Create, modify, and delete Service certs. |
 
-The **Overview** node is visible as long as the role has read on *at least one* folder; the cert list filters per-row by the same per-folder permissions. The PKI Cert Installer EXE talks to the same REST surface, so the same permissions decide which certs an installer operator can deploy on a given XProtect server.
+The **Overview** node is visible as long as the role has Read on *at least one* kind; the cert grid filters per-row by the same per-kind permissions. The PKI Cert Installer EXE talks to the same REST surface, so the same permissions decide which certs an installer operator can deploy on a given XProtect server.
+
+!!! warning "Treat Root CA Read as the most sensitive grant"
+    Anyone with Root CA Read can export the private key that signs your entire chain. A common pattern is to grant Root Read only to the security team, Intermediate Read to cert operators, and Service / HTTPS / 802.1X Read to installer operators.
 
 ## Storage and security notes
 
-- Cert and key bytes are stored as PKCS#12 (PFX) on the MIP item, base64-encoded. Anyone with read access to the Management Server config can extract them.
+- Cert and key bytes are stored as PKCS#12 (PFX) on the MIP item, base64-encoded. Any user with Read on the matching kind can export the private key, so keep that grant tight (see [Role permissions](#role-permissions)).
 - The plugin does not auto-renew. Watch **Remaining** in the Overview; generate a fresh cert before expiry and re-deploy with the Cert Installer.
 - Deleting a CA item is blocked while other certs in the vault still reference its thumbprint as their issuer. Delete the dependents (or re-issue them against a different CA) first.
 
