@@ -27,25 +27,15 @@
   </ItemGroup>
 
   <!--
-    Internal Smart Client assemblies (not on NuGet) for IGlobalHotspotController.
-    The legacy Map plugin does NOT broadcast a MIP message on camera click - its
-    MoveThumb.OnMouseLeftButtonDown directly calls Workroom.HotspotController
-    .UpdateHotspotCamera(camera). The global hotspot controller is the single
-    source of truth for tile-click / Map-click / camera-tree-pick selections.
-    Reached via the same accessor path the built-in Hotspot plugin uses
-    (HotspotContentHolder.cs:553). DLLs are NOT redistributed - the operator
-    machine already has them.
+    HotspotCameraSource reaches into the Smart Client's internal GlobalHotspotController
+    (same hook the built-in Hotspot plugin uses) entirely via reflection - no compile-time
+    reference to VideoOS.RemoteClient.Application / VideoOS.Shared. Those DLLs are not on
+    NuGet and not present on CI; binding late keeps this csproj pure-public-API like every
+    other Smart Client plugin in the repo, while still resolving the controller at runtime
+    inside Smart Client. The legacy Map plugin does not broadcast a MIP message on camera
+    click, so this controller remains the only reliable single source of truth for
+    tile/Map/camera-tree selections.
   -->
-  <ItemGroup>
-    <Reference Include="VideoOS.RemoteClient.Application">
-      <HintPath>C:\Program Files\Milestone\XProtect Smart Client\VideoOS.RemoteClient.Application.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="VideoOS.Shared">
-      <HintPath>C:\Program Files\Milestone\XProtect Smart Client\VideoOS.Shared.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-  </ItemGroup>
 
   <ItemGroup>
     <Content Include="plugin.def">
