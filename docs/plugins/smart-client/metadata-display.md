@@ -37,9 +37,9 @@ If the configuration's **Inspect packet...** button shows fresh XML and Learn di
 1. In **Setup** mode, drag a **Metadata Display** view item into a slot
 2. Click **Open configuration...**
 3. **Select channel...** -> pick a metadata channel
-4. Click **Start Learn** to discover the topics and data keys flowing through the stream, then pick from the dropdowns
+4. Click **Start Learn** to discover the topics and data keys flowing through the stream, then pick from the dropdowns.
 5. Choose a render type (Lamp / Number / Gauge / Text / Line Chart / Table / Trend), tune the options, hit **Save**
-6. Switch to **Live** - the widget starts displaying as soon as a matching packet arrives
+6. Switch to **Live** - the widget starts displaying as soon as a matching packet arrives.
 
 ## Render Types
 
