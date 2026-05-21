@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <RootNamespace>LiveExporter</RootNamespace>
+    <AssemblyName>LiveExporter</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <PluginName>LiveExporter</PluginName>
+    <StopSmartClient>true</StopSmartClient>
+    <LaunchSmartClient>true</LaunchSmartClient>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="22.3.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+
+  <!--
+    Internal Smart Client assemblies (not on NuGet) for IGlobalHotspotController.
+    The legacy Map plugin does NOT broadcast a MIP message on camera click - its
+    MoveThumb.OnMouseLeftButtonDown directly calls Workroom.HotspotController
+    .UpdateHotspotCamera(camera). The global hotspot controller is the single
+    source of truth for tile-click / Map-click / camera-tree-pick selections.
+    Reached via the same accessor path the built-in Hotspot plugin uses
+    (HotspotContentHolder.cs:553). DLLs are NOT redistributed - the operator
+    machine already has them.
+  -->
+  <ItemGroup>
+    <Reference Include="VideoOS.RemoteClient.Application">
+      <HintPath>C:\Program Files\Milestone\XProtect Smart Client\VideoOS.RemoteClient.Application.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VideoOS.Shared">
+      <HintPath>C:\Program Files\Milestone\XProtect Smart Client\VideoOS.Shared.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

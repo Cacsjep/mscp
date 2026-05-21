@@ -1,0 +1,4 @@
+<plugin>
+   <file name="LiveExporter.dll"/>
+   <load env="SmartClient"/>
+</plugin>
