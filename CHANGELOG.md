@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.1.1] - 2026-05-21
+## [3.1.2] - 2026-05-21
 - Add Live Exporter: New Smart Client toolbar plugin for Live workspace. Opens a flyout that mirrors the most recently clicked camera (tile click, legacy Map click, Smart Map click, camera-tree pick) in independent playback with its own scrubber. Operator scrubs to the desired start, clicks Set start, scrubs to the end, clicks Set end, and Add to Export drops the (camera, start to end) pair into the Smart Client's built-in export list with a native confirmation toast. Reset clears the captured times. The flyout follows further camera clicks live so the operator can rapidly mark ranges across multiple cameras.
 
 ## [3.0.2] - 2026-05-19

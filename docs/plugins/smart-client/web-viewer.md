@@ -13,11 +13,11 @@ For a multi-tab web/RDP launcher with a folder tree, see the **Remote Manager** 
 
 ## Quick Start
 
-1. In **Setup** mode, drag a **Web Viewer** view item into a slot
-2. Click into the view item; the Setup form appears
+1. In **Setup** mode, drag a **Web Viewer** view item into a slot.
+2. Click into the view item; the Setup form appears.
 3. Enter the **URL** (must start with `http://` or `https://`)
-4. (Optional) Set a **Title**, **User** / **Password**, and tick the cert / login options
-5. Click **Save**, then switch to **Live** - the page loads inside the view item
+4. (Optional) Set a **Title**, **User** / **Password**, and tick the cert / login options.
+5. Click **Save**, then switch to **Live** - the page loads inside the view item.
 
 ## Properties
 
