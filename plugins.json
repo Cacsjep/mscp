@@ -181,5 +181,12 @@
     "path": "Smart Client Plugins/WebViewer",
     "category": "SmartClient",
     "description": "Embed a single web page in a Smart Client view item via Microsoft Edge WebView2 (per-item URL, optional title, HTTP Basic credentials)"
+  },
+  {
+    "name": "LiveExporter",
+    "displayName": "Live Exporter",
+    "path": "Smart Client Plugins/LiveExporter",
+    "category": "SmartClient",
+    "description": "Toolbar flyout that mirrors the most recently clicked camera in independent playback and lets the operator mark a (start, end) range and add it to the Smart Client export list"
   }
 ]

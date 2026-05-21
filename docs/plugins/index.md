@@ -73,6 +73,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-grid"></i></div>
     <div class="pt"><span class="pn">Flex View</span><span class="pd">Design custom view layouts beyond the standard view templates.</span></div>
   </a>
+  <a class="pr" href="smart-client/live-exporter/">
+    <div class="pi sc"><i class="mdi mdi-file-export"></i></div>
+    <div class="pt"><span class="pn">Live Exporter</span><span class="pd">Toolbar flyout window that mirrors the most recently clicked camera in independent playback and marks a (start, end) range for the export list.</span></div>
+  </a>
   <a class="pr" href="smart-client/metadata-display/">
     <div class="pi sc"><i class="mdi mdi-gauge"></i></div>
     <div class="pt"><span class="pn">Metadata Display</span><span class="pd">Render any value from a metadata channel as a dashboard widget - lamp, number, gauge, or text.</span></div>
