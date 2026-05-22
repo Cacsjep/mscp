@@ -1,0 +1,245 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="TodoList.Client.TodoListViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:fa5="http://schemas.fontawesome.com/icons/"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="400"
+    d:DesignWidth="600"
+    PreviewMouseLeftButtonUp="OnMouseLeftUp"
+    PreviewMouseDoubleClick="OnMouseDoubleClick">
+    <external:ViewItemWpfUserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TodoList;component/Client/Themes/Buttons.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style TargetType="TextBox" BasedOn="{StaticResource DarkTextBox}"/>
+        </ResourceDictionary>
+    </external:ViewItemWpfUserControl.Resources>
+
+    <Grid Background="#FF1C2326">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Title header bar -->
+        <Border Grid.Row="0" Background="#FF070809" Padding="10,6">
+            <DockPanel>
+                <Border x:Name="modeChip"
+                        DockPanel.Dock="Right"
+                        Background="#FF2A3338"
+                        CornerRadius="2"
+                        Padding="6,2"
+                        VerticalAlignment="Center"
+                        Margin="6,0,0,0">
+                    <TextBlock x:Name="modeChipText"
+                               Text="Free"
+                               Foreground="#FF88BBFF"
+                               FontSize="11"/>
+                </Border>
+                <TextBlock x:Name="progressText"
+                           DockPanel.Dock="Right"
+                           Foreground="#FF888888"
+                           FontSize="11"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0"/>
+                <TextBlock x:Name="titleText"
+                           Foreground="#FF88BBFF"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Body container -->
+        <Grid Grid.Row="1">
+
+            <!-- Free mode -->
+            <Grid x:Name="freePanel" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Background="#FF1C2326">
+                    <ItemsControl x:Name="freeTasksList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="8,4" BorderBrush="#FF2A3338" BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding Done, Mode=TwoWay}"
+                                                  Click="OnFreeTaskCheckClick"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,8,0"
+                                                  Foreground="#FFE0E0E0"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Text}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#FFE0E0E0"
+                                                   TextWrapping="Wrap"/>
+                                        <Button Grid.Column="2"
+                                                Style="{StaticResource IconButton}"
+                                                Width="24" Height="24"
+                                                Click="OnFreeTaskMoveUpClick"
+                                                ToolTip="Move up"
+                                                Margin="2,0,0,0">
+                                            <fa5:ImageAwesome Icon="Solid_ArrowUp" Foreground="#FFD0D0D0" Width="10" Height="10"/>
+                                        </Button>
+                                        <Button Grid.Column="3"
+                                                Style="{StaticResource IconButton}"
+                                                Width="24" Height="24"
+                                                Click="OnFreeTaskMoveDownClick"
+                                                ToolTip="Move down"
+                                                Margin="2,0,0,0">
+                                            <fa5:ImageAwesome Icon="Solid_ArrowDown" Foreground="#FFD0D0D0" Width="10" Height="10"/>
+                                        </Button>
+                                        <Button Grid.Column="4"
+                                                Style="{StaticResource IconButton}"
+                                                Width="24" Height="24"
+                                                Click="OnFreeTaskDeleteClick"
+                                                ToolTip="Delete"
+                                                Margin="2,0,0,0">
+                                            <fa5:ImageAwesome Icon="Solid_TrashAlt" Foreground="#FFE05050" Width="10" Height="10"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <Grid Grid.Row="1" Margin="8,8,8,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="newTaskTextBox"
+                             Grid.Column="0"
+                             KeyDown="OnNewTaskKeyDown"/>
+                    <Button Grid.Column="1"
+                            Content="Add"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="OnAddFreeTaskClick"
+                            Padding="14,5"
+                            Margin="6,0,0,0"/>
+                </Grid>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="8,4,8,8">
+                    <Button Content="Clear completed"
+                            Style="{StaticResource SmallButton}"
+                            Click="OnClearCompletedClick"
+                            Margin="0,0,6,0"/>
+                    <Button Content="Clear all"
+                            Style="{StaticResource SmallButton}"
+                            Click="OnClearAllClick"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Template mode: no active template -->
+            <Grid x:Name="templateNoSelectionPanel" Visibility="Collapsed">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock x:Name="templateNoSelectionText"
+                               Text="No template active."
+                               Foreground="#FFCFD7DA"
+                               FontSize="14"
+                               HorizontalAlignment="Center"/>
+                    <Button Content="Pick template..."
+                            Style="{StaticResource PrimaryButton}"
+                            Click="OnPickTemplateClick"
+                            Padding="16,6"
+                            Margin="0,12,0,0"
+                            HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Template mode: active template -->
+            <Grid x:Name="templateRunPanel" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Background="#FF1C2326">
+                    <ItemsControl x:Name="templateTasksList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="8,4" BorderBrush="#FF2A3338" BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding Done, Mode=TwoWay}"
+                                                  Click="OnTemplateTaskCheckClick"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,8,0"
+                                                  Foreground="#FFE0E0E0"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Text}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#FFE0E0E0"
+                                                   TextWrapping="Wrap"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="8">
+                    <Button Content="Start new shift"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="OnStartNewShiftClick"
+                            Padding="14,5"
+                            Margin="0,0,6,0"/>
+                    <Button Content="Switch template..."
+                            Style="{StaticResource SmallButton}"
+                            Click="OnSwitchTemplateClick"
+                            Padding="14,5"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Setup overlay -->
+            <Grid x:Name="setupOverlay" Background="#FF1C2326" Visibility="Collapsed">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock x:Name="setupTitleText"
+                               Foreground="White"
+                               FontSize="22"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,2"/>
+                    <TextBlock Text="Todo List"
+                               Foreground="#FFAAAAAA"
+                               FontSize="13"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="setupInfoText"
+                               Foreground="#FF88BBFF"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               Margin="0,10,0,0"
+                               TextAlignment="Center"/>
+                    <TextBlock Text="Configure title, mode, and templates in the Properties panel"
+                               Foreground="#FF666666"
+                               FontSize="11"
+                               HorizontalAlignment="Center"
+                               Margin="0,8,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</external:ViewItemWpfUserControl>

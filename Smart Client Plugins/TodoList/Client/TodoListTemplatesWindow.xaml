@@ -1,0 +1,223 @@
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:fa5="http://schemas.fontawesome.com/icons/"
+    x:Class="TodoList.Client.TodoListTemplatesWindow"
+    Title="Todo List - Templates"
+    Width="900" Height="600"
+    MinWidth="700" MinHeight="450"
+    WindowStartupLocation="CenterOwner"
+    Background="#FF1E1E1E"
+    Foreground="#FFD0D0D0"
+    FontSize="13"
+    Closing="OnWindowClosing">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TodoList;component/Client/Themes/Buttons.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style TargetType="TextBox" BasedOn="{StaticResource DarkTextBox}"/>
+
+            <Style TargetType="ListBox">
+                <Setter Property="Background" Value="#FF2A2A2A"/>
+                <Setter Property="Foreground" Value="#FFE0E0E0"/>
+                <Setter Property="BorderBrush" Value="#FF444444"/>
+                <Setter Property="BorderThickness" Value="1"/>
+            </Style>
+            <Style TargetType="ListBoxItem">
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="Background" Value="#FF2A2A2A"/>
+                <Setter Property="Foreground" Value="#FFE0E0E0"/>
+            </Style>
+
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left pane: templates -->
+            <Grid Grid.Column="0" Margin="0,0,12,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Text="Templates"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="#FFE6EAEC"
+                           Margin="0,0,0,8"/>
+
+                <ListBox x:Name="templatesListBox"
+                         Grid.Row="1"
+                         DisplayMemberPath="Name"
+                         SelectionMode="Single"
+                         SelectionChanged="OnTemplateSelectionChanged"/>
+
+                <Grid Grid.Row="2" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Content="+ New"
+                            Style="{StaticResource SmallButton}"
+                            Click="OnNewTemplateClick"
+                            Margin="0,0,4,0"/>
+                    <Button Grid.Column="1"
+                            x:Name="duplicateTemplateButton"
+                            Style="{StaticResource IconButton}"
+                            Click="OnDuplicateTemplateClick"
+                            ToolTip="Duplicate template"
+                            Margin="0,0,4,0">
+                        <fa5:ImageAwesome Icon="Solid_Clone" Foreground="#FFD0D0D0" Width="12" Height="12"/>
+                    </Button>
+                    <Button Grid.Column="2"
+                            x:Name="renameTemplateButton"
+                            Style="{StaticResource IconButton}"
+                            Click="OnRenameTemplateClick"
+                            ToolTip="Rename template"
+                            Margin="0,0,4,0">
+                        <fa5:ImageAwesome Icon="Solid_Pen" Foreground="#FFD0D0D0" Width="12" Height="12"/>
+                    </Button>
+                    <Button Grid.Column="3"
+                            x:Name="deleteTemplateButton"
+                            Style="{StaticResource IconButton}"
+                            Click="OnDeleteTemplateClick"
+                            ToolTip="Delete template">
+                        <fa5:ImageAwesome Icon="Solid_TrashAlt" Foreground="#FFE05050" Width="12" Height="12"/>
+                    </Button>
+                </Grid>
+            </Grid>
+
+            <!-- Right pane: task editor -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           x:Name="editorTitleText"
+                           Text="No template selected"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="#FFE6EAEC"
+                           Margin="0,0,0,8"/>
+
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Tasks:" Margin="0,0,0,4"/>
+
+                    <ListBox Grid.Row="1"
+                             x:Name="tasksListBox"
+                             SelectionMode="Single"
+                             SelectionChanged="OnTaskSelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding DisplayNumber}" Foreground="#FF888888"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Text}" Foreground="#FFE0E0E0" TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Grid Grid.Row="2" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0"
+                                 x:Name="newTaskTextBox"
+                                 IsEnabled="False"
+                                 KeyDown="OnNewTaskKeyDown"/>
+                        <Button Grid.Column="1"
+                                x:Name="addTaskButton"
+                                Content="Add task"
+                                Style="{StaticResource PrimaryButton}"
+                                Click="OnAddTaskClick"
+                                IsEnabled="False"
+                                Margin="6,0,0,0"/>
+                    </Grid>
+                </Grid>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button x:Name="editTaskButton"
+                            Style="{StaticResource IconButton}"
+                            Click="OnEditTaskClick"
+                            IsEnabled="False"
+                            ToolTip="Edit task"
+                            Margin="0,0,4,0">
+                        <fa5:ImageAwesome Icon="Solid_Pen" Foreground="#FFD0D0D0" Width="12" Height="12"/>
+                    </Button>
+                    <Button x:Name="moveTaskUpButton"
+                            Style="{StaticResource IconButton}"
+                            Click="OnMoveTaskUpClick"
+                            IsEnabled="False"
+                            ToolTip="Move up"
+                            Margin="0,0,4,0">
+                        <fa5:ImageAwesome Icon="Solid_ArrowUp" Foreground="#FFD0D0D0" Width="12" Height="12"/>
+                    </Button>
+                    <Button x:Name="moveTaskDownButton"
+                            Style="{StaticResource IconButton}"
+                            Click="OnMoveTaskDownClick"
+                            IsEnabled="False"
+                            ToolTip="Move down"
+                            Margin="0,0,4,0">
+                        <fa5:ImageAwesome Icon="Solid_ArrowDown" Foreground="#FFD0D0D0" Width="12" Height="12"/>
+                    </Button>
+                    <Button x:Name="deleteTaskButton"
+                            Style="{StaticResource IconButton}"
+                            Click="OnDeleteTaskClick"
+                            IsEnabled="False"
+                            ToolTip="Delete task">
+                        <fa5:ImageAwesome Icon="Solid_TrashAlt" Foreground="#FFE05050" Width="12" Height="12"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- Footer -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Cancel"
+                    Style="{StaticResource SmallButton}"
+                    Click="OnCancelClick"
+                    Padding="20,6"
+                    Margin="0,0,6,0"/>
+            <Button Content="Save"
+                    Style="{StaticResource PrimaryButton}"
+                    Click="OnSaveClick"
+                    Padding="20,6"
+                    IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

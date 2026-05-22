@@ -1,5 +1,8 @@
 # Changelog
 
+## [3.2.0] - 2026-05-22
+- Add Todo List: New Smart Client view-item plugin. 
+
 ## [3.1.3] - 2026-05-21
 - Add Metadata Display: **Base64 Image** render type. Renders an image carried in the metadata value as a base64-encoded string (raw or `data:image/...;base64,...` form). Empty payloads show "No Image"; non-decodable payloads show "Decode error: <reason>" in the Bad color so the operator can distinguish a missing value from a malformed one.
 

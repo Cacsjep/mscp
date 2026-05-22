@@ -59,6 +59,7 @@ nav:
       - Snapshot Report: plugins/smart-client/snapreport.md
       - Timelapse: plugins/smart-client/timelapse.md
       - Timeline Jump: plugins/smart-client/timeline-jump.md
+      - Todo List: plugins/smart-client/todo-list.md
       - View Carousel: plugins/smart-client/view-carousel.md
       - Weather: plugins/smart-client/weather.md
       - Web Viewer: plugins/smart-client/web-viewer.md

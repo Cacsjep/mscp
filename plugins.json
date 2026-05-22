@@ -188,5 +188,12 @@
     "path": "Smart Client Plugins/LiveExporter",
     "category": "SmartClient",
     "description": "Toolbar flyout that mirrors the most recently clicked camera in independent playback and lets the operator mark a (start, end) range and add it to the Smart Client export list"
+  },
+  {
+    "name": "TodoList",
+    "displayName": "Todo List Plugin",
+    "path": "Smart Client Plugins/TodoList",
+    "category": "SmartClient",
+    "description": "Operator checklist view item with free-form tasks or pre-defined shift templates"
   }
 ]
