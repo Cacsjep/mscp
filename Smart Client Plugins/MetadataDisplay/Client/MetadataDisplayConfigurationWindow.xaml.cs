@@ -59,6 +59,7 @@ namespace MetadataDisplay.Client
         private LineChartRenderer _previewLine;
         private TableRenderer _previewTable;
         private TrendRenderer _previewTrend;
+        private Base64ImageRenderer _previewBase64Image;
 
         // Additional line series rows (Series 2..N - Series 1 lives in the
         // legacy line-panel fields). Cap is LineSeriesParser.MaxSeries - 1.
@@ -135,13 +136,14 @@ namespace MetadataDisplay.Client
 
             switch ((_vim.RenderType ?? "Lamp"))
             {
-                case "Number":    rtNumber.IsChecked = true; break;
-                case "Gauge":     rtGauge.IsChecked = true; break;
-                case "Text":      rtText.IsChecked = true; break;
-                case "LineChart": rtLine.IsChecked = true; break;
-                case "Table":     rtTable.IsChecked = true; break;
-                case "Trend":     rtTrend.IsChecked = true; break;
-                default:          rtLamp.IsChecked = true; break;
+                case "Number":      rtNumber.IsChecked = true; break;
+                case "Gauge":       rtGauge.IsChecked = true; break;
+                case "Text":        rtText.IsChecked = true; break;
+                case "LineChart":   rtLine.IsChecked = true; break;
+                case "Table":       rtTable.IsChecked = true; break;
+                case "Trend":       rtTrend.IsChecked = true; break;
+                case "Base64Image": rtBase64Image.IsChecked = true; break;
+                default:            rtLamp.IsChecked = true; break;
             }
 
             RebuildLampRowsFromManager();
@@ -500,6 +502,7 @@ namespace MetadataDisplay.Client
             _previewLine = null;
             _previewTable = null;
             _previewTrend = null;
+            _previewBase64Image = null;
 
             UIElement visual;
             bool isChart = false;
@@ -520,6 +523,12 @@ namespace MetadataDisplay.Client
                 _previewText = new TextRenderer();
                 visual = _previewText.Visual;
                 _previewText.Clear();
+            }
+            else if (rtBase64Image.IsChecked == true)
+            {
+                _previewBase64Image = new Base64ImageRenderer();
+                visual = _previewBase64Image.Visual;
+                _previewBase64Image.Clear();
             }
             else if (rtLine.IsChecked == true)
             {
@@ -1228,6 +1237,7 @@ namespace MetadataDisplay.Client
                 _previewNumber?.Clear();
                 _previewGauge?.Clear();
                 _previewText?.Clear();
+                _previewBase64Image?.Clear();
                 // Don't clear the line chart on missing value - its accumulated history
                 // is its whole point. Just leave the existing buffer.
                 previewMetaText.Text = "";
@@ -1262,6 +1272,10 @@ namespace MetadataDisplay.Client
             {
                 _previewText.FontSize = TryParseDouble(textFontSizeBox.Text) ?? 28;
                 _previewText.Update(_lastPreviewValue);
+            }
+            else if (_previewBase64Image != null)
+            {
+                _previewBase64Image.Update(_lastPreviewValue);
             }
             else if (_previewLine != null)
             {
@@ -2174,6 +2188,7 @@ namespace MetadataDisplay.Client
             else if (rtLine.IsChecked == true) rt = "LineChart";
             else if (rtTable.IsChecked == true) rt = "Table";
             else if (rtTrend.IsChecked == true) rt = "Trend";
+            else if (rtBase64Image.IsChecked == true) rt = "Base64Image";
             _vim.RenderType = rt;
 
             _vim.LampMap = SerializeLampRows();

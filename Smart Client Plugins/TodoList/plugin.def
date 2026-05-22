@@ -1,0 +1,4 @@
+<plugin>
+   <file name="TodoList.dll"/>
+   <load env="SmartClient"/>
+</plugin>

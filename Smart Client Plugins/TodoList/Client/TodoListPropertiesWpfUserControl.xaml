@@ -1,0 +1,60 @@
+<external:PropertiesWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="TodoList.Client.TodoListPropertiesWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <external:PropertiesWpfUserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TodoList;component/Client/Themes/Buttons.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </external:PropertiesWpfUserControl.Resources>
+    <StackPanel Margin="10">
+        <GroupBox Header="Todo List" Foreground="White">
+            <StackPanel Margin="8">
+                <TextBlock Text="Title:" Foreground="#FFCFD7DA" Margin="0,0,0,4"/>
+                <TextBox x:Name="titleTextBox" Padding="4"/>
+
+                <TextBlock Text="Mode:" Foreground="#FFCFD7DA" Margin="0,12,0,4"/>
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton x:Name="freeModeRadio"
+                                 Content="Free"
+                                 GroupName="TodoMode"
+                                 Margin="0,0,12,0"
+                                 Checked="OnModeChanged"/>
+                    <RadioButton x:Name="templateModeRadio"
+                                 Content="Template"
+                                 GroupName="TodoMode"
+                                 Checked="OnModeChanged"/>
+                </StackPanel>
+
+                <TextBlock Text="Default template:" Foreground="#FFCFD7DA" Margin="0,12,0,4"/>
+                <ComboBox x:Name="defaultTemplateCombo"
+                          DisplayMemberPath="Name"
+                          SelectedValuePath="Id"
+                          Padding="4"/>
+                <TextBlock Text="Pre-selects this entry in the picker. Does not auto-load on view open."
+                           Foreground="#FF888888"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Margin="0,4,0,0"/>
+
+                <TextBlock Text="Templates:" Foreground="#FFCFD7DA" Margin="0,12,0,4"/>
+                <TextBlock x:Name="templateCountText"
+                           Text="0 defined"
+                           Foreground="White"
+                           Margin="0,0,0,6"/>
+                <Button x:Name="manageTemplatesButton"
+                        Content="Manage templates..."
+                        Style="{StaticResource SmallButton}"
+                        Padding="12,5"
+                        HorizontalAlignment="Left"
+                        Click="OnManageTemplatesClick"/>
+
+                <TextBlock Text="Font size:" Foreground="#FFCFD7DA" Margin="0,12,0,4"/>
+                <TextBox x:Name="fontSizeTextBox" Padding="4"/>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</external:PropertiesWpfUserControl>

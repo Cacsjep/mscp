@@ -113,6 +113,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-skip-forward"></i></div>
     <div class="pt"><span class="pn">Timeline Jump</span><span class="pd">Toolbar flyout to jump the playback timeline backward or forward by configurable increments (seconds, minutes, hours, days)</span></div>
   </a>
+  <a class="pr" href="smart-client/todo-list/">
+    <div class="pi sc"><i class="mdi mdi-format-list-checks"></i></div>
+    <div class="pt"><span class="pn">Todo List</span><span class="pd">Operator checklist view item with free-form tasks or pre-defined shift templates</span></div>
+  </a>
   <a class="pr" href="smart-client/view-carousel/">
     <div class="pi sc"><i class="mdi mdi-view-carousel"></i></div>
     <div class="pt"><span class="pn">View Carousel</span><span class="pd">Cycle through Smart Client views inside a single view item slot</span></div>
