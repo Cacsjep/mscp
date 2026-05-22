@@ -41,6 +41,7 @@ namespace MetadataDisplay.Client
         private LineChartRenderer _lineRenderer;
         private TableRenderer _tableRenderer;
         private TrendRenderer _trendRenderer;
+        private Base64ImageRenderer _base64ImageRenderer;
 
         private DateTime? _lastValueUtc;
         // Playback line-chart backfill bookkeeping: track the last cursor we
@@ -1200,6 +1201,7 @@ namespace MetadataDisplay.Client
             _lineRenderer = null;
             _tableRenderer = null;
             _trendRenderer = null;
+            _base64ImageRenderer = null;
             _lineExtractorCfgs = null;
 
             UIElement visual;
@@ -1220,6 +1222,11 @@ namespace MetadataDisplay.Client
                     _textRenderer = new TextRenderer();
                     visual = _textRenderer.Visual;
                     _textRenderer.Clear();
+                    break;
+                case "Base64Image":
+                    _base64ImageRenderer = new Base64ImageRenderer();
+                    visual = _base64ImageRenderer.Visual;
+                    _base64ImageRenderer.Clear();
                     break;
                 case "LineChart":
                     _lineRenderer = new LineChartRenderer();
@@ -1451,6 +1458,10 @@ namespace MetadataDisplay.Client
             {
                 _textRenderer.FontSize = ParseDouble(_viewItemManager.TextFontSize, 28);
                 _textRenderer.Update(value);
+            }
+            else if (_base64ImageRenderer != null)
+            {
+                _base64ImageRenderer.Update(value);
             }
             else if (_lineRenderer != null)
             {

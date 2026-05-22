@@ -396,7 +396,8 @@
                                 <RadioButton x:Name="rtText" Content="Text" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
                                 <RadioButton x:Name="rtLine" Content="Line chart" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
                                 <RadioButton x:Name="rtTable" Content="Table" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
-                                <RadioButton x:Name="rtTrend" Content="Trend" GroupName="rt" Margin="0,0,0,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtTrend" Content="Trend" GroupName="rt" Margin="0,0,16,6" Checked="OnRenderTypeChanged"/>
+                                <RadioButton x:Name="rtBase64Image" Content="Base64 image" GroupName="rt" Margin="0,0,0,6" Checked="OnRenderTypeChanged"/>
                             </WrapPanel>
 
                             <Grid x:Name="lampPanel" Visibility="Visible">

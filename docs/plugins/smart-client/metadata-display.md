@@ -1,13 +1,13 @@
 ---
 title: "Metadata Display Widgets for Milestone XProtect"
-description: "Metadata Display plugin for Milestone XProtect Smart Client - turn ONVIF metadata channels into dashboard widgets (lamp, number, gauge, text, line chart, table)."
+description: "Metadata Display plugin for Milestone XProtect Smart Client - turn ONVIF metadata channels into dashboard widgets (lamp, number, gauge, text, line chart, table, trend, base64 image)."
 ---
 
 <div class="show-title" markdown>
 
 # Metadata Display
 
-Render any value from a Milestone metadata channel as a dashboard widget in the Smart Client. One widget per value, seven render styles (Lamp, Number, Gauge, Text, Line Chart, Table, Trend).
+Render any value from a Milestone metadata channel as a dashboard widget in the Smart Client. One widget per value, eight render styles (Lamp, Number, Gauge, Text, Line Chart, Table, Trend, Base64 Image).
 
 Built for ONVIF metadata like: Axis `CameraApplicationPlatform` analytics (area occupancy, line crossing, object counts), digital I/O port states, vendor counters - anything emitted as `tt:Message` over the metadata stream.
 
@@ -38,7 +38,7 @@ If the configuration's **Inspect packet...** button shows fresh XML and Learn di
 2. Click **Open configuration...**
 3. **Select channel...** -> pick a metadata channel
 4. Click **Start Learn** to discover the topics and data keys flowing through the stream, then pick from the dropdowns.
-5. Choose a render type (Lamp / Number / Gauge / Text / Line Chart / Table / Trend), tune the options, hit **Save**
+5. Choose a render type (Lamp / Number / Gauge / Text / Line Chart / Table / Trend / Base64 Image), tune the options, hit **Save**
 6. Switch to **Live** - the widget starts displaying as soon as a matching packet arrives.
 
 ## Render Types
@@ -153,6 +153,15 @@ Scrolling time-ordered table of `(Time, Value)` rows. Use when you want to read 
 - **Thresholds** - same shared model as Number / Gauge / Line Chart. When **Enable thresholds** is on, the value text is tinted Ok / Warn / Bad based on Min / Max and the High-is-bad direction. Non-numeric values stay neutral.
 - **Live archive backfill** - on first appearance of a Table widget, the configured window of recorded data is loaded from the archive so the table opens with real history instead of accumulating a single row per packet from cold.
 - **Playback** - the row at-or-before the timeline cursor is highlighted as the cursor moves. Large jumps trigger a fresh range scan around the new cursor position, identical to the Line Chart behavior.
+
+### Base64 Image
+
+Renders an image carried in the metadata value as a base64-encoded string. Use it for cameras / analytics that embed JPEG / PNG snapshots (vehicle plates, face thumbnails, ROI crops) inside the ONVIF metadata stream.
+
+- **Empty value** - the widget shows a "No Image" placeholder so an absent payload is visibly different from a render bug.
+- **Decode error** - if the value isn't valid base64 (or the bytes aren't a known image format), the widget shows "Decode error: <reason>" in the Bad color instead of going blank, so the operator can see the payload isn't usable.
+- **Image displayed** - any string that decodes as JPEG, PNG, BMP, or GIF is shown. The raw `base64...` form and the `data:image/png;base64,...` URI form are both accepted; the prefix is stripped automatically.
+- **No widget-specific options** - title, density, and stale handling work the same as every other render type. There are no thresholds, no font sizes, no axes; the image either renders or it doesn't.
 
 ## What to Read
 
