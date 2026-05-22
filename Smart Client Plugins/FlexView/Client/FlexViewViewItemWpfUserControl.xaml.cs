@@ -15,6 +15,7 @@ namespace FlexView.Client
 {
     public partial class FlexViewViewItemWpfUserControl : ViewItemWpfUserControl
     {
+        private const string DefaultBackgroundColor = "#FF070809";
         private const int GridCols = 60;
         private const int GridRows = 60;
         private const double CanvasWidth = 800.0;
@@ -69,15 +70,18 @@ namespace FlexView.Client
 
         // Save target
         private Item _targetFolder;
+        private readonly FlexViewViewItemManager _viewItemManager;
 
-        public FlexViewViewItemWpfUserControl()
+        public FlexViewViewItemWpfUserControl(FlexViewViewItemManager viewItemManager)
         {
+            _viewItemManager = viewItemManager;
             InitializeComponent();
         }
 
         public override void Init()
         {
             FlexViewDefinition.Log.Info("ViewItemWpfUserControl Init called");
+            ApplyBackgroundColor();
             RedrawCanvas();
             UpdateStatus();
             FlexViewDefinition.Log.Info("ViewItemWpfUserControl Init completed");
@@ -725,6 +729,30 @@ namespace FlexView.Client
                 UpdateStatus();
             };
             timer.Start();
+        }
+
+        private void ApplyBackgroundColor()
+        {
+            var raw = _viewItemManager?.BackgroundColor;
+            if (string.IsNullOrWhiteSpace(raw))
+                raw = DefaultBackgroundColor;
+
+            try
+            {
+                var color = (Color)ColorConverter.ConvertFromString(raw);
+                var brush = new SolidColorBrush(color);
+                Background = brush;
+                rootGrid.Background = brush;
+                headerBar.Background = brush;
+            }
+            catch
+            {
+                var fallback = (Color)ColorConverter.ConvertFromString(DefaultBackgroundColor);
+                var brush = new SolidColorBrush(fallback);
+                Background = brush;
+                rootGrid.Background = brush;
+                headerBar.Background = brush;
+            }
         }
 
         #endregion

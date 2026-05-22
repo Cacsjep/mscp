@@ -11,7 +11,7 @@
     Focusable="True"
     PreviewKeyDown="OnPreviewKeyDown"
     Background="#FF070809">
-    <Grid Background="#FF070809">
+    <Grid x:Name="rootGrid" Background="#FF070809">
         <Grid.Resources>
             <!-- Flat dark button template (no hover color change from system) -->
             <ControlTemplate x:Key="FlatButtonTemplate" TargetType="Button">
@@ -83,7 +83,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header toolbar -->
-        <Border Grid.Row="0" Background="#FF070809" Padding="12,8" BorderBrush="#FF30363D" BorderThickness="0,0,0,0.5">
+        <Border x:Name="headerBar" Grid.Row="0" Background="#FF070809" Padding="12,8" BorderBrush="#FF30363D" BorderThickness="0,0,0,0.5">
             <Grid>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Button Content="&#x2795; New" Style="{StaticResource ToolButton}"
