@@ -12,6 +12,8 @@ A Smart Client workspace plugin that gives administrators instant access to ever
 !!! warning "Administrator Use Only"
     This plugin exposes hardware device credentials (usernames and passwords) from the management server. It should **only** be deployed to Smart Client installations used by administrators. Do not install it on operator workstations where users should not have access to device credentials.
 
+    The global settings (see [Global Settings](#global-settings)) are stored in `%ProgramData%\Milestone\RemoteManager\config.xml` and are therefore **machine-wide**. Any local user who can open the Smart Client Settings dialog can toggle them. If end-users must not be able to flip these toggles, deploy the plugin under a custom **Smart Client Profile** (Management Client > Smart Client Profiles) that hides or locks the Settings dialog, and assign that profile to operator roles.
+
 ## Quick Start
 
 1. Open XProtect Smart Client
@@ -120,6 +122,8 @@ When a hardware device tab is active, the credential bar appears at the top show
 
 Passwords are read on-demand from the management server when you first select a device.
 
+The credential bar is shown by default. To hide it (e.g. to prevent credentials from being copied or displayed), see [Global Settings](#global-settings) below.
+
 ## Adding Connections
 
 Right-click the root node or any folder and select the entry type:
@@ -147,14 +151,29 @@ Right-click the root node or any folder and select the entry type:
 
 ## Settings
 
-Two checkboxes at the bottom of the left panel control global behavior:
+### Workspace Settings
+
+Two checkboxes at the bottom of the left panel control per-workspace behavior:
 
 | Setting | Description |
 |---|---|
 | **Accept untrusted SSL** | Automatically accept self-signed or untrusted SSL certificates when opening web pages. Common for IP cameras with self-signed certs. Default: on. |
 | **Use Autologin** | Automatically fill in username and password when a web page requests HTTP authentication (Basic/Digest). Credentials are sent only once per tab to avoid infinite retry on wrong credentials. Default: off. |
 
-Both settings are persisted per workspace.
+Both settings are persisted per workspace (saved with the view item).
+
+### Global Settings
+
+Open Smart Client **Settings** and select **Remote Manager** to access machine-wide settings:
+
+| Setting | Description |
+|---|---|
+| **Hide credentials toolbar** | When enabled, the toolbar that exposes hardware usernames and passwords (with Copy and Show buttons) is never rendered. Use this when operators must not see or copy device credentials. Default: **off** (toolbar visible). |
+
+Global settings are stored at `%ProgramData%\Milestone\RemoteManager\config.xml` and apply to every Smart Client user on the host.
+
+!!! tip "Locking down the global settings"
+    Because the config file lives in `ProgramData`, any local user who can reach Smart Client **Settings** on this machine can toggle these settings. To prevent end-users from changing them, assign a custom **Smart Client Profile** (Management Client > Smart Client Profiles) that hides or locks the Settings dialog. This plugin is designed to be installed on **administrator** Smart Client workstations only.
 
 ## Tree Persistence
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading.Tasks;
@@ -57,6 +58,7 @@ namespace RemoteManager
 
             if (EnvironmentManager.Instance.EnvironmentType == EnvironmentType.SmartClient)
             {
+                RemoteManagerConfig.Load();
                 _viewItemPlugins.Add(new RemoteManagerViewItemPlugin());
                 _workSpacePlugins.Add(new RemoteManagerWorkspacePlugin());
             }
@@ -81,5 +83,8 @@ namespace RemoteManager
 
         public override List<ViewItemPlugin> ViewItemPlugins => _viewItemPlugins;
         public override List<WorkSpacePlugin> WorkSpacePlugins => _workSpacePlugins;
+
+        public override Collection<SettingsPanelPlugin> SettingsPanelPlugins
+            => new Collection<SettingsPanelPlugin> { new RemoteManagerSettingsPanel() };
     }
 }

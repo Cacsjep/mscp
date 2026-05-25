@@ -1005,6 +1005,12 @@ namespace RemoteManager.Client
 
         private void UpdateCredentialBar(string name, string username, string password, bool showBar)
         {
+            if (RemoteManagerConfig.HideCredentialBar)
+            {
+                credentialBar.Visibility = Visibility.Collapsed;
+                return;
+            }
+
             bool hasCreds = !string.IsNullOrEmpty(username) || !string.IsNullOrEmpty(password) || showBar;
             credentialBar.Visibility = hasCreds ? Visibility.Visible : Visibility.Collapsed;
             if (!hasCreds) return;
