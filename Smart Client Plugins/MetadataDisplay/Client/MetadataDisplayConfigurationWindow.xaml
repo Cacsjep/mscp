@@ -262,10 +262,13 @@
                                 <Button x:Name="learnStartButton" Content="Start Learn"
                                         Margin="0,0,8,0" Click="OnStartLearn"/>
                                 <Button x:Name="learnStopButton" Content="Stop"
-                                        Margin="0,0,12,0" IsEnabled="False" Click="OnStopLearn"/>
+                                        Margin="0,0,8,0" IsEnabled="False" Click="OnStopLearn"/>
+                                <Button x:Name="importPacketButton" Content="Import packet..."
+                                        Margin="0,0,12,0" Click="OnImportPacket"
+                                        ToolTip="Paste an XML packet to populate Topics and Fields without listening live."/>
                                 <TextBlock x:Name="learnStatus" VerticalAlignment="Center"
                                            Style="{StaticResource HintText}" TextWrapping="Wrap"
-                                           Text="Idle. Start Learn to discover topics and fields."/>
+                                           Text="Idle."/>
                             </StackPanel>
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>

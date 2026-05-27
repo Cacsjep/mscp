@@ -354,7 +354,7 @@ namespace MetadataDisplay.Client
                     _learn.Stop();
                     learnStartButton.IsEnabled = true;
                     learnStopButton.IsEnabled = false;
-                    learnStatus.Text = "Idle. Pick a Topic + Data key from the discovered list, or click Start Learn.";
+                    learnStatus.Text = "Idle.";
 
                     _metadataItem = picker.SelectedItems.First();
                     _metadataIdString = _metadataItem.FQID.ObjectId.ToString();
@@ -1433,6 +1433,27 @@ namespace MetadataDisplay.Client
                 if (_source == null) StartSourceIfReady();
                 return true;
             };
+            // Per-row import: the row opens the same dialog the main window
+            // uses and consumes the snapshot for itself only. No channel
+            // requirement - the operator can paste a packet even before
+            // picking a metadata channel.
+            row.OnImportPacketRequested = (ownerWindow) =>
+            {
+                try
+                {
+                    var dlg = new PacketImportDialog { Owner = ownerWindow ?? this };
+                    if (dlg.ShowDialog() != true) return null;
+                    if (dlg.Snapshot == null) return null;
+                    if (_metadataItem != null && !string.IsNullOrEmpty(dlg.ImportedXml))
+                        LastXmlCache.Put(_metadataItem.FQID.ObjectId, dlg.ImportedXml);
+                    return dlg.Snapshot;
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"[Row import] dialog threw: {ex.Message}", ex);
+                    return null;
+                }
+            };
             _additionalSeriesRows.Add(row);
             additionalSeriesList.Children.Add(row.RootExpander);
             // Pre-populate with the most recent learn snapshot so a new row
@@ -1968,6 +1989,64 @@ namespace MetadataDisplay.Client
             return true;
         }
 
+        // ───────── Packet import ─────────
+
+        // Opens the import dialog. On OK, applies the parsed snapshot to the
+        // main learn pipeline (so all dropdowns - main + fanned-out rows - get
+        // the imported topics/fields), auto-selects the first topic when the
+        // Topic combo is empty, and caches the imported XML so Inspect packet
+        // can show it without a live capture.
+        private void OnImportPacket(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dlg = new PacketImportDialog { Owner = this };
+                if (dlg.ShowDialog() != true) return;
+                if (dlg.Snapshot == null) return;
+
+                // Stop any in-flight learn capture - the operator has just
+                // pinned a packet, no reason to keep accumulating into the
+                // shared session and risk overwriting the imported view.
+                if (_learn.IsActive)
+                {
+                    _learn.Stop();
+                    learnStartButton.IsEnabled = true;
+                    learnStopButton.IsEnabled = false;
+                }
+
+                // Stash the XML so Inspect packet has something to show and
+                // ReExtractAndRender can find a match against the new Topic
+                // / Field combo without waiting for a live packet.
+                if (_metadataItem != null && !string.IsNullOrEmpty(dlg.ImportedXml))
+                    LastXmlCache.Put(_metadataItem.FQID.ObjectId, dlg.ImportedXml);
+
+                ApplyLearnSnapshot(dlg.Snapshot);
+
+                // Auto-select the first topic when the operator hasn't already
+                // chosen one - matches the "click and go" intent of the import
+                // flow. If they already had a Topic typed in we leave it alone.
+                if (string.IsNullOrWhiteSpace(topicCombo.Text))
+                {
+                    var first = PacketImportDialog.FirstTopic(dlg.Snapshot);
+                    if (!string.IsNullOrEmpty(first))
+                    {
+                        topicCombo.Text = first;
+                        // OnTopicChanged is wired to topicCombo.TextChanged and
+                        // will refresh the Field combo / learned source list.
+                    }
+                }
+
+                learnStatus.Text = $"Imported. {dlg.Snapshot.Topics.Count} topic(s).";
+                ReExtractAndRender();
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"OnImportPacket threw: {ex.Message}", ex);
+                MessageBox.Show(this, "Could not import packet:\n" + ex.Message, "Import packet",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         // ───────── Packet inspector ─────────
 
         private void OnInspectPacket(object sender, RoutedEventArgs e)
@@ -2059,7 +2138,7 @@ namespace MetadataDisplay.Client
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             };
             var para = new Paragraph { Margin = new Thickness(0) };
-            HighlightXmlInto(para, pretty);
+            XmlHighlighter.HighlightInto(para, pretty);
             rtb.Document = new System.Windows.Documents.FlowDocument(para)
             {
                 PageWidth = 4000,
@@ -2100,69 +2179,6 @@ namespace MetadataDisplay.Client
             {
                 return "(dump failed: " + ex.Message + ")";
             }
-        }
-
-        // Coloring rules (mirrors Admin/MetadataViewer style):
-        //   <,>,/  : dim gray
-        //   element name      : light blue
-        //   attribute name    : salmon
-        //   attribute value   : light orange
-        //   text content      : default foreground
-        private static readonly SolidColorBrush BrushBracket = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
-        private static readonly SolidColorBrush BrushElement = new SolidColorBrush(Color.FromRgb(0x6B, 0xB6, 0xFF));
-        private static readonly SolidColorBrush BrushAttr = new SolidColorBrush(Color.FromRgb(0xE6, 0x95, 0x80));
-        private static readonly SolidColorBrush BrushAttrValue = new SolidColorBrush(Color.FromRgb(0xE6, 0xB8, 0x6B));
-        private static readonly SolidColorBrush BrushText = new SolidColorBrush(Color.FromRgb(0xE6, 0xEA, 0xEC));
-
-        private static readonly Regex XmlTokenRegex = new Regex(
-            @"(?<tag><(?<close>/?)(?<elname>[\w:.\-]+)(?<attrs>(\s+[\w:.\-]+\s*=\s*""[^""]*"")*)\s*(?<self>/?)>)|(?<text>[^<]+)",
-            RegexOptions.Compiled | RegexOptions.Singleline);
-
-        private static readonly Regex AttrRegex = new Regex(
-            @"(?<name>[\w:.\-]+)\s*=\s*""(?<value>[^""]*)""",
-            RegexOptions.Compiled);
-
-        private static void HighlightXmlInto(Paragraph para, string xml)
-        {
-            int i = 0;
-            foreach (Match m in XmlTokenRegex.Matches(xml))
-            {
-                if (m.Index > i)
-                    para.Inlines.Add(new Run(xml.Substring(i, m.Index - i)) { Foreground = BrushText });
-
-                if (m.Groups["text"].Success)
-                {
-                    para.Inlines.Add(new Run(m.Value) { Foreground = BrushText });
-                }
-                else
-                {
-                    para.Inlines.Add(new Run("<" + m.Groups["close"].Value) { Foreground = BrushBracket });
-                    para.Inlines.Add(new Run(m.Groups["elname"].Value) { Foreground = BrushElement });
-                    var attrs = m.Groups["attrs"].Value;
-                    if (!string.IsNullOrEmpty(attrs))
-                    {
-                        int last = 0;
-                        foreach (Match am in AttrRegex.Matches(attrs))
-                        {
-                            if (am.Index > last)
-                                para.Inlines.Add(new Run(attrs.Substring(last, am.Index - last)) { Foreground = BrushBracket });
-                            para.Inlines.Add(new Run(am.Groups["name"].Value) { Foreground = BrushAttr });
-                            para.Inlines.Add(new Run("=\"") { Foreground = BrushBracket });
-                            para.Inlines.Add(new Run(am.Groups["value"].Value) { Foreground = BrushAttrValue });
-                            para.Inlines.Add(new Run("\"") { Foreground = BrushBracket });
-                            last = am.Index + am.Length;
-                        }
-                        if (last < attrs.Length)
-                            para.Inlines.Add(new Run(attrs.Substring(last)) { Foreground = BrushBracket });
-                    }
-                    var selfClose = m.Groups["self"].Value;
-                    para.Inlines.Add(new Run(selfClose + ">") { Foreground = BrushBracket });
-                }
-
-                i = m.Index + m.Length;
-            }
-            if (i < xml.Length)
-                para.Inlines.Add(new Run(xml.Substring(i)) { Foreground = BrushText });
         }
 
         private void WriteToManager()

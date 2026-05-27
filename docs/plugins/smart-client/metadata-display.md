@@ -170,11 +170,20 @@ The "What to read" section is the bridge from the raw stream to a single value:
 - **Topic** - the ONVIF topic to listen for. Match is exact - the camera's topic must equal the configured value letter for letter. Pick a topic from the dropdown (populated by **Start Learn**) or paste one in directly.
 - **Field** - the `tt:SimpleItem Name` to pull the value from. The dropdown filters to only the fields seen under the currently-selected Topic, so changing the Topic refreshes the available fields.
 - **Inspect packet...** - opens a syntax-highlighted XML viewer of the most recent metadata packet from the channel, so you can see exactly what the camera is emitting and which Topic / Field combinations are available.
+- **Import packet...** - paste an XML packet from a vendor SDK sample, a saved Inspect packet copy, or another configured widget. Populates the Topic / Field / Source filter dropdowns without waiting for a live channel.
 - **Source filter** (advanced, under the **Advanced** expander) - constrain to specific Source SimpleItem `name=value` pairs (e.g. `port=1` for I/O input port 1, or `objectid=42` for one tracked object). Multiple pairs can be combined with semicolons.
 
 ### Learn
 
 Click **Start Learn** to subscribe to the live stream and watch the discovered topics + data keys populate the dropdowns. Stop when you have what you need. The data-key dropdown is filtered to only the keys observed under the currently-selected topic, so changing the topic refreshes the available keys.
+
+### Import packet
+
+When you already have a sample XML packet (from the vendor's documentation, an **Inspect packet...** copy from a working widget, or any other source) you can skip the live capture entirely. Click **Import packet...**, paste the XML, and the dialog parses it and reports `Parsed N topic(s), M field(s), K source value(s)`. Click **Import** to apply.
+
+- The first topic in the packet is auto-selected when the Topic field is empty.
+- The imported XML is cached as the most recent packet, so **Inspect packet...** shows the same payload immediately afterwards.
+- For multi-series Line Chart widgets, each Additional series row has its own **Import packet...** button so you can wire each series from a different sample without disturbing the others. The main button fans its snapshot out to every row.
 
 ## Title and Density
 

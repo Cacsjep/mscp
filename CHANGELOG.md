@@ -1,5 +1,8 @@
 # Changelog
 
+## [3.2.2] - 2026-05-27
+- Add Metadata Display: **Import packet** button in the configuration window's "What to read" section and on every Additional series row. 
+
 ## [3.2.1] - 2026-05-22
 - Add Todo List: New Smart Client view-item plugin. 
 - Improve Remote Manager: Add option to hide toolbar so password cant copied or displayed.

@@ -51,8 +51,13 @@ namespace MetadataDisplay.Client
         // configuration window uses this to ensure the metadata channel is
         // picked and the source is started before learning begins.
         public Func<bool> OnStartLearnRequested;
+        // Invoked when the row's Import packet button is clicked. The
+        // configuration window opens the import dialog and returns its result
+        // so the row can apply the parsed snapshot. Null result = cancelled.
+        public Func<Window, LearnSnapshot> OnImportPacketRequested;
         private Button _learnStartBtn;
         private Button _learnStopBtn;
+        private Button _importPacketBtn;
         private TextBlock _learnStatus;
 
         private readonly ComboBox _topicCombo;
@@ -193,6 +198,42 @@ namespace MetadataDisplay.Client
             if (_applyingLearnSnapshot) return;
             if (_lastSnapshot == null) return;
             RefreshFieldComboItems(_lastSnapshot, topic);
+        }
+
+        // Opens the shared packet-import dialog (owned by the configuration
+        // window) and applies the resulting snapshot to this row only. Auto-
+        // selects the first topic when the row's Topic combo is still empty
+        // so the typical "paste and pick the field" flow works in one step.
+        private void OnImportPacketClick(object sender, RoutedEventArgs e)
+        {
+            var owner = Window.GetWindow(RootExpander);
+            var snap = OnImportPacketRequested?.Invoke(owner);
+            if (snap == null) return;
+
+            // Stop the row's own learn capture if it was running - the
+            // operator has just pinned a packet and further passive capture
+            // would only blur the dropdowns.
+            StopLearn();
+
+            ApplyLearnSnapshot(snap);
+
+            if (string.IsNullOrWhiteSpace(_topicCombo.Text))
+            {
+                var first = PacketImportDialog.FirstTopic(snap);
+                if (!string.IsNullOrEmpty(first)) _topicCombo.Text = first;
+            }
+
+            if (_learnStatus != null)
+            {
+                int topicCount = snap.Topics?.Count ?? 0;
+                int keyCount = 0;
+                if (snap.Topics != null) foreach (var t in snap.Topics) keyCount += t.DataKeyExamples?.Count ?? 0;
+                _learnStatus.Text = $"Imported. {topicCount} topic(s), {keyCount} field(s).";
+            }
+
+            // Row-level extractor rebuild so the new Topic / Field text
+            // propagates to the snapshot the source thread reads from.
+            OnExtractorChanged?.Invoke();
         }
 
         // Auto-stop on Topic-combo activation. Once the operator starts
@@ -386,11 +427,20 @@ namespace MetadataDisplay.Client
                 if (_learnStatus != null) _learnStatus.Text = "Listening - waiting for first packet...";
             };
             _learnStopBtn.Click += (s, e) => StopLearn();
+            _importPacketBtn = new Button
+            {
+                Content = "Import packet...",
+                Padding = new Thickness(10, 3, 10, 3),
+                Margin = new Thickness(0, 0, 12, 0),
+                ToolTip = "Paste an XML packet to populate this series's Topic and Field dropdowns without listening live.",
+            };
+            _importPacketBtn.Click += OnImportPacketClick;
             learnRow.Children.Add(_learnStartBtn);
             learnRow.Children.Add(_learnStopBtn);
+            learnRow.Children.Add(_importPacketBtn);
             _learnStatus = new TextBlock
             {
-                Text = "Idle. Start Learn to discover topics and fields for this series only.",
+                Text = "Idle.",
                 Foreground = new SolidColorBrush(Color.FromRgb(0x7A, 0x83, 0x88)),
                 FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
