@@ -106,6 +106,17 @@
                  Sequence="both"
                  Condition="NOT MSCP_PLUGINS_DIR_PATH" />
 
+    <!-- Admin-managed extras drop folder. Empty at install; WiX owns the
+         directory (cmpMscpExtrasFolder) but not its contents. CA_RemoveExtras
+         wipes whatever's inside on uninstall so the parent dir can be
+         removed by RemoveFiles. -->
+    <Property Id="MSCP_EXTRAS_DIR_PATH" Secure="yes" />
+    <SetProperty Id="MSCP_EXTRAS_DIR_PATH"
+                 Value="[MSCP_PUBLIC]extras"
+                 Before="CostFinalize"
+                 Sequence="both"
+                 Condition="NOT MSCP_EXTRAS_DIR_PATH" />
+
     <!-- Fill the defaults from [ProgramFiles64Folder] only if the user or
          caller hasn't already set them. Before CostFinalize on both sequences
          so they resolve correctly in both UI and Execute phases. -->
@@ -455,6 +466,19 @@
                   Impersonate="no"
                   Return="ignore" />
 
+    <!-- Cleanup: wipe the admin-managed extras\ folder contents on IISHosting
+         removal / full uninstall so RemoveFiles can take the directory down. -->
+    <SetProperty Id="CA_RemoveExtras"
+                 Before="CA_RemoveExtras"
+                 Sequence="execute"
+                 Value="DestinationFolder=[MSCP_EXTRAS_DIR_PATH]" />
+    <CustomAction Id="CA_RemoveExtras"
+                  BinaryRef="InstallerCustomActions"
+                  DllEntry="RemoveExtras"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- Install sequence                                          -->
     <!--   1. Kill processes (SC, MC, DFP)                         -->
@@ -501,9 +525,13 @@
       <Custom Action="CA_CopyPluginZipsToPublic"
               After="CA_PublishMsi"
               Condition="(&amp;IISHosting=3) AND IIS_PRESENT" />
-      <!-- Remove the generated per-plugin ZIPs first, then unpublish the MSI.
-           Both run before RemoveFiles so the directories are still present. -->
+      <!-- Remove the generated per-plugin ZIPs first, then the extras drop
+           folder contents, then unpublish the MSI. All three run before
+           RemoveFiles so the directories are still present. -->
       <Custom Action="CA_RemovePluginZips"
+              Before="CA_RemoveExtras"
+              Condition="((&amp;IISHosting=2) OR REMOVE=&quot;ALL&quot;) AND IIS_PRESENT" />
+      <Custom Action="CA_RemoveExtras"
               Before="CA_UnpublishMsi"
               Condition="((&amp;IISHosting=2) OR REMOVE=&quot;ALL&quot;) AND IIS_PRESENT" />
       <Custom Action="CA_UnpublishMsi"

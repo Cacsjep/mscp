@@ -95,15 +95,10 @@ After manual installation, restart the relevant service, if you update, you need
 | Admin Plugins | Restart the **Event Server** service, then the **Management Client** and **Smart Client** |
 
 ## Local Download Page
-When you install on a machine that has IIS (Managment Server), the installer offers an optional feature called **Local download page on this server**. 
 
-When enabled, it publishes the MSI and every per-plugin ZIP to `http://this-server/mscp/`, so other admins on the same network can browse to the page and download any plugin without having to fetch the MSI from GitHub.
+When you install on a machine that has IIS (Management Server), the installer offers an optional feature called **Local download page on this server** that publishes the MSI, every per-plugin ZIP, the PKI Cert Installer, and an admin-managed extras folder to `http://<this-server>/mscp/`. The feature is off by default and hidden on machines without IIS.
 
-The feature is **off by default**. It is hidden entirely on machines without IIS.
-
-After install, browse to `http://<management-server>/mscp/`. If the management server has an encryption enabled, `https://...` works automatically with the same certificate.
-
-The page also hosts the **PKI Cert Installer** (`Mscp.PkiCertInstaller-vX.X.exe`), a single-file EXE for deploying certificates issued by the [PKI plugin](../plugins/admin/pki.md) onto remote XProtect servers that don't have the plugin installed. No MIP SDK runtime needed; just download, run as Administrator on the target server, and sign in.
+See [Local Download Page](local-download-page.md) for the full reference: what gets published, the extras drop folder, security notes, and troubleshooting.
 <script>
 fetch("https://api.github.com/repos/Cacsjep/mscp/releases/latest")
   .then(function(r) { return r.json(); })

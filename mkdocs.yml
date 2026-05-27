@@ -37,6 +37,7 @@ nav:
   - Home: index.md
   - Plugins & Drivers: plugins/index.md
   - Download: getting-started/installation.md
+  - Local Download Page: getting-started/local-download-page.md
   - Plugins:
     - Admin Plugins:
       - Auditor: plugins/admin/auditor.md

@@ -121,6 +121,75 @@
       <h2>Individual plugins</h2>
 __PLUGINS_HTML__
     </div>
+
+    <!-- Admin-managed extras card. Hidden by default; the script below
+         tries to fetch the IIS directory listing from /mscp/extras/ and
+         renders the links into the <ul>. If the folder is empty, IIS
+         isn't serving it (e.g. directoryBrowse role missing), or the
+         fetch fails for any reason, the card stays hidden. -->
+    <div class="card" id="extras-card" style="display:none">
+      <h2>Additional downloads</h2>
+      <p class="note">Files dropped into <code>C:\inetpub\wwwroot\mscp\extras\</code> on this server.</p>
+      <ul class="plugin-list" id="extras-list"></ul>
+    </div>
   </div>
+  <script>
+    (function () {
+      // Fetch the IIS directory listing for /mscp/extras/ and scrape the
+      // <a href> entries. IIS classic Directory Browsing emits absolute
+      // hrefs like "/mscp/extras/Cobra.zip" plus one parent-dir anchor
+      // pointing at "/mscp/". We resolve each href against the extras URL
+      // and keep only those whose final pathname sits inside extras/.
+      var card = document.getElementById('extras-card');
+      var list = document.getElementById('extras-list');
+      if (!card || !list) return;
+      var extrasUrl = new URL('extras/', window.location.href);
+      var extrasPrefix = extrasUrl.pathname;
+      fetch(extrasUrl.href, { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+        .then(function (html) {
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var anchors = doc.querySelectorAll('a[href]');
+          var entries = [];
+          var seen = {};
+          for (var i = 0; i < anchors.length; i++) {
+            var a = anchors[i];
+            var raw = a.getAttribute('href') || '';
+            if (!raw) continue;
+            var resolved;
+            try { resolved = new URL(raw, extrasUrl); }
+            catch (e) { continue; }
+            if (resolved.origin !== extrasUrl.origin) continue;
+            // Keep only entries strictly under extras/ - this filters out
+            // the parent-dir link IIS emits (path "/mscp/") and anything
+            // that points elsewhere on the host.
+            if (resolved.pathname.indexOf(extrasPrefix) !== 0) continue;
+            if (resolved.pathname === extrasPrefix) continue;
+            if (seen[resolved.pathname]) continue;
+            seen[resolved.pathname] = true;
+            var name;
+            try { name = decodeURIComponent(resolved.pathname.substring(extrasPrefix.length)); }
+            catch (e) { name = resolved.pathname.substring(extrasPrefix.length); }
+            // Trim trailing slash on subdirectory entries so the label
+            // reads "subfolder" not "subfolder/" while the link itself
+            // still points at the directory listing.
+            var label = (a.textContent || '').trim() || name.replace(/\/$/, '');
+            entries.push({ url: resolved.href, label: label });
+          }
+          if (entries.length === 0) return;
+          for (var j = 0; j < entries.length; j++) {
+            var li = document.createElement('li');
+            var anchor = document.createElement('a');
+            anchor.href = entries[j].url;
+            anchor.setAttribute('download', '');
+            anchor.textContent = entries[j].label;
+            li.appendChild(anchor);
+            list.appendChild(li);
+          }
+          card.style.display = '';
+        })
+        .catch(function () { /* silent: leave the card hidden */ });
+    })();
+  </script>
 </body>
 </html>

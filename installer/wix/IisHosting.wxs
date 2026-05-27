@@ -46,6 +46,12 @@
     <StandardDirectory Id="TARGETDIR">
       <Directory Id="MSCP_PUBLIC" Name=".">
         <Directory Id="MSCP_PLUGINS_DIR" Name="plugins" />
+        <!-- Empty drop folder. Whatever the admin copies in (EXEs, ZIPs,
+             helper scripts, certs) is served by IIS and listed in the
+             "Additional downloads" card on index.html. WiX only owns the
+             folder itself; the contents are user-managed. Wiped on
+             uninstall by CA_RemoveExtras. -->
+        <Directory Id="MSCP_EXTRAS_DIR" Name="extras" />
       </Directory>
     </StandardDirectory>
 
@@ -72,6 +78,7 @@
       <ComponentRef Id="cmpMscpWebConfig" />
       <ComponentRef Id="cmpMscpVdir" />
       <ComponentRef Id="cmpMscpPkiCertInstallerExe" />
+      <ComponentRef Id="cmpMscpExtrasFolder" />
       <!-- Pull in every plugin's ZIP component. The same components are
            referenced from each Feature_<Name> in Components.wxs, so MSI
            reference counts the file: enabling either path causes the ZIP
@@ -111,6 +118,16 @@
             Name="Mscp.PkiCertInstaller-v$(var.Version).exe"
             Source="!(bindpath.zips)\Mscp.PkiCertInstaller-v$(var.Version).exe"
             KeyPath="yes" />
+    </Component>
+
+    <!-- Empty extras\ drop folder. CreateFolder lets WiX own the directory
+         even with no <File> entries; persistent component GUID so Major
+         Upgrade preserves any files the admin has copied into it. WiX won't
+         delete user-dropped files on uninstall (it only tracks files it
+         installed), so CA_RemoveExtras handles the wipe. -->
+    <Component Id="cmpMscpExtrasFolder" Directory="MSCP_EXTRAS_DIR"
+               Guid="E1F2A3B4-5C6D-4E7F-8A9B-0C1D2E3F4A5B" Condition="IIS_PRESENT">
+      <CreateFolder />
     </Component>
 
     <!-- The vdir component. CreateFolder lets WiX track the physical folder

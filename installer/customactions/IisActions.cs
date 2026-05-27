@@ -297,6 +297,37 @@ namespace InstallerCustomActions
             }
         }
 
+        // Cleanup the admin-managed extras\ folder on uninstall / IISHosting
+        // removal. Unlike RemovePluginZips this isn't scoped to *.zip - the
+        // folder can contain anything the admin dropped in (EXEs, ZIPs,
+        // certs, scripts). Recursive so any subdirectories the admin made
+        // are wiped too. WiX's RemoveFiles for cmpMscpExtrasFolder takes
+        // the now-empty folder down afterwards.
+        //
+        // CustomActionData keys: DestinationFolder
+        [CustomAction]
+        public static ActionResult RemoveExtras(Session session)
+        {
+            try
+            {
+                var destFolder = session.CustomActionData["DestinationFolder"];
+                if (string.IsNullOrWhiteSpace(destFolder) || !Directory.Exists(destFolder))
+                {
+                    session.Log($"[IisActions] Extras folder '{destFolder}' missing, nothing to remove.");
+                    return ActionResult.Success;
+                }
+
+                DeleteDirectoryContents(destFolder, session);
+                session.Log($"[IisActions] Wiped extras folder '{destFolder}'");
+                return ActionResult.Success;
+            }
+            catch (Exception ex)
+            {
+                session.Log($"[IisActions] RemoveExtras failed (non-fatal): {ex}");
+                return ActionResult.Success;
+            }
+        }
+
         // Wipe the contents of a directory without removing the directory
         // itself. Used by ExtractZipToFolder to clear stale files before
         // re-extracting on reinstall / Major Upgrade.
