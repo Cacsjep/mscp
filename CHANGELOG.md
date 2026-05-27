@@ -1,6 +1,10 @@
 # Changelog
 
-## [3.2.2] - 2026-05-27
+## [3.2.5] - 2026-05-27
+- Add Metadata Display: **History** button next to Import packet. Opens a browser of recorded packets from the selected channel (1h / 6h / 24h / 7d lookback) with search, an XML preview pane, and a "Use selected packet" action that populates Topics and Fields exactly like Import packet. Useful for cameras that publish events rarely, where Start Learn would otherwise sit idle. The status text under the buttons moved to its own row to make space.
+- Fix FlexView: Edit and Save As no longer drop plugin view items (Metadata Display, Remote Manager, etc.) from the layout. 
+
+## [3.2.3] - 2026-05-27
 - Add Metadata Display: **Import packet** button in the configuration window's "What to read" section and on every Additional series row. 
 - Add Installer: **Extras folder** on the Local Download Page. Anything dropped into `C:\inetpub\wwwroot\mscp\extras\` on the management server appears as an "Additional downloads" card on `/mscp/`. Wiped on uninstall, preserved across Major Upgrade.
 

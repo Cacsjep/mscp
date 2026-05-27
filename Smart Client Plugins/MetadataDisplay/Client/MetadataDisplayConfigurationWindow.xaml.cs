@@ -2004,40 +2004,9 @@ namespace MetadataDisplay.Client
                 if (dlg.ShowDialog() != true) return;
                 if (dlg.Snapshot == null) return;
 
-                // Stop any in-flight learn capture - the operator has just
-                // pinned a packet, no reason to keep accumulating into the
-                // shared session and risk overwriting the imported view.
-                if (_learn.IsActive)
-                {
-                    _learn.Stop();
-                    learnStartButton.IsEnabled = true;
-                    learnStopButton.IsEnabled = false;
-                }
-
-                // Stash the XML so Inspect packet has something to show and
-                // ReExtractAndRender can find a match against the new Topic
-                // / Field combo without waiting for a live packet.
-                if (_metadataItem != null && !string.IsNullOrEmpty(dlg.ImportedXml))
-                    LastXmlCache.Put(_metadataItem.FQID.ObjectId, dlg.ImportedXml);
-
-                ApplyLearnSnapshot(dlg.Snapshot);
-
-                // Auto-select the first topic when the operator hasn't already
-                // chosen one - matches the "click and go" intent of the import
-                // flow. If they already had a Topic typed in we leave it alone.
-                if (string.IsNullOrWhiteSpace(topicCombo.Text))
-                {
-                    var first = PacketImportDialog.FirstTopic(dlg.Snapshot);
-                    if (!string.IsNullOrEmpty(first))
-                    {
-                        topicCombo.Text = first;
-                        // OnTopicChanged is wired to topicCombo.TextChanged and
-                        // will refresh the Field combo / learned source list.
-                    }
-                }
-
-                learnStatus.Text = $"Imported. {dlg.Snapshot.Topics.Count} topic(s).";
-                ReExtractAndRender();
+                ApplyImportedPacket(dlg.Snapshot, dlg.ImportedXml,
+                    preferredTopic: PacketImportDialog.FirstTopic(dlg.Snapshot),
+                    statusPrefix: "Imported");
             }
             catch (Exception ex)
             {
@@ -2045,6 +2014,69 @@ namespace MetadataDisplay.Client
                 MessageBox.Show(this, "Could not import packet:\n" + ex.Message, "Import packet",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        // ───────── Packet history (recordings) ─────────
+
+        // Opens the history browser scoped to the current metadata channel and
+        // applies the picked packet via the same path Import packet uses. The
+        // history dialog is self-contained: it spins up its own playback source
+        // and does not touch the live source / learn session that drives the
+        // preview, so reopening it later won't churn live subscriptions.
+        private void OnHistory(object sender, RoutedEventArgs e)
+        {
+            if (_metadataItem == null)
+            {
+                MessageBox.Show(this,
+                    "Pick a metadata channel first - the history browser reads recordings from the selected channel.",
+                    "History", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                var dlg = new PacketHistoryDialog(_metadataItem) { Owner = this };
+                if (dlg.ShowDialog() != true) return;
+                if (dlg.Snapshot == null) return;
+
+                ApplyImportedPacket(dlg.Snapshot, dlg.ImportedXml,
+                    preferredTopic: dlg.PreferredTopic ?? PacketImportDialog.FirstTopic(dlg.Snapshot),
+                    statusPrefix: "Applied from history");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"OnHistory threw: {ex.Message}", ex);
+                MessageBox.Show(this, "Could not open history:\n" + ex.Message, "History",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // Shared apply path for Import packet and History. Stops any in-flight
+        // learn so a stale capture can't overwrite the imported view, caches
+        // the XML so Inspect packet / preview re-extraction have something to
+        // work against, applies the snapshot to populate the dropdowns, and
+        // auto-selects the preferred topic when the operator hasn't typed one.
+        private void ApplyImportedPacket(LearnSnapshot snapshot, string xml, string preferredTopic, string statusPrefix)
+        {
+            if (snapshot == null) return;
+
+            if (_learn.IsActive)
+            {
+                _learn.Stop();
+                learnStartButton.IsEnabled = true;
+                learnStopButton.IsEnabled = false;
+            }
+
+            if (_metadataItem != null && !string.IsNullOrEmpty(xml))
+                LastXmlCache.Put(_metadataItem.FQID.ObjectId, xml);
+
+            ApplyLearnSnapshot(snapshot);
+
+            if (string.IsNullOrWhiteSpace(topicCombo.Text) && !string.IsNullOrEmpty(preferredTopic))
+                topicCombo.Text = preferredTopic;
+
+            learnStatus.Text = $"{statusPrefix}. {snapshot.Topics?.Count ?? 0} topic(s).";
+            ReExtractAndRender();
         }
 
         // ───────── Packet inspector ─────────

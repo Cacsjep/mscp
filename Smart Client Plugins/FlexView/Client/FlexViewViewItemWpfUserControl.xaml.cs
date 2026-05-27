@@ -790,8 +790,9 @@ namespace FlexView.Client
         #region View Save / Load
 
         // Returns the freshly-created view on success, null on failure.
-        // If slotContent is provided, the new view's slots are populated via
-        // InsertBuiltinViewItem in the same order ConvertPanesToSdkLayout produces.
+        // If slotContent is provided, the new view's slots are populated in the same
+        // order ConvertPanesToSdkLayout produces: built-ins via InsertBuiltinViewItem
+        // and plugin view items (e.g. Metadata Display) via InsertViewItemPlugin.
         private ViewAndLayoutItem SaveNewView(string name, Item folder, List<SlotSnapshot> slotContent = null)
         {
             try
@@ -831,11 +832,12 @@ namespace FlexView.Client
             }
         }
 
-        // ViewAndLayoutItem.Layout is one-shot — its setter throws "Cannot change layout
+        // ViewAndLayoutItem.Layout is one-shot: its setter throws "Cannot change layout
         // on existing View" on any saved view. Every edit must delete the existing view
-        // and create a new one. We snapshot each slot's builtin content (camera, hotspot,
-        // …) before deletion and re-attach via InsertBuiltinViewItem on the new view —
-        // plain Properties writes on slot children silently revert to "Empty ViewItem"
+        // and create a new one. We snapshot each slot's content (built-ins like camera
+        // or hotspot, and plugin view items like Metadata Display) before deletion and
+        // re-attach on the new view via InsertBuiltinViewItem or InsertViewItemPlugin.
+        // Plain Properties writes on slot children silently revert to "Empty ViewItem"
         // because the owning plugin doesn't persist them.
         private void SaveEditedView()
         {
@@ -894,7 +896,7 @@ namespace FlexView.Client
 
         private class SlotSnapshot
         {
-            public Guid BuiltinId;
+            public Guid ViewItemId;
             public Dictionary<string, string> Properties;
         }
 
@@ -917,9 +919,9 @@ namespace FlexView.Client
                     var src = children[pane.OriginalSlotIndex];
                     if (src?.Properties != null &&
                         src.Properties.TryGetValue("ViewItemId", out var vid) &&
-                        Guid.TryParse(vid, out var builtinId))
+                        Guid.TryParse(vid, out var viewItemId))
                     {
-                        snap = new SlotSnapshot { BuiltinId = builtinId, Properties = new Dictionary<string, string>() };
+                        snap = new SlotSnapshot { ViewItemId = viewItemId, Properties = new Dictionary<string, string>() };
                         foreach (var key in src.Properties.Keys)
                         {
                             if (key == "ViewItemId" || key == "Index" || key == "Builtin") continue;
@@ -938,20 +940,59 @@ namespace FlexView.Client
             try { emptyBuiltinId = ViewAndLayoutItem.EmptyBuiltinId; }
             catch { emptyBuiltinId = new Guid("57abe978-8861-4577-8a09-5fa6e43c4109"); }
 
+            var pluginsById = BuildViewItemPluginLookup();
+
             for (int i = 0; i < snapshots.Count; i++)
             {
                 var snap = snapshots[i];
-                if (snap == null || snap.BuiltinId == emptyBuiltinId) continue;
+                if (snap == null || snap.ViewItemId == emptyBuiltinId) continue;
+
                 try
                 {
-                    view.InsertBuiltinViewItem(i, snap.BuiltinId, snap.Properties);
-                    FlexViewDefinition.Log.Info($"slot[{i}]: restored builtin={snap.BuiltinId} props={snap.Properties.Count}");
+                    if (pluginsById.TryGetValue(snap.ViewItemId, out var plugin))
+                    {
+                        view.InsertViewItemPlugin(i, plugin, snap.Properties);
+                        FlexViewDefinition.Log.Info($"slot[{i}]: restored plugin '{plugin.Name}' ({snap.ViewItemId}) props={snap.Properties.Count}");
+                    }
+                    else
+                    {
+                        view.InsertBuiltinViewItem(i, snap.ViewItemId, snap.Properties);
+                        FlexViewDefinition.Log.Info($"slot[{i}]: restored builtin={snap.ViewItemId} props={snap.Properties.Count}");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    FlexViewDefinition.Log.Info($"slot[{i}]: InsertBuiltinViewItem failed: {ex.Message}");
+                    FlexViewDefinition.Log.Info($"slot[{i}]: restore failed for {snap.ViewItemId}: {ex.Message}");
                 }
             }
+        }
+
+        // Enumerate every ViewItemPlugin registered in the current Smart Client so we
+        // can dispatch saved-slot GUIDs to InsertViewItemPlugin. Without this, plugin
+        // view items (Metadata Display, Remote Manager, etc.) silently disappear after
+        // edit/save-as because InsertBuiltinViewItem rejects non-builtin GUIDs.
+        private static Dictionary<Guid, ViewItemPlugin> BuildViewItemPluginLookup()
+        {
+            var lookup = new Dictionary<Guid, ViewItemPlugin>();
+            try
+            {
+                var defs = EnvironmentManager.Instance.AllPluginDefinitions;
+                if (defs == null) return lookup;
+                foreach (var def in defs)
+                {
+                    if (def?.ViewItemPlugins == null) continue;
+                    foreach (var vp in def.ViewItemPlugins)
+                    {
+                        if (vp == null) continue;
+                        lookup[vp.Id] = vp;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                FlexViewDefinition.Log.Info($"Failed to enumerate ViewItemPlugins: {ex.Message}");
+            }
+            return lookup;
         }
 
         private void LoadViewForEditing(ViewAndLayoutItem view, Item parent)

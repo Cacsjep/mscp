@@ -171,6 +171,7 @@ The "What to read" section is the bridge from the raw stream to a single value:
 - **Field** - the `tt:SimpleItem Name` to pull the value from. The dropdown filters to only the fields seen under the currently-selected Topic, so changing the Topic refreshes the available fields.
 - **Inspect packet...** - opens a syntax-highlighted XML viewer of the most recent metadata packet from the channel, so you can see exactly what the camera is emitting and which Topic / Field combinations are available.
 - **Import packet...** - paste an XML packet from a vendor SDK sample, a saved Inspect packet copy, or another configured widget. Populates the Topic / Field / Source filter dropdowns without waiting for a live channel.
+- **History...** - browse recorded packets from the selected channel (last 1h / 6h / 24h / 7d) and apply one with a click. Useful for sparse event channels where Start Learn would sit idle waiting for the next message.
 - **Source filter** (advanced, under the **Advanced** expander) - constrain to specific Source SimpleItem `name=value` pairs (e.g. `port=1` for I/O input port 1, or `objectid=42` for one tracked object). Multiple pairs can be combined with semicolons.
 
 ### Learn
@@ -184,6 +185,22 @@ When you already have a sample XML packet (from the vendor's documentation, an *
 - The first topic in the packet is auto-selected when the Topic field is empty.
 - The imported XML is cached as the most recent packet, so **Inspect packet...** shows the same payload immediately afterwards.
 - For multi-series Line Chart widgets, each Additional series row has its own **Import packet...** button so you can wire each series from a different sample without disturbing the others. The main button fans its snapshot out to every row.
+
+### History
+
+When a metadata channel publishes events sparsely (loitering, scheduled audit logs, IO triggers tied to physical actions), **Start Learn** can sit idle for hours waiting for the next message. **History...** sidesteps that wait by reading the recordings instead of the live stream.
+
+Click **History...** to open the recorded-packets browser:
+
+- **Lookback** - pick **Last 1 hour**, **6 hours**, **24 hours** (default), or **7 days**. Click **Reload** after changing it.
+- **Search** - filters the list by topic, field name, or value as you type.
+- **Packet list** - one row per NotificationMessage in the recordings, newest first. Columns: capture time (UTC), topic, and a summary of the message's Source and Data SimpleItems (e.g. `[VideoSource=1]; speed_kmh=43`).
+- **Preview** - clicking a row syntax-highlights the full packet XML in the right pane so you can see exactly what arrived at that moment.
+- **Use selected packet** - applies the picked packet through the same path as **Import packet...**: Topic / Field / Source filter dropdowns populate, the chosen row's topic auto-selects when the Topic field is empty, and the XML is cached so **Inspect packet...** shows the same payload immediately afterwards. Double-click a row to apply without using the button.
+
+The dialog runs against the channel's recordings via its own playback source, so it does not disturb the live preview that's already streaming behind the configuration window. A hard cap of 10000 rows protects the dialog from very noisy channels; if you hit it, narrow the lookback or use the search box to find the message you want.
+
+Prerequisites are the same as Playback mode: metadata recording must be enabled on the channel and a recording rule must cover it (see [Prerequisites](#prerequisites)). If History opens empty for a channel you know publishes events, recording isn't reaching the archive.
 
 ## Title and Density
 

@@ -258,18 +258,21 @@
                     <TextBlock Text="What to read" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <Button x:Name="learnStartButton" Content="Start Learn"
                                         Margin="0,0,8,0" Click="OnStartLearn"/>
                                 <Button x:Name="learnStopButton" Content="Stop"
                                         Margin="0,0,8,0" IsEnabled="False" Click="OnStopLearn"/>
                                 <Button x:Name="importPacketButton" Content="Import packet..."
-                                        Margin="0,0,12,0" Click="OnImportPacket"
+                                        Margin="0,0,8,0" Click="OnImportPacket"
                                         ToolTip="Paste an XML packet to populate Topics and Fields without listening live."/>
-                                <TextBlock x:Name="learnStatus" VerticalAlignment="Center"
-                                           Style="{StaticResource HintText}" TextWrapping="Wrap"
-                                           Text="Idle."/>
+                                <Button x:Name="historyButton" Content="History..."
+                                        Margin="0,0,0,0" Click="OnHistory"
+                                        ToolTip="Browse recorded metadata packets from the selected channel and apply one without listening live."/>
                             </StackPanel>
+                            <TextBlock x:Name="learnStatus" Margin="0,0,0,10"
+                                       Style="{StaticResource HintText}" TextWrapping="Wrap"
+                                       Text="Idle."/>
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="120"/>
