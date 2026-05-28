@@ -11,6 +11,11 @@ Render any value from a Milestone metadata channel as a dashboard widget in the 
 
 Built for ONVIF metadata like: Axis `CameraApplicationPlatform` analytics (area occupancy, line crossing, object counts), digital I/O port states, vendor counters - anything emitted as `tt:Message` over the metadata stream.
 
+Update: (V3.2.9) Package Picker instead of learn mode.<small> We changed how metadata packages are selected. This is a follow-up video to the tutorial videos below. Since those tutorial videos show all widgets, I don’t want to remake them.</small>
+<video controls width="100%">
+  <source src="../vids/metadata-picker.mp4" type="video/mp4">
+</video>
+
 Part-1
 <video controls width="100%">
   <source src="../vids/mpart1.mp4" type="video/mp4">
@@ -217,8 +222,6 @@ The configuration window has a live preview pane on the right. As soon as a meta
 Optional. **Mark stale after (seconds)** - if no matching packet arrives within that window, the widget dims and a "stale" badge appears in the corner. Useful for catching dead channels: if the camera silently stops emitting metadata, the widget visibly fades instead of pretending the last value is still current. Set to 0 to disable.
 
 ## Export to CSV
-
-
 <video controls width="100%">
   <source src="../vids/metadata_export.mp4" type="video/mp4">
 </video>
