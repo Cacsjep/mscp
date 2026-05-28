@@ -195,5 +195,12 @@
     "path": "Smart Client Plugins/TodoList",
     "category": "SmartClient",
     "description": "Operator checklist view item with free-form tasks or pre-defined shift templates"
+  },
+  {
+    "name": "AutoExporter",
+    "displayName": "Auto Exporter Plugin",
+    "path": "Admin Plugins/AutoExporter",
+    "category": "AdminPlugin",
+    "description": "Scheduled XProtect / AVI exports as a rule action with ring-buffer storage, manual Run Now, and live progress"
   }
 ]

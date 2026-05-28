@@ -1,0 +1,582 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using AutoExporter.Admin;
+using AutoExporter.Messaging;
+using CommunitySDK;
+using VideoOS.Platform;
+using VideoOS.Platform.Background;
+using VideoOS.Platform.Data;
+using VideoOS.Platform.Messaging;
+
+namespace AutoExporter.Background
+{
+    public class AutoExporterBackgroundPlugin : BackgroundPlugin
+    {
+        private static readonly PluginLog _log = new PluginLog("AutoExporter");
+        private readonly SystemLog _sysLog = new SystemLog(_log);
+        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
+        private readonly ExecutionLog _executionLog = new ExecutionLog();
+        private readonly Exporter _exporter = new Exporter();
+
+        private readonly object _configLock = new object();
+        private List<Item> _jobs = new List<Item>();
+
+        private object _msgJobsObj;
+
+        private System.Threading.Timer _ringTimer;
+
+        private readonly ConcurrentDictionary<Guid, RunHandle> _running = new ConcurrentDictionary<Guid, RunHandle>();
+        private volatile bool _closing;
+
+        internal static AutoExporterBackgroundPlugin Instance { get; private set; }
+
+        public override Guid Id => AutoExporterDefinition.BackgroundPluginId;
+        public override string Name => "Auto Exporter Background";
+
+        public override List<EnvironmentType> TargetEnvironments =>
+            new List<EnvironmentType> { EnvironmentType.Service };
+
+        public override void Init()
+        {
+            Instance = this;
+            _log.Info("Auto Exporter background plugin initializing");
+
+            _sysLog.Register();
+            LoadConfig();
+
+            _msgJobsObj = EnvironmentManager.Instance.RegisterReceiver(
+                OnConfigurationChanged,
+                new MessageIdAndRelatedKindFilter(
+                    MessageId.Server.ConfigurationChangedIndication,
+                    AutoExporterDefinition.JobKindId));
+
+            if (_cmh.Start())
+            {
+                _cmh.Register(OnRunNowMessage,       new CommunicationIdFilter(AutoExporterMessageIds.RunNowRequest));
+                _cmh.Register(OnStorageProbeRequest, new CommunicationIdFilter(AutoExporterMessageIds.StorageProbeRequest));
+            }
+
+            // Hourly safety pass on the ring buffer.
+            _ringTimer = new System.Threading.Timer(_ => SafeRingCleanup(), null,
+                TimeSpan.FromMinutes(5), TimeSpan.FromHours(1));
+
+            _log.Info("Auto Exporter background plugin initialized");
+        }
+
+        public override void Close()
+        {
+            _closing = true;
+            _log.Info("Auto Exporter background plugin closing");
+
+            _ringTimer?.Dispose();
+
+            if (_msgJobsObj != null) { EnvironmentManager.Instance.UnRegisterReceiver(_msgJobsObj); _msgJobsObj = null; }
+
+            // Cancel any in-flight runs.
+            foreach (var rh in _running.Values)
+            {
+                try { rh.Cts.Cancel(); } catch { }
+            }
+
+            _cmh.Close();
+            Instance = null;
+        }
+
+        // ─── Config ─────────────────────────────────────────
+
+        private void LoadConfig()
+        {
+            try
+            {
+                var jobs = Configuration.Instance.GetItemConfigurations(
+                    AutoExporterDefinition.PluginId,
+                    null,
+                    AutoExporterDefinition.JobKindId) ?? new List<Item>();
+
+                lock (_configLock) { _jobs = jobs; }
+                _log.Info($"Config loaded: jobs={jobs.Count}");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"LoadConfig failed: {ex.Message}", ex);
+            }
+        }
+
+        private object OnConfigurationChanged(Message msg, FQID dest, FQID sender)
+        {
+            if (_closing) return null;
+            _log.Info("Configuration changed, reloading");
+            LoadConfig();
+            return null;
+        }
+
+        // ─── Triggers ───────────────────────────────────────
+
+        public void TriggerJob(Guid jobObjectId, BaseEvent triggeringEvent, string triggerSource)
+        {
+            if (_closing) return;
+
+            Item job;
+            lock (_configLock)
+            {
+                job = _jobs.FirstOrDefault(j => j.FQID.ObjectId == jobObjectId);
+            }
+            if (job == null)
+            {
+                _log.Error($"Job {jobObjectId} not found in config");
+                return;
+            }
+
+            if (!IsJobEnabled(job))
+            {
+                _log.Info($"Job '{job.Name}' is disabled, skipping");
+                return;
+            }
+
+            var newRun = new RunHandle
+            {
+                RunId = Guid.NewGuid(),
+                JobObjectId = jobObjectId,
+                Cts = new CancellationTokenSource()
+            };
+
+            if (!_running.TryAdd(jobObjectId, newRun))
+            {
+                _log.Info($"Job '{job.Name}' skipped: previous run still in progress");
+                _sysLog.JobSkippedBusy(job.Name);
+                FireFailedEvent(job, triggeringEvent, "Skipped: previous run still in progress");
+                AppendExecutionAndBroadcast(new ExecutionRecord
+                {
+                    RunId = newRun.RunId,
+                    JobObjectId = jobObjectId,
+                    JobName = job.Name,
+                    StartedUtc = DateTime.UtcNow,
+                    FinishedUtc = DateTime.UtcNow,
+                    Format = GetProp(job, "Format", "XProtect"),
+                    Trigger = triggerSource,
+                    Success = false,
+                    Error = "Skipped: previous run still in progress"
+                });
+                return;
+            }
+
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try { RunJob(job, triggeringEvent, triggerSource, newRun); }
+                catch (Exception ex) { _log.Error($"RunJob threw: {ex.Message}", ex); }
+                finally
+                {
+                    RunHandle removed;
+                    _running.TryRemove(jobObjectId, out removed);
+                    newRun.Cts.Dispose();
+                }
+            });
+        }
+
+        private void RunJob(Item job, BaseEvent triggeringEvent, string triggerSource, RunHandle run)
+        {
+            var startedUtc = DateTime.UtcNow;
+            var rangeValue = ParseInt(GetProp(job, "RangeValue", "1"), 1);
+            var rangeUnit  = GetProp(job, "RangeUnit", "Days");
+            var format     = GetProp(job, "Format", "XProtect") == "AVI" ? ExportFormat.Avi : ExportFormat.XProtect;
+
+            var rangeEndUtc   = startedUtc;
+            var rangeStartUtc = TimeRange.Subtract(rangeEndUtc, rangeValue, rangeUnit);
+
+            string storage = GetProp(job, "StoragePath", "");
+            if (string.IsNullOrWhiteSpace(storage))
+            {
+                FinishFailure(job, triggeringEvent, triggerSource, run, startedUtc, rangeStartUtc, rangeEndUtc, format,
+                    "Storage path not configured on this job");
+                return;
+            }
+
+            var ring = BuildRingStorage(job);
+            try
+            {
+                var cr = ring?.Prune();
+                if (cr != null && cr.PrunedFolders > 0)
+                    _log.Info($"Pre-run cleanup for '{job.Name}': pruned {cr.PrunedFolders} folder(s), reclaimed {cr.BytesReclaimed / (1024 * 1024)} MB");
+            }
+            catch (Exception ex) { _log.Error($"Pre-run cleanup failed for '{job.Name}': {ex.Message}", ex); }
+
+            var runFolder = Path.Combine(storage, rangeEndUtc.ToLocalTime().ToString("dd.MM.yyyy_HHmm"));
+
+            List<Item> cameras;
+            try { cameras = ResolveCameras(job); }
+            catch (Exception ex)
+            {
+                FinishFailure(job, triggeringEvent, triggerSource, run, startedUtc, rangeStartUtc, rangeEndUtc, format,
+                    "Failed to resolve cameras: " + ex.Message);
+                return;
+            }
+
+            if (cameras.Count == 0)
+            {
+                FinishFailure(job, triggeringEvent, triggerSource, run, startedUtc, rangeStartUtc, rangeEndUtc, format,
+                    "No cameras resolved from job configuration");
+                return;
+            }
+
+            var cfg = new ExportJobConfig
+            {
+                JobObjectId   = job.FQID.ObjectId,
+                JobName       = job.Name,
+                Format        = format,
+                Encrypt       = GetProp(job, "Encrypt", "No") == "Yes",
+                Password      = GetProp(job, "Password", ""),
+                IncludePlayer = GetProp(job, "IncludePlayer", "Yes") != "No",
+                IncludeAudio  = GetProp(job, "IncludeAudio", "Yes") != "No",
+                Cameras       = cameras,
+                RangeStartUtc = rangeStartUtc,
+                RangeEndUtc   = rangeEndUtc,
+                OutputFolder  = runFolder
+            };
+
+            BroadcastProgress(run.RunId, cfg, 0, 0, "");
+
+            int total = cameras.Count;
+            Action<int, int, string> onProgress = (camIdx, pct, camName) =>
+            {
+                int overall = (int)(((double)camIdx + (pct / 100.0)) / total * 100);
+                if (overall < 0) overall = 0;
+                if (overall > 100) overall = 100;
+                BroadcastProgress(run.RunId, cfg, overall, camIdx, camName);
+            };
+
+            ExportRunResult result;
+            try
+            {
+                result = _exporter.Run(cfg, onProgress, run.Cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                FinishFailure(job, triggeringEvent, triggerSource, run, startedUtc, rangeStartUtc, rangeEndUtc, format,
+                    "Cancelled");
+                return;
+            }
+
+            var finishedUtc = DateTime.UtcNow;
+            var record = new ExecutionRecord
+            {
+                RunId         = run.RunId,
+                JobObjectId   = job.FQID.ObjectId,
+                JobName       = job.Name,
+                StartedUtc    = startedUtc,
+                FinishedUtc   = finishedUtc,
+                RangeStartUtc = rangeStartUtc,
+                RangeEndUtc   = rangeEndUtc,
+                Format        = format == ExportFormat.Avi ? "AVI" : "XProtect",
+                Trigger       = triggerSource,
+                Success       = result.Success,
+                Error         = result.Error ?? "",
+                CameraCount   = result.CameraCount,
+                BytesWritten  = result.BytesWritten,
+                OutputFolder  = runFolder,
+                CameraNames   = cameras.Select(c => c.Name).ToList()
+            };
+
+            AppendExecutionAndBroadcast(record);
+            BroadcastProgress(run.RunId, cfg, 100, total - 1, "");
+
+            if (result.Success)
+            {
+                var seconds = (finishedUtc - startedUtc).TotalSeconds;
+                _sysLog.JobSucceeded(job.Name, result.CameraCount, result.BytesWritten / (1024 * 1024), seconds);
+                FireSucceededEvent(job, triggeringEvent, record);
+            }
+            else
+            {
+                _sysLog.JobFailed(job.Name, result.Error ?? "Unknown");
+                FireFailedEvent(job, triggeringEvent, result.Error ?? "Unknown");
+            }
+        }
+
+        private void FinishFailure(Item job, BaseEvent triggeringEvent, string triggerSource, RunHandle run,
+            DateTime startedUtc, DateTime rangeStartUtc, DateTime rangeEndUtc, ExportFormat format, string error)
+        {
+            var record = new ExecutionRecord
+            {
+                RunId = run.RunId,
+                JobObjectId = job.FQID.ObjectId,
+                JobName = job.Name,
+                StartedUtc = startedUtc,
+                FinishedUtc = DateTime.UtcNow,
+                RangeStartUtc = rangeStartUtc,
+                RangeEndUtc = rangeEndUtc,
+                Format = format == ExportFormat.Avi ? "AVI" : "XProtect",
+                Trigger = triggerSource,
+                Success = false,
+                Error = error
+            };
+            AppendExecutionAndBroadcast(record);
+            _sysLog.JobFailed(job.Name, error);
+            FireFailedEvent(job, triggeringEvent, error);
+        }
+
+        // ─── Camera resolution (cameras + camera groups) ──
+
+        private List<Item> ResolveCameras(Item job)
+        {
+            var targets = JobUserControl.ReadTargets(job);
+            if (targets.Count == 0) return new List<Item>();
+
+            var seen = new HashSet<Guid>();
+            var result = new List<Item>();
+
+            ServerId serverId = null;
+            try { serverId = EnvironmentManager.Instance.MasterSite?.ServerId; } catch { }
+
+            foreach (var t in targets)
+            {
+                try
+                {
+                    // Both cameras and groups live in Kind.Camera. Groups are folder-type items
+                    // with FolderType != No; GetChildren() returns the member cameras.
+                    var item = Configuration.Instance.GetItem(serverId, t.ObjectId, Kind.Camera);
+                    if (item == null) continue;
+
+                    bool isGroup = item.FQID != null && item.FQID.FolderType != FolderType.No;
+                    if (isGroup)
+                    {
+                        foreach (var child in FlattenCameras(item))
+                        {
+                            if (seen.Add(child.FQID.ObjectId)) result.Add(child);
+                        }
+                    }
+                    else
+                    {
+                        if (seen.Add(item.FQID.ObjectId)) result.Add(item);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Resolve failed for {t.Kind} {t.ObjectId} (job '{job.Name}'): {ex.Message}", ex);
+                }
+            }
+
+            int groupCount = targets.Count(t => t.Kind == JobTargetKind.Group);
+            _log.Info($"Resolved targets for '{job.Name}': {targets.Count} target(s) " +
+                      $"({groupCount} group{(groupCount == 1 ? "" : "s")}) → {result.Count} unique camera(s)");
+            return result;
+        }
+
+        // Walk a camera-group folder recursively and yield only leaf camera items.
+        private static IEnumerable<Item> FlattenCameras(Item folder)
+        {
+            foreach (var child in SafeChildren(folder))
+            {
+                if (child?.FQID == null) continue;
+                if (child.FQID.Kind != Kind.Camera) continue;
+                if (child.FQID.FolderType != FolderType.No)
+                {
+                    foreach (var grandchild in FlattenCameras(child))
+                        yield return grandchild;
+                }
+                else
+                {
+                    yield return child;
+                }
+            }
+        }
+
+        private static IEnumerable<Item> SafeChildren(Item group)
+        {
+            try { return group?.GetChildren() ?? Enumerable.Empty<Item>(); }
+            catch { return Enumerable.Empty<Item>(); }
+        }
+
+        // ─── Manual trigger via MessageCommunication ──────
+
+        private object OnStorageProbeRequest(Message message, FQID destination, FQID sender)
+        {
+            if (_closing) return null;
+            try
+            {
+                if (message?.Data is StorageProbeRequest req)
+                {
+                    _log.Info($"Storage probe request: correlationId={req.CorrelationId} path='{req.Path}'");
+                    var report = StorageStatus.Inspect(req.JobObjectId, req.JobName, req.Path, req.MaxBytes, req.MaxAgeDays);
+
+                    if (_cmh.MessageCommunication != null)
+                    {
+                        _cmh.TransmitMessage(new Message(AutoExporterMessageIds.StorageProbeReply,
+                            new StorageProbeReply { CorrelationId = req.CorrelationId, Report = report }));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Storage probe handler error: {ex.Message}", ex);
+            }
+            return null;
+        }
+
+        private object OnRunNowMessage(Message message, FQID destination, FQID sender)
+        {
+            if (_closing) return null;
+            try
+            {
+                if (message?.Data is RunNowRequest req)
+                {
+                    _log.Info($"Manual Run Now request: job={req.JobObjectId}");
+                    TriggerJob(req.JobObjectId, null, "Manual");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"RunNow handler error: {ex.Message}", ex);
+            }
+            return null;
+        }
+
+        // ─── Events ─────────────────────────────────────────
+
+        private void FireSucceededEvent(Item job, BaseEvent triggeringEvent, ExecutionRecord rec)
+        {
+            FireRuleEvent(job, AutoExporterDefinition.EvtJobSucceededId,
+                "AutoExportJobSucceeded", "Auto Export: Job Succeeded",
+                $"Cameras: {rec.CameraCount} | Size: {rec.BytesWritten / (1024 * 1024)} MB | Folder: {rec.OutputFolder}",
+                priority: 5);
+        }
+
+        private void FireFailedEvent(Item job, BaseEvent triggeringEvent, string error)
+        {
+            FireRuleEvent(job, AutoExporterDefinition.EvtJobFailedId,
+                "AutoExportJobFailed", "Auto Export: Job Failed",
+                "Error: " + error,
+                priority: 3);
+        }
+
+        private void FireRuleEvent(Item job, Guid eventTypeId, string type, string message, string customTag, ushort priority)
+        {
+            try
+            {
+                _log.Info($"Firing rule event: type={type} job='{job.Name}' tag='{customTag}'");
+                var header = new EventHeader
+                {
+                    ID = Guid.NewGuid(),
+                    Class = "Operational",
+                    Type = type,
+                    Timestamp = DateTime.Now,
+                    Name = job.Name,
+                    Message = message,
+                    CustomTag = customTag,
+                    Priority = priority,
+                    Source = new EventSource
+                    {
+                        Name = job.Name,
+                        FQID = job.FQID
+                    }
+                };
+
+                var ev = new AnalyticsEvent { EventHeader = header };
+                EnvironmentManager.Instance.SendMessage(
+                    new Message(MessageId.Server.NewEventCommand)
+                    {
+                        Data = ev,
+                        RelatedFQID = job.FQID
+                    });
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Failed to fire {type} event for job '{job.Name}': {ex.Message}", ex);
+            }
+        }
+
+        // ─── Cross-environment broadcasting ───────────────
+
+        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int percent, int camIdx, string camName)
+        {
+            if (_cmh.MessageCommunication == null) return;
+            try
+            {
+                _cmh.TransmitMessage(new Message(AutoExporterMessageIds.Progress, new ProgressUpdate
+                {
+                    RunId             = runId,
+                    JobObjectId       = cfg.JobObjectId,
+                    JobName           = cfg.JobName,
+                    Percent           = percent,
+                    CameraIndex       = camIdx,
+                    CameraCount       = cfg.Cameras?.Count ?? 0,
+                    CurrentCameraName = camName ?? ""
+                }));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"BroadcastProgress failed for run {runId}: {ex.Message}", ex);
+            }
+        }
+
+        private void AppendExecutionAndBroadcast(ExecutionRecord rec)
+        {
+            try { _executionLog.Append(rec); }
+            catch (Exception ex) { _log.Error($"ExecutionLog.Append failed for run {rec.RunId}: {ex.Message}", ex); }
+
+            if (_cmh.MessageCommunication == null) return;
+            try { _cmh.TransmitMessage(new Message(AutoExporterMessageIds.ExecutionAdded, rec)); }
+            catch (Exception ex) { _log.Error($"Broadcast ExecutionAdded failed for run {rec.RunId}: {ex.Message}", ex); }
+        }
+
+        // ─── Ring cleanup ───────────────────────────────────
+
+        private static RingStorage BuildRingStorage(Item job)
+        {
+            if (job == null) return null;
+            var path = GetProp(job, "StoragePath", "");
+            var maxGB = ParseLong(GetProp(job, "MaxGB", "0"), 0);
+            var maxAge = ParseInt(GetProp(job, "MaxAgeDays", "0"), 0);
+            return RingStorage.FromGigabytes(path, maxGB, maxAge);
+        }
+
+        private void SafeRingCleanup()
+        {
+            if (_closing) return;
+            try
+            {
+                List<Item> jobs;
+                lock (_configLock) { jobs = _jobs.ToList(); }
+
+                foreach (var job in jobs)
+                {
+                    var ring = BuildRingStorage(job);
+                    if (ring == null || !ring.IsConfigured) continue;
+                    var r = ring.Prune();
+                    if (r.PrunedFolders > 0)
+                        _sysLog.RingCleanup(r.PrunedFolders, r.BytesReclaimed / (1024 * 1024), ring.Root);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Ring cleanup failed: {ex.Message}", ex);
+            }
+        }
+
+        // ─── Helpers ────────────────────────────────────────
+
+        private static bool IsJobEnabled(Item job)
+            => !job.Properties.ContainsKey("Enabled") || job.Properties["Enabled"] != "No";
+
+        private static string GetProp(Item item, string key, string defaultValue)
+            => item.Properties.ContainsKey(key) ? item.Properties[key] : defaultValue;
+
+        private static int ParseInt(string s, int def)
+            => int.TryParse(s, out var v) ? v : def;
+
+        private static long ParseLong(string s, long def)
+            => long.TryParse(s, out var v) ? v : def;
+
+        // ─── Per-job in-flight handle ────────────────────
+
+        private class RunHandle
+        {
+            public Guid RunId;
+            public Guid JobObjectId;
+            public CancellationTokenSource Cts;
+        }
+    }
+}

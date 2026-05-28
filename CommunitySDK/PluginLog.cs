@@ -18,17 +18,30 @@ namespace CommunitySDK
 
         public void Info(string message)
         {
-            EnvironmentManager.Instance.Log(false, _category, message);
+            try { LogInternal(false, message, null); } catch { }
         }
 
         public void Error(string message)
         {
-            EnvironmentManager.Instance.Log(true, _category, message);
+            try { LogInternal(true, message, null); } catch { }
         }
 
         public void Error(string message, Exception ex)
         {
-            EnvironmentManager.Instance.Log(true, _category, message, new[] { ex });
+            try { LogInternal(true, message, ex); } catch { }
+        }
+
+        // Kept separate so callers above can catch assembly-load failures (e.g. in
+        // unit-test processes that don't have VideoOS.Platform available). The JIT
+        // compiles this method lazily on first call, so any TypeLoad/FileNotFound
+        // exception surfaces inside the try/catch above rather than during JIT of
+        // the public entry points.
+        private void LogInternal(bool isError, string message, Exception ex)
+        {
+            if (ex != null)
+                EnvironmentManager.Instance.Log(isError, _category, message, new[] { ex });
+            else
+                EnvironmentManager.Instance.Log(isError, _category, message);
         }
     }
 }
