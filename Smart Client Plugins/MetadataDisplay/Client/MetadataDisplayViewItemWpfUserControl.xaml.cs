@@ -66,6 +66,7 @@ namespace MetadataDisplay.Client
         {
             _viewItemManager = viewItemManager;
             InitializeComponent();
+            SizeChanged += (s, e) => ApplySetupCompactMode(e.NewSize.Width, e.NewSize.Height);
         }
 
         public override void Init()
@@ -125,6 +126,7 @@ namespace MetadataDisplay.Client
                     setupHint.Text = overlay;
                 openConfigButton.Visibility = mode == Mode.ClientSetup ? Visibility.Visible : Visibility.Collapsed;
                 setupPanel.Visibility = Visibility.Visible;
+                ApplySetupCompactMode(ActualWidth, ActualHeight);
                 renderViewbox.Visibility = Visibility.Collapsed;
                 chartRoot.Visibility = Visibility.Collapsed;
                 noDataPanel.Visibility = Visibility.Collapsed;
@@ -1546,6 +1548,23 @@ namespace MetadataDisplay.Client
             {
                 _log.Error($"OnOpenConfigClick threw: {ex.Message}", ex);
             }
+        }
+
+        // Setup pane is wrapped in a Viewbox so content scales down to fit.
+        // On small panes (e.g. setup-mode left column with multiple slots), the
+        // full Channel/Render/Topic/Data key summary shrinks to unreadable
+        // sizes. Collapse the summary + subheader below a threshold so only
+        // the title and Open configuration button remain - those stay at
+        // native size in the tighter content stack. Driven by the user
+        // control's own SizeChanged so the dimensions reflect the actual pane
+        // slot, not the Viewbox's content-scaled report.
+        private void ApplySetupCompactMode(double width, double height)
+        {
+            if (setupSummary == null || setupSubheader == null) return;
+            bool compact = width < 300 || height < 220;
+            var vis = compact ? Visibility.Collapsed : Visibility.Visible;
+            setupSummary.Visibility = vis;
+            setupSubheader.Visibility = vis;
         }
 
         public override bool Maximizable => true;
