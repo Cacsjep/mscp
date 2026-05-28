@@ -174,20 +174,24 @@ namespace FlexView.Client
                 Canvas.SetTop(rect, y + 1);
                 gridCanvas.Children.Add(rect);
 
-                // Camera name (if editing existing view)
-                if (!string.IsNullOrEmpty(pane.CameraName) && w > 60 && h > 40)
+                // Slot label: camera name for camera slots, plugin name for
+                // non-camera plugin view items (e.g. "Metadata Display"). Both
+                // are populated by TryReadSlotLabels when editing an existing
+                // view; new panes have neither and stay unlabeled.
+                string slotLabel = !string.IsNullOrEmpty(pane.CameraName) ? pane.CameraName : pane.PluginName;
+                if (!string.IsNullOrEmpty(slotLabel) && w > 60 && h > 40)
                 {
-                    var camLabel = new TextBlock
+                    var label = new TextBlock
                     {
-                        Text = pane.CameraName,
+                        Text = slotLabel,
                         Foreground = CameraLabelBrush,
                         FontSize = 10,
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxWidth = w - 12
                     };
-                    Canvas.SetLeft(camLabel, x + 6);
-                    Canvas.SetTop(camLabel, y + h - 20);
-                    gridCanvas.Children.Add(camLabel);
+                    Canvas.SetLeft(label, x + 6);
+                    Canvas.SetTop(label, y + h - 20);
+                    gridCanvas.Children.Add(label);
                 }
 
                 // Size label (center)
@@ -1013,7 +1017,7 @@ namespace FlexView.Client
             FlexViewDefinition.Log.Info($"LoadViewForEditing: name='{view.Name}', slots={layout.Length}");
 
             LoadFromSdkLayout(layout);
-            TryReadCameraData(view);
+            TryReadSlotLabels(view);
 
             _targetFolder = parent;
             viewNameLabel.Text = view.Name;
@@ -1024,7 +1028,7 @@ namespace FlexView.Client
             UpdateStatus();
         }
 
-        private void TryReadCameraData(ViewAndLayoutItem view)
+        private void TryReadSlotLabels(ViewAndLayoutItem view)
         {
             try
             {
@@ -1034,56 +1038,78 @@ namespace FlexView.Client
                 var children = configItem.GetChildren();
                 if (children == null || children.Count == 0) return;
 
+                // Plugin lookup is built lazily on the first non-camera slot
+                // we encounter - most edited views are camera grids, so this
+                // avoids enumerating AllPluginDefinitions for nothing.
+                Dictionary<Guid, ViewItemPlugin> pluginsById = null;
+
                 for (int i = 0; i < children.Count && i < _panes.Count; i++)
                 {
                     var child = children[i];
-                    if (child.Properties == null) continue;
+                    if (child?.Properties == null) continue;
 
-                    string camIdStr;
-                    if (!child.Properties.TryGetValue("CameraId", out camIdStr)) continue;
-                    if (!Guid.TryParse(camIdStr, out var camId) || camId == Guid.Empty) continue;
-
-                    _panes[i].CameraId = camId;
-
-                    // Try to resolve camera name via FQID
-                    try
+                    // Camera slot: resolve via CameraId -> camera item name.
+                    if (child.Properties.TryGetValue("CameraId", out var camIdStr)
+                        && Guid.TryParse(camIdStr, out var camId)
+                        && camId != Guid.Empty)
                     {
-                        var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
-                        var fqid = new FQID(serverId, Guid.Empty, camId, FolderType.No, Kind.Camera);
-                        var camItem = Configuration.Instance.GetItem(fqid);
-                        if (camItem != null && !string.IsNullOrEmpty(camItem.Name))
+                        _panes[i].CameraId = camId;
+                        _panes[i].CameraName = ResolveCameraName(camId);
+                        continue;
+                    }
+
+                    // Non-camera slot: resolve via ViewItemId -> plugin name.
+                    // Built-in view items (Hotspot, Carousel, etc.) are not in
+                    // AllPluginDefinitions, so the lookup misses and the pane
+                    // stays unlabeled - matches the prior camera-only behavior.
+                    if (child.Properties.TryGetValue("ViewItemId", out var vidStr)
+                        && Guid.TryParse(vidStr, out var viewItemId)
+                        && viewItemId != Guid.Empty)
+                    {
+                        if (pluginsById == null) pluginsById = BuildViewItemPluginLookup();
+                        if (pluginsById.TryGetValue(viewItemId, out var plugin)
+                            && !string.IsNullOrEmpty(plugin?.Name))
                         {
-                            _panes[i].CameraName = camItem.Name;
-                            continue;
+                            _panes[i].PluginName = plugin.Name;
                         }
                     }
-                    catch { }
-
-                    // Fallback: try GetItemsByKind
-                    try
-                    {
-                        var allCams = Configuration.Instance.GetItemsByKind(Kind.Camera);
-                        if (allCams != null)
-                        {
-                            foreach (var cam in allCams)
-                            {
-                                if (cam.FQID.ObjectId == camId)
-                                {
-                                    _panes[i].CameraName = cam.Name;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-
-                    if (string.IsNullOrEmpty(_panes[i].CameraName))
-                        _panes[i].CameraName = camId.ToString().Substring(0, 8) + "...";
                 }
             }
             catch
             {
             }
+        }
+
+        private static string ResolveCameraName(Guid camId)
+        {
+            // Try FQID lookup first (fast path).
+            try
+            {
+                var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
+                var fqid = new FQID(serverId, Guid.Empty, camId, FolderType.No, Kind.Camera);
+                var camItem = Configuration.Instance.GetItem(fqid);
+                if (camItem != null && !string.IsNullOrEmpty(camItem.Name))
+                    return camItem.Name;
+            }
+            catch { }
+
+            // Fallback: scan every camera in the configuration.
+            try
+            {
+                var allCams = Configuration.Instance.GetItemsByKind(Kind.Camera);
+                if (allCams != null)
+                {
+                    foreach (var cam in allCams)
+                    {
+                        if (cam.FQID.ObjectId == camId) return cam.Name;
+                    }
+                }
+            }
+            catch { }
+
+            // Last resort: the abbreviated GUID so the operator still sees
+            // *something* identifying the slot.
+            return camId.ToString().Substring(0, 8) + "...";
         }
 
         #endregion

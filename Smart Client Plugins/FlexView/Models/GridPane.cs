@@ -17,7 +17,13 @@ namespace FlexView.Models
         public Guid? CameraId { get; set; }
         public string CameraName { get; set; }
 
-        public string Label => CameraName ?? $"Slot {Id}";
+        // Non-camera view-item plugin name (populated when editing existing
+        // views). e.g. "Metadata Display" for slots whose ViewItemId resolves
+        // to a registered ViewItemPlugin. Empty for built-in view items
+        // (Camera, Hotspot, etc.) since those are not in the plugin registry.
+        public string PluginName { get; set; }
+
+        public string Label => CameraName ?? PluginName ?? $"Slot {Id}";
 
         public bool Contains(int col, int row)
         {

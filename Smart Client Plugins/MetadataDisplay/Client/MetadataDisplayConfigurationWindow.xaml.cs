@@ -5,12 +5,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using System.Xml;
-using System.Xml.Linq;
 using CommunitySDK;
 using FontAwesome5;
 using MetadataDisplay.Client.Renderers;
@@ -30,7 +27,8 @@ namespace MetadataDisplay.Client
         private string _metadataIdString = "";
         private string _metadataNameString = "";
 
-        // Single shared MetadataLiveSource: feeds both preview render and learn aggregator.
+        // Live source feeds the preview pane so the operator sees actual data
+        // flowing through the configured widget.
         private MetadataLiveSource _source;
         private int _packetsSeen;
 
@@ -38,8 +36,11 @@ namespace MetadataDisplay.Client
         // the background LiveContentEvent callback to avoid touching WPF controls there.
         private volatile ExtractorConfig _extractorSnapshot;
 
-        // Learn is just an aggregator now; the source is shared.
-        private readonly MetadataLearnSession _learn = new MetadataLearnSession();
+        // Last XML seen on the channel (set by Pick packet, Import packet, and the
+        // live source's content callback). ReExtractAndRender pulls from this so a
+        // topic/field edit refreshes the preview without waiting for the next packet.
+        // volatile because OnSourceContent writes from a background thread.
+        private volatile string _lastXml;
 
         private DateTime? _lastPreviewUtc;
         private string _lastPreviewValue;
@@ -82,7 +83,6 @@ namespace MetadataDisplay.Client
         {
             _vim = viewItemManager;
             InitializeComponent();
-            _learn.Updated += OnLearnUpdated;
             Loaded += (s, e) =>
             {
                 _log.Info("[ConfigWindow] Loaded");
@@ -350,11 +350,7 @@ namespace MetadataDisplay.Client
                 if (picker.ShowDialog() == true && picker.SelectedItems != null && picker.SelectedItems.Any())
                 {
                     StopSource();
-                    _learn.Reset();
-                    _learn.Stop();
-                    learnStartButton.IsEnabled = true;
-                    learnStopButton.IsEnabled = false;
-                    learnStatus.Text = "Idle.";
+                    _lastXml = null;
 
                     _metadataItem = picker.SelectedItems.First();
                     _metadataIdString = _metadataItem.FQID.ObjectId.ToString();
@@ -876,7 +872,7 @@ namespace MetadataDisplay.Client
                 previewStatusText.Text = $"Subscribed to '{_metadataItem.Name}'. Waiting for first packet...";
 
                 EnsureDiagTicker();
-                SeedPreviewFromCache();
+                SeedPreviewFromLastXml();
             }
             catch (Exception ex)
             {
@@ -922,36 +918,21 @@ namespace MetadataDisplay.Client
             _diagTicker = null;
         }
 
-        private void SeedPreviewFromCache()
+        // Renders from the last XML the window saw (set by Pick packet, Import
+        // packet, or the most recent live packet). No-op when there is no XML
+        // yet - the live source will trigger a render on its first packet.
+        private void SeedPreviewFromLastXml()
         {
-            if (_metadataItem == null) { _log.Info("[ConfigWindow] Seed skipped (no item)"); return; }
-            if (!LastXmlCache.TryGet(_metadataItem.FQID.ObjectId, out var xml, out var cachedAt))
-            {
-                _log.Info("[ConfigWindow] Seed: no cached XML available");
-                return;
-            }
-
-            if (_learn.IsActive) _learn.Observe(xml);
-            foreach (var r in _additionalSeriesRows) if (r.LearnSession.IsActive) r.LearnSession.Observe(xml);
+            var xml = _lastXml;
+            if (string.IsNullOrEmpty(xml)) return;
 
             var cfg = BuildExtractorCfgFromUi();
-            if (string.IsNullOrEmpty(cfg.DataKey))
-            {
-                _log.Info("[ConfigWindow] Seed: cached XML found but DataKey is empty");
-                return;
-            }
+            if (string.IsNullOrEmpty(cfg.DataKey)) return;
             var hit = MetadataExtractor.TryExtract(xml, cfg);
-            if (hit == null)
-            {
-                _log.Info($"[ConfigWindow] Seed: cached XML found but no match for topic='{cfg.Topic}' key='{cfg.DataKey}'");
-                return;
-            }
+            if (hit == null) return;
 
-            _log.Info($"[ConfigWindow] Seed: rendered cached value '{hit.Value}'");
             _lastPreviewUtc = hit.TimestampUtc;
             _lastPreviewValue = hit.Value;
-            previewStatusText.Text =
-                $"Showing cached value from {FormatAge(DateTime.UtcNow - cachedAt)} ago - waiting for next packet...";
             ReRenderPreview();
         }
 
@@ -967,15 +948,10 @@ namespace MetadataDisplay.Client
                     return;
                 }
 
-                if (_metadataItem != null)
-                    LastXmlCache.Put(_metadataItem.FQID.ObjectId, xml);
+                _lastXml = xml;
 
                 if (_packetsSeen <= 3 || _packetsSeen % 50 == 0)
                     _log.Info($"[ConfigWindow] Packet #{_packetsSeen} bytes={xml.Length}");
-
-                // Learn aggregation (main + per-row independent sessions)
-                if (_learn.IsActive) _learn.Observe(xml);
-                foreach (var r in _additionalSeriesRows) if (r.LearnSession.IsActive) r.LearnSession.Observe(xml);
 
                 // Per-row extraction first - run regardless of whether the
                 // main series has a Data key, so additional series can still
@@ -1048,56 +1024,19 @@ namespace MetadataDisplay.Client
                 previewStatusText.Text = "Stream error: " + (ex?.Message ?? "(unknown)")));
         }
 
-        // ───────── Learn ─────────
+        // ───────── Picked-packet snapshot ─────────
 
-        private void OnStartLearn(object sender, RoutedEventArgs e)
-        {
-            if (_metadataItem == null)
-            {
-                MessageBox.Show(this, "Pick a metadata channel first.", "Learn",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            // Learn just toggles aggregation on the shared source; if no source yet, start one.
-            if (_source == null) StartSourceIfReady();
-
-            _learn.Reset();
-            _learn.Start();
-            learnStartButton.IsEnabled = false;
-            learnStopButton.IsEnabled = true;
-            learnStatus.Text = "Listening - waiting for first packet...";
-        }
-
-        private void OnStopLearn(object sender, RoutedEventArgs e)
-        {
-            _learn.Stop();
-            learnStartButton.IsEnabled = true;
-            learnStopButton.IsEnabled = false;
-        }
-
-        private void OnLearnUpdated(LearnSnapshot snap)
-        {
-            Dispatcher.BeginInvoke(new Action(() => ApplyLearnSnapshot(snap)));
-        }
-
-        // Last received learn snapshot - kept so we can re-filter the Data key dropdown
-        // whenever the user changes Topic / TopicMatchMode without needing a fresh packet.
+        // The most recently picked / imported packet's snapshot. Used to refill
+        // the Field combo when the operator switches Topic, and to pre-populate
+        // a freshly-added series row.
         private LearnSnapshot _lastSnapshot;
 
-        private void ApplyLearnSnapshot(LearnSnapshot snap)
+        // Populate Topic / Field / Source dropdowns from the picked packet.
+        // Preserves the currently typed Topic - the Pick/Import caller assigns
+        // the preferred topic afterwards.
+        private void ApplySnapshot(LearnSnapshot snap)
         {
             _lastSnapshot = snap;
-
-            int topicCount = snap.Topics.Count;
-            int keyCount = 0;
-            int srcCount = 0;
-            foreach (var t in snap.Topics)
-            {
-                keyCount += t.DataKeyExamples.Count;
-                foreach (var sv in t.SourceValues) srcCount += sv.Value.Count;
-            }
-            learnStatus.Text =
-                $"Captured {snap.PacketsReceived} packet(s) - {topicCount} topic(s), {keyCount} key(s), {srcCount} source value(s).";
 
             string currentTopic = topicCombo.Text;
             topicCombo.Items.Clear();
@@ -1112,7 +1051,7 @@ namespace MetadataDisplay.Client
             // Fan the snapshot out to additional-series rows so each row's
             // Topic / Source filter / Data key dropdowns get the same picks.
             foreach (var row in _additionalSeriesRows)
-                row.ApplyLearnSnapshot(snap);
+                row.ApplySnapshot(snap);
         }
 
         // Re-filters the Data key dropdown to keys observed for the supplied
@@ -1205,10 +1144,10 @@ namespace MetadataDisplay.Client
 
         private void ReExtractAndRender()
         {
-            // Pull the most recent XML from the cache and extract with the current
-            // form state so combo edits are reflected without waiting for a packet.
-            if (_metadataItem != null
-                && LastXmlCache.TryGet(_metadataItem.FQID.ObjectId, out var xml, out _))
+            // Re-extract from the most recent XML the window saw so combo edits
+            // reflect immediately, without waiting for the next live packet.
+            var xml = _lastXml;
+            if (!string.IsNullOrEmpty(xml))
             {
                 var cfg = BuildExtractorCfgFromUi();
                 if (!string.IsNullOrEmpty(cfg.DataKey))
@@ -1412,7 +1351,6 @@ namespace MetadataDisplay.Client
             row.OnChanged = ReconfigureLinePreview;
             row.OnRemove = r =>
             {
-                r.LearnSession.Stop();
                 _additionalSeriesRows.Remove(r);
                 additionalSeriesList.Children.Remove(r.RootExpander);
                 UpdateAddSeriesButtonState();
@@ -1420,32 +1358,38 @@ namespace MetadataDisplay.Client
                 ReconfigureLinePreview();
             };
             row.OnExtractorChanged = RebuildAdditionalExtractorSnapshots;
-            // Row-owned learn session needs the metadata source to be running
-            // before it'll receive any packets - this callback ensures that.
-            row.OnStartLearnRequested = () =>
+            // Per-row Pick packet: opens the same browser the main window uses,
+            // scoped to the configured channel. The picked packet only updates
+            // this row's dropdowns - the main series and other rows are not touched.
+            row.OnPickPacketRequested = (ownerWindow) =>
             {
                 if (_metadataItem == null)
                 {
-                    MessageBox.Show(this, "Pick a metadata channel first.", "Learn",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
-                    return false;
+                    MessageBox.Show(ownerWindow ?? this,
+                        "Pick a metadata channel first - the packet browser reads recordings from the selected channel.",
+                        "Pick packet", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return null;
                 }
-                if (_source == null) StartSourceIfReady();
-                return true;
+                try
+                {
+                    var dlg = new PacketHistoryDialog(_metadataItem) { Owner = ownerWindow ?? this };
+                    if (dlg.ShowDialog() != true) return null;
+                    return dlg.Snapshot;
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"[Row pick] dialog threw: {ex.Message}", ex);
+                    return null;
+                }
             };
-            // Per-row import: the row opens the same dialog the main window
-            // uses and consumes the snapshot for itself only. No channel
-            // requirement - the operator can paste a packet even before
-            // picking a metadata channel.
+            // Per-row Import packet: paste path. No channel requirement -
+            // the operator can paste a packet even before picking a channel.
             row.OnImportPacketRequested = (ownerWindow) =>
             {
                 try
                 {
                     var dlg = new PacketImportDialog { Owner = ownerWindow ?? this };
                     if (dlg.ShowDialog() != true) return null;
-                    if (dlg.Snapshot == null) return null;
-                    if (_metadataItem != null && !string.IsNullOrEmpty(dlg.ImportedXml))
-                        LastXmlCache.Put(_metadataItem.FQID.ObjectId, dlg.ImportedXml);
                     return dlg.Snapshot;
                 }
                 catch (Exception ex)
@@ -1456,9 +1400,10 @@ namespace MetadataDisplay.Client
             };
             _additionalSeriesRows.Add(row);
             additionalSeriesList.Children.Add(row.RootExpander);
-            // Pre-populate with the most recent learn snapshot so a new row
-            // gets the same dropdown content the main series has.
-            if (_lastSnapshot != null) row.ApplyLearnSnapshot(_lastSnapshot);
+            // Pre-populate dropdowns from the most recently picked/imported
+            // packet so a new row starts with the same suggestions the main
+            // series has.
+            if (_lastSnapshot != null) row.ApplySnapshot(_lastSnapshot);
             RebuildAdditionalExtractorSnapshots();
         }
 
@@ -1991,11 +1936,10 @@ namespace MetadataDisplay.Client
 
         // ───────── Packet import ─────────
 
-        // Opens the import dialog. On OK, applies the parsed snapshot to the
-        // main learn pipeline (so all dropdowns - main + fanned-out rows - get
-        // the imported topics/fields), auto-selects the first topic when the
-        // Topic combo is empty, and caches the imported XML so Inspect packet
-        // can show it without a live capture.
+        // Opens the import dialog. On OK, populates Topic / Field dropdowns
+        // from the pasted XML and selects the first topic so the operator
+        // sees a value immediately. Live packets that arrive afterwards keep
+        // refreshing the preview.
         private void OnImportPacket(object sender, RoutedEventArgs e)
         {
             try
@@ -2004,9 +1948,8 @@ namespace MetadataDisplay.Client
                 if (dlg.ShowDialog() != true) return;
                 if (dlg.Snapshot == null) return;
 
-                ApplyImportedPacket(dlg.Snapshot, dlg.ImportedXml,
-                    preferredTopic: PacketImportDialog.FirstTopic(dlg.Snapshot),
-                    statusPrefix: "Imported");
+                ApplyPickedPacket(dlg.Snapshot, dlg.ImportedXml,
+                    preferredTopic: PacketImportDialog.FirstTopic(dlg.Snapshot));
             }
             catch (Exception ex)
             {
@@ -2016,20 +1959,19 @@ namespace MetadataDisplay.Client
             }
         }
 
-        // ───────── Packet history (recordings) ─────────
+        // ───────── Pick packet (recordings) ─────────
 
-        // Opens the history browser scoped to the current metadata channel and
-        // applies the picked packet via the same path Import packet uses. The
-        // history dialog is self-contained: it spins up its own playback source
-        // and does not touch the live source / learn session that drives the
-        // preview, so reopening it later won't churn live subscriptions.
-        private void OnHistory(object sender, RoutedEventArgs e)
+        // Opens the Pick packet browser scoped to the current metadata channel
+        // and applies the picked packet. The dialog is self-contained: it spins
+        // up its own playback source and does not touch the live source driving
+        // the preview, so reopening it later won't churn live subscriptions.
+        private void OnPickPacket(object sender, RoutedEventArgs e)
         {
             if (_metadataItem == null)
             {
                 MessageBox.Show(this,
-                    "Pick a metadata channel first - the history browser reads recordings from the selected channel.",
-                    "History", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "Pick a metadata channel first - the packet browser reads recordings from the selected channel.",
+                    "Pick packet", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -2039,144 +1981,35 @@ namespace MetadataDisplay.Client
                 if (dlg.ShowDialog() != true) return;
                 if (dlg.Snapshot == null) return;
 
-                ApplyImportedPacket(dlg.Snapshot, dlg.ImportedXml,
-                    preferredTopic: dlg.PreferredTopic ?? PacketImportDialog.FirstTopic(dlg.Snapshot),
-                    statusPrefix: "Applied from history");
+                ApplyPickedPacket(dlg.Snapshot, dlg.ImportedXml,
+                    preferredTopic: dlg.PreferredTopic ?? PacketImportDialog.FirstTopic(dlg.Snapshot));
             }
             catch (Exception ex)
             {
-                _log.Error($"OnHistory threw: {ex.Message}", ex);
-                MessageBox.Show(this, "Could not open history:\n" + ex.Message, "History",
+                _log.Error($"OnPickPacket threw: {ex.Message}", ex);
+                MessageBox.Show(this, "Could not open Pick packet:\n" + ex.Message, "Pick packet",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        // Shared apply path for Import packet and History. Stops any in-flight
-        // learn so a stale capture can't overwrite the imported view, caches
-        // the XML so Inspect packet / preview re-extraction have something to
-        // work against, applies the snapshot to populate the dropdowns, and
-        // auto-selects the preferred topic when the operator hasn't typed one.
-        private void ApplyImportedPacket(LearnSnapshot snapshot, string xml, string preferredTopic, string statusPrefix)
+        // Shared apply path for Pick packet and Import packet. Seeds the
+        // window's last-XML buffer so the preview renders immediately, then
+        // populates the dropdowns and selects the picked packet's topic.
+        // The live source (if any) keeps overriding _lastXml as new packets
+        // arrive, so the preview keeps updating live afterwards.
+        private void ApplyPickedPacket(LearnSnapshot snapshot, string xml, string preferredTopic)
         {
             if (snapshot == null) return;
 
-            if (_learn.IsActive)
-            {
-                _learn.Stop();
-                learnStartButton.IsEnabled = true;
-                learnStopButton.IsEnabled = false;
-            }
+            if (!string.IsNullOrEmpty(xml))
+                _lastXml = xml;
 
-            if (_metadataItem != null && !string.IsNullOrEmpty(xml))
-                LastXmlCache.Put(_metadataItem.FQID.ObjectId, xml);
+            ApplySnapshot(snapshot);
 
-            ApplyLearnSnapshot(snapshot);
-
-            if (string.IsNullOrWhiteSpace(topicCombo.Text) && !string.IsNullOrEmpty(preferredTopic))
+            if (!string.IsNullOrEmpty(preferredTopic))
                 topicCombo.Text = preferredTopic;
 
-            learnStatus.Text = $"{statusPrefix}. {snapshot.Topics?.Count ?? 0} topic(s).";
             ReExtractAndRender();
-        }
-
-        // ───────── Packet inspector ─────────
-
-        private void OnInspectPacket(object sender, RoutedEventArgs e)
-        {
-            if (_metadataItem == null)
-            {
-                MessageBox.Show(this,
-                    "No packet captured yet. Pick a metadata channel and wait for the first packet.",
-                    "Inspect packet", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            // Try to find a recent packet matching the Topic the operator
-            // currently has selected so the dialog reflects their choice.
-            // Cameras interleave several topics, so the "latest" packet often
-            // doesn't match the selected one.
-            string xml = null;
-            bool fallback = false;
-            // Inspect uses Text directly: by the time the operator clicks the
-            // button, any pending SelectionChanged has long since settled and
-            // Text reflects the displayed Topic.
-            string selectedTopic = (topicCombo.Text ?? string.Empty).Trim();
-            Guid itemId = _metadataItem.FQID.ObjectId;
-
-            if (!string.IsNullOrEmpty(selectedTopic))
-            {
-                bool Matches(string candidate)
-                {
-                    if (string.IsNullOrEmpty(candidate)) return false;
-                    foreach (var msg in MetadataExtractor.Observe(candidate))
-                    {
-                        if (string.Equals(msg.Topic, selectedTopic, StringComparison.OrdinalIgnoreCase))
-                            return true;
-                    }
-                    return false;
-                }
-                if (LastXmlCache.TryGetMatching(itemId, Matches, out var matched, out _))
-                    xml = matched;
-            }
-            if (string.IsNullOrEmpty(xml))
-            {
-                if (LastXmlCache.TryGet(itemId, out var latest, out _))
-                {
-                    xml = latest;
-                    fallback = !string.IsNullOrEmpty(selectedTopic);
-                }
-            }
-
-            if (string.IsNullOrEmpty(xml))
-            {
-                MessageBox.Show(this,
-                    "No packet captured yet. Pick a metadata channel and wait for the first packet.",
-                    "Inspect packet", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            string pretty;
-            try
-            {
-                var filtered = MetadataExtractor.FilterHiddenTopics(xml);
-                pretty = XDocument.Parse(filtered).ToString(SaveOptions.None);
-            }
-            catch { pretty = xml; }
-
-            string title = string.IsNullOrEmpty(selectedTopic)
-                ? "Latest packet (XML)"
-                : (fallback
-                    ? $"Latest packet (XML) - no recent packet for topic '{selectedTopic}'"
-                    : $"Packet for topic '{selectedTopic}' (XML)");
-
-            var win = new Window
-            {
-                Title = title,
-                Width = 900,
-                Height = 700,
-                Owner = this,
-                Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x1E)),
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            };
-            var rtb = new RichTextBox
-            {
-                Background = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A)),
-                Foreground = new SolidColorBrush(Color.FromRgb(0xE6, 0xEA, 0xEC)),
-                BorderThickness = new Thickness(0),
-                FontFamily = new FontFamily("Consolas"),
-                FontSize = 12,
-                IsReadOnly = true,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            };
-            var para = new Paragraph { Margin = new Thickness(0) };
-            XmlHighlighter.HighlightInto(para, pretty);
-            rtb.Document = new System.Windows.Documents.FlowDocument(para)
-            {
-                PageWidth = 4000,
-            };
-            win.Content = rtb;
-            win.ShowDialog();
         }
 
         private static string DumpXmlContents(string xml)
@@ -2438,8 +2271,6 @@ namespace MetadataDisplay.Client
 
         private void Teardown()
         {
-            _learn.Stop();
-            foreach (var r in _additionalSeriesRows) r.LearnSession.Stop();
             StopSource();
             _ageTicker?.Stop();
             _ageTicker = null;
