@@ -30,14 +30,14 @@ Before the widget can show anything, the camera and the VMS need to be set up to
 - **Recording rule for the metadata channel** - in Management Client under **Rules**, make sure a rule records the metadata channel (either always-on, or on the same trigger as the corresponding video). The default recording rule typically covers cameras but not their metadata channels - check that the rule's device list includes the metadata items, otherwise nothing ends up in the archive even though recording is "enabled" on the channel.
 - **User permissions** - the Smart Client user needs **Live** and **Playback** rights on the metadata channel. Without these the channel won't appear in the configuration's channel picker, or the widget will sit on **Waiting for data...** forever.
 
-If the configuration's **Inspect packet...** button shows fresh XML and Learn discovers topics, prerequisites are met. If it stays empty, the channel is not flowing - fix the camera or rule before tuning the widget.
+If the configuration's **Pick packet...** button opens a list of recorded packets, prerequisites are met. If the list is empty, the channel is not flowing or its recordings are not reaching the archive - fix the camera or rule before tuning the widget.
 
 ## Quick Start
 
 1. In **Setup** mode, drag a **Metadata Display** view item into a slot
 2. Click **Open configuration...**
 3. **Select channel...** -> pick a metadata channel
-4. Click **Start Learn** to discover the topics and data keys flowing through the stream, then pick from the dropdowns.
+4. Click **Pick packet...** to load a recent recorded packet from the channel. The Topic and Field dropdowns populate from it and the picked row's topic is auto-selected. (No recordings? Use **Import packet...** to paste an XML sample instead.)
 5. Choose a render type (Lamp / Number / Gauge / Text / Line Chart / Table / Trend / Base64 Image), tune the options, hit **Save**
 6. Switch to **Live** - the widget starts displaying as soon as a matching packet arrives.
 
@@ -167,40 +167,35 @@ Renders an image carried in the metadata value as a base64-encoded string. Use i
 
 The "What to read" section is the bridge from the raw stream to a single value:
 
-- **Topic** - the ONVIF topic to listen for. Match is exact - the camera's topic must equal the configured value letter for letter. Pick a topic from the dropdown (populated by **Start Learn**) or paste one in directly.
+- **Topic** - the ONVIF topic to listen for. Match is exact - the camera's topic must equal the configured value letter for letter. Pick a topic from the dropdown (populated by **Pick packet** or **Import packet**) or paste one in directly.
 - **Field** - the `tt:SimpleItem Name` to pull the value from. The dropdown filters to only the fields seen under the currently-selected Topic, so changing the Topic refreshes the available fields.
-- **Inspect packet...** - opens a syntax-highlighted XML viewer of the most recent metadata packet from the channel, so you can see exactly what the camera is emitting and which Topic / Field combinations are available.
-- **Import packet...** - paste an XML packet from a vendor SDK sample, a saved Inspect packet copy, or another configured widget. Populates the Topic / Field / Source filter dropdowns without waiting for a live channel.
-- **History...** - browse recorded packets from the selected channel (last 1h / 6h / 24h / 7d) and apply one with a click. Useful for sparse event channels where Start Learn would sit idle waiting for the next message.
+- **Pick packet...** - browse recorded packets from the selected channel (last 1h / 6h / 24h / 7d) and apply one with a click. The selected packet's topic is set on Topic, and Topic / Field / Source filter dropdowns populate from its contents.
+- **Import packet...** - paste an XML packet from a vendor SDK sample, an exported packet from another widget, or any other source. Same effect as Pick packet, no channel required.
 - **Source filter** (advanced, under the **Advanced** expander) - constrain to specific Source SimpleItem `name=value` pairs (e.g. `port=1` for I/O input port 1, or `objectid=42` for one tracked object). Multiple pairs can be combined with semicolons.
 
-### Learn
+### Pick packet
 
-Click **Start Learn** to subscribe to the live stream and watch the discovered topics + data keys populate the dropdowns. Stop when you have what you need. The data-key dropdown is filtered to only the keys observed under the currently-selected topic, so changing the topic refreshes the available keys.
-
-### Import packet
-
-When you already have a sample XML packet (from the vendor's documentation, an **Inspect packet...** copy from a working widget, or any other source) you can skip the live capture entirely. Click **Import packet...**, paste the XML, and the dialog parses it and reports `Parsed N topic(s), M field(s), K source value(s)`. Click **Import** to apply.
-
-- The first topic in the packet is auto-selected when the Topic field is empty.
-- The imported XML is cached as the most recent packet, so **Inspect packet...** shows the same payload immediately afterwards.
-- For multi-series Line Chart widgets, each Additional series row has its own **Import packet...** button so you can wire each series from a different sample without disturbing the others. The main button fans its snapshot out to every row.
-
-### History
-
-When a metadata channel publishes events sparsely (loitering, scheduled audit logs, IO triggers tied to physical actions), **Start Learn** can sit idle for hours waiting for the next message. **History...** sidesteps that wait by reading the recordings instead of the live stream.
-
-Click **History...** to open the recorded-packets browser:
+The fastest path on any channel that has metadata recordings. Click **Pick packet...** to open the recorded-packets browser:
 
 - **Lookback** - pick **Last 1 hour**, **6 hours**, **24 hours** (default), or **7 days**. Click **Reload** after changing it.
 - **Search** - filters the list by topic, field name, or value as you type.
 - **Packet list** - one row per NotificationMessage in the recordings, newest first. Columns: capture time (UTC), topic, and a summary of the message's Source and Data SimpleItems (e.g. `[VideoSource=1]; speed_kmh=43`).
 - **Preview** - clicking a row syntax-highlights the full packet XML in the right pane so you can see exactly what arrived at that moment.
-- **Use selected packet** - applies the picked packet through the same path as **Import packet...**: Topic / Field / Source filter dropdowns populate, the chosen row's topic auto-selects when the Topic field is empty, and the XML is cached so **Inspect packet...** shows the same payload immediately afterwards. Double-click a row to apply without using the button.
+- **Use selected packet** - applies the picked packet: the row's topic is set on Topic, the Field / Source filter dropdowns populate from the packet's contents, and the configuration window's live preview re-extracts immediately. Double-click a row to apply without using the button.
 
 The dialog runs against the channel's recordings via its own playback source, so it does not disturb the live preview that's already streaming behind the configuration window. A hard cap of 10000 rows protects the dialog from very noisy channels; if you hit it, narrow the lookback or use the search box to find the message you want.
 
-Prerequisites are the same as Playback mode: metadata recording must be enabled on the channel and a recording rule must cover it (see [Prerequisites](#prerequisites)). If History opens empty for a channel you know publishes events, recording isn't reaching the archive.
+For multi-series Line Chart widgets, each Additional series row has its own **Pick packet...** button (alongside **Import packet...**) so you can wire each series from a different sample without disturbing the others.
+
+Prerequisites are the same as Playback mode: metadata recording must be enabled on the channel and a recording rule must cover it (see [Prerequisites](#prerequisites)). If Pick packet opens empty for a channel you know publishes events, recording isn't reaching the archive.
+
+### Import packet
+
+When the channel has no recordings yet, or when you have a sample XML packet from the vendor's documentation, click **Import packet...**, paste the XML, and the dialog parses it and reports `Parsed N topic(s), M field(s), K source value(s)`. Click **Import** to apply.
+
+- The first topic in the packet is selected on Topic.
+- The imported XML seeds the configuration window's live preview so the widget renders right away; subsequent live packets keep refreshing it.
+- For multi-series Line Chart widgets, each Additional series row has its own **Import packet...** button so you can wire each series from a different sample without disturbing the others.
 
 ## Title and Density
 
@@ -215,7 +210,7 @@ User-set sizes (Title font size, Gauge value font size, Text font size, Lamp ico
 
 The configuration window has a live preview pane on the right. As soon as a metadata packet matches your Topic + Data key, the preview shows the same widget that will render in the view. Until a value arrives, the preview shows the same **Waiting for data...** indicator that the live view uses, so what you see in Setup matches what users will see at runtime.
 
-If you change the Topic or Data key, the preview re-runs against the most recent cached XML, so you don't have to wait for a fresh packet to validate the choice. The Line Chart and Table previews are sized at 16:9 inside the configuration window so the rendered shape matches the runtime pane.
+**Pick packet** and **Import packet** seed the preview immediately from the picked/pasted XML so you see a value before the next live packet arrives. After that, every live packet on the channel keeps re-rendering the preview. Changing the Topic or Data key re-extracts against the last packet seen, so you don't have to wait for a fresh one to validate the choice. The Line Chart and Table previews are sized at 16:9 inside the configuration window so the rendered shape matches the runtime pane.
 
 ## Stale Handling
 
@@ -272,9 +267,9 @@ The plugin stores all settings as MIP item properties on the view item. No exter
 
 | Problem | Fix |
 |---|---|
-| "Waiting for data..." never goes away | Check the channel is recording metadata. Use Inspect packet... to see what topics are flowing. Confirm Topic match mode + Data key are correct. |
+| "Waiting for data..." never goes away | Check the channel is recording metadata. Use Pick packet... to see what topics are in the recordings. Confirm Topic and Data key are correct. |
 | Plugin doesn't appear in Setup | Check `MIPPlugins\MetadataDisplay\` exists. Unblock the ZIP if installed manually. |
-| Wrong value shown | Topic / Data key mismatch (case-insensitive but the names must match). Use Learn to pick from the actual stream. |
+| Wrong value shown | Topic / Data key mismatch (case-insensitive but the names must match). Use Pick packet... to copy them from the actual recorded packets. |
 | Gauge value clipped or off-center | Set the Scale Min/Max to bracket your real value range. Reduce Title font size if it's eating the canvas. |
 | Line Chart starts empty for a wide window | Recorded metadata is required for backfill. Confirm a recording rule covers the metadata channel (see Prerequisites). Without recordings the chart still works, it just fills only with new live samples. |
 | Channel does not appear in the configuration channel picker | Either the metadata stream is not enabled on the camera, the user has no rights on the channel, or the channel is in a folder you cannot browse. See Prerequisites. |
