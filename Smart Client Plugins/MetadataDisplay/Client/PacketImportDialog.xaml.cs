@@ -8,11 +8,9 @@ using CommunitySDK;
 namespace MetadataDisplay.Client
 {
     // Editable XML import dialog. Operator pastes a metadata packet, sees it
-    // syntax-highlighted live, and on Import we feed the parsed payload to a
-    // transient MetadataLearnSession to produce a LearnSnapshot. The caller
-    // (configuration window / additional-series row) applies that snapshot
-    // through the same path Start Learn uses, so the Topic / Field / Source
-    // dropdowns populate without waiting for a live packet.
+    // syntax-highlighted live, and on Import we build a LearnSnapshot from
+    // the parsed payload. The caller (configuration window / additional-series
+    // row) feeds the snapshot into the Topic / Field / Source dropdowns.
     public partial class PacketImportDialog : Window
     {
         private static readonly PluginLog _log = new PluginLog("MetadataDisplay");
@@ -31,9 +29,9 @@ namespace MetadataDisplay.Client
         // shape produced by Start Learn.
         internal LearnSnapshot Snapshot { get; private set; }
 
-        // The raw XML the user imported (post pretty-print if they used it).
-        // The caller can stash this in the LastXmlCache so Inspect packet
-        // shows the same payload that drove the import.
+        // The raw XML the user imported. The caller seeds the configuration
+        // window's preview re-extract buffer with this so the preview renders
+        // the imported packet right away.
         public string ImportedXml { get; private set; }
 
         public PacketImportDialog()
@@ -105,11 +103,7 @@ namespace MetadataDisplay.Client
                 return;
             }
 
-            var transient = new MetadataLearnSession();
-            transient.Start();
-            transient.Observe(xml);
-            transient.Stop();
-            var snap = transient.Snapshot();
+            var snap = LearnSnapshot.FromXml(xml);
 
             int topicCount = snap.Topics?.Count ?? 0;
             int keyCount = 0;

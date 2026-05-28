@@ -258,34 +258,23 @@
                     <TextBlock Text="What to read" Style="{StaticResource SectionTitle}"/>
                     <Border Style="{StaticResource SectionContainer}">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <Button x:Name="learnStartButton" Content="Start Learn"
-                                        Margin="0,0,8,0" Click="OnStartLearn"/>
-                                <Button x:Name="learnStopButton" Content="Stop"
-                                        Margin="0,0,8,0" IsEnabled="False" Click="OnStopLearn"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button x:Name="pickPacketButton" Content="Pick packet..."
+                                        Margin="0,0,8,0" Click="OnPickPacket"
+                                        ToolTip="Browse recorded packets from the selected channel and apply one to populate Topic and Field."/>
                                 <Button x:Name="importPacketButton" Content="Import packet..."
-                                        Margin="0,0,8,0" Click="OnImportPacket"
-                                        ToolTip="Paste an XML packet to populate Topics and Fields without listening live."/>
-                                <Button x:Name="historyButton" Content="History..."
-                                        Margin="0,0,0,0" Click="OnHistory"
-                                        ToolTip="Browse recorded metadata packets from the selected channel and apply one without listening live."/>
+                                        Margin="0,0,0,0" Click="OnImportPacket"
+                                        ToolTip="Paste an XML packet to populate Topic and Field."/>
                             </StackPanel>
-                            <TextBlock x:Name="learnStatus" Margin="0,0,0,10"
-                                       Style="{StaticResource HintText}" TextWrapping="Wrap"
-                                       Text="Idle."/>
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Topic" Style="{StaticResource FieldLabel}"/>
                                 <ComboBox Grid.Column="1" x:Name="topicCombo" IsEditable="True"
                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}, TargetNullValue='(no topic configured)', FallbackValue='(no topic configured)'}"
                                           ToolTipService.ShowOnDisabled="True"/>
-                                <Button Grid.Column="2" x:Name="inspectPacketButton" Content="Inspect packet..."
-                                        Margin="8,0,0,0" Click="OnInspectPacket"
-                                        ToolTip="Open a recent XML packet for the selected Topic"/>
                             </Grid>
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>

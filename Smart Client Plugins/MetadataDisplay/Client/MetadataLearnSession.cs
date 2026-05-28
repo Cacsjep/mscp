@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace MetadataDisplay.Client
 {
+    // Observations rolled up per topic from a single picked / imported packet.
+    // The configuration window uses this to populate the Topic / Field /
+    // Source filter dropdowns from a representative packet.
     internal sealed class TopicObservation
     {
         public string Topic;
@@ -11,63 +14,31 @@ namespace MetadataDisplay.Client
         public int Count;
     }
 
+    // Carrier for a single packet's observations - what gets handed off from
+    // PacketHistoryDialog / PacketImportDialog to the configuration window.
     internal sealed class LearnSnapshot
     {
         public int PacketsReceived;
         public IReadOnlyList<TopicObservation> Topics;
-    }
 
-    // Aggregator only: takes XML packets and accumulates topic/source/key observations.
-    // The live source is owned by the configuration window so a single subscription
-    // feeds both preview and learn.
-    internal sealed class MetadataLearnSession
-    {
-        private readonly object _gate = new object();
-        private readonly Dictionary<string, TopicObservation> _byTopic = new Dictionary<string, TopicObservation>(StringComparer.Ordinal);
-        private int _packets;
-
-        public bool IsActive { get; private set; }
-        public int PacketsReceived => _packets;
-
-        public event Action<LearnSnapshot> Updated;
-
-        public void Start()
+        // Build a snapshot from a single XML packet. Walks every
+        // NotificationMessage and groups by Topic. Empty / unparseable input
+        // yields an empty snapshot rather than throwing so callers can use
+        // the same null-check / Topics.Count gate either way.
+        public static LearnSnapshot FromXml(string xml)
         {
-            IsActive = true;
-        }
-
-        public void Stop()
-        {
-            IsActive = false;
-        }
-
-        public void Reset()
-        {
-            lock (_gate)
+            var byTopic = new Dictionary<string, TopicObservation>(StringComparer.Ordinal);
+            int packets = 0;
+            if (!string.IsNullOrEmpty(xml))
             {
-                _byTopic.Clear();
-                _packets = 0;
-            }
-            Updated?.Invoke(Snapshot());
-        }
-
-        public void Observe(string xml)
-        {
-            if (!IsActive || string.IsNullOrEmpty(xml)) return;
-
-            _packets++;
-            bool changed = false;
-
-            foreach (var msg in MetadataExtractor.Observe(xml))
-            {
-                if (string.IsNullOrEmpty(msg.Topic)) continue;
-                lock (_gate)
+                packets = 1;
+                foreach (var msg in MetadataExtractor.Observe(xml))
                 {
-                    if (!_byTopic.TryGetValue(msg.Topic, out var obs))
+                    if (string.IsNullOrEmpty(msg.Topic)) continue;
+                    if (!byTopic.TryGetValue(msg.Topic, out var obs))
                     {
                         obs = new TopicObservation { Topic = msg.Topic };
-                        _byTopic[msg.Topic] = obs;
-                        changed = true;
+                        byTopic[msg.Topic] = obs;
                     }
                     obs.Count++;
 
@@ -77,41 +48,20 @@ namespace MetadataDisplay.Client
                         {
                             set = new HashSet<string>(StringComparer.Ordinal);
                             obs.SourceValues[src.Key] = set;
-                            changed = true;
                         }
-                        if (set.Add(src.Value)) changed = true;
+                        set.Add(src.Value);
                     }
                     foreach (var dk in msg.Data)
                     {
                         if (!obs.DataKeyExamples.ContainsKey(dk.Key))
-                        {
                             obs.DataKeyExamples[dk.Key] = dk.Value;
-                            changed = true;
-                        }
                     }
                 }
             }
 
-            if (changed || (_packets % 5) == 0)
-                Updated?.Invoke(Snapshot());
-        }
-
-        public LearnSnapshot Snapshot()
-        {
-            lock (_gate)
-            {
-                var copy = new List<TopicObservation>(_byTopic.Count);
-                foreach (var kv in _byTopic)
-                {
-                    var clone = new TopicObservation { Topic = kv.Value.Topic, Count = kv.Value.Count };
-                    foreach (var sv in kv.Value.SourceValues)
-                        clone.SourceValues[sv.Key] = new HashSet<string>(sv.Value, StringComparer.Ordinal);
-                    foreach (var dk in kv.Value.DataKeyExamples)
-                        clone.DataKeyExamples[dk.Key] = dk.Value;
-                    copy.Add(clone);
-                }
-                return new LearnSnapshot { PacketsReceived = _packets, Topics = copy };
-            }
+            var list = new List<TopicObservation>(byTopic.Count);
+            foreach (var kv in byTopic) list.Add(kv.Value);
+            return new LearnSnapshot { PacketsReceived = packets, Topics = list };
         }
     }
 }

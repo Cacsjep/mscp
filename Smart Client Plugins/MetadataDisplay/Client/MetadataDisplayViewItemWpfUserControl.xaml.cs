@@ -1350,9 +1350,6 @@ namespace MetadataDisplay.Client
                     return;
                 }
 
-                if (_metadataItem != null)
-                    LastXmlCache.Put(_metadataItem.FQID.ObjectId, xml);
-
                 // Multi-series line chart: walk the XML once and dispatch every
                 // matching series in a single pass. Other render types fall
                 // through to the legacy single-key TryExtract path below.

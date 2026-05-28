@@ -18,15 +18,15 @@ using VideoOS.Platform.Data;
 
 namespace MetadataDisplay.Client
 {
-    // History browser for recorded metadata packets. Opens a MetadataPlaybackSource
-    // on the supplied channel, walks a [now-lookback, now] window in chunks of 200,
-    // and lists one row per NotificationMessage so the operator can filter by topic
-    // or data and apply a packet without waiting for a live capture.
+    // Browser for recorded metadata packets. Opens a MetadataPlaybackSource on
+    // the supplied channel, walks a [now-lookback, now] window in chunks of
+    // 200, and lists one row per NotificationMessage so the operator can
+    // filter by topic or data and pick a packet without waiting for live.
     //
-    // The dialog is self-contained: it does not touch the configuration window's
-    // live source, learn session, or LastXmlCache. On "Use selected", the caller
-    // gets a LearnSnapshot + raw XML mirroring PacketImportDialog's contract so
-    // the same apply path can be reused.
+    // The dialog is self-contained: it does not touch the configuration
+    // window's live source. On "Use selected", the caller gets a
+    // LearnSnapshot + raw XML mirroring PacketImportDialog's contract so the
+    // same apply path can be reused.
     public partial class PacketHistoryDialog : Window
     {
         private static readonly PluginLog _log = new PluginLog("MetadataDisplay");
@@ -56,8 +56,7 @@ namespace MetadataDisplay.Client
             InitializeComponent();
             packetGrid.ItemsSource = _visibleRows;
             headerText.Text =
-                $"Browse recorded metadata packets from '{channel.Name}'. " +
-                "Select a packet to preview its XML, then click \"Use selected packet\" to populate Topics and Fields.";
+                $"Pick a recorded packet from '{channel.Name}' to populate Topic and Field.";
             Loaded += (s, e) => ReloadAsync();
             Closed += OnDialogClosed;
             searchBox.TextChanged += OnSearchChanged;
@@ -340,11 +339,7 @@ namespace MetadataDisplay.Client
 
             try
             {
-                var transient = new MetadataLearnSession();
-                transient.Start();
-                transient.Observe(row.Xml);
-                transient.Stop();
-                var snap = transient.Snapshot();
+                var snap = LearnSnapshot.FromXml(row.Xml);
                 if (snap?.Topics == null || snap.Topics.Count == 0)
                 {
                     statusText.Text = "Selected packet contains no NotificationMessage topics.";
