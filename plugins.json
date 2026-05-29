@@ -201,6 +201,12 @@
     "displayName": "Auto Exporter Plugin",
     "path": "Admin Plugins/AutoExporter",
     "category": "AdminPlugin",
-    "description": "Scheduled XProtect / AVI exports as a rule action with ring-buffer storage, manual Run Now, and live progress"
+    "description": "Scheduled XProtect / AVI exports as a rule action with ring-buffer storage, manual Run Now, and live progress",
+    "extraProjects": [
+      "Admin Plugins/AutoExporter/AutoExporterHelper/AutoExporterHelper.csproj"
+    ],
+    "extraStagingDirs": [
+      "Admin Plugins/AutoExporter/AutoExporterHelper/bin/Release/net48"
+    ]
   }
 ]

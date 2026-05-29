@@ -18,7 +18,6 @@ namespace AutoExporter
         internal static readonly Guid PluginId             = new Guid("BB8298C5-8877-4073-BE24-68F67DE4694D");
         internal static readonly Guid ExecutionsKindId     = new Guid("453DF150-37CB-408B-B919-66EA1FCE4332");
         internal static readonly Guid StatusKindId         = new Guid("D13DFED2-A9DE-4E01-A615-ED2AE502FCFA");
-        internal static readonly Guid JobsFolderKindId     = new Guid("FB28977B-2AF2-47F1-A49F-445C7A79ED18");
         internal static readonly Guid JobKindId            = new Guid("1425AA67-4D80-42BA-8B1B-15FA60B3331C");
         internal static readonly Guid BackgroundPluginId   = new Guid("BA8ABBB6-7F34-477B-925C-B92FC20D8635");
 
@@ -29,7 +28,6 @@ namespace AutoExporter
 
         // Fixed FQID.ObjectIds for the singleton items so they round-trip deterministically.
         internal static readonly Guid ExecutionsSingletonId    = new Guid("CFAFE824-6071-45FB-8B26-510AB392702D");
-        internal static readonly Guid JobsFolderSingletonId    = new Guid("3E6172BE-19B6-487B-AAF0-F8006FA2E636");
         internal static readonly Guid StatusSingletonId        = new Guid("6778FEF5-3F53-4342-842E-7D2B11995F9F");
 
         private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
@@ -130,21 +128,12 @@ namespace AutoExporter
                         null),
 
                     new ItemNode(
-                        JobsFolderKindId, Guid.Empty,
+                        JobKindId, Guid.Empty,
+                        "Job", _folderIcon,
                         "Jobs", _folderIcon,
-                        "Jobs", _folderIcon,
-                        Category.Text, true, ItemsAllowed.One,
-                        new JobsFolderItemManager(JobsFolderKindId),
-                        new List<ItemNode>
-                        {
-                            new ItemNode(
-                                JobKindId, JobsFolderKindId,
-                                "Job", _jobIcon,
-                                "Jobs", _jobIcon,
-                                Category.Text, true, ItemsAllowed.Many,
-                                new JobItemManager(JobKindId),
-                                null)
-                        })
+                        Category.Text, true, ItemsAllowed.Many,
+                        new JobItemManager(JobKindId),
+                        null)
                 };
                 return _itemNodes;
             }

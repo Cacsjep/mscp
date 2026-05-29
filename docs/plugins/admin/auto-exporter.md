@@ -13,9 +13,9 @@ XProtect has no native automated export. This plugin adds it: configure jobs (ca
 
 1. Open the **Management Client**
 2. Navigate to the **Auto Exporter** node in the sidebar
-3. Right-click **Jobs** → Create New… (creates the folder once)
-4. Right-click the **Jobs** folder → Create New… to add a job. Configure name, cameras, format, time range, storage path, and MAX GB / MAX TIME.
-5. Open **Executions** → click **Run Now ▼** to test, or build a Rule using **Execute Auto Export Job** as the action.
+3. Right-click **Jobs** → Create New… for each job. Configure name, cameras, format, time range, storage path, and MAX GB / MAX TIME. Click **Verify on ES** next to Browse to confirm the Event Server can reach the path.
+4. Open **Executions** → click **Run Now ▼** to test, or build a Rule using **Execute Auto Export Job** as the action.
+5. Open **Status** for a live per-job dashboard probed from the Event Server.
 
 ## Tree layout
 
@@ -23,7 +23,7 @@ XProtect has no native automated export. This plugin adds it: configure jobs (ca
 Auto Exporter
 ├── Status      (singleton — per-job storage dashboard: health, usage, free disk)
 ├── Executions  (singleton — run history, Run Now, live progress)
-└── Jobs
+└── Jobs        (category — right-click to Create New… each job)
       ├── Nightly Lobby
       └── Weekly Parking
 ```

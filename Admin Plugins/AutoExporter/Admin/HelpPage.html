@@ -25,10 +25,10 @@
 
 <h2>Setup</h2>
 <ol>
-  <li>Open <strong>Jobs</strong> (right-click → <em>Create New…</em> the first time to create the folder, then right-click the folder → <em>Create New…</em> for each job).</li>
-  <li>For each job: name, cameras / groups, format, time range, and the <strong>storage path + MAX GB / MAX TIME</strong> for that job.</li>
+  <li>Right-click <strong>Jobs</strong> in the sidebar → <em>Create New…</em> for each export job.</li>
+  <li>For each job: name, cameras / groups, format, time range, and the <strong>storage path + MAX GB / MAX TIME</strong>. Use <em>Verify on ES</em> to confirm the Event Server can reach the path.</li>
   <li>Open <strong>Executions</strong> and click <em>Run Now ▼</em> to test a job, or build a XProtect Rule using the <strong>Execute Auto Export Job</strong> action.</li>
-  <li>Open <strong>Status</strong> for a per-job dashboard of storage health (path reachable? quota %, free disk, oldest run, etc.).</li>
+  <li>Open <strong>Status</strong> for a per-job dashboard of storage health (path reachable from the Event Server? quota %, free disk, oldest run, etc.).</li>
 </ol>
 
 <div class="warn">
@@ -89,6 +89,9 @@
 
 <h2>Concurrency</h2>
 <p>If a rule re-triggers a job while the previous run is still active, the new trigger is <em>skipped</em>, an entry is added to the Executions log, and the Failed event is fired. This prevents disk/IO pile-ups.</p>
+
+<h2>Architecture note</h2>
+<p>Milestone's export APIs (<code>DBExporter</code> / <code>AVIExporter</code>) refuse to run in the Event Server's restricted <em>Service</em> environment. The plugin solves this by spawning <code>AutoExporterHelper.exe</code> next to the plugin DLL — the helper hosts a full standalone SDK environment, logs in to the management server, runs the export, and reports back via stderr + a result JSON. The helper inherits the Event Server service account's credentials, so the same camera-read permissions apply.</p>
 
 <h2>Troubleshooting</h2>
 <ul>

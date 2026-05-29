@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Windows.Forms;
 using VideoOS.Platform;
 using VideoOS.Platform.Admin;
+using VideoOS.Platform.Data;
 
 namespace AutoExporter.Admin
 {
@@ -15,6 +18,63 @@ namespace AutoExporter.Admin
 
         public override void Init() { }
         public override void Close() { ReleaseUserControl(); }
+
+        #region Rules-engine event registration (top-level ItemManager)
+
+        public override Collection<EventGroup> GetKnownEventGroups(CultureInfo culture)
+        {
+            return new Collection<EventGroup>
+            {
+                new EventGroup
+                {
+                    ID = AutoExporterDefinition.EventGroupId,
+                    Name = "Auto Exporter"
+                }
+            };
+        }
+
+        public override Collection<EventType> GetKnownEventTypes(CultureInfo culture)
+        {
+            var sourceKinds = new List<Guid> { AutoExporterDefinition.JobKindId };
+            return new Collection<EventType>
+            {
+                new EventType
+                {
+                    ID = AutoExporterDefinition.EvtJobSucceededId,
+                    Message = "Auto Export: Job Succeeded",
+                    GroupID = AutoExporterDefinition.EventGroupId,
+                    StateGroupID = AutoExporterDefinition.StateGroupId,
+                    State = "Success",
+                    DefaultSourceKind = AutoExporterDefinition.JobKindId,
+                    SourceKinds = sourceKinds
+                },
+                new EventType
+                {
+                    ID = AutoExporterDefinition.EvtJobFailedId,
+                    Message = "Auto Export: Job Failed",
+                    GroupID = AutoExporterDefinition.EventGroupId,
+                    StateGroupID = AutoExporterDefinition.StateGroupId,
+                    State = "Failed",
+                    DefaultSourceKind = AutoExporterDefinition.JobKindId,
+                    SourceKinds = sourceKinds
+                }
+            };
+        }
+
+        public override Collection<StateGroup> GetKnownStateGroups(CultureInfo culture)
+        {
+            return new Collection<StateGroup>
+            {
+                new StateGroup
+                {
+                    ID = AutoExporterDefinition.StateGroupId,
+                    Name = "Auto Export Status",
+                    States = new[] { "Success", "Failed" }
+                }
+            };
+        }
+
+        #endregion
 
         public override UserControl GenerateDetailUserControl()
         {

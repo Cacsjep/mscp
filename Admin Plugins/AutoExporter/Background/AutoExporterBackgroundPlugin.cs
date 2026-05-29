@@ -206,19 +206,11 @@ namespace AutoExporter.Background
 
             var runFolder = Path.Combine(storage, rangeEndUtc.ToLocalTime().ToString("dd.MM.yyyy_HHmm"));
 
-            List<Item> cameras;
-            try { cameras = ResolveCameras(job); }
-            catch (Exception ex)
+            var targets = JobUserControl.ReadTargets(job);
+            if (targets.Count == 0)
             {
                 FinishFailure(job, triggeringEvent, triggerSource, run, startedUtc, rangeStartUtc, rangeEndUtc, format,
-                    "Failed to resolve cameras: " + ex.Message);
-                return;
-            }
-
-            if (cameras.Count == 0)
-            {
-                FinishFailure(job, triggeringEvent, triggerSource, run, startedUtc, rangeStartUtc, rangeEndUtc, format,
-                    "No cameras resolved from job configuration");
+                    "No cameras / groups configured on this job");
                 return;
             }
 
@@ -231,18 +223,30 @@ namespace AutoExporter.Background
                 Password      = GetProp(job, "Password", ""),
                 IncludePlayer = GetProp(job, "IncludePlayer", "Yes") != "No",
                 IncludeAudio  = GetProp(job, "IncludeAudio", "Yes") != "No",
-                Cameras       = cameras,
+                Targets       = targets.Select(t => new JobTargetSpec
+                {
+                    Kind     = t.Kind == JobTargetKind.Group ? "Group" : "Camera",
+                    ObjectId = t.ObjectId,
+                    Name     = t.Name
+                }).ToList(),
                 RangeStartUtc = rangeStartUtc,
                 RangeEndUtc   = rangeEndUtc,
                 OutputFolder  = runFolder
             };
 
+            string serverUri = GetServerUri();
+            _log.Info(
+                $"Job started: name='{job.Name}' runId={run.RunId} trigger={triggerSource} " +
+                $"format={cfg.Format} encrypt={cfg.Encrypt} targets={cfg.Targets.Count} " +
+                $"range={rangeStartUtc:O}->{rangeEndUtc:O} outputFolder='{runFolder}' serverUri='{serverUri}'");
+
             BroadcastProgress(run.RunId, cfg, 0, 0, "");
 
-            int total = cameras.Count;
+            int targetCount = targets.Count;
             Action<int, int, string> onProgress = (camIdx, pct, camName) =>
             {
-                int overall = (int)(((double)camIdx + (pct / 100.0)) / total * 100);
+                int denom = Math.Max(targetCount, camIdx + 1);
+                int overall = (int)(((double)camIdx + (pct / 100.0)) / denom * 100);
                 if (overall < 0) overall = 0;
                 if (overall > 100) overall = 100;
                 BroadcastProgress(run.RunId, cfg, overall, camIdx, camName);
@@ -251,7 +255,7 @@ namespace AutoExporter.Background
             ExportRunResult result;
             try
             {
-                result = _exporter.Run(cfg, onProgress, run.Cts.Token);
+                result = _exporter.Run(cfg, serverUri, onProgress, run.Cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -277,11 +281,11 @@ namespace AutoExporter.Background
                 CameraCount   = result.CameraCount,
                 BytesWritten  = result.BytesWritten,
                 OutputFolder  = runFolder,
-                CameraNames   = cameras.Select(c => c.Name).ToList()
+                CameraNames   = result.CameraNames ?? new List<string>()
             };
 
             AppendExecutionAndBroadcast(record);
-            BroadcastProgress(run.RunId, cfg, 100, total - 1, "");
+            BroadcastProgress(run.RunId, cfg, 100, Math.Max(0, record.CameraCount - 1), "");
 
             if (result.Success)
             {
@@ -318,76 +322,18 @@ namespace AutoExporter.Background
             FireFailedEvent(job, triggeringEvent, error);
         }
 
-        // ─── Camera resolution (cameras + camera groups) ──
+        // Camera resolution moved to AutoExporterHelper.exe — the Service env can't
+        // call ExportManager APIs, so the helper does both the SDK init AND the
+        // camera/group resolution in its own standalone environment.
 
-        private List<Item> ResolveCameras(Item job)
+        private static string GetServerUri()
         {
-            var targets = JobUserControl.ReadTargets(job);
-            if (targets.Count == 0) return new List<Item>();
-
-            var seen = new HashSet<Guid>();
-            var result = new List<Item>();
-
-            ServerId serverId = null;
-            try { serverId = EnvironmentManager.Instance.MasterSite?.ServerId; } catch { }
-
-            foreach (var t in targets)
+            try
             {
-                try
-                {
-                    // Both cameras and groups live in Kind.Camera. Groups are folder-type items
-                    // with FolderType != No; GetChildren() returns the member cameras.
-                    var item = Configuration.Instance.GetItem(serverId, t.ObjectId, Kind.Camera);
-                    if (item == null) continue;
-
-                    bool isGroup = item.FQID != null && item.FQID.FolderType != FolderType.No;
-                    if (isGroup)
-                    {
-                        foreach (var child in FlattenCameras(item))
-                        {
-                            if (seen.Add(child.FQID.ObjectId)) result.Add(child);
-                        }
-                    }
-                    else
-                    {
-                        if (seen.Add(item.FQID.ObjectId)) result.Add(item);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"Resolve failed for {t.Kind} {t.ObjectId} (job '{job.Name}'): {ex.Message}", ex);
-                }
+                var sid = EnvironmentManager.Instance.MasterSite?.ServerId;
+                return sid?.Uri?.ToString() ?? "";
             }
-
-            int groupCount = targets.Count(t => t.Kind == JobTargetKind.Group);
-            _log.Info($"Resolved targets for '{job.Name}': {targets.Count} target(s) " +
-                      $"({groupCount} group{(groupCount == 1 ? "" : "s")}) → {result.Count} unique camera(s)");
-            return result;
-        }
-
-        // Walk a camera-group folder recursively and yield only leaf camera items.
-        private static IEnumerable<Item> FlattenCameras(Item folder)
-        {
-            foreach (var child in SafeChildren(folder))
-            {
-                if (child?.FQID == null) continue;
-                if (child.FQID.Kind != Kind.Camera) continue;
-                if (child.FQID.FolderType != FolderType.No)
-                {
-                    foreach (var grandchild in FlattenCameras(child))
-                        yield return grandchild;
-                }
-                else
-                {
-                    yield return child;
-                }
-            }
-        }
-
-        private static IEnumerable<Item> SafeChildren(Item group)
-        {
-            try { return group?.GetChildren() ?? Enumerable.Empty<Item>(); }
-            catch { return Enumerable.Empty<Item>(); }
+            catch { return ""; }
         }
 
         // ─── Manual trigger via MessageCommunication ──────
@@ -502,7 +448,7 @@ namespace AutoExporter.Background
                     JobName           = cfg.JobName,
                     Percent           = percent,
                     CameraIndex       = camIdx,
-                    CameraCount       = cfg.Cameras?.Count ?? 0,
+                    CameraCount       = cfg.Targets?.Count ?? 0,
                     CurrentCameraName = camName ?? ""
                 }));
             }

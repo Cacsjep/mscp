@@ -38,4 +38,32 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- Exclude the helper subfolder from this project's auto-glob -->
+  <ItemGroup>
+    <Compile Remove="AutoExporterHelper\**" />
+    <None Remove="AutoExporterHelper\**" />
+    <Content Remove="AutoExporterHelper\**" />
+    <EmbeddedResource Remove="AutoExporterHelper\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Build dependency: helper must be built before plugin so DeployHelper finds it -->
+    <ProjectReference Include="AutoExporterHelper\AutoExporterHelper.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <!-- Kill the helper process before MIP stops the Event Server -->
+  <Target Name="StopHelper" BeforeTargets="MIPStopProcesses"
+          Condition="'$(CIBuild)' != 'true'">
+    <Exec Command="taskkill /F /IM AutoExporterHelper.exe 2&gt;nul" IgnoreExitCode="true"/>
+  </Target>
+
+  <!-- Copy helper exe + native deps into MIPPlugins\AutoExporter\ -->
+  <Target Name="DeployHelper" AfterTargets="MIPDeploy" BeforeTargets="MIPLaunch"
+          Condition="'$(CIBuild)' != 'true' and '$(PluginName)' != ''">
+    <Exec Command="xcopy /Y /D /E /I &quot;$(ProjectDir)AutoExporterHelper\bin\$(Configuration)\net48\*&quot; &quot;$(MIPPluginDir)&quot;" IgnoreExitCode="true"/>
+  </Target>
 </Project>
