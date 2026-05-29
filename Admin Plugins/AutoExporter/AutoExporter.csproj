@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>Library</OutputType>
+    <RootNamespace>AutoExporter</RootNamespace>
+    <AssemblyName>AutoExporter</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <PluginName>AutoExporter</PluginName>
+    <StopAdminClient>true</StopAdminClient>
+    <StopEventServer>true</StopEventServer>
+    <StartEventServer>true</StartEventServer>
+    <LaunchAdminClient>false</LaunchAdminClient>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AutoExporter.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunitySDK\CommunitySDK.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="plugin.def">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Admin\HelpPage.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Exclude the helper subfolder from this project's auto-glob -->
+  <ItemGroup>
+    <Compile Remove="AutoExporterHelper\**" />
+    <None Remove="AutoExporterHelper\**" />
+    <Content Remove="AutoExporterHelper\**" />
+    <EmbeddedResource Remove="AutoExporterHelper\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Build dependency: helper must be built before plugin so DeployHelper finds it -->
+    <ProjectReference Include="AutoExporterHelper\AutoExporterHelper.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <!-- Kill the helper process before MIP stops the Event Server -->
+  <Target Name="StopHelper" BeforeTargets="MIPStopProcesses"
+          Condition="'$(CIBuild)' != 'true'">
+    <Exec Command="taskkill /F /IM AutoExporterHelper.exe 2&gt;nul" IgnoreExitCode="true"/>
+  </Target>
+
+  <!-- Copy helper exe + native deps into MIPPlugins\AutoExporter\ -->
+  <Target Name="DeployHelper" AfterTargets="MIPDeploy" BeforeTargets="MIPLaunch"
+          Condition="'$(CIBuild)' != 'true' and '$(PluginName)' != ''">
+    <Exec Command="xcopy /Y /D /E /I &quot;$(ProjectDir)AutoExporterHelper\bin\$(Configuration)\net48\*&quot; &quot;$(MIPPluginDir)&quot;" IgnoreExitCode="true"/>
+  </Target>
+</Project>
