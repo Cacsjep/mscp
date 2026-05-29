@@ -170,12 +170,14 @@ namespace AutoExporter.Admin
             return null;
         }
 
+        // Normalizes for duplicate comparison WITHOUT Path.GetFullPath: these are paths
+        // interpreted on the Event Server, so resolving them against the Management
+        // Client's working directory would be wrong. Just trim, drop trailing
+        // separators, and lower-case.
         private static string NormalizePath(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return "";
-            try { path = System.IO.Path.GetFullPath(path.Trim()); }
-            catch { path = path.Trim(); }
-            return path.TrimEnd('\\', '/').ToLowerInvariant();
+            return path.Trim().TrimEnd('\\', '/').ToLowerInvariant();
         }
 
         public override string GetItemName() => _userControl?.DisplayName ?? CurrentItem?.Name ?? "Job";

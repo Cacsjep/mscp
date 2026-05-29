@@ -71,8 +71,9 @@ namespace AutoExporter.Background
             {
                 report.Health = StorageHealth.PathMissing;
                 report.Detail = IsUncPath(storagePath)
-                    ? "UNC share not reachable (or service account lacks access)"
-                    : "Folder does not exist";
+                    ? "UNC share not reachable (or the Event Server service account lacks access)"
+                    : "Folder not found, or the Event Server service account cannot access it. " +
+                      "Avoid user-profile paths (Desktop, Documents); use a folder the service account can write to.";
                 return report;
             }
 

@@ -19,10 +19,16 @@ namespace AutoExporter.Admin
         private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
         private bool _started;
 
+        // History is owned by the Event Server (the JSONL file lives there). We hold a
+        // newest-first in-memory copy fetched over messaging and updated by broadcasts,
+        // so the view works from a remote Management Client too.
+        private readonly List<ExecutionRecord> _records = new List<ExecutionRecord>();
+
         public ExecutionsUserControl()
         {
             InitializeComponent();
             _progressBar.Visible = false;
+            _progressBarCamera.Visible = false;
             _lblProgressText.Visible = false;
         }
 
@@ -34,16 +40,18 @@ namespace AutoExporter.Admin
                 {
                     _cmh.Register(OnProgress, new CommunicationIdFilter(AutoExporterMessageIds.Progress));
                     _cmh.Register(OnExecutionAdded, new CommunicationIdFilter(AutoExporterMessageIds.ExecutionAdded));
+                    _cmh.Register(OnExecutionsReply, new CommunicationIdFilter(AutoExporterMessageIds.GetExecutionsReply));
                 }
                 _started = true;
             }
 
             RefreshRunNowMenu();
-            RefreshGrid();
+            RequestExecutions();
         }
 
         public void ClearContent()
         {
+            _records.Clear();
             _grid.Rows.Clear();
         }
 
@@ -53,21 +61,41 @@ namespace AutoExporter.Admin
             _started = false;
         }
 
-        // ─── History ────────────────────────────────────────
+        // Safety net: close the message handler whenever the handle goes away, even if
+        // the host never calls ReleaseUserControl/Shutdown. Idempotent.
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            Shutdown();
+            base.OnHandleDestroyed(e);
+        }
 
-        private void RefreshGrid()
+        // ─── History (fetched from the Event Server over messaging) ──
+
+        private void RequestExecutions()
+        {
+            _lblHint.Text = "Loading executions from the Event Server...";
+            try
+            {
+                if (_cmh.MessageCommunication != null)
+                    _cmh.TransmitMessage(new VideoOS.Platform.Messaging.Message(
+                        AutoExporterMessageIds.GetExecutionsRequest,
+                        new GetExecutionsRequest { CorrelationId = Guid.NewGuid() }));
+                else
+                    _lblHint.Text = "Cross-environment messaging not available. Is the Event Server running?";
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"RequestExecutions failed: {ex.Message}");
+            }
+        }
+
+        private void RenderGrid()
         {
             _grid.Rows.Clear();
-
-            var log = new ExecutionLog();
-            var records = log.LoadRecent();
-            records.Reverse();   // newest first
-
-            foreach (var r in records) AddRow(r);
-
-            _lblHint.Text = records.Count == 0
+            foreach (var r in _records) AddRow(r);   // _records is newest-first
+            _lblHint.Text = _records.Count == 0
                 ? "No executions yet. Trigger a job via a Rule, or use Run Now above to test."
-                : $"{records.Count} executions";
+                : $"{_records.Count} executions";
         }
 
         private void AddRow(ExecutionRecord r)
@@ -142,7 +170,12 @@ namespace AutoExporter.Admin
 
         private void RefreshRunNowMenu()
         {
+            // Dispose the old items (and their click handlers); ToolStrip.Items.Clear()
+            // removes but does not dispose them. Snapshot first, clear, then dispose so
+            // we don't mutate the collection while enumerating it.
+            var oldItems = _menuRunNow.Items.Cast<ToolStripItem>().ToArray();
             _menuRunNow.Items.Clear();
+            foreach (var old in oldItems) old.Dispose();
             try
             {
                 var jobs = Configuration.Instance.GetItemConfigurations(
@@ -203,7 +236,7 @@ namespace AutoExporter.Admin
         private void OnRefreshClick(object sender, EventArgs e)
         {
             RefreshRunNowMenu();
-            RefreshGrid();
+            RequestExecutions();
         }
 
         private void OnClearClick(object sender, EventArgs e)
@@ -228,6 +261,7 @@ namespace AutoExporter.Admin
                 _log.Error($"Clear request failed: {ex.Message}");
             }
 
+            _records.Clear();
             _grid.Rows.Clear();
             _lblHint.Text = "No executions yet. Trigger a job via a Rule, or use Run Now to test.";
         }
@@ -254,11 +288,35 @@ namespace AutoExporter.Admin
                     BeginInvokeSafe(() =>
                     {
                         _progressBar.Visible = false;
+                        _progressBarCamera.Visible = false;
                         _lblProgressText.Visible = false;
 
-                        // Insert at top
-                        _grid.Rows.Clear();
-                        RefreshGrid();
+                        // Insert the just-finished run at the top in memory (no disk read).
+                        _records.Insert(0, r);
+                        RenderGrid();
+                    });
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private object OnExecutionsReply(VideoOS.Platform.Messaging.Message m, FQID dest, FQID sender)
+        {
+            try
+            {
+                if (m?.Data is GetExecutionsReply reply)
+                {
+                    BeginInvokeSafe(() =>
+                    {
+                        _records.Clear();
+                        if (reply.Records != null)
+                        {
+                            // Server sends file order (oldest first); show newest first.
+                            for (int i = reply.Records.Count - 1; i >= 0; i--)
+                                _records.Add(reply.Records[i]);
+                        }
+                        RenderGrid();
                     });
                 }
             }
@@ -269,14 +327,19 @@ namespace AutoExporter.Admin
         private void ApplyProgress(ProgressUpdate p)
         {
             _progressBar.Visible = true;
+            _progressBarCamera.Visible = true;
             _lblProgressText.Visible = true;
-            // Real percent has arrived: switch from the indeterminate marquee to a
-            // normal filling bar.
+            // Real percent has arrived: switch from the indeterminate marquee to
+            // normal filling bars.
             if (_progressBar.Style != ProgressBarStyle.Blocks) _progressBar.Style = ProgressBarStyle.Blocks;
+            if (_progressBarCamera.Style != ProgressBarStyle.Blocks) _progressBarCamera.Style = ProgressBarStyle.Blocks;
+
             _progressBar.Value = Math.Max(0, Math.Min(100, p.Percent));
-            var camPart = p.CameraCount > 0 ? $" (camera {p.CameraIndex + 1}/{p.CameraCount})" : "";
+            _progressBarCamera.Value = Math.Max(0, Math.Min(100, p.CameraPercent));
+
+            var camPart = p.CameraCount > 0 ? $" - camera {p.CameraIndex + 1}/{p.CameraCount} at {p.CameraPercent}%" : "";
             var namePart = string.IsNullOrEmpty(p.CurrentCameraName) ? "" : $" '{p.CurrentCameraName}'";
-            _lblProgressText.Text = $"{p.JobName}: {p.Percent}%{camPart}{namePart}";
+            _lblProgressText.Text = $"{p.JobName}: {p.Percent}% overall{camPart}{namePart}";
         }
 
         private void BeginInvokeSafe(Action a)

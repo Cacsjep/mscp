@@ -59,6 +59,7 @@ namespace AutoExporter.Background
                 _cmh.Register(OnRunNowMessage,        new CommunicationIdFilter(AutoExporterMessageIds.RunNowRequest));
                 _cmh.Register(OnStorageProbeRequest,  new CommunicationIdFilter(AutoExporterMessageIds.StorageProbeRequest));
                 _cmh.Register(OnClearExecutions,      new CommunicationIdFilter(AutoExporterMessageIds.ClearExecutionsRequest));
+                _cmh.Register(OnGetExecutions,        new CommunicationIdFilter(AutoExporterMessageIds.GetExecutionsRequest));
             }
 
             // Hourly safety pass on the ring buffer.
@@ -256,7 +257,7 @@ namespace AutoExporter.Background
                 int overall = (int)(((double)camIdx + (pct / 100.0)) / denom * 100);
                 if (overall < 0) overall = 0;
                 if (overall > 100) overall = 100;
-                BroadcastProgress(run.RunId, cfg, overall, camIdx, camName);
+                BroadcastProgress(run.RunId, cfg, overall, camIdx, camName, pct);
             };
 
             ExportRunResult result;
@@ -274,15 +275,8 @@ namespace AutoExporter.Background
             var finishedUtc = DateTime.UtcNow;
             var skippedCams = result.SkippedCameras ?? new List<string>();
 
-            // Distinct outcome so the Executions view can show more than pass/fail:
-            //   Failed  - the export itself errored
-            //   Skipped - nothing was exported (no camera had recordings in the range)
-            //   Partial - exported, but some cameras had no recordings and were left out
-            //   Success - everything requested was exported
-            string outcome =
-                !result.Success      ? "Failed"  :
-                result.CameraCount == 0 ? "Skipped" :
-                skippedCams.Count > 0   ? "Partial" : "Success";
+            // Distinct outcome so the Executions view can show more than pass/fail.
+            string outcome = ExecutionOutcome.Classify(result.Success, result.CameraCount, skippedCams.Count);
 
             var record = new ExecutionRecord
             {
@@ -417,6 +411,29 @@ namespace AutoExporter.Background
             return null;
         }
 
+        // Serves the execution history to the admin view (the file lives here, on the
+        // Event Server, not on the Management Client machine).
+        private object OnGetExecutions(Message message, FQID destination, FQID sender)
+        {
+            if (_closing) return null;
+            try
+            {
+                var req = message?.Data as GetExecutionsRequest;
+                var reply = new GetExecutionsReply
+                {
+                    CorrelationId = req?.CorrelationId ?? Guid.Empty,
+                    Records = _executionLog.LoadRecent()
+                };
+                if (_cmh.MessageCommunication != null)
+                    _cmh.TransmitMessage(new Message(AutoExporterMessageIds.GetExecutionsReply, reply));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Get executions handler error: {ex.Message}", ex);
+            }
+            return null;
+        }
+
         // ─── Events ─────────────────────────────────────────
 
         private void FireStartedEvent(Item job, string trigger, DateTime rangeStartUtc, DateTime rangeEndUtc)
@@ -481,7 +498,7 @@ namespace AutoExporter.Background
 
         // ─── Cross-environment broadcasting ───────────────
 
-        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int percent, int camIdx, string camName)
+        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int percent, int camIdx, string camName, int cameraPercent = 0)
         {
             if (_cmh.MessageCommunication == null) return;
             try
@@ -492,6 +509,7 @@ namespace AutoExporter.Background
                     JobObjectId       = cfg.JobObjectId,
                     JobName           = cfg.JobName,
                     Percent           = percent,
+                    CameraPercent     = cameraPercent,
                     CameraIndex       = camIdx,
                     CameraCount       = cfg.Targets?.Count ?? 0,
                     CurrentCameraName = camName ?? ""

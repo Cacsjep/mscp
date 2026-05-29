@@ -52,7 +52,7 @@ namespace AutoExporter.Tests
             var bogus = Path.Combine(_root, "nope-" + Guid.NewGuid().ToString("N"));
             var r = StorageStatus.Inspect(Guid.NewGuid(), "Job", bogus, 0, 0);
             Assert.Equal(StorageHealth.PathMissing, r.Health);
-            Assert.Contains("does not exist", r.Detail, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("not found", r.Detail, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

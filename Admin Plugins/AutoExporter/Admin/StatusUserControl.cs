@@ -53,6 +53,14 @@ namespace AutoExporter.Admin
             _started = false;
         }
 
+        // Safety net: stop the timer and close the handler whenever the handle goes
+        // away, even if the host never calls ReleaseUserControl/Shutdown. Idempotent.
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            Shutdown();
+            base.OnHandleDestroyed(e);
+        }
+
         private void SafeRefresh()
         {
             try { Refresh(); }

@@ -17,7 +17,6 @@ namespace AutoExporter
     {
         internal static readonly Guid PluginId             = new Guid("BB8298C5-8877-4073-BE24-68F67DE4694D");
         internal static readonly Guid ExecutionsKindId     = new Guid("453DF150-37CB-408B-B919-66EA1FCE4332");
-        internal static readonly Guid StatusKindId         = new Guid("D13DFED2-A9DE-4E01-A615-ED2AE502FCFA");
         internal static readonly Guid JobKindId            = new Guid("1425AA67-4D80-42BA-8B1B-15FA60B3331C");
         internal static readonly Guid BackgroundPluginId   = new Guid("BA8ABBB6-7F34-477B-925C-B92FC20D8635");
 
@@ -27,9 +26,8 @@ namespace AutoExporter
         internal static readonly Guid EvtJobFailedId       = new Guid("0C21BC12-B4D1-4CD8-A429-27021561CB3E");
         internal static readonly Guid StateGroupId         = new Guid("29CE359F-1E1F-46F9-976A-2CF5F6416BAE");
 
-        // Fixed FQID.ObjectIds for the singleton items so they round-trip deterministically.
+        // Fixed FQID.ObjectId for the singleton item so it round-trips deterministically.
         internal static readonly Guid ExecutionsSingletonId    = new Guid("CFAFE824-6071-45FB-8B26-510AB392702D");
-        internal static readonly Guid StatusSingletonId        = new Guid("6778FEF5-3F53-4342-842E-7D2B11995F9F");
 
         // Read/Edit permission pair per item kind, mirroring the PKI plugin. Surfaces
         // as Read + Edit checkboxes under Security > Roles > [Role] > MIP > Auto Exporter.

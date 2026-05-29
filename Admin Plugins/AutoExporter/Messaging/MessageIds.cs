@@ -12,6 +12,8 @@ namespace AutoExporter.Messaging
         public const string StorageProbeRequest   = "AutoExporter.StorageProbeRequest";
         public const string StorageProbeReply     = "AutoExporter.StorageProbeReply";
         public const string ClearExecutionsRequest = "AutoExporter.ClearExecutionsRequest";
+        public const string GetExecutionsRequest   = "AutoExporter.GetExecutionsRequest";
+        public const string GetExecutionsReply     = "AutoExporter.GetExecutionsReply";
     }
 
     [Serializable]
@@ -26,7 +28,8 @@ namespace AutoExporter.Messaging
         public Guid RunId;
         public Guid JobObjectId;
         public string JobName;
-        public int Percent;
+        public int Percent;            // overall (cameras done + current fraction) / total
+        public int CameraPercent;      // current camera's own 0-100 progress
         public int CameraIndex;
         public int CameraCount;
         public string CurrentCameraName;
@@ -36,6 +39,22 @@ namespace AutoExporter.Messaging
     public class ClearExecutionsRequest
     {
         public Guid CorrelationId;
+    }
+
+    // The execution history file lives on the Event Server, so the admin view must
+    // ask for it over messaging rather than reading a local path that only exists
+    // on the Event Server machine.
+    [Serializable]
+    public class GetExecutionsRequest
+    {
+        public Guid CorrelationId;
+    }
+
+    [Serializable]
+    public class GetExecutionsReply
+    {
+        public Guid CorrelationId;
+        public List<ExecutionRecord> Records;
     }
 
     [Serializable]

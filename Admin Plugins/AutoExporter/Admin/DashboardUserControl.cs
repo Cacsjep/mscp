@@ -29,7 +29,7 @@ namespace AutoExporter.Admin
             _split = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                Orientation = Orientation.Vertical   // left | right
+                Orientation = Orientation.Horizontal   // jobs on top, executions below
             };
 
             _split.Panel1.Controls.Add(Wrap("Jobs and storage status", _status));
@@ -39,19 +39,20 @@ namespace AutoExporter.Admin
             ApplySplitterDistance();
         }
 
-        // Keeps the splitter at ~42% with safe bounds. Wrapped because SplitContainer
-        // throws if the computed distance ever falls outside its allowed range (which
-        // can happen at tiny transient sizes during host activation).
+        // Puts the splitter at ~42% (jobs get the top ~42%, executions the rest), with
+        // safe bounds. Wrapped because SplitContainer throws if the computed distance
+        // ever falls outside its allowed range, which can happen at tiny transient
+        // sizes during host activation. Uses Height because the split is horizontal.
         private void ApplySplitterDistance()
         {
             try
             {
-                int w = _split.Width;
-                if (w <= 0) return;
+                int extent = _split.Orientation == Orientation.Horizontal ? _split.Height : _split.Width;
+                if (extent <= 0) return;
                 int min = _split.Panel1MinSize;
-                int max = w - _split.Panel2MinSize;
+                int max = extent - _split.Panel2MinSize;
                 if (max <= min) return;
-                int target = (int)(w * 0.42);
+                int target = (int)(extent * 0.42);
                 _split.SplitterDistance = Math.Max(min, Math.Min(target, max));
             }
             catch { /* transient size during activation; retried on next resize */ }
@@ -104,6 +105,12 @@ namespace AutoExporter.Admin
         {
             try { _status.Shutdown(); } catch { }
             try { _executions.Shutdown(); } catch { }
+        }
+
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            Shutdown();
+            base.OnHandleDestroyed(e);
         }
     }
 }

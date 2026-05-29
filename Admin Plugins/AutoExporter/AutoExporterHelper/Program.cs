@@ -763,26 +763,70 @@ namespace AutoExporterHelper
         private static string[] BuildSearchDirs(string milestoneDir)
         {
             var dirs = new List<string>();
-            if (!string.IsNullOrEmpty(milestoneDir) && Directory.Exists(milestoneDir))
-                dirs.Add(milestoneDir);
-
-            // Order matters: the standard server install dirs ship VideoOS.Platform.dll
-            // and a subset of the SDK DLLs (Recording Server has SDK + Export + Media).
-            // SDK.UI.dll, however, is only present under MIPDrivers\GisDriver. Without
-            // that dir, VideoOS.Platform.SDK.UI.Environment.Initialize() throws
-            // FileNotFoundException for "VideoOS.Platform.SDK.UI".
-            var candidates = new[]
+            void Add(string d)
             {
-                @"C:\Program Files\Milestone\XProtect Event Server",
-                @"C:\Program Files\Milestone\XProtect Recording Server",
-                @"C:\Program Files\Milestone\XProtect Management Server",
-                @"C:\Program Files\Milestone\MIPDrivers\GisDriver"
-            };
+                if (!string.IsNullOrEmpty(d) && Directory.Exists(d) &&
+                    !dirs.Any(x => string.Equals(x, d, StringComparison.OrdinalIgnoreCase)))
+                    dirs.Add(d);
+            }
 
-            foreach (var dir in candidates)
-                if (Directory.Exists(dir) && !dirs.Contains(dir)) dirs.Add(dir);
+            // 1. Directory passed by the parent process (most reliable).
+            Add(milestoneDir);
+
+            // 2. Actual install locations from the registry, so we work on machines
+            //    that did NOT install to C:\Program Files (different drive, localized
+            //    Program Files, custom path). GisDriver sits under the install root's
+            //    MIPDrivers folder and ships SDK.UI.dll, which the others may lack.
+            foreach (var root in ReadMilestoneInstallRoots())
+            {
+                Add(root);
+                Add(Path.Combine(root, "MIPDrivers", "GisDriver"));
+            }
+
+            // 3. Standard-install fallbacks (only added if they exist).
+            var baseDir = @"C:\Program Files\Milestone";
+            Add(Path.Combine(baseDir, "XProtect Event Server"));
+            Add(Path.Combine(baseDir, "XProtect Recording Server"));
+            Add(Path.Combine(baseDir, "XProtect Management Server"));
+            Add(Path.Combine(baseDir, "MIPDrivers", "GisDriver"));
 
             return dirs.ToArray();
+        }
+
+        // Reads VideoOS install paths from HKLM (64-bit view). These point at the
+        // service install roots that contain VideoOS.Platform.dll and the SDK DLLs.
+        private static IEnumerable<string> ReadMilestoneInstallRoots()
+        {
+            var roots = new List<string>();
+            var keys = new[]
+            {
+                @"SOFTWARE\VideoOS\Server",
+                @"SOFTWARE\VideoOS\Recorder",
+                @"SOFTWARE\VideoOS\Platform",
+                @"SOFTWARE\VideoOS\EventServer",
+            };
+            foreach (var sub in keys)
+            {
+                foreach (var valueName in new[] { "InstallationPath", "InstallPath", "Path", "InstallDir" })
+                {
+                    var v = ReadRegistry(Microsoft.Win32.RegistryHive.LocalMachine, sub, valueName);
+                    if (!string.IsNullOrEmpty(v)) roots.Add(v);
+                }
+            }
+            return roots;
+        }
+
+        private static string ReadRegistry(Microsoft.Win32.RegistryHive hive, string subkey, string valueName)
+        {
+            try
+            {
+                using (var baseKey = Microsoft.Win32.RegistryKey.OpenBaseKey(hive, Microsoft.Win32.RegistryView.Registry64))
+                using (var key = baseKey.OpenSubKey(subkey))
+                {
+                    return key?.GetValue(valueName) as string;
+                }
+            }
+            catch { return null; }
         }
 
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
