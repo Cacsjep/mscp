@@ -8,6 +8,7 @@ namespace AutoExporter.Messaging
     {
         public const string RunNowRequest         = "AutoExporter.RunNowRequest";
         public const string Progress              = "AutoExporter.Progress";
+        public const string ExecutionStarted      = "AutoExporter.ExecutionStarted";
         public const string ExecutionAdded        = "AutoExporter.ExecutionAdded";
         public const string StorageProbeRequest   = "AutoExporter.StorageProbeRequest";
         public const string StorageProbeReply     = "AutoExporter.StorageProbeReply";
@@ -33,6 +34,8 @@ namespace AutoExporter.Messaging
         public int CameraIndex;
         public int CameraCount;
         public string CurrentCameraName;
+        public string Format;          // "XProtect" | "AVI" (AVI has no meaningful percent)
+        public DateTime StartedUtc;    // real run start, so a re-opened view shows correct elapsed
     }
 
     [Serializable]

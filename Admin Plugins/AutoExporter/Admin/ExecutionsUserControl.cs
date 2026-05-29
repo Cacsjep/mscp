@@ -24,13 +24,21 @@ namespace AutoExporter.Admin
         // so the view works from a remote Management Client too.
         private readonly List<ExecutionRecord> _records = new List<ExecutionRecord>();
 
+        // Live progress for in-flight runs, keyed by RunId, and the grid row currently
+        // showing each one (so we can update it in place instead of re-rendering at 4 Hz).
+        private readonly Dictionary<Guid, ProgressUpdate> _liveProgress = new Dictionary<Guid, ProgressUpdate>();
+        private readonly Dictionary<Guid, DataGridViewRow> _runningRows = new Dictionary<Guid, DataGridViewRow>();
+
+        private bool _hasJobs;
+        private bool _runActive;   // a run is in progress; Run Now stays disabled until it finishes
+
         public ExecutionsUserControl()
         {
             InitializeComponent();
-            _progressBar.Visible = false;
-            _progressBarCamera.Visible = false;
-            _lblProgressText.Visible = false;
         }
+
+        private static bool IsRunning(ExecutionRecord r)
+            => string.Equals(r.Outcome, "Running", StringComparison.OrdinalIgnoreCase);
 
         public void FillContent(Item _)
         {
@@ -39,12 +47,17 @@ namespace AutoExporter.Admin
                 if (_cmh.Start())
                 {
                     _cmh.Register(OnProgress, new CommunicationIdFilter(AutoExporterMessageIds.Progress));
+                    _cmh.Register(OnExecutionStarted, new CommunicationIdFilter(AutoExporterMessageIds.ExecutionStarted));
                     _cmh.Register(OnExecutionAdded, new CommunicationIdFilter(AutoExporterMessageIds.ExecutionAdded));
                     _cmh.Register(OnExecutionsReply, new CommunicationIdFilter(AutoExporterMessageIds.GetExecutionsReply));
                 }
                 _started = true;
             }
 
+            // Reset the in-progress guard when the view (re)opens, so a stuck state
+            // (e.g. a helper that died without a completion record) can't leave Run Now
+            // permanently disabled.
+            _runActive = false;
             RefreshRunNowMenu();
             RequestExecutions();
         }
@@ -52,6 +65,8 @@ namespace AutoExporter.Admin
         public void ClearContent()
         {
             _records.Clear();
+            _liveProgress.Clear();
+            _runningRows.Clear();
             _grid.Rows.Clear();
         }
 
@@ -92,6 +107,7 @@ namespace AutoExporter.Admin
         private void RenderGrid()
         {
             _grid.Rows.Clear();
+            _runningRows.Clear();
             foreach (var r in _records) AddRow(r);   // _records is newest-first
             _lblHint.Text = _records.Count == 0
                 ? "No executions yet. Trigger a job via a Rule, or use Run Now above to test."
@@ -104,13 +120,16 @@ namespace AutoExporter.Admin
             var range    = (r.RangeStartUtc == DateTime.MinValue || r.RangeEndUtc == DateTime.MinValue)
                 ? ""
                 : $"{r.RangeStartUtc.ToLocalTime():MM-dd HH:mm} to {r.RangeEndUtc.ToLocalTime():MM-dd HH:mm}";
-            var sizeMB   = r.BytesWritten / (1024 * 1024);
-            var duration = r.FinishedUtc > r.StartedUtc
-                ? FormatDuration(r.FinishedUtc - r.StartedUtc)
-                : "";
 
-            var outcome = OutcomeOf(r);
-            var detail  = DetailOf(r, outcome);
+            var outcome  = OutcomeOf(r);
+            bool running = IsRunning(r);
+
+            var sizeMB   = r.BytesWritten / (1024 * 1024);
+            var sizeStr  = running ? "" : (sizeMB > 0 ? $"{sizeMB} MB" : "");
+            var duration = running
+                ? (r.StartedUtc != DateTime.MinValue ? FormatDuration(DateTime.UtcNow - r.StartedUtc) : "")
+                : (r.FinishedUtc > r.StartedUtc ? FormatDuration(r.FinishedUtc - r.StartedUtc) : "");
+            var detail   = running ? RunningDetail(r) : DetailOf(r, outcome);
 
             var idx = _grid.Rows.Add(
                 when,
@@ -119,13 +138,29 @@ namespace AutoExporter.Admin
                 r.Format,
                 range,
                 r.CameraCount,
-                sizeMB > 0 ? $"{sizeMB} MB" : "",
+                sizeStr,
                 duration,
                 outcome,
                 detail);
 
             var row = _grid.Rows[idx];
+            row.Tag = r.RunId;
             row.DefaultCellStyle.ForeColor = ColorFor(outcome);
+            if (running) _runningRows[r.RunId] = row;
+        }
+
+        // Live detail for a Running row, from the last progress message. AVI exposes a
+        // real per-camera percent (and which camera); XProtect's DBExporter percent is
+        // the overall export progress. Until the first progress arrives, "starting...".
+        private string RunningDetail(ExecutionRecord r)
+        {
+            if (!_liveProgress.TryGetValue(r.RunId, out var p) || p == null)
+                return "starting...";
+
+            bool isAvi = string.Equals(p.Format ?? r.Format, "AVI", StringComparison.OrdinalIgnoreCase);
+            if (isAvi && p.CameraCount > 0)
+                return $"camera {p.CameraIndex + 1}/{p.CameraCount} - {p.CameraPercent}%";
+            return $"{p.CameraPercent}%";
         }
 
         // Falls back to the legacy Success bool for records written before Outcome existed.
@@ -155,6 +190,7 @@ namespace AutoExporter.Admin
                 case "Failed":  return Color.FromArgb(180, 30, 30);
                 case "Partial": return Color.FromArgb(180, 110, 0);
                 case "Skipped": return Color.FromArgb(120, 120, 120);
+                case "Running": return Color.FromArgb(40, 90, 160);
                 default:        return Color.Black;   // Success
             }
         }
@@ -185,11 +221,12 @@ namespace AutoExporter.Admin
                 {
                     var none = new ToolStripMenuItem("(no jobs configured)") { Enabled = false };
                     _menuRunNow.Items.Add(none);
-                    _btnRunNow.Enabled = false;
+                    _hasJobs = false;
+                    UpdateRunNowEnabled();
                     return;
                 }
 
-                _btnRunNow.Enabled = true;
+                _hasJobs = true;
                 foreach (var job in jobs.OrderBy(j => j.Name))
                 {
                     var item = new ToolStripMenuItem(job.Name);
@@ -197,11 +234,29 @@ namespace AutoExporter.Admin
                     item.Click += (s, e) => InvokeRunNow(jobId, job.Name);
                     _menuRunNow.Items.Add(item);
                 }
+                UpdateRunNowEnabled();
             }
             catch (Exception ex)
             {
                 _log.Error($"RefreshRunNowMenu failed: {ex.Message}");
             }
+        }
+
+        // Run Now is disabled while a run is in progress: the view has a single
+        // progress bar, so a user must not start a second run from here on top of one
+        // that is already running.
+        private void UpdateRunNowEnabled()
+        {
+            _btnRunNow.Enabled = _hasJobs && !_runActive;
+            _btnRunNow.ToolTipText = _runActive
+                ? "An export is already running. Wait for it to finish."
+                : "";
+        }
+
+        private void SetRunActive(bool active)
+        {
+            _runActive = active;
+            UpdateRunNowEnabled();
         }
 
         private void InvokeRunNow(Guid jobObjectId, string jobName)
@@ -218,13 +273,10 @@ namespace AutoExporter.Admin
                 _cmh.TransmitMessage(new VideoOS.Platform.Messaging.Message(AutoExporterMessageIds.RunNowRequest,
                     new RunNowRequest { JobObjectId = jobObjectId }));
 
-                // The Event Server has to spawn the helper, log in, and probe the
-                // cameras before the first real percent arrives (several seconds), so
-                // show an indeterminate bar right away instead of a dead 0%.
-                _lblProgressText.Text = $"Starting export for '{jobName}'...";
-                _lblProgressText.Visible = true;
-                _progressBar.Style = ProgressBarStyle.Marquee;
-                _progressBar.Visible = true;
+                SetRunActive(true);   // block a second Run Now until this one finishes
+                // The Event Server will broadcast ExecutionStarted within a moment,
+                // which adds the "Running" row; show a hint until then.
+                _lblHint.Text = $"Starting export for '{jobName}'...";
             }
             catch (Exception ex)
             {
@@ -279,6 +331,26 @@ namespace AutoExporter.Admin
             return null;
         }
 
+        // A run has started: add (or refresh) its "Running" row at the top.
+        private object OnExecutionStarted(VideoOS.Platform.Messaging.Message m, FQID dest, FQID sender)
+        {
+            try
+            {
+                if (m?.Data is ExecutionRecord r)
+                {
+                    BeginInvokeSafe(() =>
+                    {
+                        SetRunActive(true);
+                        if (!_records.Any(x => x.RunId == r.RunId))
+                            _records.Insert(0, r);
+                        RenderGrid();
+                    });
+                }
+            }
+            catch { }
+            return null;
+        }
+
         private object OnExecutionAdded(VideoOS.Platform.Messaging.Message m, FQID dest, FQID sender)
         {
             try
@@ -287,11 +359,12 @@ namespace AutoExporter.Admin
                 {
                     BeginInvokeSafe(() =>
                     {
-                        _progressBar.Visible = false;
-                        _progressBarCamera.Visible = false;
-                        _lblProgressText.Visible = false;
+                        SetRunActive(false);   // run finished; allow Run Now again
+                        _liveProgress.Remove(r.RunId);
 
-                        // Insert the just-finished run at the top in memory (no disk read).
+                        // Replace the in-memory "Running" row for this run with the final
+                        // record (or insert it at top if there was no running row).
+                        _records.RemoveAll(x => x.RunId == r.RunId);
                         _records.Insert(0, r);
                         RenderGrid();
                     });
@@ -326,20 +399,41 @@ namespace AutoExporter.Admin
 
         private void ApplyProgress(ProgressUpdate p)
         {
-            _progressBar.Visible = true;
-            _progressBarCamera.Visible = true;
-            _lblProgressText.Visible = true;
-            // Real percent has arrived: switch from the indeterminate marquee to
-            // normal filling bars.
-            if (_progressBar.Style != ProgressBarStyle.Blocks) _progressBar.Style = ProgressBarStyle.Blocks;
-            if (_progressBarCamera.Style != ProgressBarStyle.Blocks) _progressBarCamera.Style = ProgressBarStyle.Blocks;
+            // A run is active (this one, or one started by a rule) - keep Run Now off.
+            SetRunActive(true);
+            _liveProgress[p.RunId] = p;
 
-            _progressBar.Value = Math.Max(0, Math.Min(100, p.Percent));
-            _progressBarCamera.Value = Math.Max(0, Math.Min(100, p.CameraPercent));
+            // If we already have a Running row for this run, update it in place (cheap,
+            // no flicker). Otherwise the started message hasn't landed yet (or we opened
+            // the view mid-run): synthesize a Running record and render once.
+            if (_runningRows.TryGetValue(p.RunId, out var row) && row.DataGridView != null && row.Index >= 0)
+            {
+                var rec = _records.FirstOrDefault(x => x.RunId == p.RunId);
+                if (rec != null)
+                {
+                    row.Cells[9].Value = RunningDetail(rec);
+                    if (rec.StartedUtc != DateTime.MinValue)
+                        row.Cells[7].Value = FormatDuration(DateTime.UtcNow - rec.StartedUtc);
+                }
+                return;
+            }
 
-            var camPart = p.CameraCount > 0 ? $" - camera {p.CameraIndex + 1}/{p.CameraCount} at {p.CameraPercent}%" : "";
-            var namePart = string.IsNullOrEmpty(p.CurrentCameraName) ? "" : $" '{p.CurrentCameraName}'";
-            _lblProgressText.Text = $"{p.JobName}: {p.Percent}% overall{camPart}{namePart}";
+            if (!_records.Any(x => x.RunId == p.RunId))
+            {
+                _records.Insert(0, new ExecutionRecord
+                {
+                    RunId       = p.RunId,
+                    JobName     = p.JobName,
+                    Format      = p.Format,
+                    Outcome     = "Running",
+                    // Use the real start time carried in the progress message so a
+                    // view re-opened mid-run shows the correct elapsed, not 0.
+                    StartedUtc  = p.StartedUtc != DateTime.MinValue ? p.StartedUtc : DateTime.UtcNow,
+                    FinishedUtc = DateTime.MinValue,
+                    CameraCount = p.CameraCount
+                });
+            }
+            RenderGrid();
         }
 
         private void BeginInvokeSafe(Action a)

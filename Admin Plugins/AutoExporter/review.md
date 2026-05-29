@@ -1,63 +1,75 @@
 # AutoExporter plugin review
 
-Reviewer stance: picky. Priorities, in order: correctness on non-happy paths, runtime behaviour on *other* machines (this is a distributed VMS, not a dev box), event-handler / resource leaks, testability, and gratuitous complexity.
+Reviewer stance: picky. Priorities: correctness on non-happy paths, runtime behaviour on other machines (distributed VMS, not a dev box), event-handler / resource leaks, testability, gratuitous complexity.
 
-> **Status:** H1, H2, M1, M2, M3, L1, L5 are fixed (notes inline). Remaining by choice: M4 (minor), L2/L3/L4 (acknowledged non-defects). 67 unit tests pass.
-
----
-
-## High severity
-
-### H1. Executions grid read a machine-local file, so it was empty on a remote Management Client  [FIXED]
-`RefreshGrid()` used `new ExecutionLog().LoadRecent()`, but that file lives in `%ProgramData%` on the **Event Server**. On a separate Management Client the grid was empty, and `OnExecutionAdded` discarded the broadcast record and reloaded from the missing local file.
-**Fix:** added `GetExecutionsRequest`/`GetExecutionsReply` messages; the Event Server serves `LoadRecent()`. The view now holds a newest-first in-memory list, populated from the reply, and appends broadcast records directly (no disk read). Works from a remote client.
-
-### H2. Helper assembly/native-DLL resolution was hardcoded to `C:\Program Files\Milestone\...`  [FIXED]
-On a non-default install (other drive, localized Program Files) the helper could not find `VideoOS.Platform.dll` / `CoreToolkits.dll` and died at resolve time.
-**Fix:** `BuildSearchDirs` now reads the real install roots from `HKLM\SOFTWARE\VideoOS\...` (64-bit view) first, adds each root plus its `MIPDrivers\GisDriver`, then falls back to the `C:\Program Files` guesses. Mirrors the BarcodeReader helper.
+This is **round 2**, after the messaging refactor, the Running-row progress redesign, and the AVI fixes. Round-1 findings (H1, H2, M1, M2, M3, L1, L5) are resolved. 67 unit tests pass.
 
 ---
 
-## Medium severity
+## Round 2 findings
 
-### M1. Inconsistent message-handler / timer teardown  [FIXED]
-`StatusUserControl` (and its 30s timer) and `ExecutionsUserControl` only closed their handler in `Shutdown()`, which runs only if the host calls `ReleaseUserControl`.
-**Fix:** all three controls (`Status`, `Executions`, `Dashboard`) now also close in `OnHandleDestroyed` (idempotent), matching `JobUserControl`.
+### R1. Helper `WaitForCompletion` can hang forever  [MEDIUM]
+`AutoExporterHelper/Program.cs` `WaitForCompletion`:
+```
+while (true) {
+    int p = exporter.Progress;
+    EmitProgress(...);
+    if (p >= 100 || exporter.LastError > 0) return;
+    PumpMessages(250);
+}
+```
+If `Progress` plateaus below 100 without setting `LastError` (recorder stall, a camera that never finishes, a driver edge case), this loops forever. The helper has no internal timeout or cancellation. For a **manual** run the plugin never cancels it, so the helper runs indefinitely, never writes a result, never broadcasts a completion record, and the UI's Run Now stays disabled until the view is reopened.
+**Fix:** add a no-progress watchdog (if `Progress` has not advanced in N minutes, `Cancel()` + return an error) and/or an absolute max-duration cap. Emit a clear error so the run is recorded as Failed.
 
-### M2. `RefreshRunNowMenu()` leaked `ToolStripMenuItem` click handlers  [FIXED]
-`Items.Clear()` removes but does not dispose, and the items carried capturing click lambdas, rebuilt on every refresh.
-**Fix:** snapshot the items, `Clear()`, then dispose each.
+### R2. AVI "camera n/m" total is the target count, not the resolved camera count  [MEDIUM, display]
+The Running row shows `camera {CameraIndex+1}/{CameraCount}` where `CameraCount = cfg.Targets.Count`. When a job targets camera **groups**, the resolved camera count differs from the target count, so the denominator is wrong (e.g. "camera 3/2"). The helper knows the real resolved count.
+**Fix:** have the helper include the resolved total in its PROGRESS line and thread it through `ProgressUpdate.CameraCount`, instead of using the target count in the plugin.
 
-### M3. Outcome decision was inline in the BG plugin (untestable)  [FIXED]
-**Fix:** extracted `ExecutionOutcome.Classify(success, cameraCount, skippedCount)` (pure, internal) next to `TimeRange`; the BG plugin calls it; added `ExecutionOutcomeTests` covering Failed/Skipped/Partial/Success.
+### R3. Re-opened view loses Trigger/Range on a still-running row  [LOW, cosmetic]
+When you leave the node and return mid-run, the view reloads history from the Event Server, which does not contain the in-progress run. The next progress message re-synthesizes the Running row from `ProgressUpdate`, which carries RunId/JobName/Format/StartedUtc (duration is now correct) but **not** Trigger or Range, so those cells are blank until the run completes.
+**Fix (proper):** have `OnGetExecutions` include currently-running jobs (from `_running`) in the reply, with full metadata. Requires storing run metadata (started, trigger, format, range) on `RunHandle`.
 
-### M4. `ClearExecutions` is fire-and-forget  [NOT CHANGED]
-Sends the clear and wipes the local grid without a reply, so a dropped message leaves server/UI briefly out of sync and other open clients are not refreshed. Low impact; left as-is. Revisit if multi-client clear consistency matters.
+### R4. `OnExecutionsReply` ignores `CorrelationId`  [LOW]
+The reply handler replaces `_records` wholesale for any reply. A stale reply (multiple Refreshes, or a reply that lands just after Clear) can repopulate the grid. Harmless but sloppy.
+**Fix:** stamp the request's correlationId and ignore replies that do not match the latest request.
+
+### R5. Dead/misleading overall percent in the plugin  [LOW]
+`onProgress` still computes `overall = (camIdx + pct/100)/denom` and passes it as `ProgressUpdate.Percent`. For XProtect this is wrong (DBExporter.Progress is already the whole-export percent, so dividing by target count understates it), and the UI no longer displays `Percent` at all (it uses `CameraPercent`). Dead code that will mislead the next developer.
+**Fix:** drop `Percent` (and the calc), or compute it correctly per format. Display already relies on `CameraPercent` + format.
+
+### R6. Hardcoded grid cell indices in `ApplyProgress`  [LOW]
+`row.Cells[9]` / `row.Cells[7]` for detail/duration are positional and silently break if the columns are reordered.
+**Fix:** name the columns and address by name, or centralize column indices as constants.
+
+### R7. `_records` grows unbounded while the view stays open  [LOW]
+Every completed run is `Insert`ed; the list is only reset on a fetch/refresh/reopen. The Event Server file is capped, but a long-lived open view accumulates rows in memory.
+**Fix:** cap `_records` (e.g. trim to the same 500 the server returns) after each insert.
+
+### R8. Run Now can stay disabled after an abnormal end  [LOW]
+`_runActive` is cleared on completion (ExecutionAdded) and on view reopen, but **not** on Refresh. If a helper dies without a completion record (see R1), Refresh will not re-enable Run Now, only reopening the node will.
+**Fix:** reset `_runActive` (and re-request history) in `OnRefreshClick`, or add a stale-progress timeout that clears it.
+
+### R9. Verify the AVI `Filename` change on a real run  [LOW, verify]
+`Filename` was changed from a full path to `name + ".avi"` with `Path = camDir` (per the docs). Confirm on an actual AVI export that this yields `<name>.avi` (and `<name>_0001.avi` segments) and not a doubled extension. Not yet exercised end-to-end.
 
 ---
 
-## Low severity / cleanup
+## Still-open from round 1 (by choice)
+- **M4** ClearExecutions is fire-and-forget (no reply, no multi-client refresh).
+- **L2** three `CrossMessageHandler`s on one page.
+- **L3** `Application.DoEvents` pump in the helper.
+- **L4** hand-rolled JSON in `ExecutionLog`.
 
-### L1. Duplicate-path normalization used `Path.GetFullPath` on the client  [FIXED]
-These are Event Server paths; resolving them against the client CWD was wrong for relative inputs. **Fix:** normalize by trim + trailing-separator-strip + lower-case only.
+## Good
+- History served over messaging (works from a remote Management Client); broadcasts applied in-memory.
+- Running-row updates in place (no full re-render at 4 Hz, keeps selection).
+- Distinct outcomes (Success/Partial/Skipped/Failed) with skipped-camera names; benign double-trigger recorded as Skipped, not a false Failed event.
+- Pre-export `SequenceDataSource` probe (RecordingSequence) is the right fix for "Recorder offline".
+- Helper finds the install path via registry (portable), IPC is clean (result JSON + tested stderr parser + deterministic exit codes), temp files cleaned in `finally`.
+- Handlers closed in both `Shutdown` and `OnHandleDestroyed`; Run Now menu items disposed on rebuild.
+- Pure logic isolated and unit-tested (`TimeRange`, `ExecutionLog.PruneLines`, `StorageStatus`, `HelperProgressParser`, `ExecutionOutcome`).
 
-### L2. Three independent `CrossMessageHandler`s on one page  [NOT CHANGED]
-Status, Executions, and Job controls each start their own handler. Not a bug; a shared handler would be lighter. Low priority.
-
-### L3. `PumpMessages` uses `Application.DoEvents`  [NOT CHANGED]
-Justified by the recorder-status-callback requirement and kept single-purpose. Acceptable.
-
-### L4. Hand-rolled JSON in `ExecutionLog`  [NOT CHANGED]
-Unit-tested; fine as-is. If a nested object is ever added, switch to a real serializer.
-
-### L5. Dead members after refactors  [FIXED]
-Removed the unused `StatusItemManager` and the `StatusKindId` / `StatusSingletonId` GUIDs (Status is merged into the dashboard). `ExecutionsItemManager` still serves the combined dashboard; name left as-is to avoid churn.
-
----
-
-## Things that are good
-- Export root cause (DBExporter "Recorder offline" for cameras with no recordings) handled by a pre-export `SequenceDataSource` probe on `RecordingSequence` (covers continuous and motion recording), surfaced as a distinct Partial/Skipped outcome with the camera names.
-- Helper IPC: request/result JSON, tested stderr `PROGRESS` parser, deterministic exit codes, cancellation via `Process.Kill`, temp files cleaned in `finally`.
-- Concurrency guard records benign double-triggers as `Skipped` instead of firing a false Failed event.
-- Pure logic isolated from MIP and unit-tested (`TimeRange`, `ExecutionLog.PruneLines`, `StorageStatus`, `HelperProgressParser`, `ExecutionOutcome`).
-- Permissions follow the PKI pattern (Read/Edit security actions + per-item `CheckPermission`).
+## Suggested fix order
+1. R1 (potential indefinite hang) and R2 (wrong camera count with groups).
+2. R5 (remove dead/misleading percent), R8 (Run Now re-enable on Refresh).
+3. R3/R4/R6/R7 as cleanup.

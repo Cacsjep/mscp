@@ -248,7 +248,10 @@ namespace AutoExporter.Background
 
             FireStartedEvent(job, triggerSource, rangeStartUtc, rangeEndUtc);
 
-            BroadcastProgress(run.RunId, cfg, 0, 0, "");
+            // Tell the admin view a run has started so it shows a "Running" row
+            // immediately (it flips to the final outcome when the run completes).
+            BroadcastExecutionStarted(run, cfg, triggerSource, startedUtc, rangeStartUtc, rangeEndUtc, format);
+            BroadcastProgress(run.RunId, cfg, 0, 0, "", 0, startedUtc);
 
             int targetCount = targets.Count;
             Action<int, int, string> onProgress = (camIdx, pct, camName) =>
@@ -257,7 +260,7 @@ namespace AutoExporter.Background
                 int overall = (int)(((double)camIdx + (pct / 100.0)) / denom * 100);
                 if (overall < 0) overall = 0;
                 if (overall > 100) overall = 100;
-                BroadcastProgress(run.RunId, cfg, overall, camIdx, camName, pct);
+                BroadcastProgress(run.RunId, cfg, overall, camIdx, camName, pct, startedUtc);
             };
 
             ExportRunResult result;
@@ -300,7 +303,7 @@ namespace AutoExporter.Background
             };
 
             AppendExecutionAndBroadcast(record);
-            BroadcastProgress(run.RunId, cfg, 100, Math.Max(0, record.CameraCount - 1), "");
+            BroadcastProgress(run.RunId, cfg, 100, Math.Max(0, record.CameraCount - 1), "", 100, startedUtc);
 
             if (result.Success)
             {
@@ -498,7 +501,34 @@ namespace AutoExporter.Background
 
         // ─── Cross-environment broadcasting ───────────────
 
-        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int percent, int camIdx, string camName, int cameraPercent = 0)
+        private void BroadcastExecutionStarted(RunHandle run, ExportJobConfig cfg, string trigger,
+            DateTime startedUtc, DateTime rangeStartUtc, DateTime rangeEndUtc, ExportFormat format)
+        {
+            if (_cmh.MessageCommunication == null) return;
+            try
+            {
+                _cmh.TransmitMessage(new Message(AutoExporterMessageIds.ExecutionStarted, new ExecutionRecord
+                {
+                    RunId         = run.RunId,
+                    JobObjectId   = cfg.JobObjectId,
+                    JobName       = cfg.JobName,
+                    StartedUtc    = startedUtc,
+                    FinishedUtc   = DateTime.MinValue,
+                    RangeStartUtc = rangeStartUtc,
+                    RangeEndUtc   = rangeEndUtc,
+                    Format        = format == ExportFormat.Avi ? "AVI" : "XProtect",
+                    Trigger       = trigger,
+                    Outcome       = "Running",
+                    CameraCount   = cfg.Targets?.Count ?? 0
+                }));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"BroadcastExecutionStarted failed for run {run.RunId}: {ex.Message}", ex);
+            }
+        }
+
+        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int percent, int camIdx, string camName, int cameraPercent = 0, DateTime startedUtc = default(DateTime))
         {
             if (_cmh.MessageCommunication == null) return;
             try
@@ -512,7 +542,9 @@ namespace AutoExporter.Background
                     CameraPercent     = cameraPercent,
                     CameraIndex       = camIdx,
                     CameraCount       = cfg.Targets?.Count ?? 0,
-                    CurrentCameraName = camName ?? ""
+                    CurrentCameraName = camName ?? "",
+                    Format            = cfg.Format == ExportFormat.Avi ? "AVI" : "XProtect",
+                    StartedUtc        = startedUtc
                 }));
             }
             catch (Exception ex)

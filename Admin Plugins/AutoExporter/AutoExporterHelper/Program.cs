@@ -553,9 +553,14 @@ namespace AutoExporterHelper
                 AVIExporter exporter = null;
                 try
                 {
-                    exporter = new AVIExporter { Filename = filename };
+                    // Per the SDK: Path = directory, Filename = base name only (NOT a
+                    // full path). Large exports are auto-split into <name>.avi,
+                    // <name>_0001.avi, ... at MaxAVIFileSize (512 MB default) because
+                    // AutoSplitExportFile defaults to true.
+                    exporter = new AVIExporter();
                     exporter.Init();
                     exporter.Path = camDir;
+                    exporter.Filename = name + ".avi";
                     exporter.CameraList.Add(cam);
 
                     if (req.IncludeAudio)
