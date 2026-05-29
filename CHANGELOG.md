@@ -1,5 +1,10 @@
 # Changelog
 
+
+## [3.4.0] - 2026-05-29
+- Add: Auto Export Plugin
+- Add: SC System Help Toolbar Plugin
+
 ## [3.2.9] - 2026-05-28
 - Remove Metadata Display: **Learn mode**, **Inspect packet**, and the per-channel packet cache are gone. The configuration window is now driven entirely by **Pick packet** (renamed from History) and **Import packet** - both populate Topic and Field from a real packet, and the live source keeps the preview updating after a pick. Additional series rows lose their per-row Learn buttons and gain their own Pick packet alongside Import packet. 
 - Fix Metadata Display: **Pick packet** and **Import packet** now switch to the picked packet's topic even when a topic was already selected. Previously the prior topic was preserved silently and the operator had to reopen the Topic dropdown to select the new one.

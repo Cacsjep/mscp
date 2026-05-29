@@ -59,6 +59,7 @@ nav:
       - Remote Manager: plugins/smart-client/remote-manager.md
       - Smart Bar: plugins/smart-client/smartbar.md
       - Snapshot Report: plugins/smart-client/snapreport.md
+      - System Status: plugins/smart-client/system-status.md
       - Timelapse: plugins/smart-client/timelapse.md
       - Timeline Jump: plugins/smart-client/timeline-jump.md
       - Todo List: plugins/smart-client/todo-list.md
