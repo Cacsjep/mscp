@@ -523,7 +523,11 @@ namespace AutoExporterHelper
                     return false;
                 }
 
-                WaitForCompletion(exporter, cameras.FirstOrDefault()?.Name ?? "", 0);
+                if (!WaitForCompletion(exporter, cameras.FirstOrDefault()?.Name ?? "", 0, cameras.Count, req.OutputFolder))
+                {
+                    error = "Export stalled (no progress and no new data); cancelled";
+                    return false;
+                }
 
                 if (exporter.LastError > 0)
                 {
@@ -577,7 +581,11 @@ namespace AutoExporterHelper
                         return false;
                     }
 
-                    WaitForCompletion(exporter, cam?.Name ?? "", i);
+                    if (!WaitForCompletion(exporter, cam?.Name ?? "", i, cameras.Count, camDir))
+                    {
+                        error = $"Camera '{cam?.Name}': export stalled (no progress and no new data); cancelled";
+                        return false;
+                    }
 
                     if (exporter.LastError > 0)
                     {
@@ -592,17 +600,54 @@ namespace AutoExporterHelper
 
         // ─── Common ────────────────────────────────────────
 
-        private static void WaitForCompletion(IExporter exporter, string cameraName, int cameraIndex)
+        // Polls the exporter to completion. Returns true when it finished (Progress
+        // reached 100 or an error was set), false if it STALLED (no progress and no new
+        // bytes written for StallLimitMs). The stall watchdog watches BOTH the reported
+        // percent AND the output folder size, because some exporters (notably AVI) keep
+        // writing while Progress sits flat - we must not kill a run that is still
+        // producing data. Without this, a recorder/driver hang would loop here forever.
+        private static bool WaitForCompletion(IExporter exporter, string cameraName, int cameraIndex, int total, string outputPath)
         {
+            const int PollMs = 250;
+            const int StallLimitMs = 10 * 60 * 1000;   // 10 min with neither % nor bytes moving
+            const int SizeCheckMs = 5000;
+
+            int lastPct = -1;
+            long lastSize = -1;
+            int sinceAdvanceMs = 0;
+            int sinceSizeCheckMs = SizeCheckMs;   // force a size read on the first stalled poll
+
             while (true)
             {
                 int p = exporter.Progress;
                 if (p < 0) p = 0;
-                EmitProgress(cameraIndex, p, cameraName);
-                if (p >= 100 || exporter.LastError > 0) return;
+                EmitProgress(cameraIndex, total, p, cameraName);
+                if (p >= 100 || exporter.LastError > 0) return true;
+
+                bool advanced = false;
+                if (p > lastPct) { lastPct = p; advanced = true; }
+
+                sinceSizeCheckMs += PollMs;
+                if (sinceSizeCheckMs >= SizeCheckMs)
+                {
+                    sinceSizeCheckMs = 0;
+                    long size = MeasureSize(outputPath);
+                    if (size > lastSize) { lastSize = size; advanced = true; }
+                }
+
+                if (advanced) sinceAdvanceMs = 0;
+                else sinceAdvanceMs += PollMs;
+
+                if (sinceAdvanceMs >= StallLimitMs)
+                {
+                    Console.Error.WriteLine($"WARN export stalled at {p}% with no new bytes for {StallLimitMs / 1000}s; cancelling");
+                    try { exporter.Cancel(); } catch { }
+                    return false;
+                }
+
                 // Pump (not plain Sleep) so the export's own media callbacks keep
                 // being dispatched on this thread while we wait.
-                PumpMessages(250);
+                PumpMessages(PollMs);
             }
         }
 
@@ -622,11 +667,13 @@ namespace AutoExporterHelper
             while (unchecked(System.Environment.TickCount - start) < ms);
         }
 
-        private static void EmitProgress(int cameraIdx, int pct, string camName)
+        private static void EmitProgress(int cameraIdx, int total, int pct, string camName)
         {
             // stderr line consumed by the parent process. Keep this format STABLE (it's parsed).
-            // PROGRESS cameraIdx=<int> pct=<int> name=<string-may-have-spaces>
-            Console.Error.WriteLine($"PROGRESS cameraIdx={cameraIdx} pct={pct} name={camName}");
+            // PROGRESS cameraIdx=<int> total=<int> pct=<int> name=<string-may-have-spaces>
+            // total = resolved camera count (so the UI shows "camera n/total" correctly
+            // even when the job targets groups). "name" is always last (may contain spaces).
+            Console.Error.WriteLine($"PROGRESS cameraIdx={cameraIdx} total={total} pct={pct} name={camName}");
         }
 
         private static void SafeEnd(IExporter exporter)

@@ -4,7 +4,8 @@ namespace AutoExporter.Background
 {
     /// <summary>
     /// Parses one stderr line from AutoExporterHelper.exe. The contract:
-    ///   PROGRESS cameraIdx=&lt;int&gt; pct=&lt;int&gt; name=&lt;string-may-have-spaces&gt;
+    ///   PROGRESS cameraIdx=&lt;int&gt; total=&lt;int&gt; pct=&lt;int&gt; name=&lt;string-may-have-spaces&gt;
+    /// "total" is the resolved camera count (optional for back-compat; 0 if absent).
     /// All other lines are returned as <see cref="HelperLine.Kind.Info"/> for logging only.
     /// Made internal-static so the test project can lock the format down.
     /// </summary>
@@ -15,6 +16,7 @@ namespace AutoExporter.Background
             public enum LineKind { Progress, Info }
             public LineKind Kind;
             public int CameraIndex;
+            public int Total;
             public int Percent;
             public string CameraName;
             public string Raw;
@@ -32,7 +34,7 @@ namespace AutoExporter.Background
             // Strip "PROGRESS "
             var rest = line.Substring("PROGRESS ".Length);
 
-            int camIdx = 0, pct = 0;
+            int camIdx = 0, total = 0, pct = 0;
             string name = "";
 
             int cursor = 0;
@@ -55,6 +57,7 @@ namespace AutoExporter.Background
                 string val = rest.Substring(valStart, valEnd - valStart);
 
                 if (key == "cameraIdx") int.TryParse(val, out camIdx);
+                else if (key == "total") int.TryParse(val, out total);
                 else if (key == "pct") int.TryParse(val, out pct);
 
                 cursor = sp < 0 ? rest.Length : sp + 1;
@@ -62,6 +65,7 @@ namespace AutoExporter.Background
 
             result.Kind        = HelperLine.LineKind.Progress;
             result.CameraIndex = camIdx;
+            result.Total       = total;
             result.Percent     = pct;
             result.CameraName  = name;
             return result;

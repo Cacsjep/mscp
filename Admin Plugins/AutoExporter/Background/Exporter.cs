@@ -59,7 +59,7 @@ namespace AutoExporter.Background
         public ExportRunResult Run(
             ExportJobConfig cfg,
             string serverUri,
-            Action<int, int, string> onProgress,
+            Action<int, int, int, string> onProgress,   // (cameraIndex, cameraTotal, percent, cameraName)
             CancellationToken ct)
         {
             if (cfg == null) return Fail("Null config");
@@ -131,7 +131,7 @@ namespace AutoExporter.Background
         // ─── Process management ────────────────────────────
 
         private static int SpawnHelper(string exe, string serverUri, string configPath,
-            Action<int, int, string> onProgress, CancellationToken ct)
+            Action<int, int, int, string> onProgress, CancellationToken ct)
         {
             var psi = new ProcessStartInfo
             {
@@ -153,7 +153,7 @@ namespace AutoExporter.Background
                     var parsed = HelperProgressParser.Parse(e.Data);
                     if (parsed.Kind == HelperProgressParser.HelperLine.LineKind.Progress)
                     {
-                        try { onProgress?.Invoke(parsed.CameraIndex, parsed.Percent, parsed.CameraName); }
+                        try { onProgress?.Invoke(parsed.CameraIndex, parsed.Total, parsed.Percent, parsed.CameraName); }
                         catch { /* progress callback must not break the helper loop */ }
                     }
                     else

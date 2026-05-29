@@ -77,7 +77,7 @@ namespace AutoExporter.Admin
             _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Size", FillWeight = 60 });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Duration", FillWeight = 60 });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Result", FillWeight = 50 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Error", FillWeight = 200 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Status", FillWeight = 200 });
 
             this.Controls.AddRange(new Control[] { _grid, _lblHint, _toolbar });
             this.Size = new Size(980, 540);

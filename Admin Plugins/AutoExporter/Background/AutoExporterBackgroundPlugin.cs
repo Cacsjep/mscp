@@ -254,13 +254,16 @@ namespace AutoExporter.Background
             BroadcastProgress(run.RunId, cfg, 0, 0, "", 0, startedUtc);
 
             int targetCount = targets.Count;
-            Action<int, int, string> onProgress = (camIdx, pct, camName) =>
+            Action<int, int, int, string> onProgress = (camIdx, camTotal, pct, camName) =>
             {
-                int denom = Math.Max(targetCount, camIdx + 1);
+                // Prefer the helper's resolved camera total (correct even when the job
+                // targets groups); fall back to the target count if not reported.
+                int total = camTotal > 0 ? camTotal : targetCount;
+                int denom = Math.Max(total, camIdx + 1);
                 int overall = (int)(((double)camIdx + (pct / 100.0)) / denom * 100);
                 if (overall < 0) overall = 0;
                 if (overall > 100) overall = 100;
-                BroadcastProgress(run.RunId, cfg, overall, camIdx, camName, pct, startedUtc);
+                BroadcastProgress(run.RunId, cfg, overall, camIdx, camName, pct, startedUtc, total);
             };
 
             ExportRunResult result;
@@ -528,7 +531,7 @@ namespace AutoExporter.Background
             }
         }
 
-        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int percent, int camIdx, string camName, int cameraPercent = 0, DateTime startedUtc = default(DateTime))
+        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int percent, int camIdx, string camName, int cameraPercent = 0, DateTime startedUtc = default(DateTime), int cameraCount = 0)
         {
             if (_cmh.MessageCommunication == null) return;
             try
@@ -541,7 +544,7 @@ namespace AutoExporter.Background
                     Percent           = percent,
                     CameraPercent     = cameraPercent,
                     CameraIndex       = camIdx,
-                    CameraCount       = cfg.Targets?.Count ?? 0,
+                    CameraCount       = cameraCount > 0 ? cameraCount : (cfg.Targets?.Count ?? 0),
                     CurrentCameraName = camName ?? "",
                     Format            = cfg.Format == ExportFormat.Avi ? "AVI" : "XProtect",
                     StartedUtc        = startedUtc

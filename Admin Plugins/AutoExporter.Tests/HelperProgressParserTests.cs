@@ -8,9 +8,21 @@ namespace AutoExporter.Tests
         [Fact]
         public void Progress_line_with_all_fields()
         {
-            var r = HelperProgressParser.Parse("PROGRESS cameraIdx=2 pct=47 name=Lobby Camera");
+            var r = HelperProgressParser.Parse("PROGRESS cameraIdx=2 total=44 pct=47 name=Lobby Camera");
             Assert.Equal(HelperProgressParser.HelperLine.LineKind.Progress, r.Kind);
             Assert.Equal(2, r.CameraIndex);
+            Assert.Equal(44, r.Total);
+            Assert.Equal(47, r.Percent);
+            Assert.Equal("Lobby Camera", r.CameraName);
+        }
+
+        [Fact]
+        public void Total_is_optional_and_defaults_to_zero()
+        {
+            // Lines written before "total" existed still parse (total = 0).
+            var r = HelperProgressParser.Parse("PROGRESS cameraIdx=2 pct=47 name=Lobby Camera");
+            Assert.Equal(HelperProgressParser.HelperLine.LineKind.Progress, r.Kind);
+            Assert.Equal(0, r.Total);
             Assert.Equal(47, r.Percent);
             Assert.Equal("Lobby Camera", r.CameraName);
         }
