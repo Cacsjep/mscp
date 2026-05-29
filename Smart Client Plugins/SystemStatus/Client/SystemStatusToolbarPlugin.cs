@@ -17,13 +17,28 @@ namespace SystemStatus.Client
             if (window != null && window.FQID.ObjectId != Kind.Window)
                 Visible = false;
 
-            Title = SystemStatusBackgroundPlugin.Instance?.CurrentSnapshot?.ToolbarText ?? "Status";
+            // Standard text button labeled "System Status"; the live counts go in the hover tooltip
+            // (Tooltip exists from Smart Client 2022 R3, set reflectively since we compile on 22.3),
+            // and the full lists are in the flyout on click.
+            Title = "System Status";
+            TrySet("Tooltip", SystemStatusBackgroundPlugin.Instance?.CurrentSnapshot?.ToolbarText ?? "System Status");
 
             if (SystemStatusBackgroundPlugin.Instance != null)
             {
                 SystemStatusBackgroundPlugin.Instance.StatusChanged += OnStatusChanged;
                 _subscribed = true;
             }
+        }
+
+        private bool TrySet(string propertyName, object value)
+        {
+            try
+            {
+                var p = GetType().GetProperty(propertyName);
+                if (p != null && p.CanWrite && value != null) { p.SetValue(this, value); return true; }
+            }
+            catch { }
+            return false;
         }
 
         public override void Activate()
@@ -61,7 +76,8 @@ namespace SystemStatus.Client
 
         private void OnStatusChanged(object sender, StatusChangedEventArgs e)
         {
-            try { Title = e.Snapshot.ToolbarText; }
+            // Keep the "Health" label; refresh the hover tooltip with the live counts.
+            try { TrySet("Tooltip", e.Snapshot.ToolbarText); }
             catch { /* host may not be ready yet */ }
         }
     }

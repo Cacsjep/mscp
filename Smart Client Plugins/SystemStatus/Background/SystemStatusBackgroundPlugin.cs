@@ -32,7 +32,7 @@ namespace SystemStatus.Background
 
         // TEST: inject fake cameras to preview the list with many entries (online state arbitrary).
         // Set to false to disable.
-        private const bool InjectFakeCameras = true;
+        private static readonly bool InjectFakeCameras = false;
         private static readonly List<CameraRow> FakeCameras = BuildFakeCameras();
         private static List<CameraRow> BuildFakeCameras()
         {
