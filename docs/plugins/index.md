@@ -105,6 +105,10 @@ hide:
     <div class="pi sc"><i class="mdi mdi-file-pdf-box"></i></div>
     <div class="pt"><span class="pn">Snapshot Report</span><span class="pd">Camera snapshot PDF report generator</span></div>
   </a>
+  <a class="pr" href="smart-client/system-status/">
+    <div class="pi sc"><i class="mdi mdi-heart-pulse"></i></div>
+    <div class="pt"><span class="pn">System Status</span><span class="pd">Toolbar button and flyout showing online versus total enabled cameras and the connected users with their client type (Smart Client, Management Client, Standalone)</span></div>
+  </a>
   <a class="pr" href="smart-client/timelapse/">
     <div class="pi sc"><i class="mdi mdi-timelapse"></i></div>
     <div class="pt"><span class="pn">Timelapse</span><span class="pd">Generate timelapse videos from recorded cameras with multi-camera stitch support</span></div>
