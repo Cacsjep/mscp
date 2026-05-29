@@ -6,11 +6,12 @@ namespace AutoExporter.Messaging
 {
     internal static class AutoExporterMessageIds
     {
-        public const string RunNowRequest        = "AutoExporter.RunNowRequest";
-        public const string Progress             = "AutoExporter.Progress";
-        public const string ExecutionAdded       = "AutoExporter.ExecutionAdded";
-        public const string StorageProbeRequest  = "AutoExporter.StorageProbeRequest";
-        public const string StorageProbeReply    = "AutoExporter.StorageProbeReply";
+        public const string RunNowRequest         = "AutoExporter.RunNowRequest";
+        public const string Progress              = "AutoExporter.Progress";
+        public const string ExecutionAdded        = "AutoExporter.ExecutionAdded";
+        public const string StorageProbeRequest   = "AutoExporter.StorageProbeRequest";
+        public const string StorageProbeReply     = "AutoExporter.StorageProbeReply";
+        public const string ClearExecutionsRequest = "AutoExporter.ClearExecutionsRequest";
     }
 
     [Serializable]
@@ -29,6 +30,12 @@ namespace AutoExporter.Messaging
         public int CameraIndex;
         public int CameraCount;
         public string CurrentCameraName;
+    }
+
+    [Serializable]
+    public class ClearExecutionsRequest
+    {
+        public Guid CorrelationId;
     }
 
     [Serializable]
@@ -62,10 +69,12 @@ namespace AutoExporter.Messaging
         public string Format;
         public string Trigger;          // "Rule", "Manual"
         public bool Success;
+        public string Outcome;          // "Success", "Partial", "Skipped", "Failed" (derived from Success if empty)
         public string Error;
         public int CameraCount;
         public long BytesWritten;
         public string OutputFolder;
         public List<string> CameraNames = new List<string>();
+        public List<string> SkippedCameras = new List<string>();   // cameras with no recordings in range
     }
 }

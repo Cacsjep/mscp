@@ -8,7 +8,7 @@ namespace AutoExporter.Admin
 {
     public class ExecutionsItemManager : ItemManager
     {
-        private ExecutionsUserControl _userControl;
+        private DashboardUserControl _userControl;
         private readonly Guid _kind;
 
         public ExecutionsItemManager(Guid kind) { _kind = kind; }
@@ -18,7 +18,7 @@ namespace AutoExporter.Admin
 
         public override UserControl GenerateDetailUserControl()
         {
-            _userControl = new ExecutionsUserControl();
+            _userControl = new DashboardUserControl();
             return _userControl;
         }
 
@@ -42,8 +42,8 @@ namespace AutoExporter.Admin
 
         public override bool ValidateAndSaveUserControl() { return true; }
 
-        public override string GetItemName() => "Executions";
-        public override void SetItemName(string name) { if (CurrentItem != null) CurrentItem.Name = "Executions"; }
+        public override string GetItemName() => "Status and Executions";
+        public override void SetItemName(string name) { if (CurrentItem != null) CurrentItem.Name = "Status and Executions"; }
 
         public override List<Item> GetItems()
             => Configuration.Instance.GetItemConfigurations(AutoExporterDefinition.PluginId, null, _kind);
@@ -63,7 +63,7 @@ namespace AutoExporter.Admin
                 FolderType.No,
                 _kind);
 
-            CurrentItem = new Item(fqid, "Executions");
+            CurrentItem = new Item(fqid, "Status and Executions");
             Configuration.Instance.SaveItemConfiguration(AutoExporterDefinition.PluginId, CurrentItem);
             return CurrentItem;
         }

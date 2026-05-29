@@ -56,8 +56,9 @@ namespace AutoExporter.Background
 
             if (_cmh.Start())
             {
-                _cmh.Register(OnRunNowMessage,       new CommunicationIdFilter(AutoExporterMessageIds.RunNowRequest));
-                _cmh.Register(OnStorageProbeRequest, new CommunicationIdFilter(AutoExporterMessageIds.StorageProbeRequest));
+                _cmh.Register(OnRunNowMessage,        new CommunicationIdFilter(AutoExporterMessageIds.RunNowRequest));
+                _cmh.Register(OnStorageProbeRequest,  new CommunicationIdFilter(AutoExporterMessageIds.StorageProbeRequest));
+                _cmh.Register(OnClearExecutions,      new CommunicationIdFilter(AutoExporterMessageIds.ClearExecutionsRequest));
             }
 
             // Hourly safety pass on the ring buffer.
@@ -146,9 +147,12 @@ namespace AutoExporter.Background
 
             if (!_running.TryAdd(jobObjectId, newRun))
             {
+                // A trigger fired while the job's previous run is still going (e.g. the
+                // trigger interval is shorter than the export takes). This is benign,
+                // not a failure: record it as Skipped so it shows in the Executions
+                // view, but do NOT fire the Job Failed event for it.
                 _log.Info($"Job '{job.Name}' skipped: previous run still in progress");
                 _sysLog.JobSkippedBusy(job.Name);
-                FireFailedEvent(job, triggeringEvent, "Skipped: previous run still in progress");
                 AppendExecutionAndBroadcast(new ExecutionRecord
                 {
                     RunId = newRun.RunId,
@@ -159,7 +163,8 @@ namespace AutoExporter.Background
                     Format = GetProp(job, "Format", "XProtect"),
                     Trigger = triggerSource,
                     Success = false,
-                    Error = "Skipped: previous run still in progress"
+                    Outcome = "Skipped",
+                    Error = "Previous run still in progress (trigger faster than export)"
                 });
                 return;
             }
@@ -240,6 +245,8 @@ namespace AutoExporter.Background
                 $"format={cfg.Format} encrypt={cfg.Encrypt} targets={cfg.Targets.Count} " +
                 $"range={rangeStartUtc:O}->{rangeEndUtc:O} outputFolder='{runFolder}' serverUri='{serverUri}'");
 
+            FireStartedEvent(job, triggerSource, rangeStartUtc, rangeEndUtc);
+
             BroadcastProgress(run.RunId, cfg, 0, 0, "");
 
             int targetCount = targets.Count;
@@ -265,23 +272,37 @@ namespace AutoExporter.Background
             }
 
             var finishedUtc = DateTime.UtcNow;
+            var skippedCams = result.SkippedCameras ?? new List<string>();
+
+            // Distinct outcome so the Executions view can show more than pass/fail:
+            //   Failed  - the export itself errored
+            //   Skipped - nothing was exported (no camera had recordings in the range)
+            //   Partial - exported, but some cameras had no recordings and were left out
+            //   Success - everything requested was exported
+            string outcome =
+                !result.Success      ? "Failed"  :
+                result.CameraCount == 0 ? "Skipped" :
+                skippedCams.Count > 0   ? "Partial" : "Success";
+
             var record = new ExecutionRecord
             {
-                RunId         = run.RunId,
-                JobObjectId   = job.FQID.ObjectId,
-                JobName       = job.Name,
-                StartedUtc    = startedUtc,
-                FinishedUtc   = finishedUtc,
-                RangeStartUtc = rangeStartUtc,
-                RangeEndUtc   = rangeEndUtc,
-                Format        = format == ExportFormat.Avi ? "AVI" : "XProtect",
-                Trigger       = triggerSource,
-                Success       = result.Success,
-                Error         = result.Error ?? "",
-                CameraCount   = result.CameraCount,
-                BytesWritten  = result.BytesWritten,
-                OutputFolder  = runFolder,
-                CameraNames   = result.CameraNames ?? new List<string>()
+                RunId          = run.RunId,
+                JobObjectId    = job.FQID.ObjectId,
+                JobName        = job.Name,
+                StartedUtc     = startedUtc,
+                FinishedUtc    = finishedUtc,
+                RangeStartUtc  = rangeStartUtc,
+                RangeEndUtc    = rangeEndUtc,
+                Format         = format == ExportFormat.Avi ? "AVI" : "XProtect",
+                Trigger        = triggerSource,
+                Success        = result.Success,
+                Outcome        = outcome,
+                Error          = result.Error ?? "",
+                CameraCount    = result.CameraCount,
+                BytesWritten   = result.BytesWritten,
+                OutputFolder   = runFolder,
+                CameraNames    = result.CameraNames ?? new List<string>(),
+                SkippedCameras = skippedCams
             };
 
             AppendExecutionAndBroadcast(record);
@@ -315,6 +336,7 @@ namespace AutoExporter.Background
                 Format = format == ExportFormat.Avi ? "AVI" : "XProtect",
                 Trigger = triggerSource,
                 Success = false,
+                Outcome = "Failed",
                 Error = error
             };
             AppendExecutionAndBroadcast(record);
@@ -322,7 +344,7 @@ namespace AutoExporter.Background
             FireFailedEvent(job, triggeringEvent, error);
         }
 
-        // Camera resolution moved to AutoExporterHelper.exe — the Service env can't
+        // Camera resolution moved to AutoExporterHelper.exe. The Service env can't
         // call ExportManager APIs, so the helper does both the SDK init AND the
         // camera/group resolution in its own standalone environment.
 
@@ -380,7 +402,30 @@ namespace AutoExporter.Background
             return null;
         }
 
+        private object OnClearExecutions(Message message, FQID destination, FQID sender)
+        {
+            if (_closing) return null;
+            try
+            {
+                _log.Info("Clear executions request");
+                _executionLog.Clear();
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Clear executions handler error: {ex.Message}", ex);
+            }
+            return null;
+        }
+
         // ─── Events ─────────────────────────────────────────
+
+        private void FireStartedEvent(Item job, string trigger, DateTime rangeStartUtc, DateTime rangeEndUtc)
+        {
+            FireRuleEvent(job, AutoExporterDefinition.EvtJobStartedId,
+                "AutoExportJobStarted", "Auto Export: Job Started",
+                $"Trigger: {trigger} | Range: {rangeStartUtc.ToLocalTime():g} to {rangeEndUtc.ToLocalTime():g}",
+                priority: 4);
+        }
 
         private void FireSucceededEvent(Item job, BaseEvent triggeringEvent, ExecutionRecord rec)
         {

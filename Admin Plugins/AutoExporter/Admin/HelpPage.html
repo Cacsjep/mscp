@@ -21,14 +21,23 @@
 <body>
 
 <h1>Auto Exporter</h1>
-<p>Automate XProtect video exports on a recurring rule and keep them on disk for a bounded amount of time or space — per job.</p>
+<p>Automate XProtect video exports on a recurring rule and keep them on disk for a bounded amount of time or space, per job.</p>
+
+<div class="warn">
+  <strong>Where jobs run.</strong>
+  Exports execute on the <strong>Event Server</strong>, not on the Management Client you are configuring from. Everything a job touches is resolved on the Event Server:
+  <ul>
+    <li>The <strong>storage path</strong> is read on the Event Server, so it must be a folder the <strong>Event Server service account</strong> can write to (a local path on the Event Server machine, or a UNC share that account can reach).</li>
+    <li>Type the path as the Event Server sees it, then click <em>Verify on ES</em> to confirm it is reachable and writable there. A path that exists on your client machine is meaningless unless the Event Server can also reach it.</li>
+  </ul>
+</div>
 
 <h2>Setup</h2>
 <ol>
-  <li>Right-click <strong>Jobs</strong> in the sidebar → <em>Create New…</em> for each export job.</li>
-  <li>For each job: name, cameras / groups, format, time range, and the <strong>storage path + MAX GB / MAX TIME</strong>. Use <em>Verify on ES</em> to confirm the Event Server can reach the path.</li>
-  <li>Open <strong>Executions</strong> and click <em>Run Now ▼</em> to test a job, or build a XProtect Rule using the <strong>Execute Auto Export Job</strong> action.</li>
-  <li>Open <strong>Status</strong> for a per-job dashboard of storage health (path reachable from the Event Server? quota %, free disk, oldest run, etc.).</li>
+  <li>Right-click <strong>Jobs</strong> in the sidebar and pick <em>Create New</em> for each export job.</li>
+  <li>For each job: name, cameras / groups, format, time range, and the <strong>storage path + MAX GB / MAX TIME</strong>. Type the storage path as the Event Server sees it (that is where the export runs) and use <em>Verify on ES</em> to confirm it is writable there.</li>
+  <li>Open <strong>Status and Executions</strong> and click <em>Run Now</em> to test a job, or build a XProtect Rule using the <strong>Execute Auto Export Job</strong> action.</li>
+  <li>The same <strong>Status and Executions</strong> page shows, on the left, a per-job dashboard of storage health (path reachable from the Event Server, quota %, free disk, oldest run) and, on the right, the run history.</li>
 </ol>
 
 <div class="warn">
@@ -48,13 +57,13 @@
   28.05.2026_0400\
     ...
 </code></pre>
-<p>Each job has its own storage path, MAX GB, and MAX TIME. Two jobs that point at the same path share the same ring buffer (everyone's runs prune together).</p>
+<p>Each job has its own storage path, MAX GB, and MAX TIME. Each storage path must be unique to one job: saving a job whose path is already used by another job is rejected, so jobs never mix their exports or fight over cleanup.</p>
 
 <h2>Ring buffer</h2>
 <ul>
   <li>Each job's limits apply to its own storage path's run folders only.</li>
   <li>Cleanup runs <em>before each export</em> and once an hour for every job.</li>
-  <li>Oldest run folders are deleted first until under <code>MAX GB</code>; folders older than <code>MAX TIME</code> are deleted on every pass.</li>
+  <li>Oldest run folders are deleted first until under <code>MAX GB</code>. Folders older than <code>MAX TIME</code> are deleted on every pass.</li>
   <li><code>0</code> = unlimited for either limit.</li>
 </ul>
 
@@ -72,8 +81,8 @@
 <p>Each job specifies <code>Last N [Minutes | Hours | Days | Months]</code>. The range is anchored at the moment the job is triggered, so the same job works for a nightly schedule, a manual <em>Run Now</em>, or an event-driven rule.</p>
 <table>
   <tr><th>Trigger time</th><th>Range setting</th><th>Exported window</th></tr>
-  <tr><td>2026-05-28 03:00</td><td>Last 2 Days</td><td>2026-05-26 03:00 → 2026-05-28 03:00</td></tr>
-  <tr><td>2026-05-28 14:22</td><td>Last 2 Hours</td><td>2026-05-28 12:22 → 2026-05-28 14:22</td></tr>
+  <tr><td>2026-05-28 03:00</td><td>Last 2 Days</td><td>2026-05-26 03:00 to 2026-05-28 03:00</td></tr>
+  <tr><td>2026-05-28 14:22</td><td>Last 2 Hours</td><td>2026-05-28 12:22 to 2026-05-28 14:22</td></tr>
 </table>
 <p><em>Months</em> = 30 days.</p>
 
@@ -81,22 +90,23 @@
 <p>Each job can target any mix of individual cameras and camera groups. Groups are resolved to their member cameras at the moment of export, so adding/removing cameras from a group flows through automatically.</p>
 
 <h2>Rule action</h2>
-<p>The plugin exposes one action: <strong>Execute Auto Export Job</strong>. The Rules engine offers individual / folder / ALL targeting automatically. The action fires one of two events on completion:</p>
+<p>The plugin exposes one action: <strong>Execute Auto Export Job</strong>. The Rules engine offers individual / folder / ALL targeting automatically. The action fires these events:</p>
 <ul>
-  <li><strong>Auto Export: Job Succeeded</strong> — chain it to Notification, HTTP Requests, etc.</li>
-  <li><strong>Auto Export: Job Failed</strong> — fires on disk-full, missing cameras, “job busy”, etc.</li>
+  <li><strong>Auto Export: Job Started</strong>. Fires when a run begins. Chain it to a Notification or to mark a state.</li>
+  <li><strong>Auto Export: Job Succeeded</strong>. Fires when a run finishes. Chain it to Notification, HTTP Requests, and so on.</li>
+  <li><strong>Auto Export: Job Failed</strong>. Fires on disk-full, missing cameras, and other hard errors.</li>
 </ul>
 
 <h2>Concurrency</h2>
-<p>If a rule re-triggers a job while the previous run is still active, the new trigger is <em>skipped</em>, an entry is added to the Executions log, and the Failed event is fired. This prevents disk/IO pile-ups.</p>
+<p>If a rule re-triggers a job while the previous run is still active (for example a trigger interval shorter than the export takes), the new trigger is <em>skipped</em> and recorded in the Executions list with the <strong>Skipped</strong> result. This is treated as normal back-pressure, not a failure, so it does not fire the Job Failed event. This prevents disk and IO pile-ups.</p>
 
 <h2>Architecture note</h2>
-<p>Milestone's export APIs (<code>DBExporter</code> / <code>AVIExporter</code>) refuse to run in the Event Server's restricted <em>Service</em> environment. The plugin solves this by spawning <code>AutoExporterHelper.exe</code> next to the plugin DLL — the helper hosts a full standalone SDK environment, logs in to the management server, runs the export, and reports back via stderr + a result JSON. The helper inherits the Event Server service account's credentials, so the same camera-read permissions apply.</p>
+<p>Milestone's export APIs (<code>DBExporter</code> / <code>AVIExporter</code>) refuse to run in the Event Server's restricted <em>Service</em> environment. The plugin solves this by spawning <code>AutoExporterHelper.exe</code> next to the plugin DLL. The helper hosts a full standalone SDK environment, logs in to the management server, runs the export, and reports back via stderr plus a result JSON. The helper inherits the Event Server service account's credentials, so the same camera-read permissions apply.</p>
 
 <h2>Troubleshooting</h2>
 <ul>
   <li><strong>"Storage path not configured on this job."</strong> Open the job and set a path that the Event Server service account can write to. UNC paths must be reachable as the service account, not your interactive user.</li>
-  <li><strong>Job fails immediately, no video.</strong> The export range may not overlap any recorded footage. This is logged but the job is still recorded as successful with 0 bytes.</li>
+  <li><strong>A camera has no recordings in the range.</strong> Cameras with no recorded data in the database are skipped (Milestone's exporter would otherwise abort the whole run). The run is recorded as <strong>Partial</strong> when some cameras still exported, or <strong>Skipped</strong> when none had data, and the affected camera names are listed in the Executions detail. This is informational, not an error.</li>
   <li><strong>AVI + Encrypt rejected at save.</strong> AVI export does not support encryption. Switch to XProtect, or disable encryption.</li>
   <li><strong>Progress bar stuck at 0%.</strong> Encryption + signing on very large exports can take a while before progress moves. Check the Milestone System Log for category <code>Auto Exporter</code>.</li>
 </ul>

@@ -22,6 +22,7 @@ namespace AutoExporter
         internal static readonly Guid BackgroundPluginId   = new Guid("BA8ABBB6-7F34-477B-925C-B92FC20D8635");
 
         internal static readonly Guid EventGroupId         = new Guid("138E90D8-E2A2-4ACE-A28D-CC7EA7FCB447");
+        internal static readonly Guid EvtJobStartedId      = new Guid("3F7C9A21-5D84-4B2E-9C16-7A0E2D6B4F58");
         internal static readonly Guid EvtJobSucceededId    = new Guid("A6314293-89AB-4855-8BC7-4C9E841AA2AD");
         internal static readonly Guid EvtJobFailedId       = new Guid("0C21BC12-B4D1-4CD8-A429-27021561CB3E");
         internal static readonly Guid StateGroupId         = new Guid("29CE359F-1E1F-46F9-976A-2CF5F6416BAE");
@@ -29,6 +30,14 @@ namespace AutoExporter
         // Fixed FQID.ObjectIds for the singleton items so they round-trip deterministically.
         internal static readonly Guid ExecutionsSingletonId    = new Guid("CFAFE824-6071-45FB-8B26-510AB392702D");
         internal static readonly Guid StatusSingletonId        = new Guid("6778FEF5-3F53-4342-842E-7D2B11995F9F");
+
+        // Read/Edit permission pair per item kind, mirroring the PKI plugin. Surfaces
+        // as Read + Edit checkboxes under Security > Roles > [Role] > MIP > Auto Exporter.
+        private static readonly List<SecurityAction> KindSecurityActions = new List<SecurityAction>
+        {
+            new SecurityAction("GENERIC_READ",  "Read"),
+            new SecurityAction("GENERIC_WRITE", "Edit"),
+        };
 
         private List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
         private List<ItemNode> _itemNodes;
@@ -60,7 +69,7 @@ namespace AutoExporter
                     _pluginIcon     = PluginIcon.Render(EFontAwesomeIcon.Solid_FileExport);
                     _executionsIcon = PluginIcon.Render(EFontAwesomeIcon.Solid_ListAlt);
                     _statusIcon     = PluginIcon.Render(EFontAwesomeIcon.Solid_TachometerAlt);
-                    _folderIcon     = PluginIcon.Render(EFontAwesomeIcon.Solid_FolderOpen);
+                    _folderIcon     = PluginIcon.Render(EFontAwesomeIcon.Solid_FileExport);
                     _jobIcon        = PluginIcon.Render(EFontAwesomeIcon.Solid_Clock);
                 }
                 catch (Exception ex)
@@ -111,21 +120,15 @@ namespace AutoExporter
 
                 _itemNodes = new List<ItemNode>
                 {
-                    new ItemNode(
-                        StatusKindId, Guid.Empty,
-                        "Status", _statusIcon,
-                        "Status", _statusIcon,
-                        Category.Text, true, ItemsAllowed.One,
-                        new StatusItemManager(StatusKindId),
-                        null),
-
+                    // Status + Executions are merged into one page (two tables).
                     new ItemNode(
                         ExecutionsKindId, Guid.Empty,
-                        "Executions", _executionsIcon,
-                        "Executions", _executionsIcon,
+                        "Status and Executions", _executionsIcon,
+                        "Status and Executions", _executionsIcon,
                         Category.Text, true, ItemsAllowed.One,
                         new ExecutionsItemManager(ExecutionsKindId),
-                        null),
+                        null,
+                        new List<SecurityAction>(KindSecurityActions)),
 
                     new ItemNode(
                         JobKindId, Guid.Empty,
@@ -133,7 +136,8 @@ namespace AutoExporter
                         "Jobs", _folderIcon,
                         Category.Text, true, ItemsAllowed.Many,
                         new JobItemManager(JobKindId),
-                        null)
+                        null,
+                        new List<SecurityAction>(KindSecurityActions))
                 };
                 return _itemNodes;
             }

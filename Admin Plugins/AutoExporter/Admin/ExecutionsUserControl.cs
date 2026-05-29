@@ -66,7 +66,7 @@ namespace AutoExporter.Admin
             foreach (var r in records) AddRow(r);
 
             _lblHint.Text = records.Count == 0
-                ? "No executions yet. Trigger a job via a Rule, or use Run Now ▼ above to test."
+                ? "No executions yet. Trigger a job via a Rule, or use Run Now above to test."
                 : $"{records.Count} executions";
         }
 
@@ -75,11 +75,14 @@ namespace AutoExporter.Admin
             var when     = r.StartedUtc == DateTime.MinValue ? "" : r.StartedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
             var range    = (r.RangeStartUtc == DateTime.MinValue || r.RangeEndUtc == DateTime.MinValue)
                 ? ""
-                : $"{r.RangeStartUtc.ToLocalTime():MM-dd HH:mm} → {r.RangeEndUtc.ToLocalTime():MM-dd HH:mm}";
+                : $"{r.RangeStartUtc.ToLocalTime():MM-dd HH:mm} to {r.RangeEndUtc.ToLocalTime():MM-dd HH:mm}";
             var sizeMB   = r.BytesWritten / (1024 * 1024);
             var duration = r.FinishedUtc > r.StartedUtc
                 ? FormatDuration(r.FinishedUtc - r.StartedUtc)
                 : "";
+
+            var outcome = OutcomeOf(r);
+            var detail  = DetailOf(r, outcome);
 
             var idx = _grid.Rows.Add(
                 when,
@@ -90,11 +93,42 @@ namespace AutoExporter.Admin
                 r.CameraCount,
                 sizeMB > 0 ? $"{sizeMB} MB" : "",
                 duration,
-                r.Success ? "OK" : "FAIL",
-                r.Success ? "" : r.Error);
+                outcome,
+                detail);
 
             var row = _grid.Rows[idx];
-            row.DefaultCellStyle.ForeColor = r.Success ? Color.Black : Color.FromArgb(180, 30, 30);
+            row.DefaultCellStyle.ForeColor = ColorFor(outcome);
+        }
+
+        // Falls back to the legacy Success bool for records written before Outcome existed.
+        private static string OutcomeOf(ExecutionRecord r)
+        {
+            if (!string.IsNullOrEmpty(r.Outcome)) return r.Outcome;
+            return r.Success ? "Success" : "Failed";
+        }
+
+        private static string DetailOf(ExecutionRecord r, string outcome)
+        {
+            var skipped = r.SkippedCameras ?? new List<string>();
+            if ((outcome == "Partial" || outcome == "Skipped") && skipped.Count > 0)
+            {
+                var names = string.Join(", ", skipped);
+                return skipped.Count == 1
+                    ? $"No recordings in range: {names}"
+                    : $"{skipped.Count} cameras had no recordings in range: {names}";
+            }
+            return string.IsNullOrEmpty(r.Error) ? "" : r.Error;
+        }
+
+        private static Color ColorFor(string outcome)
+        {
+            switch (outcome)
+            {
+                case "Failed":  return Color.FromArgb(180, 30, 30);
+                case "Partial": return Color.FromArgb(180, 110, 0);
+                case "Skipped": return Color.FromArgb(120, 120, 120);
+                default:        return Color.Black;   // Success
+            }
         }
 
         private static string FormatDuration(TimeSpan ts)
@@ -151,9 +185,12 @@ namespace AutoExporter.Admin
                 _cmh.TransmitMessage(new VideoOS.Platform.Messaging.Message(AutoExporterMessageIds.RunNowRequest,
                     new RunNowRequest { JobObjectId = jobObjectId }));
 
-                _lblProgressText.Text = $"Queued '{jobName}' — waiting for Event Server…";
+                // The Event Server has to spawn the helper, log in, and probe the
+                // cameras before the first real percent arrives (several seconds), so
+                // show an indeterminate bar right away instead of a dead 0%.
+                _lblProgressText.Text = $"Starting export for '{jobName}'...";
                 _lblProgressText.Visible = true;
-                _progressBar.Value = 0;
+                _progressBar.Style = ProgressBarStyle.Marquee;
                 _progressBar.Visible = true;
             }
             catch (Exception ex)
@@ -167,6 +204,32 @@ namespace AutoExporter.Admin
         {
             RefreshRunNowMenu();
             RefreshGrid();
+        }
+
+        private void OnClearClick(object sender, EventArgs e)
+        {
+            if (MessageBox.Show(
+                    "Clear the entire execution history? This cannot be undone.",
+                    "Clear list", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            // The history file lives on the Event Server, so route the clear through it.
+            try
+            {
+                if (_cmh.MessageCommunication != null)
+                {
+                    _cmh.TransmitMessage(new VideoOS.Platform.Messaging.Message(
+                        AutoExporterMessageIds.ClearExecutionsRequest,
+                        new ClearExecutionsRequest { CorrelationId = Guid.NewGuid() }));
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Clear request failed: {ex.Message}");
+            }
+
+            _grid.Rows.Clear();
+            _lblHint.Text = "No executions yet. Trigger a job via a Rule, or use Run Now to test.";
         }
 
         // ─── Background messages (marshalled to UI thread) ─
@@ -207,8 +270,11 @@ namespace AutoExporter.Admin
         {
             _progressBar.Visible = true;
             _lblProgressText.Visible = true;
+            // Real percent has arrived: switch from the indeterminate marquee to a
+            // normal filling bar.
+            if (_progressBar.Style != ProgressBarStyle.Blocks) _progressBar.Style = ProgressBarStyle.Blocks;
             _progressBar.Value = Math.Max(0, Math.Min(100, p.Percent));
-            var camPart = p.CameraCount > 0 ? $" — camera {p.CameraIndex + 1}/{p.CameraCount}" : "";
+            var camPart = p.CameraCount > 0 ? $" (camera {p.CameraIndex + 1}/{p.CameraCount})" : "";
             var namePart = string.IsNullOrEmpty(p.CurrentCameraName) ? "" : $" '{p.CurrentCameraName}'";
             _lblProgressText.Text = $"{p.JobName}: {p.Percent}%{camPart}{namePart}";
         }

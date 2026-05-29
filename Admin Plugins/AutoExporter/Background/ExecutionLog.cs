@@ -131,6 +131,25 @@ namespace AutoExporter.Background
             return result;
         }
 
+        // Wipes the history file. Used by the "Clear" button in the admin view
+        // (routed through the Event Server, which owns this file).
+        public void Clear()
+        {
+            if (string.IsNullOrWhiteSpace(FullPath)) return;
+            try
+            {
+                lock (_writeLock)
+                {
+                    if (File.Exists(FullPath)) File.Delete(FullPath);
+                }
+                _log.Info("Execution log cleared");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Clear failed at '{FullPath}': {ex.Message}");
+            }
+        }
+
         public List<ExecutionRecord> LoadRecent()
         {
             var result = new List<ExecutionRecord>();
@@ -175,22 +194,30 @@ namespace AutoExporter.Background
             Field(sb, "Format", r.Format ?? "");
             Field(sb, "Trigger", r.Trigger ?? "");
             FieldRaw(sb, "Success", r.Success ? "true" : "false");
+            Field(sb, "Outcome", r.Outcome ?? "");
             Field(sb, "Error", r.Error ?? "");
             FieldRaw(sb, "CameraCount", r.CameraCount.ToString());
             FieldRaw(sb, "BytesWritten", r.BytesWritten.ToString());
             Field(sb, "OutputFolder", r.OutputFolder ?? "");
 
-            sb.Append(",\"CameraNames\":[");
-            if (r.CameraNames != null)
+            AppendStringArray(sb, "CameraNames", r.CameraNames);
+            AppendStringArray(sb, "SkippedCameras", r.SkippedCameras);
+            sb.Append("}");
+            return sb.ToString();
+        }
+
+        private static void AppendStringArray(StringBuilder sb, string key, List<string> values)
+        {
+            sb.Append(",\"").Append(key).Append("\":[");
+            if (values != null)
             {
-                for (int i = 0; i < r.CameraNames.Count; i++)
+                for (int i = 0; i < values.Count; i++)
                 {
                     if (i > 0) sb.Append(",");
-                    sb.Append(EscapeString(r.CameraNames[i] ?? ""));
+                    sb.Append(EscapeString(values[i] ?? ""));
                 }
             }
-            sb.Append("]}");
-            return sb.ToString();
+            sb.Append("]");
         }
 
         internal static ExecutionRecord Deserialize(string line)
@@ -199,26 +226,28 @@ namespace AutoExporter.Background
                 throw new FormatException("ExecutionRecord line must be a JSON object");
 
             var dict = new Dictionary<string, string>();
-            var cams = new List<string>();
-            ParseJson(line, dict, cams);
+            var arrays = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            ParseJson(line, dict, arrays);
 
             return new ExecutionRecord
             {
-                RunId         = TryGuid(dict, "RunId"),
-                JobObjectId   = TryGuid(dict, "JobObjectId"),
-                JobName       = TryStr(dict, "JobName"),
-                StartedUtc    = TryDate(dict, "StartedUtc"),
-                FinishedUtc   = TryDate(dict, "FinishedUtc"),
-                RangeStartUtc = TryDate(dict, "RangeStartUtc"),
-                RangeEndUtc   = TryDate(dict, "RangeEndUtc"),
-                Format        = TryStr(dict, "Format"),
-                Trigger       = TryStr(dict, "Trigger"),
-                Success       = TryStr(dict, "Success") == "true",
-                Error         = TryStr(dict, "Error"),
-                CameraCount   = TryInt(dict, "CameraCount"),
-                BytesWritten  = TryLong(dict, "BytesWritten"),
-                OutputFolder  = TryStr(dict, "OutputFolder"),
-                CameraNames   = cams
+                RunId          = TryGuid(dict, "RunId"),
+                JobObjectId    = TryGuid(dict, "JobObjectId"),
+                JobName        = TryStr(dict, "JobName"),
+                StartedUtc     = TryDate(dict, "StartedUtc"),
+                FinishedUtc    = TryDate(dict, "FinishedUtc"),
+                RangeStartUtc  = TryDate(dict, "RangeStartUtc"),
+                RangeEndUtc    = TryDate(dict, "RangeEndUtc"),
+                Format         = TryStr(dict, "Format"),
+                Trigger        = TryStr(dict, "Trigger"),
+                Success        = TryStr(dict, "Success") == "true",
+                Outcome        = TryStr(dict, "Outcome"),
+                Error          = TryStr(dict, "Error"),
+                CameraCount    = TryInt(dict, "CameraCount"),
+                BytesWritten   = TryLong(dict, "BytesWritten"),
+                OutputFolder   = TryStr(dict, "OutputFolder"),
+                CameraNames    = arrays.TryGetValue("CameraNames", out var cn) ? cn : new List<string>(),
+                SkippedCameras = arrays.TryGetValue("SkippedCameras", out var sc) ? sc : new List<string>()
             };
         }
 
@@ -256,8 +285,10 @@ namespace AutoExporter.Background
             return sb.ToString();
         }
 
-        // Hand-rolled JSON parser tailored to ExecutionRecord shape (flat object + "CameraNames" string array).
-        private static void ParseJson(string s, Dictionary<string, string> dict, List<string> camNames)
+        // Hand-rolled JSON parser tailored to ExecutionRecord shape (flat object plus
+        // string arrays like "CameraNames" / "SkippedCameras"). Scalars go into dict,
+        // arrays into arrays keyed by property name.
+        private static void ParseJson(string s, Dictionary<string, string> dict, Dictionary<string, List<string>> arrays)
         {
             int i = 0;
             SkipWs(s, ref i);
@@ -272,21 +303,20 @@ namespace AutoExporter.Background
                 if (i < s.Length && s[i] == ':') i++;
                 SkipWs(s, ref i);
 
-                if (string.Equals(key, "CameraNames", StringComparison.Ordinal))
+                if (i < s.Length && s[i] == '[')
                 {
-                    if (i < s.Length && s[i] == '[')
+                    var list = new List<string>();
+                    i++;
+                    SkipWs(s, ref i);
+                    while (i < s.Length && s[i] != ']')
                     {
-                        i++;
                         SkipWs(s, ref i);
-                        while (i < s.Length && s[i] != ']')
-                        {
-                            SkipWs(s, ref i);
-                            camNames.Add(ReadString(s, ref i));
-                            SkipWs(s, ref i);
-                            if (i < s.Length && s[i] == ',') i++;
-                        }
-                        if (i < s.Length && s[i] == ']') i++;
+                        list.Add(ReadString(s, ref i));
+                        SkipWs(s, ref i);
+                        if (i < s.Length && s[i] == ',') i++;
                     }
+                    if (i < s.Length && s[i] == ']') i++;
+                    arrays[key] = list;
                 }
                 else if (i < s.Length && s[i] == '"')
                 {

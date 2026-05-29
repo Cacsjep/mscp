@@ -41,6 +41,7 @@ namespace AutoExporter.Background
         public long BytesWritten;
         public int CameraCount;
         public List<string> CameraNames = new List<string>();
+        public List<string> SkippedCameras = new List<string>();
     }
 
     /// <summary>
@@ -67,7 +68,7 @@ namespace AutoExporter.Background
 
             string helperExe = ResolveHelperExe();
             if (helperExe == null)
-                return Fail($"{HelperExeName} not found next to plugin DLL — installer or dev-deploy didn't ship it");
+                return Fail($"{HelperExeName} not found next to plugin DLL. Installer or dev-deploy didn't ship it");
 
             try { Directory.CreateDirectory(cfg.OutputFolder); }
             catch (Exception ex) { return Fail("Cannot create output folder: " + ex.Message); }
@@ -122,7 +123,8 @@ namespace AutoExporter.Background
                 Error        = result.Error ?? (exitCode != 0 ? $"Helper exit code {exitCode}" : ""),
                 BytesWritten = result.BytesWritten,
                 CameraCount  = result.CameraCount,
-                CameraNames  = result.CameraNames?.ToList() ?? new List<string>()
+                CameraNames  = result.CameraNames?.ToList() ?? new List<string>(),
+                SkippedCameras = result.SkippedCameras?.ToList() ?? new List<string>()
             };
         }
 

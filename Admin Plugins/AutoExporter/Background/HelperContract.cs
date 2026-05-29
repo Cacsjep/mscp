@@ -2,8 +2,8 @@ using System.Runtime.Serialization;
 
 namespace AutoExporter.Background
 {
-    // Duplicated in AutoExporterHelper/HelperContract.cs (different namespace) —
-    // see the helper-side file for why.
+    // Duplicated in AutoExporterHelper/HelperContract.cs (different namespace).
+    // See the helper-side file for why.
 
     [DataContract(Name = "HelperRequest", Namespace = "")]
     internal class HelperRequest
@@ -37,5 +37,6 @@ namespace AutoExporter.Background
         [DataMember] public int CameraCount;
         [DataMember] public long BytesWritten;
         [DataMember] public string[] CameraNames;
+        [DataMember] public string[] SkippedCameras;
     }
 }

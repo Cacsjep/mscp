@@ -18,7 +18,6 @@ namespace AutoExporter.Admin
     {
         private static readonly PluginLog _log = new PluginLog("AutoExporter.JobUI");
         internal event EventHandler ConfigurationChangedByUser;
-        internal event EventHandler DuplicateRequested;
 
         private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
         private Guid _pendingVerifyCorrelationId = Guid.Empty;
@@ -101,6 +100,10 @@ namespace AutoExporter.Admin
             UpdateFormatUi();
         }
 
+        // Storage path as currently entered (trimmed). Used by the item manager to
+        // reject saving a job whose storage path collides with another job's.
+        public string StoragePathValue => _txtStoragePath.Text.Trim();
+
         public string ValidateInput()
         {
             if (string.IsNullOrWhiteSpace(_txtName.Text))
@@ -110,7 +113,7 @@ namespace AutoExporter.Admin
                 return "Please add at least one camera or camera group.";
 
             if (_chkEncrypt.Checked && string.IsNullOrEmpty(_txtPassword.Text))
-                return "Encryption is enabled — please enter a password.";
+                return "Encryption is enabled. Please enter a password.";
 
             if (_radAvi.Checked && _chkEncrypt.Checked)
                 return "AVI format does not support encryption. Disable encryption or switch to XProtect format.";
@@ -267,28 +270,6 @@ namespace AutoExporter.Admin
             }
         }
 
-        private void OnDuplicateClick(object sender, EventArgs e)
-            => DuplicateRequested?.Invoke(this, EventArgs.Empty);
-
-        private void OnBrowseStorageClick(object sender, EventArgs e)
-        {
-            using (var dlg = new FolderBrowserDialog
-            {
-                Description = "Pick a folder on THIS machine. The path is just a string — at run time the Event Server must be able to reach it. Use Verify to check.",
-                ShowNewFolderButton = true
-            })
-            {
-                if (!string.IsNullOrWhiteSpace(_txtStoragePath.Text) && Directory.Exists(_txtStoragePath.Text))
-                    dlg.SelectedPath = _txtStoragePath.Text;
-
-                if (dlg.ShowDialog() == DialogResult.OK)
-                {
-                    _txtStoragePath.Text = dlg.SelectedPath;
-                    OnUserChange(sender, EventArgs.Empty);
-                }
-            }
-        }
-
         // ─── Verify (Event Server probe) ────────────────────
 
         internal void OnVerifyStorageClick(object sender, EventArgs e)
@@ -304,7 +285,7 @@ namespace AutoExporter.Admin
             {
                 if (!_cmh.Start())
                 {
-                    ShowVerifyResult("Cross-environment messaging unavailable — is the Event Server running?", Color.FromArgb(180, 30, 30));
+                    ShowVerifyResult("Cross-environment messaging unavailable. Is the Event Server running?", Color.FromArgb(180, 30, 30));
                     return;
                 }
                 _cmh.Register(OnVerifyReply, new CommunicationIdFilter(AutoExporterMessageIds.StorageProbeReply));
@@ -384,7 +365,7 @@ namespace AutoExporter.Admin
                     detail = $"✓ Event Server can reach this path. " +
                              $"{r.RunFolderCount} run(s), usage {BytesToHuman(r.UsageBytes)}";
                     if (r.FreeBytes >= 0) detail += $", disk free {BytesToHuman(r.FreeBytes)}";
-                    if (r.Health == StorageHealth.QuotaWarn) detail += " — near quota";
+                    if (r.Health == StorageHealth.QuotaWarn) detail += " (near quota)";
                     break;
                 default:
                     color = Color.FromArgb(180, 30, 30);

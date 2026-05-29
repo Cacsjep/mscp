@@ -4,8 +4,8 @@ namespace AutoExporterHelper
 {
     // IPC contract between AutoExporter (Event Server BG plugin, writer) and
     // AutoExporterHelper.exe (standalone SDK process, reader). Both sides
-    // duplicate these DTOs by design — they're tiny, and a separate shared
-    // project isn't worth the build complexity.
+    // duplicate these DTOs by design (they're tiny, and a separate shared
+    // project isn't worth the build complexity).
 
     [DataContract(Name = "HelperRequest", Namespace = "")]
     public class HelperRequest
@@ -39,5 +39,6 @@ namespace AutoExporterHelper
         [DataMember] public int CameraCount;
         [DataMember] public long BytesWritten;
         [DataMember] public string[] CameraNames;
+        [DataMember] public string[] SkippedCameras;   // resolved cameras dropped for having no recordings
     }
 }

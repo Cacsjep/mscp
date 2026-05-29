@@ -60,7 +60,7 @@ namespace AutoExporterHelper
         // a sub-method whose JIT is deferred. By the time the sub-method JITs,
         // AssemblyResolve can fire and load VideoOS.Platform from disk.
         //
-        // [STAThread] mirrors Milestone's ExportSample — UI/Export sub-environments
+        // [STAThread] mirrors Milestone's ExportSample. UI/Export sub-environments
         // assume a single-threaded apartment for COM interop.
         [STAThread]
         private static int Main(string[] args)
@@ -216,11 +216,11 @@ namespace AutoExporterHelper
                 // such camera fails the WHOLE export. So drop cameras with no recorded
                 // data before exporting. Must run AFTER the pump so the recorder
                 // connection is up and the probe results are accurate.
-                var exportable = FilterCamerasWithData(cameras, endUtc);
+                var exportable = FilterCamerasWithData(cameras, endUtc, out var skipped);
                 if (exportable.Count == 0)
                 {
                     Console.Error.WriteLine("INFO no camera has recorded data in/before the range (treating as success)");
-                    WriteResult(resultPath, true, "", 0, 0, Array.Empty<string>());
+                    WriteResult(resultPath, true, "", 0, 0, Array.Empty<string>(), skipped.ToArray());
                     return 0;
                 }
                 cameras = exportable;
@@ -236,12 +236,12 @@ namespace AutoExporterHelper
 
                 if (!ok)
                 {
-                    WriteResult(resultPath, false, err, cameras.Count, bytes, cameras.Select(c => c.Name).ToArray());
+                    WriteResult(resultPath, false, err, cameras.Count, bytes, cameras.Select(c => c.Name).ToArray(), skipped.ToArray());
                     return 4;
                 }
 
-                Console.Error.WriteLine($"DONE bytes={bytes} cameras={cameras.Count}");
-                WriteResult(resultPath, true, "", cameras.Count, bytes, cameras.Select(c => c.Name).ToArray());
+                Console.Error.WriteLine($"DONE bytes={bytes} cameras={cameras.Count} skipped={skipped.Count}");
+                WriteResult(resultPath, true, "", cameras.Count, bytes, cameras.Select(c => c.Name).ToArray(), skipped.ToArray());
                 return 0;
             }
             catch (NoVideoInTimeSpanMIPException)
@@ -415,13 +415,21 @@ namespace AutoExporterHelper
         // database; the rest would each abort the whole DBExporter run with
         // "Recorder offline -". Probe = ask the recorder for a recorded frame at or
         // before the range end. No frame (or an error) => no recordings => skip.
-        private static List<Item> FilterCamerasWithData(List<Item> cameras, DateTime endUtc)
+        private static List<Item> FilterCamerasWithData(List<Item> cameras, DateTime endUtc, out List<string> skippedNames)
         {
             var keep = new List<Item>();
+            skippedNames = new List<string>();
             foreach (var cam in cameras)
             {
-                if (HasRecordedData(cam, endUtc)) keep.Add(cam);
-                else Console.Error.WriteLine($"SKIP no recordings in database: '{cam?.Name}'");
+                if (HasRecordedData(cam, endUtc))
+                {
+                    keep.Add(cam);
+                }
+                else
+                {
+                    skippedNames.Add(cam?.Name ?? "");
+                    Console.Error.WriteLine($"SKIP no recordings in database: '{cam?.Name}'");
+                }
             }
             Console.Error.WriteLine($"FILTER {cameras.Count} camera(s) -> {keep.Count} with recorded data");
             return keep;
@@ -611,7 +619,7 @@ namespace AutoExporterHelper
 
         private static void EmitProgress(int cameraIdx, int pct, string camName)
         {
-            // stderr line consumed by the parent process. Keep this format STABLE — it's parsed.
+            // stderr line consumed by the parent process. Keep this format STABLE (it's parsed).
             // PROGRESS cameraIdx=<int> pct=<int> name=<string-may-have-spaces>
             Console.Error.WriteLine($"PROGRESS cameraIdx={cameraIdx} pct={pct} name={camName}");
         }
@@ -663,7 +671,7 @@ namespace AutoExporterHelper
             }
         }
 
-        private static void WriteResult(string path, bool success, string error, int cameraCount = 0, long bytes = 0, string[] cameraNames = null)
+        private static void WriteResult(string path, bool success, string error, int cameraCount = 0, long bytes = 0, string[] cameraNames = null, string[] skippedCameras = null)
         {
             var result = new HelperResult
             {
@@ -671,7 +679,8 @@ namespace AutoExporterHelper
                 Error = error ?? "",
                 CameraCount = cameraCount,
                 BytesWritten = bytes,
-                CameraNames = cameraNames ?? Array.Empty<string>()
+                CameraNames = cameraNames ?? Array.Empty<string>(),
+                SkippedCameras = skippedCameras ?? Array.Empty<string>()
             };
             try
             {

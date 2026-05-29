@@ -29,8 +29,8 @@ namespace AutoExporter.Background
     }
 
     /// <summary>
-    /// Pure status inspector. Probes a job's storage path and returns a snapshot —
-    /// no MIP dependencies, so it's safe to call from the admin UI thread and easy
+    /// Pure status inspector. Probes a job's storage path and returns a snapshot.
+    /// No MIP dependencies, so it's safe to call from the admin UI thread and easy
     /// to unit-test.
     /// </summary>
     internal static class StorageStatus
@@ -76,7 +76,7 @@ namespace AutoExporter.Background
                 return report;
             }
 
-            // Free space — best effort. UNC paths typically fail with DriveInfo.
+            // Free space, best effort. UNC paths typically fail with DriveInfo.
             try
             {
                 var root = Path.GetPathRoot(storagePath);
@@ -132,7 +132,7 @@ namespace AutoExporter.Background
             if (report.UsagePercentOfMax >= 100)
             {
                 report.Health = StorageHealth.QuotaFull;
-                report.Detail = $"At quota — pruning will evict oldest runs";
+                report.Detail = $"At quota, pruning will evict oldest runs";
             }
             else if (report.UsagePercentOfMax >= QuotaWarnPercent)
             {

@@ -9,7 +9,6 @@ namespace AutoExporter.Admin
 
         private TextBox _txtName;
         private CheckBox _chkEnabled;
-        private Button _btnDuplicate;
 
         private GroupBox _grpFormat;
         private RadioButton _radXProtect;
@@ -35,7 +34,6 @@ namespace AutoExporter.Admin
         private GroupBox _grpStorage;
         private Label _lblStoragePath;
         private TextBox _txtStoragePath;
-        private Button _btnBrowseStorage;
         private Button _btnVerifyStorage;
         private Label _lblVerifyStatus;
         private Label _lblMaxSize;
@@ -63,9 +61,6 @@ namespace AutoExporter.Admin
 
             _chkEnabled = new CheckBox { Text = "Enabled", Location = new Point(465, 12), AutoSize = true, Checked = true };
             _chkEnabled.CheckedChanged += OnUserChange;
-
-            _btnDuplicate = new Button { Text = "Duplicate…", Location = new Point(560, 10), Size = new Size(90, 25) };
-            _btnDuplicate.Click += OnDuplicateClick;
 
             // Format group
             _grpFormat = new GroupBox { Text = "Export format", Location = new Point(10, 45), Size = new Size(420, 175) };
@@ -151,13 +146,11 @@ namespace AutoExporter.Admin
             });
 
             // Storage & retention group
-            _grpStorage = new GroupBox { Text = "Storage && retention", Location = new Point(10, 460), Size = new Size(710, 195) };
+            _grpStorage = new GroupBox { Text = "Storage && retention (on the Event Server)", Location = new Point(10, 460), Size = new Size(710, 195) };
 
             _lblStoragePath = new Label { Text = "Storage path:", Location = new Point(12, 26), AutoSize = true };
-            _txtStoragePath = new TextBox { Location = new Point(110, 23), Size = new Size(390, 23) };
+            _txtStoragePath = new TextBox { Location = new Point(110, 23), Size = new Size(480, 23) };
             _txtStoragePath.TextChanged += OnUserChange;
-            _btnBrowseStorage = new Button { Text = "Browse…", Location = new Point(506, 22), Size = new Size(85, 25) };
-            _btnBrowseStorage.Click += OnBrowseStorageClick;
             _btnVerifyStorage = new Button { Text = "Verify on ES", Location = new Point(596, 22), Size = new Size(95, 25) };
             _btnVerifyStorage.Click += OnVerifyStorageClick;
 
@@ -194,17 +187,17 @@ namespace AutoExporter.Admin
 
             _lblStorageHint = new Label
             {
-                Text = "Browse opens THIS machine's filesystem (the picker is local). " +
-                       "Verify probes the path from the Event Server with its service account — the only check that matches what export actually sees. " +
-                       "Local (D:\\AutoExport\\NightlyLobby) and UNC (\\\\nas\\autoexport\\nightly) both supported.",
+                Text = "Exports run on the EVENT SERVER, not on this Management Client. Type the path as the Event Server sees it, " +
+                       "then click Verify on ES to confirm the Event Server service account can write there (the only check that matches " +
+                       "what export actually sees). Local (D:\\AutoExport\\NightlyLobby) and UNC (\\\\nas\\autoexport\\nightly) paths are both supported.",
                 Location = new Point(12, 138),
-                Size = new Size(680, 45),
+                Size = new Size(680, 58),
                 ForeColor = Color.DimGray
             };
 
             _grpStorage.Controls.AddRange(new Control[]
             {
-                _lblStoragePath, _txtStoragePath, _btnBrowseStorage, _btnVerifyStorage,
+                _lblStoragePath, _txtStoragePath, _btnVerifyStorage,
                 _lblVerifyStatus,
                 _lblMaxSize, _numMaxGB, _lblMaxSizeUnit,
                 _lblMaxAge, _numMaxAgeDays, _lblMaxAgeUnit,
@@ -213,7 +206,7 @@ namespace AutoExporter.Admin
 
             this.Controls.AddRange(new Control[]
             {
-                lblName, _txtName, _chkEnabled, _btnDuplicate,
+                lblName, _txtName, _chkEnabled,
                 _grpFormat, _grpRange, _grpTargets, _grpStorage
             });
             this.Size = new Size(740, 670);

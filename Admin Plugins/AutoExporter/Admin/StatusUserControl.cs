@@ -86,7 +86,7 @@ namespace AutoExporter.Admin
 
             if (_cmh.MessageCommunication == null)
             {
-                _lblHint.Text = "Cross-environment messaging not available — is the Event Server running?";
+                _lblHint.Text = "Cross-environment messaging not available. Is the Event Server running?";
                 return;
             }
 
@@ -127,10 +127,10 @@ namespace AutoExporter.Admin
                 }
             }
 
-            _lblHint.Text = $"{jobs.Count} job(s) — probing Event Server…";
+            _lblHint.Text = $"{jobs.Count} job(s). Probing Event Server...";
             _lblLastRefresh.Text = $"Refresh requested: {DateTime.Now:HH:mm:ss}";
 
-            // Timeout watchdog — flag any pending row that didn't get a reply in 6s.
+            // Timeout watchdog: flag any pending row that didn't get a reply in 6s.
             var deadline = DateTime.UtcNow.AddSeconds(6);
             var watchdog = new System.Windows.Forms.Timer { Interval = 6500 };
             var cycle = _refreshCycleId;
@@ -172,15 +172,15 @@ namespace AutoExporter.Admin
         {
             if (r == null || rowIndex < 0 || rowIndex >= _grid.Rows.Count) return;
 
-            var usage    = r.UsageBytes > 0 ? FormatBytes(r.UsageBytes) : "—";
+            var usage    = r.UsageBytes > 0 ? FormatBytes(r.UsageBytes) : "-";
             var free     = r.FreeBytes  >= 0 ? FormatBytes(r.FreeBytes)  : "n/a";
             var total    = r.TotalBytes >= 0 ? FormatBytes(r.TotalBytes) : "";
             var freeCol  = string.IsNullOrEmpty(total) ? free : $"{free} / {total}";
-            var quotaPct = r.UsagePercentOfMax.HasValue ? $"{r.UsagePercentOfMax}%" : "—";
+            var quotaPct = r.UsagePercentOfMax.HasValue ? $"{r.UsagePercentOfMax}%" : "-";
             var quotaCap = r.MaxBytes > 0 ? FormatBytes(r.MaxBytes) : "∞";
             var age      = r.MaxAgeDays > 0 ? $"{r.MaxAgeDays}d" : "∞";
             var runs     = r.RunFolderCount.ToString();
-            var oldest   = r.OldestRunUtc.HasValue ? r.OldestRunUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "—";
+            var oldest   = r.OldestRunUtc.HasValue ? r.OldestRunUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "-";
 
             var row = _grid.Rows[rowIndex];
             row.Cells[1].Value = r.StoragePath;
@@ -198,8 +198,8 @@ namespace AutoExporter.Admin
 
             int outstanding = _pending.Count(p => p.Value.CycleId == _refreshCycleId);
             _lblHint.Text = outstanding == 0
-                ? $"{_grid.Rows.Count} job(s) — all reports received"
-                : $"{_grid.Rows.Count} job(s) — {outstanding} pending reply…";
+                ? $"{_grid.Rows.Count} job(s), all reports received"
+                : $"{_grid.Rows.Count} job(s), {outstanding} pending reply...";
         }
 
         private int AddPendingRow(string jobName, string path)

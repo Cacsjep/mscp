@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using VideoOS.Platform;
 using VideoOS.Platform.Admin;
 using VideoOS.Platform.Data;
+using VideoOS.Platform.Util;
 
 namespace AutoExporter.Admin
 {
@@ -40,6 +41,16 @@ namespace AutoExporter.Admin
             {
                 new EventType
                 {
+                    ID = AutoExporterDefinition.EvtJobStartedId,
+                    Message = "Auto Export: Job Started",
+                    GroupID = AutoExporterDefinition.EventGroupId,
+                    StateGroupID = AutoExporterDefinition.StateGroupId,
+                    State = "Running",
+                    DefaultSourceKind = AutoExporterDefinition.JobKindId,
+                    SourceKinds = sourceKinds
+                },
+                new EventType
+                {
                     ID = AutoExporterDefinition.EvtJobSucceededId,
                     Message = "Auto Export: Job Succeeded",
                     GroupID = AutoExporterDefinition.EventGroupId,
@@ -69,7 +80,7 @@ namespace AutoExporter.Admin
                 {
                     ID = AutoExporterDefinition.StateGroupId,
                     Name = "Auto Export Status",
-                    States = new[] { "Success", "Failed" }
+                    States = new[] { "Running", "Success", "Failed" }
                 }
             };
         }
@@ -80,7 +91,6 @@ namespace AutoExporter.Admin
         {
             _userControl = new JobUserControl();
             _userControl.ConfigurationChangedByUser += ConfigurationChangedByUserHandler;
-            _userControl.DuplicateRequested += OnDuplicateRequested;
             return _userControl;
         }
 
@@ -89,7 +99,6 @@ namespace AutoExporter.Admin
             if (_userControl != null)
             {
                 _userControl.ConfigurationChangedByUser -= ConfigurationChangedByUserHandler;
-                _userControl.DuplicateRequested -= OnDuplicateRequested;
             }
             _userControl = null;
         }
@@ -110,6 +119,14 @@ namespace AutoExporter.Admin
         {
             if (CurrentItem == null || _userControl == null) return true;
 
+            try { SecurityAccess.CheckPermission(CurrentItem, "GENERIC_WRITE"); }
+            catch (NotAuthorizedMIPException)
+            {
+                MessageBox.Show("You do not have permission to edit Auto Exporter jobs.",
+                    "Not authorized", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
             var error = _userControl.ValidateInput();
             if (error != null)
             {
@@ -117,9 +134,48 @@ namespace AutoExporter.Admin
                 return false;
             }
 
+            var dupName = FindJobWithSameStoragePath(_userControl.StoragePathValue, CurrentItem.FQID.ObjectId);
+            if (dupName != null)
+            {
+                MessageBox.Show(
+                    $"Another job ('{dupName}') already uses this storage path. Two jobs writing to the same folder " +
+                    "would mix their exports and fight over the retention cleanup. Please pick a different folder.",
+                    "Duplicate storage path", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
             _userControl.UpdateItem(CurrentItem);
             Configuration.Instance.SaveItemConfiguration(AutoExporterDefinition.PluginId, CurrentItem);
             return true;
+        }
+
+        // Returns the name of another job already using the same storage folder, or
+        // null if the path is free. Paths are normalized (full path, trailing
+        // separators trimmed) and compared case-insensitively.
+        private string FindJobWithSameStoragePath(string path, Guid currentJobId)
+        {
+            var norm = NormalizePath(path);
+            if (string.IsNullOrEmpty(norm)) return null;
+
+            List<Item> jobs;
+            try { jobs = Configuration.Instance.GetItemConfigurations(AutoExporterDefinition.PluginId, null, AutoExporterDefinition.JobKindId); }
+            catch { return null; }
+
+            foreach (var job in jobs)
+            {
+                if (job?.FQID == null || job.FQID.ObjectId == currentJobId) continue;
+                if (job.Properties == null || !job.Properties.TryGetValue("StoragePath", out var other)) continue;
+                if (NormalizePath(other) == norm) return job.Name;
+            }
+            return null;
+        }
+
+        private static string NormalizePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return "";
+            try { path = System.IO.Path.GetFullPath(path.Trim()); }
+            catch { path = path.Trim(); }
+            return path.TrimEnd('\\', '/').ToLowerInvariant();
         }
 
         public override string GetItemName() => _userControl?.DisplayName ?? CurrentItem?.Name ?? "Job";
@@ -131,13 +187,31 @@ namespace AutoExporter.Admin
         }
 
         public override List<Item> GetItems()
-            => Configuration.Instance.GetItemConfigurations(AutoExporterDefinition.PluginId, null, _kind);
+            => FilterReadable(Configuration.Instance.GetItemConfigurations(AutoExporterDefinition.PluginId, null, _kind));
 
         public override List<Item> GetItems(Item parentItem)
-            => Configuration.Instance.GetItemConfigurations(AutoExporterDefinition.PluginId, parentItem, _kind);
+            => FilterReadable(Configuration.Instance.GetItemConfigurations(AutoExporterDefinition.PluginId, parentItem, _kind));
 
         public override Item GetItem(FQID fqid)
-            => Configuration.Instance.GetItemConfiguration(AutoExporterDefinition.PluginId, _kind, fqid.ObjectId);
+        {
+            var item = Configuration.Instance.GetItemConfiguration(AutoExporterDefinition.PluginId, _kind, fqid.ObjectId);
+            if (item == null) return null;
+            try { SecurityAccess.CheckPermission(item, "GENERIC_READ"); return item; }
+            catch (NotAuthorizedMIPException) { return null; }
+        }
+
+        // Drops jobs the current role has no Read permission for (mirrors PKI).
+        private static List<Item> FilterReadable(List<Item> items)
+        {
+            if (items == null) return new List<Item>();
+            var allowed = new List<Item>(items.Count);
+            foreach (var item in items)
+            {
+                try { SecurityAccess.CheckPermission(item, "GENERIC_READ"); allowed.Add(item); }
+                catch (NotAuthorizedMIPException) { }
+            }
+            return allowed;
+        }
 
         public override Item CreateItem(Item parentItem, FQID suggestedFQID)
         {
@@ -185,26 +259,5 @@ namespace AutoExporter.Admin
             return $"{format} • Last {val} {unit.ToLowerInvariant()}";
         }
 
-        private void OnDuplicateRequested(object sender, EventArgs e)
-        {
-            if (CurrentItem == null) return;
-
-            var src = CurrentItem;
-            var newFqid = new FQID(
-                src.FQID.ServerId,
-                src.FQID.ParentId,
-                Guid.NewGuid(),
-                FolderType.No,
-                _kind);
-
-            var newItem = new Item(newFqid, "Copy of " + src.Name);
-            foreach (var kvp in src.Properties)
-                newItem.Properties[kvp.Key] = kvp.Value;
-
-            Configuration.Instance.SaveItemConfiguration(AutoExporterDefinition.PluginId, newItem);
-            MessageBox.Show(
-                $"Created \"{newItem.Name}\".\n\nCollapse/expand \"Jobs\" to see it.",
-                "Duplicated", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
     }
 }

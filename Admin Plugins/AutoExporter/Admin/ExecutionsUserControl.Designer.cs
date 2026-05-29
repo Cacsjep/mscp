@@ -11,6 +11,7 @@ namespace AutoExporter.Admin
         private ToolStripDropDownButton _btnRunNow;
         private ContextMenuStrip _menuRunNow;
         private ToolStripButton _btnRefresh;
+        private ToolStripButton _btnClear;
 
         private ProgressBar _progressBar;
         private Label _lblProgressText;
@@ -32,13 +33,17 @@ namespace AutoExporter.Admin
 
             _toolbar = new ToolStrip { Dock = DockStyle.Top, GripStyle = ToolStripGripStyle.Hidden };
 
-            _btnRunNow = new ToolStripDropDownButton("Run Now ▼") { DropDown = _menuRunNow };
+            _btnRunNow = new ToolStripDropDownButton("Run Now") { DropDown = _menuRunNow };
             _btnRefresh = new ToolStripButton("Refresh");
             _btnRefresh.Click += OnRefreshClick;
+
+            _btnClear = new ToolStripButton("Clear list");
+            _btnClear.Click += OnClearClick;
 
             _toolbar.Items.Add(_btnRunNow);
             _toolbar.Items.Add(new ToolStripSeparator());
             _toolbar.Items.Add(_btnRefresh);
+            _toolbar.Items.Add(_btnClear);
 
             // Progress strip (below toolbar)
             _lblProgressText = new Label
