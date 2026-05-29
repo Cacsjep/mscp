@@ -29,12 +29,11 @@ namespace AutoExporter.Messaging
         public Guid RunId;
         public Guid JobObjectId;
         public string JobName;
-        public int Percent;            // overall (cameras done + current fraction) / total
-        public int CameraPercent;      // current camera's own 0-100 progress
+        public int CameraPercent;      // current exporter progress 0-100 (per camera for AVI, overall for XProtect)
         public int CameraIndex;
-        public int CameraCount;
+        public int CameraCount;        // resolved camera count
         public string CurrentCameraName;
-        public string Format;          // "XProtect" | "AVI" (AVI has no meaningful percent)
+        public string Format;          // "XProtect" | "AVI"
         public DateTime StartedUtc;    // real run start, so a re-opened view shows correct elapsed
     }
 

@@ -1,24 +1,32 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using CommunitySDK;
 using VideoOS.Platform;
 
 namespace AutoExporter.Admin
 {
     /// <summary>
-    /// Single admin page that hosts both the per-job storage Status table (left)
-    /// and the run Executions table (right) in one split view, so the operator does
-    /// not have to switch between two nodes. Each side is the existing self-contained
-    /// control; this wrapper just lays them out and forwards the lifecycle calls.
+    /// Single admin page that hosts both the per-job storage Status table (top) and
+    /// the run Executions table (bottom) in one split view, so the operator does not
+    /// have to switch between two nodes. It owns ONE message handler that both tables
+    /// share, rather than each opening its own channel.
     /// </summary>
     public class DashboardUserControl : UserControl
     {
+        private static readonly PluginLog _log = new PluginLog("AutoExporter.Dashboard");
+
+        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
         private readonly StatusUserControl _status = new StatusUserControl();
         private readonly ExecutionsUserControl _executions = new ExecutionsUserControl();
         private readonly SplitContainer _split;
 
         public DashboardUserControl()
         {
+            // One shared message channel for both tables.
+            _status.UseSharedMessaging(_cmh);
+            _executions.UseSharedMessaging(_cmh);
+
             // Give the control a real width BEFORE the split is added so the host's
             // initial layout has room. Min sizes are left at the framework default
             // (small): a large Panel1MinSize would exceed the default SplitterDistance
@@ -91,6 +99,8 @@ namespace AutoExporter.Admin
 
         public void FillContent(Item item)
         {
+            // Start the shared channel once, before the children register their filters.
+            try { _cmh.Start(); } catch { }
             _status.FillContent(item);
             _executions.FillContent(item);
         }
@@ -103,8 +113,9 @@ namespace AutoExporter.Admin
 
         internal void Shutdown()
         {
-            try { _status.Shutdown(); } catch { }
+            try { _status.Shutdown(); } catch { }        // children do not own the handler
             try { _executions.Shutdown(); } catch { }
+            try { _cmh.Close(); } catch { }              // dashboard owns and closes it
         }
 
         protected override void OnHandleDestroyed(EventArgs e)

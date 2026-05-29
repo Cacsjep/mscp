@@ -15,7 +15,8 @@ namespace AutoExporter.Admin
     public partial class StatusUserControl : UserControl
     {
         private static readonly PluginLog _log = new PluginLog("AutoExporter.StatusUI");
-        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
+        private CrossMessageHandler _cmh = new CrossMessageHandler(_log);
+        private bool _ownsCmh = true;   // false when the dashboard injects a shared handler
         private readonly System.Windows.Forms.Timer _autoRefresh = new System.Windows.Forms.Timer { Interval = 30_000 };
 
         // Tracks the per-job correlationId issued in the current refresh cycle.
@@ -32,11 +33,22 @@ namespace AutoExporter.Admin
             _btnRefresh.Click += (s, e) => SafeRefresh();
         }
 
+        // Lets the host (DashboardUserControl) inject a shared message handler so the
+        // merged page uses one channel instead of one per table. Call before FillContent.
+        public void UseSharedMessaging(CrossMessageHandler shared)
+        {
+            if (shared == null) return;
+            _cmh = shared;
+            _ownsCmh = false;
+        }
+
         public void FillContent(Item _)
         {
             if (!_started)
             {
-                if (_cmh.Start())
+                // Owned handler: we start it. Shared handler: the dashboard already did.
+                bool ready = _ownsCmh ? _cmh.Start() : _cmh.MessageCommunication != null;
+                if (ready)
                     _cmh.Register(OnProbeReply, new CommunicationIdFilter(AutoExporterMessageIds.StorageProbeReply));
                 _started = true;
             }
@@ -49,7 +61,7 @@ namespace AutoExporter.Admin
         internal void Shutdown()
         {
             _autoRefresh.Stop();
-            try { _cmh.Close(); } catch { }
+            if (_ownsCmh) { try { _cmh.Close(); } catch { } }   // never close a shared handler
             _started = false;
         }
 

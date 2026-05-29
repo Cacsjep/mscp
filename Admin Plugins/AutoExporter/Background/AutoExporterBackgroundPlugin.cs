@@ -246,12 +246,22 @@ namespace AutoExporter.Background
                 $"format={cfg.Format} encrypt={cfg.Encrypt} targets={cfg.Targets.Count} " +
                 $"range={rangeStartUtc:O}->{rangeEndUtc:O} outputFolder='{runFolder}' serverUri='{serverUri}'");
 
+            // Record metadata on the handle so OnGetExecutions can describe this
+            // in-flight run to a view that opens after it started.
+            run.JobName       = job.Name;
+            run.Trigger       = triggerSource;
+            run.Format        = format == ExportFormat.Avi ? "AVI" : "XProtect";
+            run.StartedUtc    = startedUtc;
+            run.RangeStartUtc = rangeStartUtc;
+            run.RangeEndUtc   = rangeEndUtc;
+            run.CameraCount   = targets.Count;
+
             FireStartedEvent(job, triggerSource, rangeStartUtc, rangeEndUtc);
 
             // Tell the admin view a run has started so it shows a "Running" row
             // immediately (it flips to the final outcome when the run completes).
             BroadcastExecutionStarted(run, cfg, triggerSource, startedUtc, rangeStartUtc, rangeEndUtc, format);
-            BroadcastProgress(run.RunId, cfg, 0, 0, "", 0, startedUtc);
+            BroadcastProgress(run.RunId, cfg, 0, "", 0, startedUtc);
 
             int targetCount = targets.Count;
             Action<int, int, int, string> onProgress = (camIdx, camTotal, pct, camName) =>
@@ -259,11 +269,7 @@ namespace AutoExporter.Background
                 // Prefer the helper's resolved camera total (correct even when the job
                 // targets groups); fall back to the target count if not reported.
                 int total = camTotal > 0 ? camTotal : targetCount;
-                int denom = Math.Max(total, camIdx + 1);
-                int overall = (int)(((double)camIdx + (pct / 100.0)) / denom * 100);
-                if (overall < 0) overall = 0;
-                if (overall > 100) overall = 100;
-                BroadcastProgress(run.RunId, cfg, overall, camIdx, camName, pct, startedUtc, total);
+                BroadcastProgress(run.RunId, cfg, camIdx, camName, pct, startedUtc, total);
             };
 
             ExportRunResult result;
@@ -306,7 +312,7 @@ namespace AutoExporter.Background
             };
 
             AppendExecutionAndBroadcast(record);
-            BroadcastProgress(run.RunId, cfg, 100, Math.Max(0, record.CameraCount - 1), "", 100, startedUtc);
+            BroadcastProgress(run.RunId, cfg, Math.Max(0, record.CameraCount - 1), "", 100, startedUtc);
 
             if (result.Success)
             {
@@ -425,10 +431,35 @@ namespace AutoExporter.Background
             try
             {
                 var req = message?.Data as GetExecutionsRequest;
+                var records = _executionLog.LoadRecent();
+
+                // Append synthetic "Running" records for in-flight runs that are not yet
+                // in the history file, so a view that opens mid-run shows them with full
+                // trigger/range/start (file order is oldest-first, so add at the end).
+                foreach (var rh in _running.Values)
+                {
+                    if (rh == null || rh.StartedUtc == DateTime.MinValue) continue;   // not started yet
+                    if (records.Any(r => r.RunId == rh.RunId)) continue;
+                    records.Add(new ExecutionRecord
+                    {
+                        RunId         = rh.RunId,
+                        JobObjectId   = rh.JobObjectId,
+                        JobName       = rh.JobName,
+                        StartedUtc    = rh.StartedUtc,
+                        FinishedUtc   = DateTime.MinValue,
+                        RangeStartUtc = rh.RangeStartUtc,
+                        RangeEndUtc   = rh.RangeEndUtc,
+                        Format        = rh.Format,
+                        Trigger       = rh.Trigger,
+                        Outcome       = "Running",
+                        CameraCount   = rh.CameraCount
+                    });
+                }
+
                 var reply = new GetExecutionsReply
                 {
                     CorrelationId = req?.CorrelationId ?? Guid.Empty,
-                    Records = _executionLog.LoadRecent()
+                    Records = records
                 };
                 if (_cmh.MessageCommunication != null)
                     _cmh.TransmitMessage(new Message(AutoExporterMessageIds.GetExecutionsReply, reply));
@@ -531,7 +562,7 @@ namespace AutoExporter.Background
             }
         }
 
-        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int percent, int camIdx, string camName, int cameraPercent = 0, DateTime startedUtc = default(DateTime), int cameraCount = 0)
+        private void BroadcastProgress(Guid runId, ExportJobConfig cfg, int camIdx, string camName, int cameraPercent = 0, DateTime startedUtc = default(DateTime), int cameraCount = 0)
         {
             if (_cmh.MessageCommunication == null) return;
             try
@@ -541,7 +572,6 @@ namespace AutoExporter.Background
                     RunId             = runId,
                     JobObjectId       = cfg.JobObjectId,
                     JobName           = cfg.JobName,
-                    Percent           = percent,
                     CameraPercent     = cameraPercent,
                     CameraIndex       = camIdx,
                     CameraCount       = cameraCount > 0 ? cameraCount : (cfg.Targets?.Count ?? 0),
@@ -621,6 +651,16 @@ namespace AutoExporter.Background
             public Guid RunId;
             public Guid JobObjectId;
             public CancellationTokenSource Cts;
+
+            // Metadata so the admin view can show a full "Running" row for an in-flight
+            // run that is not yet in the history file (set once the run actually starts).
+            public string JobName;
+            public string Trigger;
+            public string Format;
+            public DateTime StartedUtc;
+            public DateTime RangeStartUtc;
+            public DateTime RangeEndUtc;
+            public int CameraCount;
         }
     }
 }

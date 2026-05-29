@@ -16,7 +16,8 @@ namespace AutoExporter.Admin
     {
         private static readonly PluginLog _log = new PluginLog("AutoExporter.ExecutionsUI");
 
-        private readonly CrossMessageHandler _cmh = new CrossMessageHandler(_log);
+        private CrossMessageHandler _cmh = new CrossMessageHandler(_log);
+        private bool _ownsCmh = true;   // false when the dashboard injects a shared handler
         private bool _started;
 
         // History is owned by the Event Server (the JSONL file lives there). We hold a
@@ -31,6 +32,7 @@ namespace AutoExporter.Admin
 
         private bool _hasJobs;
         private bool _runActive;   // a run is in progress; Run Now stays disabled until it finishes
+        private Guid _pendingExecRequest;   // correlation id of the latest history request
 
         public ExecutionsUserControl()
         {
@@ -40,11 +42,22 @@ namespace AutoExporter.Admin
         private static bool IsRunning(ExecutionRecord r)
             => string.Equals(r.Outcome, "Running", StringComparison.OrdinalIgnoreCase);
 
+        // Lets the host (DashboardUserControl) inject a shared message handler so the
+        // merged page uses one channel instead of one per table. Call before FillContent.
+        public void UseSharedMessaging(CrossMessageHandler shared)
+        {
+            if (shared == null) return;
+            _cmh = shared;
+            _ownsCmh = false;
+        }
+
         public void FillContent(Item _)
         {
             if (!_started)
             {
-                if (_cmh.Start())
+                // Owned handler: we start it. Shared handler: the dashboard already did.
+                bool ready = _ownsCmh ? _cmh.Start() : _cmh.MessageCommunication != null;
+                if (ready)
                 {
                     _cmh.Register(OnProgress, new CommunicationIdFilter(AutoExporterMessageIds.Progress));
                     _cmh.Register(OnExecutionStarted, new CommunicationIdFilter(AutoExporterMessageIds.ExecutionStarted));
@@ -72,7 +85,7 @@ namespace AutoExporter.Admin
 
         internal void Shutdown()
         {
-            try { _cmh.Close(); } catch { }
+            if (_ownsCmh) { try { _cmh.Close(); } catch { } }   // never close a shared handler
             _started = false;
         }
 
@@ -92,9 +105,12 @@ namespace AutoExporter.Admin
             try
             {
                 if (_cmh.MessageCommunication != null)
+                {
+                    _pendingExecRequest = Guid.NewGuid();
                     _cmh.TransmitMessage(new VideoOS.Platform.Messaging.Message(
                         AutoExporterMessageIds.GetExecutionsRequest,
-                        new GetExecutionsRequest { CorrelationId = Guid.NewGuid() }));
+                        new GetExecutionsRequest { CorrelationId = _pendingExecRequest }));
+                }
                 else
                     _lblHint.Text = "Cross-environment messaging not available. Is the Event Server running?";
             }
@@ -287,6 +303,10 @@ namespace AutoExporter.Admin
 
         private void OnRefreshClick(object sender, EventArgs e)
         {
+            // Belt-and-suspenders: clear a possibly-stuck in-progress guard. The fresh
+            // history (which includes any genuinely running run) and the next progress
+            // message will re-assert it if a run really is active.
+            _runActive = false;
             RefreshRunNowMenu();
             RequestExecutions();
         }
@@ -313,6 +333,7 @@ namespace AutoExporter.Admin
                 _log.Error($"Clear request failed: {ex.Message}");
             }
 
+            _pendingExecRequest = Guid.NewGuid();   // invalidate any in-flight history reply
             _records.Clear();
             _grid.Rows.Clear();
             _lblHint.Text = "No executions yet. Trigger a job via a Rule, or use Run Now to test.";
@@ -366,6 +387,10 @@ namespace AutoExporter.Admin
                         // record (or insert it at top if there was no running row).
                         _records.RemoveAll(x => x.RunId == r.RunId);
                         _records.Insert(0, r);
+                        // Match the server's view cap so a long-lived open view does not
+                        // grow unbounded.
+                        const int MaxRows = 500;
+                        if (_records.Count > MaxRows) _records.RemoveRange(MaxRows, _records.Count - MaxRows);
                         RenderGrid();
                     });
                 }
@@ -380,6 +405,9 @@ namespace AutoExporter.Admin
             {
                 if (m?.Data is GetExecutionsReply reply)
                 {
+                    // Ignore stale replies (e.g. an earlier Refresh, or one that lands
+                    // just after Clear) so they cannot repopulate the grid.
+                    if (reply.CorrelationId != _pendingExecRequest) return null;
                     BeginInvokeSafe(() =>
                     {
                         _records.Clear();
@@ -411,9 +439,9 @@ namespace AutoExporter.Admin
                 var rec = _records.FirstOrDefault(x => x.RunId == p.RunId);
                 if (rec != null)
                 {
-                    row.Cells[9].Value = RunningDetail(rec);
+                    row.Cells["Status"].Value = RunningDetail(rec);
                     if (rec.StartedUtc != DateTime.MinValue)
-                        row.Cells[7].Value = FormatDuration(DateTime.UtcNow - rec.StartedUtc);
+                        row.Cells["Duration"].Value = FormatDuration(DateTime.UtcNow - rec.StartedUtc);
                 }
                 return;
             }

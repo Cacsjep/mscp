@@ -68,16 +68,16 @@ namespace AutoExporter.Admin
                 BackgroundColor = Color.White
             };
 
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "When", FillWeight = 100 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Job", FillWeight = 90 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Trigger", FillWeight = 50 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Format", FillWeight = 50 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Range", FillWeight = 120 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Cameras", FillWeight = 50 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Size", FillWeight = 60 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Duration", FillWeight = 60 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Result", FillWeight = 50 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Status", FillWeight = 200 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "When",     HeaderText = "When", FillWeight = 100 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Job",      HeaderText = "Job", FillWeight = 90 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Trigger",  HeaderText = "Trigger", FillWeight = 50 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Format",   HeaderText = "Format", FillWeight = 50 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Range",    HeaderText = "Range", FillWeight = 120 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Cameras",  HeaderText = "Cameras", FillWeight = 50 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Size",     HeaderText = "Size", FillWeight = 60 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Duration", HeaderText = "Duration", FillWeight = 60 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Result",   HeaderText = "Result", FillWeight = 50 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status",   HeaderText = "Status", FillWeight = 200 });
 
             this.Controls.AddRange(new Control[] { _grid, _lblHint, _toolbar });
             this.Size = new Size(980, 540);
