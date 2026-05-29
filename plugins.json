@@ -169,6 +169,13 @@
     "description": "Toolbar flyout to jump the playback timeline backward or forward by configurable increments (seconds, minutes, hours, days)"
   },
   {
+    "name": "SystemStatus",
+    "displayName": "System Status",
+    "path": "Smart Client Plugins/SystemStatus",
+    "category": "SmartClient",
+    "description": "Toolbar indicator showing online/enabled camera count and connected user count, with a flyout listing camera status and connected users"
+  },
+  {
     "name": "MetadataDisplay",
     "displayName": "Metadata Display",
     "path": "Smart Client Plugins/MetadataDisplay",
