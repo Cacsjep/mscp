@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading;
@@ -19,14 +20,22 @@ namespace AutoExporterHelper
     /// rejects the export pipeline ("Method not supported for this Environment"),
     /// so the BG plugin spawns this process instead.
     ///
-    /// Args: <serverUri> <configJsonPath>
+    /// Args: <serverUri> <configJsonPath> [milestoneDir]
     ///   serverUri      e.g. https://localhost  (read from EnvironmentManager in the plugin)
     ///   configJsonPath path to a HelperRequest JSON file (next to which we'll write result)
+    ///
+    /// Self-test mode: --selftest <serverUri> [milestoneDir]
+    ///   Logs in, reads the AutoExporter job configuration directly from the
+    ///   Management Server, builds a request from the FIRST job, and runs it
+    ///   end-to-end. Lets us spawn the helper by hand and exercise the full
+    ///   export path without the Event Server. Output goes to the job's storage
+    ///   path under a "selftest_<timestamp>" folder (or %TEMP% if unset).
+    ///
     /// Exit codes:
     ///   0  success
     ///   1  bad args / config parse
     ///   2  SDK init or login failed
-    ///   3  no cameras resolved from targets
+    ///   3  no cameras resolved from targets (or no jobs configured in self-test)
     ///   4  export failed at runtime
     /// </summary>
     internal class Program
@@ -56,23 +65,41 @@ namespace AutoExporterHelper
         [STAThread]
         private static int Main(string[] args)
         {
+            bool selfTest = args.Length >= 1 &&
+                            args[0].Equals("--selftest", StringComparison.OrdinalIgnoreCase);
+
+            if (selfTest)
+            {
+                string serverUri = args.Length >= 2 ? args[1] : "https://localhost";
+                ArmRuntime(args.Length >= 3 ? args[2] : null);
+
+                try
+                {
+                    return RunSelfTest(serverUri);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"FATAL selftest: {ex}");
+                    return 4;
+                }
+            }
+
             if (args.Length < 2)
             {
-                Console.Error.WriteLine("Usage: AutoExporterHelper <serverUri> <configJsonPath>");
+                Console.Error.WriteLine("Usage: AutoExporterHelper <serverUri> <configJsonPath> [milestoneDir]");
+                Console.Error.WriteLine("       AutoExporterHelper --selftest <serverUri> [milestoneDir]");
                 return 1;
             }
 
-            string serverUri  = args[0];
+            string serverUriArg = args[0];
             string configPath = args[1];
             string resultPath = configPath + ".result.json";
 
-            _assemblySearchDirs = BuildSearchDirs(args.Length >= 3 ? args[2] : null);
-            Console.Error.WriteLine($"INIT search dirs: {string.Join("; ", _assemblySearchDirs)}");
-            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+            ArmRuntime(args.Length >= 3 ? args[2] : null);
 
             try
             {
-                return Run(serverUri, configPath, resultPath);
+                return Run(serverUriArg, configPath, resultPath);
             }
             catch (Exception ex)
             {
@@ -92,38 +119,7 @@ namespace AutoExporterHelper
                 return 1;
             }
 
-            try
-            {
-                Console.Error.WriteLine($"INIT serverUri={serverUri}");
-
-                // Order matches Milestone's ExportSample/Program.cs exactly:
-                //   1. Environment.Initialize        (always required)
-                //   2. UI.Environment.Initialize     (registers UI controls; safe in console)
-                //   3. Export.Environment.Initialize (registers export references)
-                //   4. AddServer + Login
-                // Earlier attempts initialized Export AFTER Login, which left the
-                // Export pipeline without the hooks it needs to talk to recorders →
-                // "Recorder offline -" from DBExporterXpco.StartExport.
-                VideoOS.Platform.SDK.Environment.Initialize();
-                VideoOS.Platform.SDK.UI.Environment.Initialize();
-                VideoOS.Platform.SDK.Export.Environment.Initialize();
-
-                var uri = new Uri(serverUri);
-                NetworkCredential creds = CredentialCache.DefaultNetworkCredentials;
-                VideoOS.Platform.SDK.Environment.AddServer(false, uri, creds, false);
-
-                // 6-arg Login registers a real integration identity so Recording
-                // Servers trust the session for media access.
-                VideoOS.Platform.SDK.Environment.Login(
-                    uri,
-                    IntegrationId,
-                    IntegrationName,
-                    IntegrationVersion,
-                    IntegrationManufacturer,
-                    false);
-
-                Console.Error.WriteLine("INIT done");
-            }
+            try { InitSdk(serverUri); }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"ERR SDK init: {ex.Message}");
@@ -131,6 +127,61 @@ namespace AutoExporterHelper
                 return 2;
             }
 
+            try { return Execute(req, resultPath); }
+            finally { Cleanup(); }
+        }
+
+        // ─── SDK lifecycle (shared by normal + self-test) ──
+
+        private static void InitSdk(string serverUri)
+        {
+            Console.Error.WriteLine($"INIT serverUri={serverUri}");
+
+            // Order:
+            //   1. Environment.Initialize        (always required)
+            //   2. UI.Environment.Initialize     (registers UI controls; safe in console)
+            //   3. Export.Environment.Initialize (registers export references)
+            //   4. AddServer + Login             (plain user login, see below)
+            //   5. Media.Environment.Initialize  (opens the recorder/media connection)
+            // Export must be initialized before Login or the pipeline lacks the
+            // hooks it needs to talk to recorders.
+            VideoOS.Platform.SDK.Environment.Initialize();
+            VideoOS.Platform.SDK.UI.Environment.Initialize();
+            VideoOS.Platform.SDK.Export.Environment.Initialize();
+
+            var uri = new Uri(serverUri);
+            NetworkCredential creds = CredentialCache.DefaultNetworkCredentials;
+            VideoOS.Platform.SDK.Environment.AddServer(false, uri, creds, false);
+
+            // 6-arg Login registers a real integration identity so Recording
+            // Servers trust the session for media access.
+            VideoOS.Platform.SDK.Environment.Login(
+                uri,
+                IntegrationId,
+                IntegrationName,
+                IntegrationVersion,
+                IntegrationManufacturer,
+                false);
+
+            // The Media environment opens the actual connection to the Recording
+            // Servers that the export pipeline pulls frames through.
+            VideoOS.Platform.SDK.Media.Environment.Initialize();
+
+            Console.Error.WriteLine("INIT done");
+        }
+
+        private static void Cleanup()
+        {
+            // Only the main Environment has a UnInitialize; Media/Export sub-envs don't.
+            try { VideoOS.Platform.SDK.Environment.Logout(); } catch { }
+            try { VideoOS.Platform.SDK.Environment.RemoveAllServers(); } catch { }
+            try { VideoOS.Platform.SDK.Environment.UnInitialize(); } catch { }
+        }
+
+        // ─── Export execution (shared by normal + self-test) ──
+
+        private static int Execute(HelperRequest req, string resultPath)
+        {
             try
             {
                 var cameras = ResolveCameras(req);
@@ -149,7 +200,32 @@ namespace AutoExporterHelper
                 var endUtc = DateTime.Parse(req.RangeEndUtc, CultureInfo.InvariantCulture,
                     DateTimeStyles.RoundtripKind);
 
-                Console.Error.WriteLine($"START format={req.Format} range={startUtc:O}->{endUtc:O}");
+                // The recording-server online status arrives via async callbacks
+                // that the SDK dispatches on a WinForms message loop. A console /
+                // service process has no such loop, so without pumping messages the
+                // recorder stays "offline" forever and StartExport throws
+                // "Recorder offline -". WinForms ExportSample / DialogLoginForm work
+                // precisely because their dialog pumps the loop. So we pump here, after
+                // login, to let the recorder come online before exporting.
+                Console.Error.WriteLine("SETTLE pumping message loop for recorder status...");
+                PumpMessages(6000);
+
+                // DBExporter throws "Recorder offline -" (by design, confirmed by
+                // Milestone) for ANY camera in the list that has no entry in the
+                // recordings database - e.g. a device that has never recorded. One
+                // such camera fails the WHOLE export. So drop cameras with no recorded
+                // data before exporting. Must run AFTER the pump so the recorder
+                // connection is up and the probe results are accurate.
+                var exportable = FilterCamerasWithData(cameras, endUtc);
+                if (exportable.Count == 0)
+                {
+                    Console.Error.WriteLine("INFO no camera has recorded data in/before the range (treating as success)");
+                    WriteResult(resultPath, true, "", 0, 0, Array.Empty<string>());
+                    return 0;
+                }
+                cameras = exportable;
+
+                Console.Error.WriteLine($"START format={req.Format} cameras={cameras.Count} range={startUtc:O}->{endUtc:O}");
 
                 bool isAvi = string.Equals(req.Format, "AVI", StringComparison.OrdinalIgnoreCase);
                 bool ok = isAvi
@@ -180,12 +256,114 @@ namespace AutoExporterHelper
                 WriteResult(resultPath, false, "Fatal: " + ex.Message);
                 return 4;
             }
-            finally
+        }
+
+        // ─── Self-test: run the first configured job end-to-end ──
+
+        private static int RunSelfTest(string serverUri)
+        {
+            Console.Error.WriteLine("=== SELF-TEST MODE ===");
+
+            try { InitSdk(serverUri); }
+            catch (Exception ex)
             {
-                // Only the main Environment has a UnInitialize; Media/Export sub-envs don't.
-                try { VideoOS.Platform.SDK.Environment.Logout(); } catch { }
-                try { VideoOS.Platform.SDK.Environment.RemoveAllServers(); } catch { }
-                try { VideoOS.Platform.SDK.Environment.UnInitialize(); } catch { }
+                Console.Error.WriteLine($"ERR SDK init: {ex.Message}");
+                return 2;
+            }
+
+            try
+            {
+                HelperRequest req = BuildRequestFromFirstJob();
+                if (req == null)
+                {
+                    Console.Error.WriteLine("SELFTEST no jobs configured on the Management Server");
+                    return 3;
+                }
+
+                Console.Error.WriteLine(
+                    $"SELFTEST job='{req.JobName}' format={req.Format} encrypt={req.Encrypt} " +
+                    $"targets={req.Targets?.Length ?? 0} range={req.RangeStartUtc}->{req.RangeEndUtc} " +
+                    $"out='{req.OutputFolder}'");
+
+                string resultPath = Path.Combine(Path.GetTempPath(), "autoexporter_selftest.result.json");
+                int code = Execute(req, resultPath);
+                Console.Error.WriteLine($"SELFTEST exit code={code}, result written to '{resultPath}'");
+                return code;
+            }
+            finally { Cleanup(); }
+        }
+
+        // Reads the AutoExporter job items straight off the Management Server and
+        // builds a HelperRequest from the first one. Mirrors the property keys the
+        // BG plugin (JobItemManager / JobUserControl / TimeRange) writes and reads.
+        private static HelperRequest BuildRequestFromFirstJob()
+        {
+            var pluginId  = new Guid("BB8298C5-8877-4073-BE24-68F67DE4694D");
+            var jobKindId = new Guid("1425AA67-4D80-42BA-8B1B-15FA60B3331C");
+
+            List<Item> jobs;
+            try { jobs = Configuration.Instance.GetItemConfigurations(pluginId, null, jobKindId); }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"ERR read job configs: {ex.Message}");
+                return null;
+            }
+
+            Console.Error.WriteLine($"SELFTEST found {jobs?.Count ?? 0} job(s)");
+            var job = jobs?.FirstOrDefault();
+            if (job == null) return null;
+
+            string Get(string key, string def) =>
+                job.Properties != null && job.Properties.ContainsKey(key) ? job.Properties[key] : def;
+
+            if (!int.TryParse(Get("RangeValue", "1"), out int rangeValue)) rangeValue = 1;
+            string rangeUnit = Get("RangeUnit", "Days");
+            DateTime endUtc = DateTime.UtcNow;
+            DateTime startUtc = SubtractRange(endUtc, rangeValue, rangeUnit);
+
+            string storage = Get("StoragePath", "");
+            string stamp = "selftest_" + endUtc.ToLocalTime().ToString("dd.MM.yyyy_HHmm");
+            string outFolder = string.IsNullOrWhiteSpace(storage)
+                ? Path.Combine(Path.GetTempPath(), "AutoExporterSelfTest", stamp)
+                : Path.Combine(storage, stamp);
+
+            var targets = new List<HelperTarget>();
+            int.TryParse(Get("Targets_Count", "0"), out int count);
+            for (int i = 0; i < count; i++)
+            {
+                string kind = Get($"Targets_{i}_Kind", null);
+                string oid  = Get($"Targets_{i}_ObjectId", null);
+                string name = Get($"Targets_{i}_Name", "");
+                if (string.IsNullOrEmpty(kind) || string.IsNullOrEmpty(oid)) continue;
+                targets.Add(new HelperTarget { Kind = kind, ObjectId = oid, Name = name });
+            }
+
+            return new HelperRequest
+            {
+                RunId         = Guid.NewGuid().ToString(),
+                JobName       = job.Name,
+                Format        = Get("Format", "XProtect"),
+                Encrypt       = Get("Encrypt", "No") == "Yes",
+                Password      = Get("Password", ""),
+                IncludePlayer = Get("IncludePlayer", "Yes") != "No",
+                IncludeAudio  = Get("IncludeAudio", "Yes") != "No",
+                RangeStartUtc = startUtc.ToString("o"),
+                RangeEndUtc   = endUtc.ToString("o"),
+                OutputFolder  = outFolder,
+                Targets       = targets.ToArray()
+            };
+        }
+
+        // Mirrors AutoExporter.Background.TimeRange.Subtract.
+        private static DateTime SubtractRange(DateTime end, int value, string unit)
+        {
+            if (value <= 0) value = 1;
+            switch ((unit ?? "Days").ToLowerInvariant())
+            {
+                case "minutes": return end.AddMinutes(-value);
+                case "hours":   return end.AddHours(-value);
+                case "months":  return end.AddDays(-value * 30);
+                default:        return end.AddDays(-value);
             }
         }
 
@@ -197,15 +375,18 @@ namespace AutoExporterHelper
             var seen = new HashSet<Guid>();
             if (req.Targets == null) return result;
 
-            ServerId serverId = null;
-            try { serverId = EnvironmentManager.Instance.MasterSite?.ServerId; } catch { }
-
             foreach (var t in req.Targets)
             {
                 if (!Guid.TryParse(t.ObjectId, out var oid)) continue;
                 try
                 {
-                    var item = Configuration.Instance.GetItem(serverId, oid, Kind.Camera);
+                    // GetItem(oid, Kind.Camera) WITHOUT a ServerId returns the camera
+                    // bound to its Recording Server (FQID.ServerId = the recorder).
+                    // Passing the master-site ServerId instead stamps the item with the
+                    // Management Server, and the export pipeline then can't find the
+                    // recorder -> "Recorder offline -" with an empty recorder name.
+                    // This matches the RtmpStreamer / BarcodeReader helpers.
+                    var item = Configuration.Instance.GetItem(oid, Kind.Camera);
                     if (item == null) continue;
 
                     bool isGroup = item.FQID != null && item.FQID.FolderType != FolderType.No;
@@ -224,7 +405,57 @@ namespace AutoExporterHelper
                     Console.Error.WriteLine($"WARN resolve failed for {t.Kind}/{t.ObjectId}: {ex.Message}");
                 }
             }
+
             return result;
+        }
+
+        // ─── Recorded-data filter ───────────────────────────
+
+        // Keeps only cameras that actually have something in the recordings
+        // database; the rest would each abort the whole DBExporter run with
+        // "Recorder offline -". Probe = ask the recorder for a recorded frame at or
+        // before the range end. No frame (or an error) => no recordings => skip.
+        private static List<Item> FilterCamerasWithData(List<Item> cameras, DateTime endUtc)
+        {
+            var keep = new List<Item>();
+            foreach (var cam in cameras)
+            {
+                if (HasRecordedData(cam, endUtc)) keep.Add(cam);
+                else Console.Error.WriteLine($"SKIP no recordings in database: '{cam?.Name}'");
+            }
+            Console.Error.WriteLine($"FILTER {cameras.Count} camera(s) -> {keep.Count} with recorded data");
+            return keep;
+        }
+
+        private static bool HasRecordedData(Item cam, DateTime endUtc)
+        {
+            if (cam == null) return false;
+            try
+            {
+                // Query recording-sequence METADATA (no frame decode) for the most
+                // recent recording at or before the range end. We deliberately look
+                // back far rather than only inside the export window: a camera that
+                // records continuously can have a single long sequence a narrow query
+                // would miss, and the crash we're guarding against fires only when the
+                // camera has NO recordings-database entry at all. maxCount=1 keeps it
+                // cheap - we just need existence.
+                var source = new SequenceDataSource(cam);
+                var sequences = source.GetData(
+                    endUtc,
+                    TimeSpan.FromDays(3650),                 // look back up to ~10 years
+                    1,                                       // at most one (existence check)
+                    TimeSpan.Zero, 0,                        // nothing after the range end
+                    DataType.SequenceTypeGuids.RecordingSequence);
+                return sequences != null && sequences.Count > 0;
+            }
+            catch (Exception ex)
+            {
+                // No database entry for this camera surfaces here (e.g. "Unable to
+                // connect to toolkit!"). Treat as "no data" so it's skipped rather
+                // than aborting the whole export.
+                Console.Error.WriteLine($"PROBE '{cam.Name}' returned no data: {ex.Message.Trim()}");
+                return false;
+            }
         }
 
         private static IEnumerable<Item> FlattenCameras(Item folder)
@@ -356,8 +587,26 @@ namespace AutoExporterHelper
                 if (p < 0) p = 0;
                 EmitProgress(cameraIndex, p, cameraName);
                 if (p >= 100 || exporter.LastError > 0) return;
-                Thread.Sleep(250);
+                // Pump (not plain Sleep) so the export's own media callbacks keep
+                // being dispatched on this thread while we wait.
+                PumpMessages(250);
             }
+        }
+
+        // Drains the WinForms message queue on this (STA) thread for roughly the
+        // given duration. The MIP SDK posts recorder connection/status and media
+        // callbacks here; a console process must pump them itself or the recorder
+        // is never marked online. Uses Environment.TickCount (not Stopwatch) to keep
+        // the dependency surface minimal.
+        private static void PumpMessages(int ms)
+        {
+            int start = System.Environment.TickCount;
+            do
+            {
+                System.Windows.Forms.Application.DoEvents();
+                Thread.Sleep(25);
+            }
+            while (unchecked(System.Environment.TickCount - start) < ms);
         }
 
         private static void EmitProgress(int cameraIdx, int pct, string camName)
@@ -436,6 +685,67 @@ namespace AutoExporterHelper
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"ERR result write: {ex.Message}");
+            }
+        }
+
+        // ─── Runtime arming: assembly + native DLL resolution ──
+
+        // Builds the Milestone search dirs, points BOTH the managed assembly
+        // resolver and the native (OS) DLL loader at them, then arms the resolver.
+        // Native setup matters: the export pipeline loads CoreToolkits.dll and its
+        // siblings through the OS loader, which AssemblyResolve never sees. Without
+        // them on the native search path, DBExporter.StartExport reports the toolkit
+        // as unreachable and surfaces it as "Recorder offline -".
+        private static void ArmRuntime(string milestoneDir)
+        {
+            _assemblySearchDirs = BuildSearchDirs(milestoneDir);
+            Console.Error.WriteLine($"INIT search dirs: {string.Join("; ", _assemblySearchDirs)}");
+
+            ConfigureNativeDllSearch(_assemblySearchDirs);
+
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+        }
+
+        // Native DLL search list (Win8+/Server2012+). Kernel32 falls back to legacy
+        // search rules if SetDefaultDllDirectories isn't available, in which case the
+        // AddDllDirectory calls are no-ops.
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetDefaultDllDirectories(uint DirectoryFlags);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr AddDllDirectory(string NewDirectory);
+
+        private const uint LOAD_LIBRARY_SEARCH_DEFAULT_DIRS    = 0x00001000;
+        private const uint LOAD_LIBRARY_SEARCH_USER_DIRS       = 0x00000400;
+        private const uint LOAD_LIBRARY_SEARCH_SYSTEM32        = 0x00000800;
+        private const uint LOAD_LIBRARY_SEARCH_APPLICATION_DIR = 0x00000200;
+
+        private static void ConfigureNativeDllSearch(string[] dirs)
+        {
+            try
+            {
+                SetDefaultDllDirectories(
+                    LOAD_LIBRARY_SEARCH_DEFAULT_DIRS |
+                    LOAD_LIBRARY_SEARCH_USER_DIRS |
+                    LOAD_LIBRARY_SEARCH_SYSTEM32 |
+                    LOAD_LIBRARY_SEARCH_APPLICATION_DIR);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"WARN SetDefaultDllDirectories not available: {ex.Message}");
+            }
+
+            if (dirs == null) return;
+            foreach (var d in dirs)
+            {
+                if (string.IsNullOrEmpty(d)) continue;
+                try
+                {
+                    var h = AddDllDirectory(d);
+                    if (h == IntPtr.Zero)
+                        Console.Error.WriteLine($"WARN AddDllDirectory failed (gle={Marshal.GetLastWin32Error()}): {d}");
+                }
+                catch (Exception ex) { Console.Error.WriteLine($"WARN AddDllDirectory threw for {d}: {ex.Message}"); }
             }
         }
 
