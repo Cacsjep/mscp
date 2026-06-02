@@ -40,6 +40,8 @@ namespace FlexView.Client
         private static readonly SolidColorBrush CameraLabelBrush = new SolidColorBrush(Color.FromRgb(88, 166, 255));
         private static readonly SolidColorBrush ResizeHandleFill = new SolidColorBrush(Color.FromRgb(160, 160, 160));
         private static readonly SolidColorBrush ResizeHandleBorder = new SolidColorBrush(Color.FromRgb(100, 100, 100));
+        private static readonly SolidColorBrush CopyIconBrush = new SolidColorBrush(Color.FromRgb(170, 170, 170));
+        private static readonly SolidColorBrush CopyIconHoverBrush = new SolidColorBrush(Color.FromRgb(88, 166, 255));
 
         // Pane state
         private readonly List<GridPane> _panes = new List<GridPane>();
@@ -216,6 +218,14 @@ namespace FlexView.Client
                 {
                     DrawResizeHandle(x + w - 7, y + h - 7);
                 }
+
+                // Copy button (top-right corner). Shown on every pane large enough
+                // to hold it, but only while a same-size duplicate can still fit
+                // somewhere on the grid. When the grid fills up the button vanishes.
+                if (w > 30 && h > 22 && TryFindCopySlot(pane, out _, out _))
+                {
+                    DrawCopyButton(pane, x + w - 20, y + 4);
+                }
             }
         }
 
@@ -237,6 +247,39 @@ namespace FlexView.Client
             Canvas.SetLeft(handle, x);
             Canvas.SetTop(handle, y);
             gridCanvas.Children.Add(handle);
+        }
+
+        // A bare copy glyph rendered on top of the pane (no box or border). The
+        // transparent background gives it a clickable bounds, and it turns blue while
+        // hovered. It handles its own MouseLeftButtonDown (and marks it handled) so the
+        // canvas create/move/resize logic never sees the click. The pane it copies is
+        // carried in Tag.
+        private void DrawCopyButton(GridPane pane, double left, double top)
+        {
+            var icon = new TextBlock
+            {
+                Text = "⧉",
+                Foreground = CopyIconBrush,
+                Background = Brushes.Transparent,
+                FontSize = 10.8,
+                Padding = new Thickness(2, 0, 2, 0),
+                Cursor = Cursors.Hand,
+                ToolTip = "Copy this pane to a free spot",
+                Tag = pane
+            };
+            icon.MouseEnter += (s, e) => ((TextBlock)s).Foreground = CopyIconHoverBrush;
+            icon.MouseLeave += (s, e) => ((TextBlock)s).Foreground = CopyIconBrush;
+            icon.MouseLeftButtonDown += CopyButton_MouseLeftButtonDown;
+            Canvas.SetLeft(icon, left);
+            Canvas.SetTop(icon, top);
+            gridCanvas.Children.Add(icon);
+        }
+
+        private void CopyButton_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            if ((sender as TextBlock)?.Tag is GridPane src)
+                CopyPane(src);
         }
 
         private void DrawDragPreview()
@@ -659,6 +702,64 @@ namespace FlexView.Client
         private bool HasOverlap(GridPane pane)
         {
             return _panes.Any(other => other != pane && pane.Overlaps(other));
+        }
+
+        // Find where a same-size duplicate of src can be dropped without overlapping
+        // any existing pane. Prefers the cell immediately to the right, then directly
+        // below, then a row-major first-fit scan of the whole grid. Returns false when
+        // nothing of that size fits anywhere (grid is full for this size).
+        private bool TryFindCopySlot(GridPane src, out int foundCol, out int foundRow)
+        {
+            int cs = src.ColSpan, rs = src.RowSpan;
+
+            bool Fits(int col, int row)
+            {
+                if (col < 0 || row < 0 || col + cs > GridCols || row + rs > GridRows)
+                    return false;
+                var candidate = new GridPane { Col = col, Row = row, ColSpan = cs, RowSpan = rs };
+                return !_panes.Any(p => candidate.Overlaps(p));
+            }
+
+            // Preferred adjacent placements first.
+            if (Fits(src.Col + cs, src.Row)) { foundCol = src.Col + cs; foundRow = src.Row; return true; }
+            if (Fits(src.Col, src.Row + rs)) { foundCol = src.Col; foundRow = src.Row + rs; return true; }
+
+            // First-fit scan, top-left to bottom-right.
+            for (int row = 0; row + rs <= GridRows; row++)
+            {
+                for (int col = 0; col + cs <= GridCols; col++)
+                {
+                    if (Fits(col, row)) { foundCol = col; foundRow = row; return true; }
+                }
+            }
+
+            foundCol = 0;
+            foundRow = 0;
+            return false;
+        }
+
+        // Duplicate a pane's shape (size only) into the first free slot. The copy is a
+        // fresh, empty pane (OriginalSlotIndex = -1) just like a hand-drawn one, so it
+        // carries no camera assignment.
+        private void CopyPane(GridPane src)
+        {
+            if (!TryFindCopySlot(src, out int col, out int row))
+                return;
+
+            var copy = new GridPane
+            {
+                Id = _nextPaneId++,
+                Col = col,
+                Row = row,
+                ColSpan = src.ColSpan,
+                RowSpan = src.RowSpan
+            };
+            _panes.Add(copy);
+            _selectedPane = copy;
+            _hoveredPane = null;
+            _isDirty = true;
+            RedrawCanvas();
+            UpdateStatus();
         }
 
         // Find the grid column whose SDK X (SdkMax * col / GridCols) is closest to sdkX
