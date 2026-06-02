@@ -129,8 +129,8 @@ Online / working = `Started == true && Error == false`. Per camera we keep
 
 Notes:
 - "Online" is not "has footage". `SequenceDataSource` (RecordingSequence) tells
-  you a camera has recordings, which is a different question and is the check
-  the AutoExporter helper uses. Do not use it for status here.
+  you a camera has recordings, which is a different question. Do not use it for
+  status here.
 - The querying identity needs status/view rights or the recorder returns
   nothing (reads as offline).
 - Reference samples: Status Demo Console, System Status Client Console.

@@ -155,10 +155,6 @@ hide:
     <div class="pi ap"><i class="mdi mdi-shield-check"></i></div>
     <div class="pt"><span class="pn">Auditor</span><span class="pd">Audit user access to recorded video with per-user rules</span></div>
   </a>
-  <a class="pr" href="admin/auto-exporter/">
-    <div class="pi ap"><i class="mdi mdi-file-export"></i></div>
-    <div class="pt"><span class="pn">Auto Exporter</span><span class="pd">Scheduled XProtect / AVI exports as a rule action with ring-buffer storage, live progress, and manual Run Now</span></div>
-  </a>
   <a class="pr" href="admin/barcode-reader/">
     <div class="pi ap"><i class="mdi mdi-qrcode-scan"></i></div>
     <div class="pt"><span class="pn">Barcode Reader</span><span class="pd">Decode QR and 1D/2D barcodes from live cameras; bookmarks + rule events</span></div>

@@ -41,7 +41,6 @@ nav:
   - Plugins:
     - Admin Plugins:
       - Auditor: plugins/admin/auditor.md
-      - Auto Exporter: plugins/admin/auto-exporter.md
       - Barcode Reader: plugins/admin/barcode-reader.md
       - Certificate Watchdog: plugins/admin/cert-watchdog.md
       - Colored Timeline: plugins/admin/colored-timeline.md
