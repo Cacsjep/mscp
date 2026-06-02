@@ -68,6 +68,8 @@ nav:
   - Device Drivers:
     - RTMP Push Driver: plugins/device-drivers/rtmp.md
     - RTSP Driver: plugins/device-drivers/rtsp.md
+  - Standalone Applications:
+    - Auto Exporter: standalone-applications/auto-exporter.md
   - Reporting Bugs: support/reporting-bugs.md
   - Changelog: support/changelog.md
   - Third-Party Notices: support/third-party-notices.md
