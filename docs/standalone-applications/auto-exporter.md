@@ -76,6 +76,9 @@ The single installer has two selectable features: **Agent service and tray app**
 
 The plugin feature closes the Management Client and restarts the Event Server during install (the plugin DLL is locked while either runs). The agent feature installs the service plus the tray app, with Start menu and Desktop shortcuts and an autostart entry, and offers to launch the tray when the installer finishes.
 
+!!! note "OEM Installations" 
+    You need manually copy files to the correct destination after installation, and stop and start the services by yourself, you need todo this only for the managment client / event server plugin.
+
 ## Configure the agent (tray app)
 
 The agent signs in to Milestone itself. The tray never logs in: it saves the configuration, restarts the service, and shows back what the service reports.

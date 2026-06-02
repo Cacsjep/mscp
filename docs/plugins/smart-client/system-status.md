@@ -16,6 +16,9 @@ Adds a **System Status** button to the Smart Client toolbar. Hovering the button
 3. Hover the button to read the quick counts in the tooltip.
 4. Click the button to open the flyout. Click again, press **Esc**, or click the **X** to close it.
 
+<img src="../img/sysstat1.PNG" width="75%">
+<img src="../img/sysstat2.PNG" width="75%">
+
 ## What it shows
 
 The flyout has two sections that refresh on their own while it is open.
