@@ -111,7 +111,7 @@
                 <StackPanel>
                     <TextBlock Text="Click and drag on the grid to create panes"
                                Foreground="#FFAAAAAA" FontSize="16" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Right-click a pane to delete it  |  Drag to move  |  Drag edges to resize"
+                    <TextBlock Text="Right-click to delete  |  Drag to move  |  Drag edges to resize  |  Copy button (top-right) to duplicate"
                                Foreground="#FF888888" FontSize="12" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>

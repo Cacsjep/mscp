@@ -28,6 +28,7 @@ Design custom camera view layouts beyond the standard row/column grids. FlexView
 | **Create pane** | Click and drag on empty cells (min 2x2) |
 | **Move pane** | Drag a pane's body |
 | **Resize pane** | Drag the bottom-right corner handle |
+| **Copy pane** | Click the copy button in a pane's top-right corner. A same-size duplicate drops into the first free spot. The button only appears while a duplicate still fits on the grid. |
 | **Delete pane** | Right-click a pane, or select + Delete key |
 | **New layout** | Click **New** to start fresh |
 

@@ -1,8 +1,10 @@
 # Changelog
 
+## [3.4.2] - 2026-06-02
+- Improve: Flex View - Pane copy
 
-## [3.4.0] - 2026-05-29
-- Add: Auto Export Plugin
+## [3.4.1] - 2026-05-29
+- Add: Auto Export Standalone
 - Add: SC System Help Toolbar Plugin
 
 ## [3.2.9] - 2026-05-28
