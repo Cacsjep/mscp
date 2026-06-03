@@ -1,6 +1,6 @@
 ---
 title: "Auto Exporter for Milestone XProtect™"
-description: "Auto Exporter is a standalone Milestone XProtect™ application that runs scheduled and rule-triggered video exports (AVI or XProtect database) on the machine that stores them, with size and age limits, managed from the Management Client."
+description: "Auto Exporter is a standalone Milestone XProtect™ application that runs scheduled and rule-triggered video exports (AVI, XProtect database, or timelapse MP4) on the machine that stores them, with size and age limits, managed from the Management Client."
 ---
 
 <style>
@@ -56,7 +56,7 @@ It does no exporting and holds no heavy state. It is part of the plugin feature 
 A Windows service installed on **each machine that stores exports**. It is a separate process and usually a separate machine for two reasons: exports are written to a folder on that machine's local disk, and the export pipeline is long-running and CPU and IO heavy, so it must not run inside the shared Event Server. The agent:
 
 - signs in to Milestone with its own credentials (as Local System) and registers itself in the Agents list,
-- runs the actual export (AVI or XProtect™ database) when a `RunJob` arrives or on a manual Run now,
+- runs the actual export (AVI, XProtect™ database, or timelapse MP4) when a `RunJob` arrives or on a manual Run now,
 - enforces the per-agent size and age limits on its export folder,
 - answers a live ping so its Online status and fields are current, and reports progress and the outcome of each run back to the Event Server bridge.
 
@@ -106,10 +106,18 @@ Audio is always included. Microphones and speakers related to the selected camer
 | Format | Result |
 |---|---|
 | **AVI** (default) | A standard video file per camera that plays in any media player, no Milestone software needed. Does not support encryption. Tick **Burn in timestamp** to draw the recording time onto the frames. |
-| **XProtect** | The Milestone database export (a Data folder plus a project file), supports encryption. Open it in a Smart Client to review it. |
+| **XProtect** | The Milestone database export (a Data folder plus a project file). Open it in a Smart Client to review it. Tick **Sign export** to add a digital signature (off by default) and **Encryption** to protect it with a password. |
+| **Timelapse** | A short MP4 per camera, made by sampling frames from the recordings and playing them back at a chosen frame rate, so hours or days of footage become a brief clip. Recording gaps are always skipped. Plays in any media player, no Milestone software needed. See the capture modes below. |
+
+The Timelapse format has two capture modes:
+
+- **Continuous** samples one frame every N seconds of footage across the whole range. Best for a steady time lapse of a scene.
+- **Event based** walks each recorded sequence instead, taking the first frame plus one every few seconds, between a minimum and maximum number of frames per sequence, and merging sequences recorded close together. Best when recording is motion or event driven and you want a few frames from each event.
+
+For both modes you set the playback **fps**, can tick **Burn in timestamp** to draw the recording time onto each frame, and can enable a **daily window** to use only footage inside a time of day range each day (for example 08:00 to 17:00).
 
 !!! warning "The Smart Client Player is not bundled"
-    The standalone Smart Client Player (the `SmartClient-Player.exe` you get from an export made inside the Smart Client) is **not** included with an XProtect-format export. Milestone only adds the player when the export runs from within the Smart Client itself, so a standalone service cannot produce it. Use **AVI** if the recipient has no Milestone software, or open the XProtect export in a Smart Client.
+    The standalone Smart Client Player (the `SmartClient-Player.exe` you get from an export made inside the Smart Client) is **not** included with an XProtect-format export. Milestone only adds the player when the export runs from within the Smart Client itself, so a standalone service cannot produce it. Use **AVI** or **Timelapse** if the recipient has no Milestone software, or open the XProtect export in a Smart Client.
 
 ### Time range
 
@@ -171,6 +179,17 @@ The plugin exposes one action, **Run Auto Export Job**, which you point at a spe
 
 !!! note "Encryption password storage"
     An export encryption password is stored in the Milestone configuration. Use encryption only where that is acceptable, and restrict configuration database access with Milestone roles.
+
+## Changelog
+
+### [1.1.0] - 2026-06-03
+- Add: Timelapse export format. 
+- Add: Sign export option for the XProtect format, off by default. Encryption stays a separate option.
+- Improve: Redesigned the job editor into General, Timerange, Cameras, and Output sections, showing only the options that apply to the chosen format.
+- Improve: Executions view shows a live progress bar column while a run is in flight.
+
+### [1.0.0] - 2026-06-02
+- Add: Auto Exporter standalone. Scheduled and rule triggered AVI or XProtect database exports, run by an agent service on the machine that stores them, with per agent size and age limits, managed from the Management Client.
 
 </div>
 
