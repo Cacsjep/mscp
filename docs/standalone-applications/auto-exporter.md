@@ -33,6 +33,11 @@ Auto Exporter is a standalone application with its own installer and release fee
 !!! info "Windows SmartScreen"
     The installer is not code-signed, so Windows SmartScreen may show a **"Windows protected your PC"** dialog when you run it. This is normal for unsigned open-source software. Click **More info** and then **Run anyway** to proceed.
 
+
+<video controls width="100%">
+  <source src="../vids/tut.mp4" type="video/mp4">
+</video>
+
 ## Architecture
 
 Auto Exporter is split into parts so the heavy export work runs on the machine that stores the files, while the configuration and status live where the operator already works (the Management Client). The parts talk to each other over Milestone MessageCommunication on the management server, so they can be on different machines.
