@@ -13,7 +13,6 @@
 - Improve Metadata Display: Setup-mode pane collapses the Channel / Render / Topic / Data key summary on slots smaller than 300x220 px, leaving only the plugin title and **Open configuration...** button so small left-column slots stay readable.
 - Improve FlexView: Edit mode now labels non-camera plugin slots with the plugin's display name (e.g. "Metadata Display", "Remote Manager"). Camera slots keep their camera-name label; built-in view items (Hotspot, Carousel, etc.) and tiny slots stay unlabeled.
 
-
 ## [3.2.5] - 2026-05-27
 - Add Metadata Display: **History** button next to Import packet. Opens a browser of recorded packets from the selected channel (1h / 6h / 24h / 7d lookback) with search, an XML preview pane, and a "Use selected packet" action that populates Topics and Fields exactly like Import packet. Useful for cameras that publish events rarely, where Start Learn would otherwise sit idle. The status text under the buttons moved to its own row to make space.
 - Fix FlexView: Edit and Save As no longer drop plugin view items (Metadata Display, Remote Manager, etc.) from the layout. 
