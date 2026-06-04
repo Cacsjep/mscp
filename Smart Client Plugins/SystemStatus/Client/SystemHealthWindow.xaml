@@ -5,6 +5,7 @@
         xmlns:fa5="http://schemas.fontawesome.com/icons/"
         Title="System Health"
         WindowStyle="None"
+        ResizeMode="CanResizeWithGrip"
         AllowsTransparency="True"
         ShowInTaskbar="True"
         Background="Transparent"
@@ -31,6 +32,7 @@
             TrueBrush="{StaticResource DotOnline}" FalseBrush="{StaticResource DotOffline}"/>
         <local:BoolToVisibilityConverter x:Key="NotToVis" Invert="True"/>
         <local:PercentToBrushConverter x:Key="PctBrush"/>
+        <local:ConnectivityToBrushConverter x:Key="ConnDot"/>
 
         <!-- Flat storage-usage bar (colored by PercentToBrushConverter). -->
         <Style x:Key="UsageBar" TargetType="ProgressBar">
@@ -125,6 +127,20 @@
             </Setter>
         </Style>
 
+        <!-- Thin drag handle on header edges so columns stay resizable under the custom header template. -->
+        <Style x:Key="ColumnHeaderGripper" TargetType="{x:Type Thumb}">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="SizeWE"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border Background="{TemplateBinding Background}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="GridHeader" TargetType="{x:Type DataGridColumnHeader}">
             <Setter Property="Background"  Value="{StaticResource ScSurface}"/>
             <Setter Property="Foreground"  Value="{StaticResource ScSubtle}"/>
@@ -137,21 +153,27 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type DataGridColumnHeader}">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <ContentPresenter VerticalAlignment="Center"
-                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
-                                <Path x:Name="SortArrow" Grid.Column="1" Width="8" Height="5" Margin="6,1,0,0"
-                                      Stretch="Fill" Fill="{StaticResource ScText}" Visibility="Collapsed"
-                                      VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"
-                                      Data="M0,0 L8,0 L4,5 Z"/>
-                            </Grid>
-                        </Border>
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter VerticalAlignment="Center"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                                    <Path x:Name="SortArrow" Grid.Column="1" Width="8" Height="5" Margin="6,1,0,0"
+                                          Stretch="Fill" Fill="{StaticResource ScText}" Visibility="Collapsed"
+                                          VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"
+                                          Data="M0,0 L8,0 L4,5 Z"/>
+                                </Grid>
+                            </Border>
+                            <Thumb x:Name="PART_LeftHeaderGripper" HorizontalAlignment="Left"
+                                   Style="{StaticResource ColumnHeaderGripper}"/>
+                            <Thumb x:Name="PART_RightHeaderGripper" HorizontalAlignment="Right"
+                                   Style="{StaticResource ColumnHeaderGripper}"/>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="SortDirection" Value="Descending">
                                 <Setter TargetName="SortArrow" Property="Visibility" Value="Visible"/>
@@ -324,7 +346,7 @@
                 </DockPanel>
                 <DataGrid x:Name="serversGrid" Grid.Row="1" Style="{StaticResource HealthGrid}">
                     <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="" Width="26" CanUserSort="False">
+                        <DataGridTemplateColumn Header="" Width="26" MinWidth="26" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Ellipse Width="9" Height="9" HorizontalAlignment="Center"
@@ -332,7 +354,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="RECORDER" Binding="{Binding RecorderHost}" Width="180"/>
+                        <DataGridTextColumn Header="RECORDER" Binding="{Binding RecorderHost}" Width="180" MinWidth="120"/>
                         <DataGridTextColumn Header="STATE"    Binding="{Binding State}" Width="Auto"/>
                         <DataGridTextColumn Header="STORAGE"  Binding="{Binding StorageName}" Width="1.2*"/>
                         <DataGridTextColumn Header="PATH"     Binding="{Binding Path}" Width="1.8*"/>
@@ -388,18 +410,36 @@
                 </DockPanel>
                 <DataGrid x:Name="camerasGrid" Grid.Row="1" Style="{StaticResource HealthGrid}"
                           VirtualizingStackPanel.IsVirtualizing="True"
-                          VirtualizingStackPanel.VirtualizationMode="Recycling">
+                          VirtualizingStackPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.IsVirtualizingWhenGrouping="True">
+                    <DataGrid.GroupStyle>
+                        <GroupStyle ContainerStyle="{StaticResource GroupContainer}"/>
+                    </DataGrid.GroupStyle>
                     <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="" Width="26" SortMemberPath="Online" CanUserSort="True">
+                        <DataGridTemplateColumn Header="" Width="26" MinWidth="26" SortMemberPath="ConnectivityState" CanUserSort="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Ellipse Width="9" Height="9" HorizontalAlignment="Center"
-                                             Fill="{Binding Online, Converter={StaticResource OnlineDot}}"/>
+                                             ToolTip="{Binding OnlineText}"
+                                             Fill="{Binding ConnectivityState, Converter={StaticResource ConnDot}}"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="CAMERA"     Binding="{Binding Name}" Width="300"/>
-                        <DataGridTextColumn Header="RECORDER"   Binding="{Binding RecorderHost}" Width="180"/>
+                        <DataGridTextColumn Header="CAMERA"     Binding="{Binding Name}" Width="300" MinWidth="220"/>
+                        <DataGridTextColumn Header="RECORDER"   Binding="{Binding RecorderHost}" Width="180" MinWidth="120">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Style.Triggers>
+                                        <!-- Recorder offline / unreachable: show the host in red. -->
+                                        <DataTrigger Binding="{Binding RecorderReachable}" Value="False">
+                                            <Setter Property="Foreground" Value="#FFE04545"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="STREAMS"    Binding="{Binding StreamCountText}" SortMemberPath="StreamCount" Width="Auto"/>
                         <DataGridTextColumn Header="RESOLUTION" Binding="{Binding Resolution}" SortMemberPath="PixelValue" Width="Auto"/>
                         <DataGridTextColumn Header="CODEC"      Binding="{Binding Codec}" Width="Auto"/>
@@ -416,11 +456,15 @@
                 <!-- Streams mode: flat list of every stream across all cameras. -->
                 <DataGrid x:Name="streamsGrid" Grid.Row="1" Style="{StaticResource HealthGrid}" Visibility="Collapsed"
                           VirtualizingStackPanel.IsVirtualizing="True"
-                          VirtualizingStackPanel.VirtualizationMode="Recycling">
+                          VirtualizingStackPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.IsVirtualizingWhenGrouping="True">
+                    <DataGrid.GroupStyle>
+                        <GroupStyle ContainerStyle="{StaticResource GroupContainer}"/>
+                    </DataGrid.GroupStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="CAMERA"     Binding="{Binding CameraName}" Width="300"/>
-                        <DataGridTextColumn Header="RECORDER"   Binding="{Binding RecorderName}" Width="180"/>
-                        <DataGridTextColumn Header="STREAM"     Binding="{Binding StreamName}" Width="1*"/>
+                        <DataGridTextColumn Header="CAMERA"     Binding="{Binding CameraName}" Width="300" MinWidth="220"/>
+                        <DataGridTextColumn Header="RECORDER"   Binding="{Binding RecorderName}" Width="180" MinWidth="120"/>
+                        <DataGridTextColumn Header="STREAM"     Binding="{Binding StreamName}" Width="*" MinWidth="120" MaxWidth="300"/>
                         <DataGridTextColumn Header="RESOLUTION" Binding="{Binding Resolution}" SortMemberPath="Width" Width="Auto"/>
                         <DataGridTextColumn Header="CODEC"      Binding="{Binding Codec}" Width="Auto"/>
                         <DataGridTextColumn Header="FPS"        Binding="{Binding FpsText}" SortMemberPath="Fps" Width="Auto"/>

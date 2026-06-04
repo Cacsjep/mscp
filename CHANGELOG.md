@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.4] - 2026-06-04
+- Add System Status: **System Health** window - the toolbar button now opens a near-fullscreen, resizable window with three tables: **Recording Servers** (per-storage usage bar coloured green/orange/red, attach/connection state), **Cameras** (live FPS / bitrate / resolution / codec, used storage and its **% of the recorder's configured storage**, first/last recording and a compact recorded **span**), and **Users**. 
+
+## [3.4.3] - 2026-06-02
+- Improve: System Status - Now its a fully status overview around **RS**, **Cameras**, **Streams** and **Users**.
+
 ## [3.4.2] - 2026-06-02
 - Improve: Flex View - Pane copy
 

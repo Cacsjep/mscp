@@ -19,6 +19,32 @@ namespace SystemStatus.Client
             => throw new NotSupportedException();
     }
 
+    /// <summary>
+    /// Camera connectivity to a status-dot brush:
+    /// "Online" -> green, "Offline" -> red, anything else (recorder unreachable) -> gray.
+    /// </summary>
+    public sealed class ConnectivityToBrushConverter : IValueConverter
+    {
+        private static readonly Brush Green = Freeze(Color.FromRgb(0x3F, 0xB9, 0x50));
+        private static readonly Brush Red = Freeze(Color.FromRgb(0xE0, 0x45, 0x45));
+        private static readonly Brush Gray = Freeze(Color.FromRgb(0x77, 0x77, 0x77));
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            switch (value as string)
+            {
+                case "Online": return Green;
+                case "Offline": return Red;
+                default: return Gray;
+            }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+
+        private static Brush Freeze(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
+    }
+
     /// <summary>Storage usage % to a fill brush: green &lt; 90, orange &lt; 95, red &gt;= 95.</summary>
     public sealed class PercentToBrushConverter : IValueConverter
     {

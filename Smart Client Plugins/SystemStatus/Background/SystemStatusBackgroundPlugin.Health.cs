@@ -22,7 +22,10 @@ namespace SystemStatus.Background
     /// </summary>
     public partial class SystemStatusBackgroundPlugin
     {
-        private const int StatsRequestTimeoutMs = 20000;
+        // Per-call SOAP timeout. Kept short so an offline recorder surfaces quickly; combined with
+        // the short-circuit below (skip the remaining calls once one fails) an offline recorder costs
+        // roughly one timeout, not four. Other recorders are unaffected (calls run in parallel).
+        private const int StatsRequestTimeoutMs = 3000;
         private const int SlowRecorderMs = 1500;       // log recorders slower than this
         private const int MaxRecorderConcurrency = 12; // parallel recorder SOAP calls
 
@@ -40,6 +43,7 @@ namespace SystemStatus.Background
             public readonly Dictionary<Guid, List<StreamStatRow>> StreamsByDevice = new Dictionary<Guid, List<StreamStatRow>>();
             public int DeviceCount;
             public int StreamCount;
+            public bool StatsOk;   // GetVideoDeviceStatistics succeeded (recorder reachable)
             public string Error;
         }
 
@@ -78,7 +82,8 @@ namespace SystemStatus.Background
                 .ToDictionary(g => g.Key, g => (ulong)g.Aggregate(0m, (a, s) => a + s.TotalBytes),
                               StringComparer.OrdinalIgnoreCase);
 
-            var cameras = BuildCameraRows(snap, recorderByCamera, streamsByDevice, usedByDevice, capacityByHost);
+            var unreachable = UnreachableHosts(results);
+            var cameras = BuildCameraRows(snap, recorderByCamera, streamsByDevice, usedByDevice, capacityByHost, unreachable);
             var storageRows = storages
                 .OrderBy(s => s.RecorderHost, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(s => s.IsArchive)
@@ -123,12 +128,16 @@ namespace SystemStatus.Background
             }
 
             // capacity null -> RecorderTotalBytes 0, preserved by CameraHealthRow.ApplyLiveFrom.
-            var cameras = BuildCameraRows(snap, recorderByCamera, streamsByDevice, usedByDevice, null);
+            var unreachable = UnreachableHosts(results);
+            var cameras = BuildCameraRows(snap, recorderByCamera, streamsByDevice, usedByDevice, null, unreachable);
 
             sw.Stop();
             int errCount = results.Count(r => r.Error != null);
-            Log.Info($"Live tick: {results.Count} recorder(s), {results.Sum(r => r.StreamCount)} stream(s), " +
-                     $"{cameras.Count} camera(s) in {sw.ElapsedMilliseconds}ms; errors={errCount}");
+            // The periodic full fetch logs full metrics every ~10s; for the frequent light tick only
+            // log when it's notably slow or has errors, to keep the MIP log readable at scale.
+            if (sw.ElapsedMilliseconds > 750 || errCount > 0)
+                Log.Info($"Live tick: {results.Count} recorder(s), {results.Sum(r => r.StreamCount)} stream(s), " +
+                         $"{cameras.Count} camera(s) in {sw.ElapsedMilliseconds}ms; errors={errCount}");
             return cameras;
         }
 
@@ -142,31 +151,42 @@ namespace SystemStatus.Background
             {
                 using (var client = new RecorderStatusService2(uri) { Timeout = StatsRequestTimeoutMs })
                 {
-                if (includeStorage)
-                {
-                    try { r.State = client.GetRecorderStatus(token); }
-                    catch (Exception ex) { Log.Error($"GetRecorderStatus failed for {r.Host}", ex); }
-                    try { r.Rec = client.GetRecordingStorageStatus(token); }
-                    catch (Exception ex) { r.Error = $"{r.Host} (storage): {Root(ex).Message}"; }
-                    try { r.Arc = client.GetArchiveStorageStatus(token); }
-                    catch (Exception ex) { Log.Error($"GetArchiveStorageStatus failed for {r.Host}", ex); }
-                }
+                    bool reachable = true;
+                    if (includeStorage)
+                    {
+                        // Probe with the cheapest call first; if it fails the recorder is unreachable,
+                        // so skip the remaining storage/stats calls rather than timing out on each.
+                        try { r.State = client.GetRecorderStatus(token); }
+                        catch (Exception ex) { reachable = false; r.Error = $"{r.Host}: {Root(ex).Message}"; }
 
-                var devices = client.GetVideoDeviceStatistics(token, ids.ToArray())
-                              ?? Array.Empty<VideoDeviceStatistics>();
-                r.DeviceCount = devices.Length;
-                foreach (var dev in devices)
-                {
-                    if (dev == null) continue;
-                    r.UsedByDevice[dev.DeviceId] = dev.UsedSpaceInBytes;
-                    nameById.TryGetValue(dev.DeviceId, out var camName);
-                    var rows = (dev.VideoStreamStatisticsArray ?? Array.Empty<VideoStreamStatistics>())
-                        .Where(s => s != null)
-                        .Select(s => BuildStreamRow(camName ?? dev.DeviceId.ToString(), r.Host, s))
-                        .ToList();
-                    r.StreamsByDevice[dev.DeviceId] = rows;
-                    r.StreamCount += rows.Count;
-                }
+                        if (reachable)
+                        {
+                            try { r.Rec = client.GetRecordingStorageStatus(token); }
+                            catch (Exception ex) { r.Error = $"{r.Host} (storage): {Root(ex).Message}"; }
+                            try { r.Arc = client.GetArchiveStorageStatus(token); }
+                            catch (Exception ex) { Log.Error($"GetArchiveStorageStatus failed for {r.Host}", ex); }
+                        }
+                    }
+
+                    if (reachable)
+                    {
+                        var devices = client.GetVideoDeviceStatistics(token, ids.ToArray())
+                                      ?? Array.Empty<VideoDeviceStatistics>();
+                        r.DeviceCount = devices.Length;
+                        foreach (var dev in devices)
+                        {
+                            if (dev == null) continue;
+                            r.UsedByDevice[dev.DeviceId] = dev.UsedSpaceInBytes;
+                            nameById.TryGetValue(dev.DeviceId, out var camName);
+                            var rows = (dev.VideoStreamStatisticsArray ?? Array.Empty<VideoStreamStatistics>())
+                                .Where(s => s != null)
+                                .Select(s => BuildStreamRow(camName ?? dev.DeviceId.ToString(), r.Host, s))
+                                .ToList();
+                            r.StreamsByDevice[dev.DeviceId] = rows;
+                            r.StreamCount += rows.Count;
+                        }
+                        r.StatsOk = true; // GetVideoDeviceStatistics returned => recorder reachable
+                    }
                 }
             }
             catch (Exception ex)
@@ -263,18 +283,28 @@ namespace SystemStatus.Background
             return map;
         }
 
+        // Recorders whose stats call did not return (offline / unreachable), by host.
+        private static HashSet<string> UnreachableHosts(List<RecorderFetch> results)
+        {
+            return new HashSet<string>(
+                results.Where(r => !r.StatsOk && r.Host != null).Select(r => r.Host),
+                StringComparer.OrdinalIgnoreCase);
+        }
+
         private static List<CameraHealthRow> BuildCameraRows(StatusSnapshot snap,
             Dictionary<Guid, Uri> recorderByCamera,
             Dictionary<Guid, List<StreamStatRow>> streamsByDevice,
             Dictionary<Guid, ulong> usedByDevice,
-            Dictionary<string, ulong> capacityByHost)
+            Dictionary<string, ulong> capacityByHost,
+            HashSet<string> unreachableHosts)
         {
             var rows = new List<CameraHealthRow>(snap.Cameras.Count);
             foreach (var c in snap.Cameras)
             {
                 recorderByCamera.TryGetValue(c.Id, out var u);
                 var host = u?.Host ?? "—";
-                var row = new CameraHealthRow { Id = c.Id, Name = c.Name, RecorderHost = host, Online = c.Online };
+                bool reachable = u == null || unreachableHosts == null || !unreachableHosts.Contains(host);
+                var row = new CameraHealthRow { Id = c.Id, Name = c.Name, RecorderHost = host, Online = c.Online, RecorderReachable = reachable };
                 if (usedByDevice != null && usedByDevice.TryGetValue(c.Id, out var used)) row.UsedSpaceBytes = used;
                 if (capacityByHost != null && capacityByHost.TryGetValue(host, out var cap)) row.RecorderTotalBytes = cap;
                 if (streamsByDevice != null && streamsByDevice.TryGetValue(c.Id, out var streams) && streams != null)
@@ -335,6 +365,7 @@ namespace SystemStatus.Background
                     RecorderHost = host,
                     State = stateText,
                     RecorderOk = ok,
+                    StorageId = st.StorageId,
                     StorageName = string.IsNullOrWhiteSpace(st.Name) ? "—" : st.Name,
                     Path = st.Path ?? "",
                     IsArchive = isArchive,

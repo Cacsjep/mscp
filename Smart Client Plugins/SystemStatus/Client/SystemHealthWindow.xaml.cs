@@ -18,14 +18,16 @@ namespace SystemStatus.Client
     public partial class SystemHealthWindow : Window
     {
         private const int RangeConcurrency = 6;             // parallel recording-range queries
+        private const int StorageRefreshEveryTicks = 5;     // every 5th 2s tick (~10s) do a full fetch
         private static readonly TimeSpan LiveInterval = TimeSpan.FromSeconds(2);
 
         private bool _closing;
         private bool _fullLoading;
         private bool _liveBusy;
         private bool _autoRefresh = true;
-        private string _statusMode = "All";        // All | Online | Offline | Streaming
+        private string _statusMode = "All";        // All | Online | Offline
         private string _viewMode = "Cameras";      // Cameras | Streams
+        private bool _grouping;                     // group cameras by recorder / streams by camera
 
         // Persistent, in-place-updated collections (preserve selection/scroll/sort across refreshes).
         private readonly ObservableCollection<StorageRow> _storages = new ObservableCollection<StorageRow>();
@@ -33,8 +35,10 @@ namespace SystemStatus.Client
         private readonly ObservableCollection<StreamStatRow> _streams = new ObservableCollection<StreamStatRow>();
         private readonly ObservableCollection<UserRow> _users = new ObservableCollection<UserRow>();
         private readonly Dictionary<Guid, CameraHealthRow> _cameraById = new Dictionary<Guid, CameraHealthRow>();
+        private readonly Dictionary<string, StorageRow> _storageByKey = new Dictionary<string, StorageRow>();
         private ICollectionView _camView;
         private ICollectionView _streamView;
+        private int _tickCount;
 
         private DispatcherTimer _liveTimer;
         // _masterCts cancels EVERYTHING when the window closes. _rangeCts (linked to it) is recreated
@@ -46,11 +50,14 @@ namespace SystemStatus.Client
         {
             InitializeComponent();
 
+            // Default = comfortable size, and that is also the minimum; the user can enlarge up to
+            // the monitor's working area.
             var wa = SystemParameters.WorkArea;
-            Width = Math.Min(1500, wa.Width - 60);
-            Height = Math.Min(900, wa.Height - 60);
-            MaxWidth = wa.Width;
-            MaxHeight = wa.Height;
+            double w = Math.Min(1500, wa.Width - 60);
+            double h = Math.Min(900, wa.Height - 60);
+            Width = w; Height = h;
+            MinWidth = w; MinHeight = h;
+            MaxWidth = wa.Width; MaxHeight = wa.Height;
 
             serversGrid.ItemsSource = _storages;
             usersGrid.ItemsSource = _users;
@@ -74,6 +81,7 @@ namespace SystemStatus.Client
             HighlightStatusButtons();
             HighlightModeButtons();
             HighlightAutoButton();
+            HighlightGroupButton();
             ApplyViewMode();
             FullRefresh();
             if (_autoRefresh) _liveTimer.Start();
@@ -110,12 +118,11 @@ namespace SystemStatus.Client
 
             if (result == null)
             {
-                ReplaceList(_storages, Array.Empty<StorageRow>());
                 ShowOverlay("No data — background plugin unavailable.");
             }
             else
             {
-                ReplaceList(_storages, result.Storages);
+                MergeStorages(result.Storages);
                 ReplaceList(_users, result.Users);
                 MergeCameras(result.Cameras, resetRanges: true);
                 RenderSummaries(result);
@@ -123,10 +130,13 @@ namespace SystemStatus.Client
                     ShowOverlay(result.Errors.Count > 0 ? "No data — see details below." : "No data.");
                 else
                     HideOverlay();
-                // Cancel any prior range sweep, then (re)load ranges for all cameras.
+                // Cancel any prior range sweep, then (re)load ranges - but only for cameras whose
+                // recorder answered. Querying sequences against an offline recorder throws an
+                // UnreachableServer exception (and hangs), so skip those (they show "—").
                 try { _rangeCts?.Cancel(); } catch { }
                 _rangeCts = CancellationTokenSource.CreateLinkedTokenSource(_masterCts.Token);
-                LoadRanges(_cameras.Where(c => c.RangeStatus == CameraHealthRow.RangeState.NotLoaded).ToList());
+                LoadRanges(_cameras.Where(c => c.RecorderReachable
+                                            && c.RangeStatus == CameraHealthRow.RangeState.NotLoaded).ToList());
             }
 
             _fullLoading = false;
@@ -143,9 +153,25 @@ namespace SystemStatus.Client
             _liveBusy = true;
             try
             {
-                var fresh = await Task.Run(() => plugin.FetchLiveCameraStats());
-                if (_closing || !_autoRefresh) return;
-                MergeCameras(fresh, resetRanges: false);
+                _tickCount++;
+                // Most ticks are a cheap stats-only refresh; every Nth tick we do a full fetch so the
+                // storage table, recorder capacity (the storage-% denominator) and recorder state stay
+                // current and recover after a recording server comes back online.
+                if (_tickCount % StorageRefreshEveryTicks == 0)
+                {
+                    var snap = await Task.Run(() => plugin.FetchSystemHealth());
+                    if (_closing || !_autoRefresh) return;
+                    MergeStorages(snap.Storages);
+                    ReplaceList(_users, snap.Users);
+                    MergeCameras(snap.Cameras, resetRanges: false);
+                    RenderSummaries(snap);
+                }
+                else
+                {
+                    var fresh = await Task.Run(() => plugin.FetchLiveCameraStats());
+                    if (_closing || !_autoRefresh) return;
+                    MergeCameras(fresh, resetRanges: false);
+                }
             }
             catch (Exception ex)
             {
@@ -154,19 +180,43 @@ namespace SystemStatus.Client
             finally { _liveBusy = false; }
         }
 
+        // Reconcile the persistent storage collection in place (preserve sort/selection).
+        private void MergeStorages(IReadOnlyList<StorageRow> fresh)
+        {
+            var seen = new HashSet<string>();
+            foreach (var f in fresh)
+            {
+                seen.Add(f.Key);
+                if (_storageByKey.TryGetValue(f.Key, out var existing)) existing.ApplyFrom(f);
+                else { _storages.Add(f); _storageByKey[f.Key] = f; }
+            }
+            for (int i = _storages.Count - 1; i >= 0; i--)
+            {
+                var s = _storages[i];
+                if (!seen.Contains(s.Key)) { _storages.RemoveAt(i); _storageByKey.Remove(s.Key); }
+            }
+        }
+
         // Reconcile the persistent camera collection with a freshly-fetched set (UI thread).
         private void MergeCameras(IReadOnlyList<CameraHealthRow> fresh, bool resetRanges)
         {
             var seen = new HashSet<Guid>();
             var newlyAdded = new List<CameraHealthRow>();
+            var recovered = new List<CameraHealthRow>();
 
             foreach (var f in fresh)
             {
                 seen.Add(f.Id);
                 if (_cameraById.TryGetValue(f.Id, out var existing))
                 {
+                    bool wasReachable = existing.RecorderReachable;
                     existing.ApplyLiveFrom(f);
-                    if (resetRanges) existing.RangeStatus = CameraHealthRow.RangeState.NotLoaded;
+                    if (resetRanges)
+                        existing.RangeStatus = CameraHealthRow.RangeState.NotLoaded;
+                    else if (!wasReachable && existing.RecorderReachable
+                             && existing.RangeStatus != CameraHealthRow.RangeState.Loaded
+                             && existing.RangeStatus != CameraHealthRow.RangeState.Loading)
+                        recovered.Add(existing); // recorder came back - its range was never loaded
                 }
                 else
                 {
@@ -185,8 +235,12 @@ namespace SystemStatus.Client
 
             SyncStreams();
 
-            // On live ticks, load ranges only for brand-new cameras (full refresh handles the rest).
-            if (!resetRanges && newlyAdded.Count > 0) LoadRanges(newlyAdded);
+            // On live ticks, load ranges for brand-new and recovered cameras on reachable recorders.
+            if (!resetRanges)
+            {
+                var loadable = newlyAdded.Concat(recovered).Where(c => c.RecorderReachable).ToList();
+                if (loadable.Count > 0) LoadRanges(loadable);
+            }
         }
 
         // Keep the flat stream collection's membership in sync with the cameras' (stable) stream objects.
@@ -324,9 +378,31 @@ namespace SystemStatus.Client
             if (camerasGrid != null) camerasGrid.Visibility = cameras ? Visibility.Visible : Visibility.Collapsed;
             if (streamsGrid != null) streamsGrid.Visibility = cameras ? Visibility.Collapsed : Visibility.Visible;
             var statusVis = cameras ? Visibility.Visible : Visibility.Collapsed;
-            foreach (var btn in new[] { fltAll, fltOnline, fltOffline, fltStreaming })
+            foreach (var btn in new[] { fltAll, fltOnline, fltOffline })
                 if (btn != null) btn.Visibility = statusVis;
             UpdateCamerasSummary();
+        }
+
+        // ── Grouping (cameras by recorder, streams by camera) ─────────────────
+        private void OnGroupToggleClick(object sender, RoutedEventArgs e)
+        {
+            _grouping = !_grouping;
+            HighlightGroupButton();
+            ApplyGrouping(_camView, "RecorderHost");
+            ApplyGrouping(_streamView, "CameraName");
+        }
+
+        private void ApplyGrouping(ICollectionView view, string property)
+        {
+            if (view == null) return;
+            view.GroupDescriptions.Clear();
+            if (_grouping) view.GroupDescriptions.Add(new PropertyGroupDescription(property));
+        }
+
+        private void HighlightGroupButton()
+        {
+            groupButton.Background = _grouping ? (Brush)FindResource("ScAccent") : Brushes.Transparent;
+            groupButton.Foreground = _grouping ? Brushes.White : (Brush)FindResource("ScSubtle");
         }
 
         private void UpdateCamerasSummary()
@@ -355,7 +431,7 @@ namespace SystemStatus.Client
 
         private void HighlightStatusButtons()
         {
-            foreach (var b in new[] { fltAll, fltOnline, fltOffline, fltStreaming })
+            foreach (var b in new[] { fltAll, fltOnline, fltOffline })
             {
                 bool active = (string)b.Tag == _statusMode;
                 b.Background = active ? (Brush)FindResource("ScAccent") : Brushes.Transparent;

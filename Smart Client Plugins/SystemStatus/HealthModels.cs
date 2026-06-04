@@ -32,20 +32,39 @@ namespace SystemStatus
 
     /// <summary>
     /// One storage (recording or archive) on a recording server, plus the recorder's
-    /// attach/connection state. Replaced wholesale on each full refresh (storage changes slowly),
-    /// so it does not need change notification.
+    /// attach/connection state. Live values are updated in place via <see cref="ApplyFrom"/> so the
+    /// servers table keeps its sort/selection across refreshes. Identity = host + StorageId + kind.
     /// </summary>
-    public sealed class StorageRow
+    public sealed class StorageRow : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public string RecorderHost { get; set; }
         public string State { get; set; }          // e.g. "Attached / Connected"
         public bool RecorderOk { get; set; }
+        public Guid StorageId { get; set; }
         public string StorageName { get; set; }
         public string Path { get; set; }
         public bool IsArchive { get; set; }
         public bool Available { get; set; }
         public ulong UsedBytes { get; set; }
         public ulong FreeBytes { get; set; }
+
+        public string Key => $"{RecorderHost}|{StorageId}|{IsArchive}";
+
+        /// <summary>Update live values from a freshly-fetched row with the same Key, and notify.</summary>
+        public void ApplyFrom(StorageRow f)
+        {
+            State = f.State; RecorderOk = f.RecorderOk; Available = f.Available;
+            Path = f.Path; StorageName = f.StorageName;
+            UsedBytes = f.UsedBytes; FreeBytes = f.FreeBytes;
+            var h = PropertyChanged;
+            if (h == null) return;
+            foreach (var n in new[] { nameof(State), nameof(RecorderOk), nameof(AvailableText), nameof(Path),
+                nameof(StorageName), nameof(Used), nameof(Free), nameof(Total), nameof(UsedPercent),
+                nameof(UsedPercentValue), nameof(UsageTooltip) })
+                h(this, new PropertyChangedEventArgs(n));
+        }
 
         public string Kind => IsArchive ? "Archive" : "Recording";
         public ulong TotalBytes => UsedBytes + FreeBytes;
@@ -104,6 +123,9 @@ namespace SystemStatus
         public string Name { get; set; }
         public string RecorderHost { get; set; }
         public bool Online { get; set; }
+        // False when the owning recording server didn't answer (offline / unreachable). The camera's
+        // real online state is then unknown, so the UI shows it gray rather than green/red.
+        public bool RecorderReachable { get; set; } = true;
         public ulong UsedSpaceBytes { get; set; }
         public ulong RecorderTotalBytes { get; set; }
         public ObservableCollection<StreamStatRow> Streams { get; } = new ObservableCollection<StreamStatRow>();
@@ -113,7 +135,9 @@ namespace SystemStatus
         public string StreamCountText => Streams.Count == 0 ? "—" : Streams.Count.ToString();
         public bool HasStreams => Streams.Count > 0;
 
-        public string OnlineText => Online ? "Online" : "Offline";
+        public string OnlineText => !RecorderReachable ? "Unknown" : (Online ? "Online" : "Offline");
+        // "Unreachable" (gray) | "Online" (green) | "Offline" (red) - drives the status dot.
+        public string ConnectivityState => !RecorderReachable ? "Unreachable" : (Online ? "Online" : "Offline");
         public string UsedSpaceText => UsedSpaceBytes > 0 ? ByteFormat.Size(UsedSpaceBytes) : "—";
 
         public double StoragePercentValue =>
@@ -154,15 +178,16 @@ namespace SystemStatus
         {
             RecorderHost = f.RecorderHost;
             Online = f.Online;
+            RecorderReachable = f.RecorderReachable;
             UsedSpaceBytes = f.UsedSpaceBytes;
             // The lightweight live tick doesn't fetch storage, so it leaves capacity 0 - keep the
             // value cached from the last full refresh rather than wiping the storage-% denominator.
             if (f.RecorderTotalBytes > 0) RecorderTotalBytes = f.RecorderTotalBytes;
             MergeStreams(f.Streams);
 
-            Raise(nameof(Online), nameof(OnlineText), nameof(RecorderHost), nameof(UsedSpaceText),
-                  nameof(StoragePercentText), nameof(StreamCountText), nameof(HasStreams),
-                  nameof(Resolution), nameof(Codec), nameof(Fps), nameof(Bitrate));
+            Raise(nameof(Online), nameof(OnlineText), nameof(ConnectivityState), nameof(RecorderReachable),
+                  nameof(RecorderHost), nameof(UsedSpaceText), nameof(StoragePercentText), nameof(StreamCountText),
+                  nameof(HasStreams), nameof(Resolution), nameof(Codec), nameof(Fps), nameof(Bitrate));
         }
 
         private void MergeStreams(IEnumerable<StreamStatRow> fresh)
