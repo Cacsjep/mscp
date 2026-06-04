@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 
@@ -31,8 +32,8 @@ namespace SystemStatus
 
     /// <summary>
     /// One storage (recording or archive) on a recording server, plus the recorder's
-    /// attach/connection state. One row per storage; a recorder with no reported storage
-    /// still gets a single state-only row.
+    /// attach/connection state. Replaced wholesale on each full refresh (storage changes slowly),
+    /// so it does not need change notification.
     /// </summary>
     public sealed class StorageRow
     {
@@ -53,15 +54,47 @@ namespace SystemStatus
         public string Total => ByteFormat.Size(TotalBytes);
         public double UsedPercentValue => TotalBytes > 0 ? (double)UsedBytes / TotalBytes * 100.0 : 0;
         public string UsedPercent => TotalBytes > 0 ? UsedPercentValue.ToString("0") + " %" : "—";
+        public bool HasTotal => TotalBytes > 0;
+        public string UsageTooltip => TotalBytes > 0
+            ? $"Used {Used} of {Total}  ({Free} free)"
+            : "No storage figures reported";
         public string AvailableText => Available ? "Yes" : "No";
     }
 
+    /// <summary>Compact human duration: decimal days (no trailing ".0"), falling to hours/minutes.</summary>
+    internal static class DurationText
+    {
+        public static string Format(TimeSpan span)
+        {
+            if (span <= TimeSpan.Zero) return "—";
+            if (span.TotalDays >= 1) return Trim(span.TotalDays) + " Days";
+            if (span.TotalHours >= 1) return Trim(span.TotalHours) + " Hours";
+            return Math.Max(1, Math.Round(span.TotalMinutes)).ToString("0") + " Minutes";
+        }
+
+        // 90.0 -> "90", 89.94 -> "89.9", 5.62 -> "5.6".
+        private static string Trim(double v)
+        {
+            double r = Math.Round(v, 1);
+            return r == Math.Floor(r) ? r.ToString("0") : r.ToString("0.0");
+        }
+    }
+
+    /// <summary>Result of an on-demand recording-range lookup (local time).</summary>
+    public sealed class RecordingRangeResult
+    {
+        public static readonly RecordingRangeResult Failed = new RecordingRangeResult { Ok = false };
+        public bool Ok { get; set; }
+        public DateTime? First { get; set; }
+        public DateTime? Last { get; set; }
+    }
+
     /// <summary>
-    /// One enabled camera with its online state, live stream statistics (if the recorder is
-    /// currently producing them), used recording space, and lazily-loaded first/last recording
-    /// timestamps. Per-stream rows live in <see cref="Streams"/> for the expandable detail panel.
-    /// Implements INotifyPropertyChanged so the recording-range cells update after their on-demand
-    /// load completes.
+    /// One enabled camera with online state, live stream statistics, used recording space, the
+    /// camera's share of its recorder's configured storage, and lazily-loaded first/last recording
+    /// timestamps. Live values are updated in place via <see cref="ApplyLiveFrom"/> on each refresh
+    /// (preserving selection/scroll/sort and the already-loaded recording range). All mutation must
+    /// happen on the UI thread because <see cref="Streams"/> is an ObservableCollection.
     /// </summary>
     public sealed class CameraHealthRow : INotifyPropertyChanged
     {
@@ -72,7 +105,8 @@ namespace SystemStatus
         public string RecorderHost { get; set; }
         public bool Online { get; set; }
         public ulong UsedSpaceBytes { get; set; }
-        public IReadOnlyList<StreamStatRow> Streams { get; set; } = Array.Empty<StreamStatRow>();
+        public ulong RecorderTotalBytes { get; set; }
+        public ObservableCollection<StreamStatRow> Streams { get; } = new ObservableCollection<StreamStatRow>();
 
         // ── Aggregates over the streams (parent row) ─────────────────────────
         public int StreamCount => Streams.Count;
@@ -82,7 +116,13 @@ namespace SystemStatus
         public string OnlineText => Online ? "Online" : "Offline";
         public string UsedSpaceText => UsedSpaceBytes > 0 ? ByteFormat.Size(UsedSpaceBytes) : "—";
 
-        // Largest stream by pixel count drives the headline resolution/codec/fps.
+        public double StoragePercentValue =>
+            RecorderTotalBytes > 0 && UsedSpaceBytes > 0 ? (double)UsedSpaceBytes / RecorderTotalBytes * 100.0 : 0;
+        public string StoragePercentText =>
+            RecorderTotalBytes > 0 && UsedSpaceBytes > 0
+                ? (StoragePercentValue >= 1 ? StoragePercentValue.ToString("0.0") : StoragePercentValue.ToString("0.00")) + " %"
+                : "—";
+
         private StreamStatRow Primary => Streams
             .OrderByDescending(s => (long)s.Width * s.Height)
             .ThenByDescending(s => s.Fps)
@@ -106,17 +146,51 @@ namespace SystemStatus
         public double FpsValue => Primary?.Fps ?? 0;
         public long PixelValue => Primary != null ? (long)Primary.Width * Primary.Height : 0;
 
+        /// <summary>
+        /// Update live fields from a freshly-fetched row (same Id), merging streams in place. Does
+        /// NOT touch the recording range. UI thread only.
+        /// </summary>
+        public void ApplyLiveFrom(CameraHealthRow f)
+        {
+            RecorderHost = f.RecorderHost;
+            Online = f.Online;
+            UsedSpaceBytes = f.UsedSpaceBytes;
+            // The lightweight live tick doesn't fetch storage, so it leaves capacity 0 - keep the
+            // value cached from the last full refresh rather than wiping the storage-% denominator.
+            if (f.RecorderTotalBytes > 0) RecorderTotalBytes = f.RecorderTotalBytes;
+            MergeStreams(f.Streams);
+
+            Raise(nameof(Online), nameof(OnlineText), nameof(RecorderHost), nameof(UsedSpaceText),
+                  nameof(StoragePercentText), nameof(StreamCountText), nameof(HasStreams),
+                  nameof(Resolution), nameof(Codec), nameof(Fps), nameof(Bitrate));
+        }
+
+        private void MergeStreams(IEnumerable<StreamStatRow> fresh)
+        {
+            var freshList = fresh as IList<StreamStatRow> ?? fresh.ToList();
+            var byId = Streams.ToDictionary(s => s.StreamId);
+            var seen = new HashSet<Guid>();
+
+            foreach (var f in freshList)
+            {
+                seen.Add(f.StreamId);
+                if (byId.TryGetValue(f.StreamId, out var existing)) existing.ApplyFrom(f);
+                else Streams.Add(f);
+            }
+            for (int i = Streams.Count - 1; i >= 0; i--)
+                if (!seen.Contains(Streams[i].StreamId)) Streams.RemoveAt(i);
+        }
+
         // ── Lazy recording range ─────────────────────────────────────────────
         private RangeState _rangeState = RangeState.NotLoaded;
         private DateTime? _firstRecording;
         private DateTime? _lastRecording;
 
         public enum RangeState { NotLoaded, Loading, Loaded, Failed }
-
         public RangeState RangeStatus
         {
             get => _rangeState;
-            set { _rangeState = value; Raise(nameof(FirstRecordingText)); Raise(nameof(LastRecordingText)); }
+            set { _rangeState = value; Raise(nameof(FirstRecordingText), nameof(LastRecordingText), nameof(SpanText)); }
         }
 
         public void SetRange(DateTime? first, DateTime? last)
@@ -124,12 +198,33 @@ namespace SystemStatus
             _firstRecording = first;
             _lastRecording = last;
             _rangeState = RangeState.Loaded;
-            Raise(nameof(FirstRecordingText));
-            Raise(nameof(LastRecordingText));
+            Raise(nameof(FirstRecordingText), nameof(LastRecordingText), nameof(SpanText));
         }
 
         public string FirstRecordingText => RangeText(_firstRecording);
         public string LastRecordingText => RangeText(_lastRecording);
+
+        /// <summary>Recording coverage span (last minus first), formatted compactly.</summary>
+        public string SpanText
+        {
+            get
+            {
+                switch (_rangeState)
+                {
+                    case RangeState.Loading: return "…";
+                    case RangeState.Failed: return "error";
+                    case RangeState.Loaded:
+                        if (!_firstRecording.HasValue || !_lastRecording.HasValue) return "—";
+                        return DurationText.Format(_lastRecording.Value - _firstRecording.Value);
+                    default: return "—";
+                }
+            }
+        }
+
+        public double SpanDaysValue =>
+            _rangeState == RangeState.Loaded && _firstRecording.HasValue && _lastRecording.HasValue
+            && _lastRecording.Value > _firstRecording.Value
+                ? (_lastRecording.Value - _firstRecording.Value).TotalDays : 0;
 
         private string RangeText(DateTime? dt)
         {
@@ -142,22 +237,17 @@ namespace SystemStatus
             }
         }
 
-        private void Raise(string p) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(p));
-    }
-
-    /// <summary>Result of an on-demand recording-range lookup (local time).</summary>
-    public sealed class RecordingRangeResult
-    {
-        public static readonly RecordingRangeResult Failed = new RecordingRangeResult { Ok = false };
-        public bool Ok { get; set; }
-        public DateTime? First { get; set; }
-        public DateTime? Last { get; set; }
+        private void Raise(params string[] names)
+        {
+            var h = PropertyChanged;
+            if (h == null) return;
+            foreach (var n in names) h(this, new PropertyChangedEventArgs(n));
+        }
     }
 
     /// <summary>
-    /// Immutable result of one system-health fetch: storages, cameras and users, plus any
-    /// per-recorder errors. Built off the live status snapshot (online state + users) merged
-    /// with the recorder-status SOAP results.
+    /// Immutable result of one full system-health fetch: storages, cameras and users, plus any
+    /// per-recorder errors and timing metrics for diagnostics.
     /// </summary>
     public sealed class SystemHealthSnapshot
     {
