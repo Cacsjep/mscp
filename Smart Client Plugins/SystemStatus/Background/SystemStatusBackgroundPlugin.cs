@@ -19,7 +19,7 @@ namespace SystemStatus.Background
     /// The toolbar button and the flyout are thin consumers that subscribe to <see cref="StatusChanged"/>
     /// and read <see cref="CurrentSnapshot"/>; they never query anything themselves.
     /// </summary>
-    public class SystemStatusBackgroundPlugin : BackgroundPlugin
+    public partial class SystemStatusBackgroundPlugin : BackgroundPlugin
     {
         internal static SystemStatusBackgroundPlugin Instance { get; private set; }
 
@@ -58,6 +58,9 @@ namespace SystemStatus.Background
 
         // ObjectId -> camera name, for all enabled cameras (the denominator).
         private Dictionary<Guid, string> _enabledCameras = new Dictionary<Guid, string>();
+        // ObjectId -> the recording server that owns the camera (its FQID.ServerId.Uri),
+        // captured during the same tree walk and used to query stream statistics.
+        private Dictionary<Guid, Uri> _cameraRecorderUri = new Dictionary<Guid, Uri>();
         // ObjectId -> last reported state string, merged from ProvideCurrentState responses.
         private readonly Dictionary<Guid, string> _deviceStates = new Dictionary<Guid, string>();
         private List<UserRow> _users = new List<UserRow>();
@@ -301,6 +304,7 @@ namespace SystemStatus.Background
                             ?? new List<Item>();
 
                 var map = new Dictionary<Guid, string>();
+                var recMap = new Dictionary<Guid, Uri>();
                 var visited = new HashSet<Guid>();
                 var stack = new Stack<KeyValuePair<Item, int>>();
                 foreach (var r in roots) stack.Push(new KeyValuePair<Item, int>(r, 0));
@@ -317,7 +321,14 @@ namespace SystemStatus.Background
 
                     if (it.FQID.Kind == Kind.Camera && it.FQID.FolderType == FolderType.No)
                     {
-                        if (it.Enabled) map[it.FQID.ObjectId] = it.Name; // leaf camera
+                        if (it.Enabled)
+                        {
+                            map[it.FQID.ObjectId] = it.Name; // leaf camera
+                            // FQID.ServerId is the recording server that owns the camera; its Uri
+                            // is the RecorderStatusService2 endpoint (the documented stats pattern).
+                            var recUri = it.FQID.ServerId?.Uri;
+                            if (recUri != null) recMap[it.FQID.ObjectId] = recUri;
+                        }
                         continue;
                     }
 
@@ -328,7 +339,7 @@ namespace SystemStatus.Background
                         foreach (var k in kids) stack.Push(new KeyValuePair<Item, int>(k, depth + 1));
                 }
 
-                lock (_lock) { _enabledCameras = map; }
+                lock (_lock) { _enabledCameras = map; _cameraRecorderUri = recMap; }
                 sw.Stop();
                 Log.Info($"Loaded {map.Count} enabled camera(s); scanned {scanned} node(s), " +
                          $"{containers} container(s), from {roots.Count} root(s) in {sw.ElapsedMilliseconds} ms");

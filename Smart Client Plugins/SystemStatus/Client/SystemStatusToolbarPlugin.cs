@@ -8,7 +8,7 @@ namespace SystemStatus.Client
 {
     internal class SystemStatusToolbarPluginInstance : WorkSpaceToolbarPluginInstance
     {
-        private static StatusFlyoutWindow _openFlyout;
+        private static SystemHealthWindow _openWindow;
         private bool _subscribed;
 
         public override void Init(Item window)
@@ -43,25 +43,24 @@ namespace SystemStatus.Client
 
         public override void Activate()
         {
-            // Toggle: a second click closes an open flyout.
-            if (_openFlyout != null)
+            // Toggle: a second click closes the open window; otherwise bring it forward / open it.
+            if (_openWindow != null)
             {
-                try { _openFlyout.Close(); } catch { }
-                _openFlyout = null;
+                try { _openWindow.Activate(); } catch { }
                 return;
             }
 
             try
             {
-                var flyout = new StatusFlyoutWindow();
-                flyout.Closed += (_, __) => { if (_openFlyout == flyout) _openFlyout = null; };
-                _openFlyout = flyout;
-                flyout.Show();
-                flyout.Activate();
+                var window = new SystemHealthWindow();
+                window.Closed += (_, __) => { if (_openWindow == window) _openWindow = null; };
+                _openWindow = window;
+                window.Show();
+                window.Activate();
             }
             catch (Exception ex)
             {
-                SystemStatusDefinition.Log.Error("Failed to open status flyout", ex);
+                SystemStatusDefinition.Log.Error("Failed to open system health window", ex);
             }
         }
 

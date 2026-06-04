@@ -20,6 +20,8 @@
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
+    <!-- Recorder/RecorderStatusProxy.cs derives from the classic ASMX SoapHttpClientProtocol. -->
+    <Reference Include="System.Web.Services" />
   </ItemGroup>
 
   <ItemGroup>
