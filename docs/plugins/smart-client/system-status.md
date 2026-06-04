@@ -16,8 +16,9 @@ Adds a **System Status** button to the Smart Client toolbar. Hovering the button
 3. Hover the button to read the quick counts in the tooltip.
 4. Click the button to open the System Health window. Click again, press **Esc**, or click the **X** to close it.
 
-<img src="../img/sysstat1.PNG" width="75%">
-<img src="../img/sysstat2.PNG" width="75%">
+<video controls width="100%">
+  <source src="../vids/sys.mp4" type="video/mp4">
+</video>
 
 ## What it shows
 
