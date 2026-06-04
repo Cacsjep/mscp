@@ -449,7 +449,7 @@
                         <DataGridTextColumn Header="STORAGE %" Binding="{Binding StoragePercentText}" SortMemberPath="StoragePercentValue" Width="Auto"/>
                         <DataGridTextColumn Header="FIRST REC"  Binding="{Binding FirstRecordingText}" CanUserSort="False" Width="Auto"/>
                         <DataGridTextColumn Header="LAST REC"   Binding="{Binding LastRecordingText}"  CanUserSort="False" Width="Auto"/>
-                        <DataGridTextColumn Header="SPAN"       Binding="{Binding SpanText}" SortMemberPath="SpanDaysValue" Width="*"/>
+                        <DataGridTextColumn Header="SPAN"       Binding="{Binding SpanText}" SortMemberPath="SpanDaysValue" Width="*" MinWidth="110"/>
                     </DataGrid.Columns>
                 </DataGrid>
 
