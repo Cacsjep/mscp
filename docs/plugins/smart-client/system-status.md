@@ -76,6 +76,7 @@ Background services such as the Event Server and the Log Server are filtered out
 | Sort | Click any column header. An arrow shows the active sort direction. Numbers, sizes, FPS, bitrate, storage, and span sort by value. |
 | Filter cameras | Type in the **Filter** box to match camera or recorder name, or use the **All / Online / Offline** buttons. The filter also applies in Streams mode. |
 | Group | The **Group** button groups cameras by recorder, and streams by camera, with collapsible group headers. |
+| Folders | The **Folders** button groups cameras by folders, only available for camera table. |
 | Resize columns | Drag the divider between two column headers. |
 | Export | The CSV icon on each table exports exactly what is shown, respecting the current sort and filter. |
 
