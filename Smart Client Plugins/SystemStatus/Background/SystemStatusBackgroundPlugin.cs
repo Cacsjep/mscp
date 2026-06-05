@@ -309,12 +309,25 @@ namespace SystemStatus.Background
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
-                // GetItemsByKind(Kind.Camera) returns only the device-tree roots (a container named
-                // after the recording server, e.g. "acs") - not the cameras. Walk the tree from those
-                // roots and collect the actual camera devices (Kind.Camera + FolderType.No). Iterative
-                // (stack) rather than recursive so ~1000 cameras stays cheap and shallow on the stack.
-                var roots = Configuration.Instance.GetItemsByKind(Kind.Camera, ItemHierarchy.SystemDefined)
-                            ?? new List<Item>();
+                // Seed the device-tree walk from the recording-server items (Kind.Server) AND the
+                // Kind.Camera roots, then walk down collecting enabled camera leaves (Kind.Camera +
+                // FolderType.No). The Kind.Camera roots alone were only descending into a single
+                // recorder; the server subtree spans every recorder, so all recorders' cameras are
+                // discovered and each camera carries its own (correct) FQID.ServerId.Uri. We do NOT
+                // fetch from the server item's own Uri - that endpoint 404s on the recorder status
+                // service; only the per-camera ServerId.Uri is a valid RecorderStatusService2 base.
+                // Iterative (stack) walk; the visited set dedups the root overlap.
+                int recorderRoots = 0;
+                var roots = new List<Item>();
+                foreach (var s in Configuration.Instance.GetItemsByKind(Kind.Server, ItemHierarchy.SystemDefined)
+                                  ?? new List<Item>())
+                {
+                    if (s == null) continue;
+                    roots.Add(s);
+                    recorderRoots++;
+                }
+                roots.AddRange(Configuration.Instance.GetItemsByKind(Kind.Camera, ItemHierarchy.SystemDefined)
+                               ?? new List<Item>());
 
                 var map = new Dictionary<Guid, string>();
                 var recMap = new Dictionary<Guid, Uri>();
@@ -354,8 +367,11 @@ namespace SystemStatus.Background
 
                 lock (_lock) { _enabledCameras = map; _cameraRecorderUri = recMap; }
                 sw.Stop();
-                Log.Info($"Loaded {map.Count} enabled camera(s); scanned {scanned} node(s), " +
-                         $"{containers} container(s), from {roots.Count} root(s) in {sw.ElapsedMilliseconds} ms");
+                int distinctRecorders = recMap.Values.Select(u => u.Host)
+                                              .Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                Log.Info($"Loaded {map.Count} enabled camera(s) across {distinctRecorders} recorder(s); " +
+                         $"scanned {scanned} node(s), {containers} container(s), from {roots.Count} root(s) " +
+                         $"({recorderRoots} recording-server root(s)) in {sw.ElapsedMilliseconds} ms");
             }
             catch (Exception ex)
             {
