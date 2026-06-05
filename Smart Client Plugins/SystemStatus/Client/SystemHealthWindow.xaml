@@ -421,8 +421,8 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="CAMERA"     Binding="{Binding Name}" Width="300" MinWidth="220"/>
-                        <DataGridTextColumn Header="RECORDER"   Binding="{Binding RecorderHost}" Width="180" MinWidth="120">
+                        <DataGridTextColumn Header="CAMERA"     Binding="{Binding Name}" Width="300" MinWidth="300"/>
+                        <DataGridTextColumn Header="RECORDER"   Binding="{Binding RecorderHost}" Width="300" MinWidth="250">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>

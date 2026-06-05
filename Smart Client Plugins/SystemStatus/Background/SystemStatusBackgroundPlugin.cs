@@ -51,6 +51,13 @@ namespace SystemStatus.Background
         private static readonly HashSet<string> HiddenServerTypes =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Service" };
 
+        // The management server reports OAuth bearer-token standalone SDK sessions (e.g. integrations
+        // that log in via AddServerOAuth with a basic user) under this placeholder identity - it
+        // cannot map the token back to the basic user name. We relabel it so the row reads as an
+        // intentional integration rather than an "unknown" user.
+        private const string UnknownOAuthIdentity = "Unknown OAuth user";
+        private const string OAuthIntegrationLabel = "Integration / SDK client";
+
         private static readonly Regex IdentityRegex =
             new Regex(@"^\s*(?<name>.*?)\s*(\((?<ip>[^)]*)\))?\s*$", RegexOptions.Compiled);
 
@@ -215,6 +222,12 @@ namespace SystemStatus.Background
                         if (serverType.Equals("Standalone", StringComparison.OrdinalIgnoreCase) &&
                             user.IndexOf("network service", StringComparison.OrdinalIgnoreCase) >= 0)
                             continue;
+
+                        // Relabel the server's "Unknown OAuth user" placeholder for standalone OAuth
+                        // sessions (see the constant above) to a friendlier integration label.
+                        if (serverType.Equals("Standalone", StringComparison.OrdinalIgnoreCase) &&
+                            user.Equals(UnknownOAuthIdentity, StringComparison.OrdinalIgnoreCase))
+                            user = OAuthIntegrationLabel;
 
                         var friendly = FriendlyClientType(serverType);
                         var key = user + "|" + friendly;
