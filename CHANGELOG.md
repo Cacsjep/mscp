@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.8] - 2026-06-05
+- Fix System Status: Camera bitrate now shows kB/s, matching the per-stream value.
+- Improve System Status: First / last recording and span are now shown as chips.
+- Improve System Status: Standalone SDK logins show as **Integration / SDK client** instead of "Unknown OAuth user".
+- Maintenance: Dependency updates (WebView2, Newtonsoft.Json, BouncyCastle, LiveChartsCore, ILRepack).
+
 ## [3.4.4] - 2026-06-04
 - Add System Status: **System Health** window - the toolbar button now opens a near-fullscreen, resizable window with three tables: **Recording Servers** (per-storage usage bar coloured green/orange/red, attach/connection state), **Cameras** (live FPS / bitrate / resolution / codec, used storage and its **% of the recorder's configured storage**, first/last recording and a compact recorded **span**), and **Users**. 
 
