@@ -118,7 +118,7 @@ namespace SystemStatus.Client
 
             if (result == null)
             {
-                ShowOverlay("No data — background plugin unavailable.");
+                ShowOverlay("No data - background plugin unavailable.");
             }
             else
             {
@@ -127,12 +127,12 @@ namespace SystemStatus.Client
                 MergeCameras(result.Cameras, resetRanges: true);
                 RenderErrors(result);
                 if (_cameras.Count == 0 && _storages.Count == 0 && _users.Count == 0)
-                    ShowOverlay(result.Errors.Count > 0 ? "No data — see details below." : "No data.");
+                    ShowOverlay(result.Errors.Count > 0 ? "No data - see details below." : "No data.");
                 else
                     HideOverlay();
                 // Cancel any prior range sweep, then (re)load ranges - but only for cameras whose
                 // recorder answered. Querying sequences against an offline recorder throws an
-                // UnreachableServer exception (and hangs), so skip those (they show "—").
+                // UnreachableServer exception (and hangs), so skip those (they show "-").
                 try { _rangeCts?.Cancel(); } catch { }
                 _rangeCts = CancellationTokenSource.CreateLinkedTokenSource(_masterCts.Token);
                 LoadRanges(_cameras.Where(c => c.RecorderReachable

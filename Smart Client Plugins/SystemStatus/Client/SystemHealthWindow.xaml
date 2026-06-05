@@ -33,6 +33,7 @@
         <local:BoolToVisibilityConverter x:Key="NotToVis" Invert="True"/>
         <local:PercentToBrushConverter x:Key="PctBrush"/>
         <local:ConnectivityToBrushConverter x:Key="ConnDot"/>
+        <local:TimestampChipConverter x:Key="TimeChip"/>
 
         <!-- Flat storage-usage bar (colored by PercentToBrushConverter). -->
         <Style x:Key="UsageBar" TargetType="ProgressBar">
@@ -66,6 +67,17 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
+        <!-- Vuetify-style "label" chip (rounded 4px) for the first/last-recording timestamps.
+             Fill/border/text brushes come from TimestampChipConverter so placeholders stay plain. -->
+        <Style x:Key="ChipBorder" TargetType="Border">
+            <Setter Property="CornerRadius"     Value="4"/>
+            <Setter Property="Padding"          Value="7,2"/>
+            <Setter Property="BorderThickness"  Value="1"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment"   Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
         <Style x:Key="SummaryLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource ScSubtle}"/>
             <Setter Property="FontSize"   Value="11"/>
@@ -443,9 +455,42 @@
                         <DataGridTextColumn Header="BITRATE"    Binding="{Binding Bitrate}" SortMemberPath="BitrateValue" Width="Auto"/>
                         <DataGridTextColumn Header="STORAGE USED" Binding="{Binding UsedSpaceText}" SortMemberPath="UsedSpaceBytes" Width="Auto"/>
                         <DataGridTextColumn Header="STORAGE %" Binding="{Binding StoragePercentText}" SortMemberPath="StoragePercentValue" Width="Auto"/>
-                        <DataGridTextColumn Header="FIRST REC"  Binding="{Binding FirstRecordingText}" CanUserSort="False" Width="Auto"/>
-                        <DataGridTextColumn Header="LAST REC"   Binding="{Binding LastRecordingText}"  CanUserSort="False" Width="Auto"/>
-                        <DataGridTextColumn Header="SPAN"       Binding="{Binding SpanText}" SortMemberPath="SpanDaysValue" Width="*" MinWidth="110"/>
+                        <DataGridTemplateColumn Header="FIRST REC" CanUserSort="False" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ChipBorder}"
+                                            Background="{Binding FirstRecordingText, Converter={StaticResource TimeChip}, ConverterParameter=fill}"
+                                            BorderBrush="{Binding FirstRecordingText, Converter={StaticResource TimeChip}, ConverterParameter=border}">
+                                        <TextBlock Text="{Binding FirstRecordingText}" FontSize="11" VerticalAlignment="Center"
+                                                   Foreground="{Binding FirstRecordingText, Converter={StaticResource TimeChip}, ConverterParameter=fg}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="LAST REC" CanUserSort="False" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ChipBorder}"
+                                            Background="{Binding LastRecordingText, Converter={StaticResource TimeChip}, ConverterParameter=fill}"
+                                            BorderBrush="{Binding LastRecordingText, Converter={StaticResource TimeChip}, ConverterParameter=border}">
+                                        <TextBlock Text="{Binding LastRecordingText}" FontSize="11" VerticalAlignment="Center"
+                                                   Foreground="{Binding LastRecordingText, Converter={StaticResource TimeChip}, ConverterParameter=fg}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="SPAN" SortMemberPath="SpanDaysValue" Width="*" MinWidth="110">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ChipBorder}"
+                                            Background="{Binding SpanText, Converter={StaticResource TimeChip}, ConverterParameter=fill}"
+                                            BorderBrush="{Binding SpanText, Converter={StaticResource TimeChip}, ConverterParameter=border}">
+                                        <TextBlock Text="{Binding SpanText}" FontSize="11" VerticalAlignment="Center"
+                                                   Foreground="{Binding SpanText, Converter={StaticResource TimeChip}, ConverterParameter=fg}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
 

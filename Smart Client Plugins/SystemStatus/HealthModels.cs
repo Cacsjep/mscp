@@ -27,7 +27,7 @@ namespace SystemStatus
         /// </summary>
         public static string Bitrate(double bytesPerSec)
         {
-            if (bytesPerSec <= 0) return "—";
+            if (bytesPerSec <= 0) return "-";
             return (bytesPerSec / 1024.0).ToString("#,0") + " kB/s";
         }
     }
@@ -74,7 +74,7 @@ namespace SystemStatus
         public string Free => ByteFormat.Size(FreeBytes);
         public string Total => ByteFormat.Size(TotalBytes);
         public double UsedPercentValue => TotalBytes > 0 ? (double)UsedBytes / TotalBytes * 100.0 : 0;
-        public string UsedPercent => TotalBytes > 0 ? UsedPercentValue.ToString("0") + " %" : "—";
+        public string UsedPercent => TotalBytes > 0 ? UsedPercentValue.ToString("0") + " %" : "-";
         public bool HasTotal => TotalBytes > 0;
         public string UsageTooltip => TotalBytes > 0
             ? $"Used {Used} of {Total}  ({Free} free)"
@@ -87,7 +87,7 @@ namespace SystemStatus
     {
         public static string Format(TimeSpan span)
         {
-            if (span <= TimeSpan.Zero) return "—";
+            if (span <= TimeSpan.Zero) return "-";
             if (span.TotalDays >= 1) return Trim(span.TotalDays) + " Days";
             if (span.TotalHours >= 1) return Trim(span.TotalHours) + " Hours";
             return Math.Max(1, Math.Round(span.TotalMinutes)).ToString("0") + " Minutes";
@@ -134,38 +134,38 @@ namespace SystemStatus
 
         // ── Aggregates over the streams (parent row) ─────────────────────────
         public int StreamCount => Streams.Count;
-        public string StreamCountText => Streams.Count == 0 ? "—" : Streams.Count.ToString();
+        public string StreamCountText => Streams.Count == 0 ? "-" : Streams.Count.ToString();
         public bool HasStreams => Streams.Count > 0;
 
         public string OnlineText => !RecorderReachable ? "Unknown" : (Online ? "Online" : "Offline");
         // "Unreachable" (gray) | "Online" (green) | "Offline" (red) - drives the status dot.
         public string ConnectivityState => !RecorderReachable ? "Unreachable" : (Online ? "Online" : "Offline");
-        public string UsedSpaceText => UsedSpaceBytes > 0 ? ByteFormat.Size(UsedSpaceBytes) : "—";
+        public string UsedSpaceText => UsedSpaceBytes > 0 ? ByteFormat.Size(UsedSpaceBytes) : "-";
 
         public double StoragePercentValue =>
             RecorderTotalBytes > 0 && UsedSpaceBytes > 0 ? (double)UsedSpaceBytes / RecorderTotalBytes * 100.0 : 0;
         public string StoragePercentText =>
             RecorderTotalBytes > 0 && UsedSpaceBytes > 0
                 ? (StoragePercentValue >= 1 ? StoragePercentValue.ToString("0.0") : StoragePercentValue.ToString("0.00")) + " %"
-                : "—";
+                : "-";
 
         private StreamStatRow Primary => Streams
             .OrderByDescending(s => (long)s.Width * s.Height)
             .ThenByDescending(s => s.Fps)
             .FirstOrDefault();
 
-        public string Resolution => Primary?.Resolution ?? "—";
+        public string Resolution => Primary?.Resolution ?? "-";
         public string Codec
         {
             get
             {
-                var codecs = Streams.Select(s => s.Codec).Where(c => !string.IsNullOrWhiteSpace(c) && c != "—")
+                var codecs = Streams.Select(s => s.Codec).Where(c => !string.IsNullOrWhiteSpace(c) && c != "-")
                                     .Distinct().ToList();
-                return codecs.Count == 0 ? "—" : string.Join(", ", codecs);
+                return codecs.Count == 0 ? "-" : string.Join(", ", codecs);
             }
         }
-        public string Fps => Primary != null ? Primary.Fps.ToString("0.0") : "—";
-        public string Bitrate => Streams.Count == 0 ? "—" : ByteFormat.Bitrate(Streams.Sum(s => (double)s.Bps));
+        public string Fps => Primary != null ? Primary.Fps.ToString("0.0") : "-";
+        public string Bitrate => Streams.Count == 0 ? "-" : ByteFormat.Bitrate(Streams.Sum(s => (double)s.Bps));
 
         // Numeric backing values for DataGrid column sorting (SortMemberPath).
         public double BitrateValue => Streams.Sum(s => (double)s.Bps);
@@ -241,9 +241,9 @@ namespace SystemStatus
                     case RangeState.Loading: return "…";
                     case RangeState.Failed: return "error";
                     case RangeState.Loaded:
-                        if (!_firstRecording.HasValue || !_lastRecording.HasValue) return "—";
+                        if (!_firstRecording.HasValue || !_lastRecording.HasValue) return "-";
                         return DurationText.Format(_lastRecording.Value - _firstRecording.Value);
-                    default: return "—";
+                    default: return "-";
                 }
             }
         }
@@ -260,7 +260,7 @@ namespace SystemStatus
                 case RangeState.Loading: return "…";
                 case RangeState.Failed: return "error";
                 case RangeState.Loaded: return dt.HasValue ? dt.Value.ToString("yyyy-MM-dd HH:mm:ss") : "(none)";
-                default: return "—";
+                default: return "-";
             }
         }
 

@@ -72,7 +72,7 @@ namespace SystemStatus.Background
                 AddStorageRows(storages, r.Host, r.StateText, r.Ok, r.Rec, isArchive: false);
                 AddStorageRows(storages, r.Host, r.StateText, r.Ok, r.Arc, isArchive: true);
                 if ((r.Rec == null || r.Rec.Length == 0) && (r.Arc == null || r.Arc.Length == 0))
-                    storages.Add(new StorageRow { RecorderHost = r.Host, State = r.StateText, RecorderOk = r.Ok, StorageName = "—", Path = "" });
+                    storages.Add(new StorageRow { RecorderHost = r.Host, State = r.StateText, RecorderOk = r.Ok, StorageName = "-", Path = "" });
                 foreach (var kv in r.UsedByDevice) usedByDevice[kv.Key] = kv.Value;
                 foreach (var kv in r.StreamsByDevice) streamsByDevice[kv.Key] = kv.Value;
             }
@@ -302,7 +302,7 @@ namespace SystemStatus.Background
             foreach (var c in snap.Cameras)
             {
                 recorderByCamera.TryGetValue(c.Id, out var u);
-                var host = u?.Host ?? "—";
+                var host = u?.Host ?? "-";
                 bool reachable = u == null || unreachableHosts == null || !unreachableHosts.Contains(host);
                 var row = new CameraHealthRow { Id = c.Id, Name = c.Name, RecorderHost = host, Online = c.Online, RecorderReachable = reachable };
                 if (usedByDevice != null && usedByDevice.TryGetValue(c.Id, out var used)) row.UsedSpaceBytes = used;
@@ -340,10 +340,10 @@ namespace SystemStatus.Background
                 StreamId = s.StreamId,
                 CameraName = camName,
                 RecorderName = recorderHost,
-                StreamName = string.IsNullOrWhiteSpace(s.Name) ? "—" : s.Name,
+                StreamName = string.IsNullOrWhiteSpace(s.Name) ? "-" : s.Name,
                 Width = res?.Width ?? 0,
                 Height = res?.Height ?? 0,
-                Codec = string.IsNullOrWhiteSpace(s.VideoFormat) ? "—" : s.VideoFormat,
+                Codec = string.IsNullOrWhiteSpace(s.VideoFormat) ? "-" : s.VideoFormat,
                 Fps = s.FPS,
                 FpsRequested = s.FPSRequested,
                 Bps = s.BPS,
@@ -366,7 +366,7 @@ namespace SystemStatus.Background
                     State = stateText,
                     RecorderOk = ok,
                     StorageId = st.StorageId,
-                    StorageName = string.IsNullOrWhiteSpace(st.Name) ? "—" : st.Name,
+                    StorageName = string.IsNullOrWhiteSpace(st.Name) ? "-" : st.Name,
                     Path = st.Path ?? "",
                     IsArchive = isArchive,
                     Available = st.Available,

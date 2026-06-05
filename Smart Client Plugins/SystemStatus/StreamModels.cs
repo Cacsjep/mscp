@@ -30,14 +30,14 @@ namespace SystemStatus
         public bool Live { get; set; }
 
         // ── Display-ready ────────────────────────────────────────────────────
-        public string Resolution => Width > 0 && Height > 0 ? $"{Width}×{Height}" : "—";
+        public string Resolution => Width > 0 && Height > 0 ? $"{Width}×{Height}" : "-";
         public string FpsText => Fps.ToString("0.0");
-        public string FpsRequestedText => FpsRequested > 0 ? FpsRequested.ToString("0.0") : "—";
+        public string FpsRequestedText => FpsRequested > 0 ? FpsRequested.ToString("0.0") : "-";
 
         // Recorder reports BPS as bytes/sec; the Smart Client video-diagnostics overlay shows kB/s.
         // Same formatter as the per-camera aggregate (CameraHealthRow.Bitrate) so they stay in sync.
         public string BitrateText => ByteFormat.Bitrate(Bps);
-        public string FrameSizeText => FrameSizeBytes > 0 ? (FrameSizeBytes / 1024.0).ToString("#,0.0") + " kB" : "—";
+        public string FrameSizeText => FrameSizeBytes > 0 ? (FrameSizeBytes / 1024.0).ToString("#,0.0") + " kB" : "-";
 
         public string RoleText
         {
@@ -46,7 +46,7 @@ namespace SystemStatus
                 var parts = new List<string>(2);
                 if (Recording) parts.Add("Rec");
                 if (Live) parts.Add("Live");
-                return parts.Count > 0 ? string.Join(" + ", parts) : "—";
+                return parts.Count > 0 ? string.Join(" + ", parts) : "-";
             }
         }
 

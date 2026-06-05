@@ -69,6 +69,39 @@ namespace SystemStatus.Client
             => throw new NotSupportedException();
     }
 
+    /// <summary>
+    /// Styles the first/last-recording timestamp "chips" (Vuetify label style). Given the cell's
+    /// display text, returns a brush per role (ConverterParameter): "fill" / "border" / "fg". For a
+    /// real timestamp the chip is a tinted accent label; for a placeholder ("-", "…", "error",
+    /// "(none)", empty) the fill/border are transparent and the text is dimmed, so empty cells read
+    /// as plain text rather than empty chips.
+    /// </summary>
+    public sealed class TimestampChipConverter : IValueConverter
+    {
+        private static readonly Brush Fill = Freeze(Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF));   // neutral white @ ~10%
+        private static readonly Brush Border = Freeze(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)); // neutral white @ ~20%
+        private static readonly Brush Text = Freeze(Color.FromRgb(0xE6, 0xE6, 0xE6));          // ScText
+        private static readonly Brush Dim = Freeze(Color.FromRgb(0x8C, 0x8C, 0x8C));           // ScSubtle
+        private static readonly Brush Clear = Freeze(Colors.Transparent);
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var s = (value as string)?.Trim();
+            bool real = !string.IsNullOrEmpty(s) && s != "-" && s != "…" && s != "error" && s != "(none)";
+            switch (parameter as string)
+            {
+                case "fg":     return real ? Text : Dim;
+                case "border": return real ? Border : Clear;
+                default:       return real ? Fill : Clear;   // "fill"
+            }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+
+        private static Brush Freeze(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
+    }
+
     /// <summary>Maps a bool to Visibility; <see cref="Invert"/> shows when the value is false.</summary>
     public sealed class BoolToVisibilityConverter : IValueConverter
     {
