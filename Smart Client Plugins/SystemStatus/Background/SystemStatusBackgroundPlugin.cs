@@ -7,6 +7,7 @@ using System.Threading;
 using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Background;
+using VideoOS.Platform.ConfigurationItems;
 using VideoOS.Platform.Messaging;
 
 namespace SystemStatus.Background
@@ -68,6 +69,10 @@ namespace SystemStatus.Background
         // ObjectId -> the recording server that owns the camera (its FQID.ServerId.Uri),
         // captured during the same tree walk and used to query stream statistics.
         private Dictionary<Guid, Uri> _cameraRecorderUri = new Dictionary<Guid, Uri>();
+        // Recording-server base Uri -> display name, enumerated authoritatively from the Management
+        // Server configuration. Drives the storage panel so every recording server shows up - even
+        // ones whose cameras this login can't see (the device tree only surfaced one recorder).
+        private Dictionary<Uri, string> _recorders = new Dictionary<Uri, string>();
         // ObjectId -> last reported state string, merged from ProvideCurrentState responses.
         private readonly Dictionary<Guid, string> _deviceStates = new Dictionary<Guid, string>();
         private List<UserRow> _users = new List<UserRow>();
@@ -309,73 +314,125 @@ namespace SystemStatus.Background
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
-                // Seed the device-tree walk from the recording-server items (Kind.Server) AND the
-                // Kind.Camera roots, then walk down collecting enabled camera leaves (Kind.Camera +
-                // FolderType.No). The Kind.Camera roots alone were only descending into a single
-                // recorder; the server subtree spans every recorder, so all recorders' cameras are
-                // discovered and each camera carries its own (correct) FQID.ServerId.Uri. We do NOT
-                // fetch from the server item's own Uri - that endpoint 404s on the recorder status
-                // service; only the per-camera ServerId.Uri is a valid RecorderStatusService2 base.
-                // Iterative (stack) walk; the visited set dedups the root overlap.
-                int recorderRoots = 0;
-                var roots = new List<Item>();
-                foreach (var s in Configuration.Instance.GetItemsByKind(Kind.Server, ItemHierarchy.SystemDefined)
-                                  ?? new List<Item>())
-                {
-                    if (s == null) continue;
-                    roots.Add(s);
-                    recorderRoots++;
-                }
-                roots.AddRange(Configuration.Instance.GetItemsByKind(Kind.Camera, ItemHierarchy.SystemDefined)
-                               ?? new List<Item>());
-
                 var map = new Dictionary<Guid, string>();
                 var recMap = new Dictionary<Guid, Uri>();
-                var visited = new HashSet<Guid>();
-                var stack = new Stack<KeyValuePair<Item, int>>();
-                foreach (var r in roots) stack.Push(new KeyValuePair<Item, int>(r, 0));
+                var recorders = new Dictionary<Uri, string>();
 
-                int scanned = 0, containers = 0;
-                while (stack.Count > 0)
-                {
-                    var pair = stack.Pop();
-                    var it = pair.Key;
-                    var depth = pair.Value;
-                    if (it?.FQID == null || depth > 16) continue;
-                    if (!visited.Add(it.FQID.ObjectId)) continue;
-                    scanned++;
+                // Authoritative path: enumerate every recording server (and its cameras) from the
+                // Management Server configuration. This is independent of the device-tree scoping
+                // that was only surfacing one recorder. Fall back to the device-tree walk only if
+                // the config API yields nothing (older sites / restricted config access).
+                bool viaConfig = LoadFromConfig(map, recMap, recorders);
+                if (!viaConfig || map.Count == 0)
+                    LoadFromDeviceTree(map, recMap);
 
-                    if (it.FQID.Kind == Kind.Camera && it.FQID.FolderType == FolderType.No)
-                    {
-                        if (it.Enabled)
-                        {
-                            map[it.FQID.ObjectId] = it.Name; // leaf camera
-                            // FQID.ServerId is the recording server that owns the camera; its Uri
-                            // is the RecorderStatusService2 endpoint (the documented stats pattern).
-                            var recUri = it.FQID.ServerId?.Uri;
-                            if (recUri != null) recMap[it.FQID.ObjectId] = recUri;
-                        }
-                        continue;
-                    }
-
-                    containers++;
-                    List<Item> kids = null;
-                    try { kids = it.GetChildren(); } catch { }
-                    if (kids != null)
-                        foreach (var k in kids) stack.Push(new KeyValuePair<Item, int>(k, depth + 1));
-                }
-
-                lock (_lock) { _enabledCameras = map; _cameraRecorderUri = recMap; }
+                lock (_lock) { _enabledCameras = map; _cameraRecorderUri = recMap; _recorders = recorders; }
                 sw.Stop();
-                int distinctRecorders = recMap.Values.Select(u => u.Host)
-                                              .Distinct(StringComparer.OrdinalIgnoreCase).Count();
-                Log.Info($"Loaded {map.Count} enabled camera(s) across {distinctRecorders} recorder(s); " +
-                         $"scanned {scanned} node(s), {containers} container(s), from {roots.Count} root(s) " +
-                         $"({recorderRoots} recording-server root(s)) in {sw.ElapsedMilliseconds} ms");
+                Log.Info($"Loaded {map.Count} enabled camera(s) across {recorders.Count} recorder(s) " +
+                         $"(source: {(viaConfig ? "config" : "device tree")}) in {sw.ElapsedMilliseconds} ms");
             }
             catch (Exception ex)
             {
                 Log.Error("LoadEnabledCameras failed", ex);
+            }
+        }
+
+        /// <summary>
+        /// Enumerates recording servers and their enabled cameras from the Management Server config
+        /// (the same API RemoteManager / PKI / CertWatchdog use). Populates the camera-name map, the
+        /// per-camera recorder Uri, and the recorder list (base Uri -> display name). Returns false
+        /// (logged) if the config API is unavailable, so the caller can fall back to the device tree.
+        /// </summary>
+        private bool LoadFromConfig(Dictionary<Guid, string> map, Dictionary<Guid, Uri> recMap,
+                                    Dictionary<Uri, string> recorders)
+        {
+            try
+            {
+                var management = new ManagementServer(EnvironmentManager.Instance.MasterSite);
+                int rsCount = 0;
+                foreach (var rs in management.RecordingServerFolder.RecordingServers)
+                {
+                    if (rs == null || !rs.Enabled) continue;
+                    var baseUri = RecorderBaseUri(rs);
+                    if (baseUri == null) { Log.Info($"Recording server '{rs.Name}' has no usable web Uri - skipped"); continue; }
+                    rsCount++;
+                    if (!recorders.ContainsKey(baseUri))
+                        recorders[baseUri] = string.IsNullOrEmpty(rs.Name) ? baseUri.Host : rs.Name;
+
+                    int cams = 0;
+                    foreach (var hw in rs.HardwareFolder.Hardwares)
+                    {
+                        if (hw == null || !hw.Enabled) continue;
+                        foreach (var cam in hw.CameraFolder.Cameras)
+                        {
+                            if (cam == null || !cam.Enabled) continue;
+                            if (!Guid.TryParse(cam.Id, out var id)) continue;
+                            map[id] = cam.Name;
+                            recMap[id] = baseUri;
+                            cams++;
+                        }
+                    }
+                    Log.Info($"Recording server '{rs.Name}' @ {baseUri} : {cams} enabled camera(s)");
+                }
+                return rsCount > 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Config API recorder enumeration failed - falling back to device-tree walk", ex);
+                return false;
+            }
+        }
+
+        // The recorder's web base Uri (host:7563), from the published WebServerUri/ActiveWebServerUri,
+        // falling back to HostName. This is the valid RecorderStatusService2 base - unlike the
+        // Kind.Server item Uri, which 404s on the status path.
+        private static Uri RecorderBaseUri(RecordingServer rs)
+        {
+            string raw = null;
+            try { raw = string.IsNullOrEmpty(rs.ActiveWebServerUri) ? rs.WebServerUri : rs.ActiveWebServerUri; }
+            catch { }
+            if (!string.IsNullOrEmpty(raw) && Uri.TryCreate(raw, UriKind.Absolute, out var u)) return u;
+            try { var h = rs.HostName; if (!string.IsNullOrEmpty(h)) return new Uri($"http://{h}:7563/"); }
+            catch { }
+            return null;
+        }
+
+        /// <summary>
+        /// Fallback enumeration: walk the system device tree from the Kind.Camera roots and collect
+        /// enabled camera leaves, mapping each to its owning recorder via FQID.ServerId.Uri. Does not
+        /// populate the recorder list (the storage panel is then camera-derived, as before).
+        /// </summary>
+        private void LoadFromDeviceTree(Dictionary<Guid, string> map, Dictionary<Guid, Uri> recMap)
+        {
+            var roots = Configuration.Instance.GetItemsByKind(Kind.Camera, ItemHierarchy.SystemDefined)
+                        ?? new List<Item>();
+            var visited = new HashSet<Guid>();
+            var stack = new Stack<KeyValuePair<Item, int>>();
+            foreach (var r in roots) stack.Push(new KeyValuePair<Item, int>(r, 0));
+
+            while (stack.Count > 0)
+            {
+                var pair = stack.Pop();
+                var it = pair.Key;
+                var depth = pair.Value;
+                if (it?.FQID == null || depth > 16) continue;
+                if (!visited.Add(it.FQID.ObjectId)) continue;
+
+                if (it.FQID.Kind == Kind.Camera && it.FQID.FolderType == FolderType.No)
+                {
+                    if (it.Enabled)
+                    {
+                        map[it.FQID.ObjectId] = it.Name;
+                        var recUri = it.FQID.ServerId?.Uri;
+                        if (recUri != null) recMap[it.FQID.ObjectId] = recUri;
+                    }
+                    continue;
+                }
+
+                List<Item> kids = null;
+                try { kids = it.GetChildren(); } catch { }
+                if (kids != null)
+                    foreach (var k in kids) stack.Push(new KeyValuePair<Item, int>(k, depth + 1));
             }
         }
 

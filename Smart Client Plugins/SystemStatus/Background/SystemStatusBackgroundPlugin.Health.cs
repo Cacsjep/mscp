@@ -57,6 +57,11 @@ namespace SystemStatus.Background
             string token = TryGetToken(errors);
 
             var byRecorder = GroupByRecorder(recorderByCamera);
+            // Union in every enumerated recording server (same base Uri the cameras use), so a recorder
+            // with no cameras visible to this login still gets its state + storage fetched. The shared
+            // Uri keying means recorders that DO own cameras are not fetched twice.
+            foreach (var u in SnapshotRecorders().Keys)
+                if (!byRecorder.ContainsKey(u)) byRecorder[u] = new List<Guid>();
             var nameById = BuildNameMap(snap);
 
             var results = token == null
@@ -168,7 +173,13 @@ namespace SystemStatus.Background
                         }
                     }
 
-                    if (reachable)
+                    if (reachable && ids.Count == 0)
+                    {
+                        // Recorder enumerated from config but with no cameras visible to this login -
+                        // the storage/state above is all we need; skip the empty stats call.
+                        r.StatsOk = true;
+                    }
+                    else if (reachable)
                     {
                         var devices = client.GetVideoDeviceStatistics(token, ids.ToArray())
                                       ?? Array.Empty<VideoDeviceStatistics>();
@@ -262,6 +273,11 @@ namespace SystemStatus.Background
         private Dictionary<Guid, Uri> SnapshotRecorderMap()
         {
             lock (_lock) { return new Dictionary<Guid, Uri>(_cameraRecorderUri); }
+        }
+
+        private Dictionary<Uri, string> SnapshotRecorders()
+        {
+            lock (_lock) { return new Dictionary<Uri, string>(_recorders); }
         }
 
         private static Dictionary<Uri, List<Guid>> GroupByRecorder(Dictionary<Guid, Uri> recorderByCamera)
