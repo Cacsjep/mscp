@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.4.10] - 2026-06-05
+- Fix System Status: Camera recording traversal
+- Improve System Status: Allow camera grouping by folders
+
 ## [3.4.8] - 2026-06-05
 - Fix System Status: Camera bitrate now shows kB/s, matching the per-stream value.
 - Improve System Status: First / last recording and span are now shown as chips.
