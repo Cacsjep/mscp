@@ -28,6 +28,7 @@ namespace SystemStatus.Client
         private string _statusMode = "All";        // All | Online | Offline
         private string _viewMode = "Cameras";      // Cameras | Streams
         private bool _grouping;                     // group cameras by recorder / streams by camera
+        private bool _foldering;                     // additionally group cameras by device-tree folder
 
         // Persistent, in-place-updated collections (preserve selection/scroll/sort across refreshes).
         private readonly ObservableCollection<StorageRow> _storages = new ObservableCollection<StorageRow>();
@@ -82,6 +83,7 @@ namespace SystemStatus.Client
             HighlightModeButtons();
             HighlightAutoButton();
             HighlightGroupButton();
+            HighlightFolderButton();
             ApplyViewMode();
             FullRefresh();
             if (_autoRefresh) _liveTimer.Start();
@@ -372,28 +374,53 @@ namespace SystemStatus.Client
             var statusVis = cameras ? Visibility.Visible : Visibility.Collapsed;
             foreach (var btn in new[] { fltAll, fltOnline, fltOffline })
                 if (btn != null) btn.Visibility = statusVis;
+            // Folder grouping is a cameras-only feature; hide its toggle in the streams view.
+            if (folderButton != null) folderButton.Visibility = statusVis;
         }
 
-        // ── Grouping (cameras by recorder, streams by camera) ─────────────────
+        // ── Grouping ──────────────────────────────────────────────────────────
+        // Two independent toggles for the cameras view: "Group" (by recorder) and "Folder" (by
+        // device-tree folder). Both on => nested recorder -> folder grouping. The streams view only
+        // honours "Group" (by camera); folder has no meaning there.
         private void OnGroupToggleClick(object sender, RoutedEventArgs e)
         {
             _grouping = !_grouping;
             HighlightGroupButton();
-            ApplyGrouping(_camView, "RecorderHost");
-            ApplyGrouping(_streamView, "CameraName");
+            RefreshGrouping();
         }
 
-        private void ApplyGrouping(ICollectionView view, string property)
+        private void OnFolderToggleClick(object sender, RoutedEventArgs e)
         {
-            if (view == null) return;
-            view.GroupDescriptions.Clear();
-            if (_grouping) view.GroupDescriptions.Add(new PropertyGroupDescription(property));
+            _foldering = !_foldering;
+            HighlightFolderButton();
+            RefreshGrouping();
+        }
+
+        private void RefreshGrouping()
+        {
+            if (_camView != null)
+            {
+                _camView.GroupDescriptions.Clear();
+                if (_grouping) _camView.GroupDescriptions.Add(new PropertyGroupDescription("RecorderHost"));
+                if (_foldering) _camView.GroupDescriptions.Add(new PropertyGroupDescription("FolderGroup"));
+            }
+            if (_streamView != null)
+            {
+                _streamView.GroupDescriptions.Clear();
+                if (_grouping) _streamView.GroupDescriptions.Add(new PropertyGroupDescription("CameraName"));
+            }
         }
 
         private void HighlightGroupButton()
         {
             groupButton.Background = _grouping ? (Brush)FindResource("ScAccent") : Brushes.Transparent;
             groupButton.Foreground = _grouping ? Brushes.White : (Brush)FindResource("ScSubtle");
+        }
+
+        private void HighlightFolderButton()
+        {
+            folderButton.Background = _foldering ? (Brush)FindResource("ScAccent") : Brushes.Transparent;
+            folderButton.Foreground = _foldering ? Brushes.White : (Brush)FindResource("ScSubtle");
         }
 
         // ── Auto-refresh toggle ───────────────────────────────────────────────

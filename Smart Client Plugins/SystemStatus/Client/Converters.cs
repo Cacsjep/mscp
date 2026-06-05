@@ -45,7 +45,6 @@ namespace SystemStatus.Client
         private static Brush Freeze(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
     }
 
-    /// <summary>Storage usage % to a fill brush: green &lt; 90, orange &lt; 95, red &gt;= 95.</summary>
     public sealed class PercentToBrushConverter : IValueConverter
     {
         private static readonly Brush Green = new SolidColorBrush(Color.FromRgb(0x3F, 0xB9, 0x50));

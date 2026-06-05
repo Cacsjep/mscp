@@ -401,6 +401,9 @@
                     <Button x:Name="groupButton" DockPanel.Dock="Left" Content="Group"
                             Style="{StaticResource FilterButton}" Click="OnGroupToggleClick" Margin="12,0,0,0"
                             ToolTip="Group cameras by recorder / streams by camera"/>
+                    <Button x:Name="folderButton" DockPanel.Dock="Left" Content="Folder"
+                            Style="{StaticResource FilterButton}" Click="OnFolderToggleClick" Margin="4,0,0,0"
+                            ToolTip="Group cameras by device-tree folder"/>
                     <!-- Right side: export at the far right (matches the other tables), then filters. -->
                     <Button DockPanel.Dock="Right" Style="{StaticResource FilterButton}" Click="OnExportCameras"
                             ToolTip="Export the current camera/stream view to CSV">

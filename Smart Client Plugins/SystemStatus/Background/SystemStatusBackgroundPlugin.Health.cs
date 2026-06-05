@@ -88,7 +88,7 @@ namespace SystemStatus.Background
                               StringComparer.OrdinalIgnoreCase);
 
             var unreachable = UnreachableHosts(results);
-            var cameras = BuildCameraRows(snap, recorderByCamera, streamsByDevice, usedByDevice, capacityByHost, unreachable);
+            var cameras = BuildCameraRows(snap, recorderByCamera, streamsByDevice, usedByDevice, capacityByHost, unreachable, SnapshotFolderMap());
             var storageRows = storages
                 .OrderBy(s => s.RecorderHost, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(s => s.IsArchive)
@@ -134,7 +134,7 @@ namespace SystemStatus.Background
 
             // capacity null -> RecorderTotalBytes 0, preserved by CameraHealthRow.ApplyLiveFrom.
             var unreachable = UnreachableHosts(results);
-            var cameras = BuildCameraRows(snap, recorderByCamera, streamsByDevice, usedByDevice, null, unreachable);
+            var cameras = BuildCameraRows(snap, recorderByCamera, streamsByDevice, usedByDevice, null, unreachable, SnapshotFolderMap());
 
             sw.Stop();
             int errCount = results.Count(r => r.Error != null);
@@ -280,6 +280,11 @@ namespace SystemStatus.Background
             lock (_lock) { return new Dictionary<Uri, string>(_recorders); }
         }
 
+        private Dictionary<Guid, string> SnapshotFolderMap()
+        {
+            lock (_lock) { return new Dictionary<Guid, string>(_cameraFolder); }
+        }
+
         private static Dictionary<Uri, List<Guid>> GroupByRecorder(Dictionary<Guid, Uri> recorderByCamera)
         {
             var byRecorder = new Dictionary<Uri, List<Guid>>();
@@ -312,7 +317,8 @@ namespace SystemStatus.Background
             Dictionary<Guid, List<StreamStatRow>> streamsByDevice,
             Dictionary<Guid, ulong> usedByDevice,
             Dictionary<string, ulong> capacityByHost,
-            HashSet<string> unreachableHosts)
+            HashSet<string> unreachableHosts,
+            Dictionary<Guid, string> folderByCamera)
         {
             var rows = new List<CameraHealthRow>(snap.Cameras.Count);
             foreach (var c in snap.Cameras)
@@ -320,7 +326,9 @@ namespace SystemStatus.Background
                 recorderByCamera.TryGetValue(c.Id, out var u);
                 var host = u?.Host ?? "-";
                 bool reachable = u == null || unreachableHosts == null || !unreachableHosts.Contains(host);
-                var row = new CameraHealthRow { Id = c.Id, Name = c.Name, RecorderHost = host, Online = c.Online, RecorderReachable = reachable };
+                string folder = null;
+                folderByCamera?.TryGetValue(c.Id, out folder);
+                var row = new CameraHealthRow { Id = c.Id, Name = c.Name, RecorderHost = host, FolderPath = folder, Online = c.Online, RecorderReachable = reachable };
                 if (usedByDevice != null && usedByDevice.TryGetValue(c.Id, out var used)) row.UsedSpaceBytes = used;
                 if (capacityByHost != null && capacityByHost.TryGetValue(host, out var cap)) row.RecorderTotalBytes = cap;
                 if (streamsByDevice != null && streamsByDevice.TryGetValue(c.Id, out var streams) && streams != null)

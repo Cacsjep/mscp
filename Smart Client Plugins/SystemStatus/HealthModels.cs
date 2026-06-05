@@ -124,6 +124,11 @@ namespace SystemStatus
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string RecorderHost { get; set; }
+        // Device-tree folder path from the Management Client system hierarchy, e.g.
+        // "video-hq-rec1 / Building A". Drives the optional "Folder" grouping in the health window.
+        // Null when the camera wasn't reached by the device-tree walk (then it groups under "(no folder)").
+        public string FolderPath { get; set; }
+        public string FolderGroup => string.IsNullOrEmpty(FolderPath) ? "(no folder)" : FolderPath;
         public bool Online { get; set; }
         // False when the owning recording server didn't answer (offline / unreachable). The camera's
         // real online state is then unknown, so the UI shows it gray rather than green/red.
@@ -179,6 +184,7 @@ namespace SystemStatus
         public void ApplyLiveFrom(CameraHealthRow f)
         {
             RecorderHost = f.RecorderHost;
+            FolderPath = f.FolderPath;
             Online = f.Online;
             RecorderReachable = f.RecorderReachable;
             UsedSpaceBytes = f.UsedSpaceBytes;
@@ -188,8 +194,8 @@ namespace SystemStatus
             MergeStreams(f.Streams);
 
             Raise(nameof(Online), nameof(OnlineText), nameof(ConnectivityState), nameof(RecorderReachable),
-                  nameof(RecorderHost), nameof(UsedSpaceText), nameof(StoragePercentText), nameof(StreamCountText),
-                  nameof(HasStreams), nameof(Resolution), nameof(Codec), nameof(Fps), nameof(Bitrate));
+                  nameof(RecorderHost), nameof(FolderGroup), nameof(UsedSpaceText), nameof(StoragePercentText),
+                  nameof(StreamCountText), nameof(HasStreams), nameof(Resolution), nameof(Codec), nameof(Fps), nameof(Bitrate));
         }
 
         private void MergeStreams(IEnumerable<StreamStatRow> fresh)

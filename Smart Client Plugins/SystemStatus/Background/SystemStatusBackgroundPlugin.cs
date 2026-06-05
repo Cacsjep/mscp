@@ -73,6 +73,9 @@ namespace SystemStatus.Background
         // Server configuration. Drives the storage panel so every recording server shows up - even
         // ones whose cameras this login can't see (the device tree only surfaced one recorder).
         private Dictionary<Uri, string> _recorders = new Dictionary<Uri, string>();
+        // ObjectId -> device-tree folder path (e.g. "video-hq-rec1 / Building A"), captured by walking
+        // the Management Client system hierarchy. Optional enrichment for the "Folder" grouping.
+        private Dictionary<Guid, string> _cameraFolder = new Dictionary<Guid, string>();
         // ObjectId -> last reported state string, merged from ProvideCurrentState responses.
         private readonly Dictionary<Guid, string> _deviceStates = new Dictionary<Guid, string>();
         private List<UserRow> _users = new List<UserRow>();
@@ -326,10 +329,21 @@ namespace SystemStatus.Background
                 if (!viaConfig || map.Count == 0)
                     LoadFromDeviceTree(map, recMap);
 
-                lock (_lock) { _enabledCameras = map; _cameraRecorderUri = recMap; _recorders = recorders; }
+                // Best-effort: capture each camera's device-tree folder path for the "Folder" grouping.
+                // Independent of the camera source above; cameras the walk misses just have no path.
+                var folders = new Dictionary<Guid, string>();
+                try { BuildFolderMap(folders); }
+                catch (Exception ex) { Log.Error("Folder map build failed", ex); }
+
+                lock (_lock)
+                {
+                    _enabledCameras = map; _cameraRecorderUri = recMap;
+                    _recorders = recorders; _cameraFolder = folders;
+                }
                 sw.Stop();
                 Log.Info($"Loaded {map.Count} enabled camera(s) across {recorders.Count} recorder(s) " +
-                         $"(source: {(viaConfig ? "config" : "device tree")}) in {sw.ElapsedMilliseconds} ms");
+                         $"(source: {(viaConfig ? "config" : "device tree")}); {folders.Count} folder path(s) " +
+                         $"in {sw.ElapsedMilliseconds} ms");
             }
             catch (Exception ex)
             {
@@ -433,6 +447,58 @@ namespace SystemStatus.Background
                 try { kids = it.GetChildren(); } catch { }
                 if (kids != null)
                     foreach (var k in kids) stack.Push(new KeyValuePair<Item, int>(k, depth + 1));
+            }
+        }
+
+        // Fixed wrapper nodes in the camera tree ("All Cameras" flatly holds every camera; "Camera
+        // Groups" wraps the device groups). They carry no grouping meaning, so they are dropped from
+        // the folder path - leaving "<server> / <group> / <subgroup>".
+        private static readonly HashSet<string> FolderWrapperNodes =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "All Cameras", "Camera Groups" };
+
+        /// <summary>
+        /// Records each enabled camera's folder path from the device-group tree - the camera "folders"
+        /// laid out in Management Client (Devices, Cameras). MIP exposes that tree as the
+        /// UserDefined hierarchy (the SystemDefined one is a flat "All Cameras" list, which is why
+        /// grouping on it produced a single group). Path = the chain of group names down to the camera,
+        /// e.g. "Building A / Floor 2". The "All Cameras" catch-all is dropped from the path; a camera
+        /// that lives only there (in no real group) is left without a folder. Cameras that belong to
+        /// several groups take the first one walked.
+        /// </summary>
+        private void BuildFolderMap(Dictionary<Guid, string> folders)
+        {
+            var roots = Configuration.Instance.GetItemsByKind(Kind.Camera, ItemHierarchy.UserDefined)
+                        ?? new List<Item>();
+
+            var visited = new HashSet<Guid>();
+            var stack = new Stack<KeyValuePair<Item, string>>();
+            foreach (var r in roots) stack.Push(new KeyValuePair<Item, string>(r, null));
+
+            while (stack.Count > 0)
+            {
+                var pair = stack.Pop();
+                var it = pair.Key;
+                var path = pair.Value;
+                if (it?.FQID == null) continue;
+                if (!visited.Add(it.FQID.ObjectId)) continue;
+
+                if (it.FQID.Kind == Kind.Camera && it.FQID.FolderType == FolderType.No)
+                {
+                    if (it.Enabled && !string.IsNullOrEmpty(path)) folders[it.FQID.ObjectId] = path;
+                    continue;
+                }
+
+                if (path != null && path.Length > 400) continue;   // guard against pathological depth
+                var name = string.IsNullOrWhiteSpace(it.Name) ? "?" : it.Name.Trim();
+                // Pass the path straight through the fixed wrapper nodes so only real groups show.
+                var childPath = FolderWrapperNodes.Contains(name)
+                    ? path
+                    : (string.IsNullOrEmpty(path) ? name : path + " / " + name);
+
+                List<Item> kids = null;
+                try { kids = it.GetChildren(); } catch { }
+                if (kids != null)
+                    foreach (var k in kids) stack.Push(new KeyValuePair<Item, string>(k, childPath));
             }
         }
 
