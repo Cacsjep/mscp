@@ -25,7 +25,7 @@ A Smart Client workspace plugin that lets users select cameras from a folder tre
 
 ## Split large reports
 
-When a report covers many cameras (hundreds or thousands), the resulting PDF can grow very large and become awkward to share or open. Tick **Split PDF** in the header and set a maximum size in **MB** (default `100`) to break the report into numbered parts instead of one big file.
+When a report covers many cameras the resulting PDF can grow very large and become awkward to share or open. Tick **Split PDF** in the header and set a maximum size in **MB** (default `100`) to break the report into numbered parts instead of one big file.
 
 | Setting | Behavior |
 |---|---|
