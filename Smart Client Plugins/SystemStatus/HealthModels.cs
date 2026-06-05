@@ -19,14 +19,16 @@ namespace SystemStatus
             return (i >= 3 ? b.ToString("#,0.0") : b.ToString("#,0")) + " " + u[i];
         }
 
-        /// <summary>Bitrate from bytes/sec: kB/s for small, Mbit/s for large.</summary>
+        /// <summary>
+        /// Bitrate in kB/s (kilobytes per second), matching what the recorder reports (BPS is
+        /// bytes/sec) and what the Smart Client video-diagnostics overlay shows. Used for both the
+        /// per-stream value and the per-camera aggregate so the two columns are directly comparable
+        /// (a single-stream camera reads identically to its stream).
+        /// </summary>
         public static string Bitrate(double bytesPerSec)
         {
             if (bytesPerSec <= 0) return "—";
-            double mbit = bytesPerSec * 8.0 / 1_000_000.0;
-            return mbit >= 1.0
-                ? mbit.ToString("#,0.0") + " Mbit/s"
-                : (bytesPerSec / 1024.0).ToString("#,0") + " kB/s";
+            return (bytesPerSec / 1024.0).ToString("#,0") + " kB/s";
         }
     }
 
@@ -291,22 +293,5 @@ namespace SystemStatus
         public IReadOnlyList<UserRow> Users { get; }
         public IReadOnlyList<string> Errors { get; }
         public int RecorderCount { get; }
-
-        public int OnlineCameras => Cameras.Count(c => c.Online);
-        public int StreamingCameras => Cameras.Count(c => c.HasStreams);
-
-        public string ServersSummary
-        {
-            get
-            {
-                ulong used = (ulong)Storages.Aggregate(0m, (a, s) => a + s.UsedBytes);
-                return $"{RecorderCount} recorder(s)   •   {Storages.Count} storage(s)   •   {ByteFormat.Size(used)} used";
-            }
-        }
-
-        public string CamerasSummary =>
-            $"{Cameras.Count} camera(s)   •   {OnlineCameras} online   •   {StreamingCameras} streaming";
-
-        public string UsersSummary => $"{Users.Count} connected user(s)";
     }
 }

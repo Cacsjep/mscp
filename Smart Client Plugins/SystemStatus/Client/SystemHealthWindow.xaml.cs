@@ -125,7 +125,7 @@ namespace SystemStatus.Client
                 MergeStorages(result.Storages);
                 ReplaceList(_users, result.Users);
                 MergeCameras(result.Cameras, resetRanges: true);
-                RenderSummaries(result);
+                RenderErrors(result);
                 if (_cameras.Count == 0 && _storages.Count == 0 && _users.Count == 0)
                     ShowOverlay(result.Errors.Count > 0 ? "No data — see details below." : "No data.");
                 else
@@ -164,7 +164,7 @@ namespace SystemStatus.Client
                     MergeStorages(snap.Storages);
                     ReplaceList(_users, snap.Users);
                     MergeCameras(snap.Cameras, resetRanges: false);
-                    RenderSummaries(snap);
+                    RenderErrors(snap);
                 }
                 else
                 {
@@ -258,14 +258,8 @@ namespace SystemStatus.Client
                 if (!present.Contains(s)) _streams.Add(s);
         }
 
-        private void RenderSummaries(SystemHealthSnapshot r)
+        private void RenderErrors(SystemHealthSnapshot r)
         {
-            serversSummary.Text = r.ServersSummary;
-            usersSummary.Text = r.UsersSummary;
-            _camerasSummaryText = r.CamerasSummary;
-            overallSummary.Text = $"{r.RecorderCount} recorder(s)  ·  {r.Cameras.Count} cameras  ·  {r.Users.Count} users";
-            UpdateCamerasSummary();
-
             if (r.Errors.Count > 0)
             {
                 errorText.Text = string.Join(Environment.NewLine, r.Errors.Take(8))
@@ -274,8 +268,6 @@ namespace SystemStatus.Client
             }
             else errorBox.Visibility = Visibility.Collapsed;
         }
-
-        private string _camerasSummaryText = "";
 
         private static void ReplaceList<T>(ObservableCollection<T> target, IReadOnlyList<T> source)
         {
@@ -380,7 +372,6 @@ namespace SystemStatus.Client
             var statusVis = cameras ? Visibility.Visible : Visibility.Collapsed;
             foreach (var btn in new[] { fltAll, fltOnline, fltOffline })
                 if (btn != null) btn.Visibility = statusVis;
-            UpdateCamerasSummary();
         }
 
         // ── Grouping (cameras by recorder, streams by camera) ─────────────────
@@ -403,14 +394,6 @@ namespace SystemStatus.Client
         {
             groupButton.Background = _grouping ? (Brush)FindResource("ScAccent") : Brushes.Transparent;
             groupButton.Foreground = _grouping ? Brushes.White : (Brush)FindResource("ScSubtle");
-        }
-
-        private void UpdateCamerasSummary()
-        {
-            if (camerasSummary == null) return;
-            camerasSummary.Text = _viewMode == "Cameras"
-                ? _camerasSummaryText
-                : $"{_streams.Count} stream(s) across all cameras";
         }
 
         // ── Auto-refresh toggle ───────────────────────────────────────────────

@@ -35,7 +35,8 @@ namespace SystemStatus
         public string FpsRequestedText => FpsRequested > 0 ? FpsRequested.ToString("0.0") : "—";
 
         // Recorder reports BPS as bytes/sec; the Smart Client video-diagnostics overlay shows kB/s.
-        public string BitrateText => (Bps / 1024.0).ToString("#,0") + " kB/s";
+        // Same formatter as the per-camera aggregate (CameraHealthRow.Bitrate) so they stay in sync.
+        public string BitrateText => ByteFormat.Bitrate(Bps);
         public string FrameSizeText => FrameSizeBytes > 0 ? (FrameSizeBytes / 1024.0).ToString("#,0.0") + " kB" : "—";
 
         public string RoleText

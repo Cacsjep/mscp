@@ -308,7 +308,7 @@
 
             <!-- Header -->
             <Border x:Name="headerBar" Grid.Row="0" Background="Transparent" Margin="0,0,0,12" Cursor="SizeAll">
-                <DockPanel>
+                <DockPanel LastChildFill="False">
                     <TextBlock Text="System Health" Style="{StaticResource HeaderText}"
                                DockPanel.Dock="Left" VerticalAlignment="Center"/>
                     <Button x:Name="closeButton" Content="&#x2715;" Width="28" Height="28" Padding="0"
@@ -325,8 +325,6 @@
                             <TextBlock x:Name="autoText" Text="Auto 2s" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <TextBlock x:Name="overallSummary" Style="{StaticResource SummaryLabel}" Margin="16,0,0,0"
-                               TextTrimming="CharacterEllipsis"/>
                 </DockPanel>
             </Border>
 
@@ -336,13 +334,12 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <DockPanel Grid.Row="0" Margin="0,0,0,4">
+                <DockPanel Grid.Row="0" Margin="0,0,0,4" LastChildFill="False">
                     <TextBlock Text="RECORDING SERVERS" Style="{StaticResource SectionLabel}" DockPanel.Dock="Left"/>
                     <Button DockPanel.Dock="Right" Style="{StaticResource FilterButton}" Click="OnExportServers"
                             ToolTip="Export recording servers to CSV">
                         <fa5:ImageAwesome Icon="Solid_FileCsv" Width="11" Height="11" Foreground="{StaticResource ScSubtle}"/>
                     </Button>
-                    <TextBlock x:Name="serversSummary" Style="{StaticResource SummaryLabel}" DockPanel.Dock="Left"/>
                 </DockPanel>
                 <DataGrid x:Name="serversGrid" Grid.Row="1" Style="{StaticResource HealthGrid}">
                     <DataGrid.Columns>
@@ -392,7 +389,6 @@
                     <Button x:Name="groupButton" DockPanel.Dock="Left" Content="Group"
                             Style="{StaticResource FilterButton}" Click="OnGroupToggleClick" Margin="12,0,0,0"
                             ToolTip="Group cameras by recorder / streams by camera"/>
-                    <TextBlock x:Name="camerasSummary" Style="{StaticResource SummaryLabel}" DockPanel.Dock="Left"/>
                     <!-- Right side: export at the far right (matches the other tables), then filters. -->
                     <Button DockPanel.Dock="Right" Style="{StaticResource FilterButton}" Click="OnExportCameras"
                             ToolTip="Export the current camera/stream view to CSV">
@@ -483,13 +479,12 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <DockPanel Grid.Row="0" Margin="0,0,0,4">
+                <DockPanel Grid.Row="0" Margin="0,0,0,4" LastChildFill="False">
                     <TextBlock Text="USERS" Style="{StaticResource SectionLabel}" DockPanel.Dock="Left"/>
                     <Button DockPanel.Dock="Right" Style="{StaticResource FilterButton}" Click="OnExportUsers"
                             ToolTip="Export users to CSV">
                         <fa5:ImageAwesome Icon="Solid_FileCsv" Width="11" Height="11" Foreground="{StaticResource ScSubtle}"/>
                     </Button>
-                    <TextBlock x:Name="usersSummary" Style="{StaticResource SummaryLabel}" DockPanel.Dock="Left"/>
                 </DockPanel>
                 <DataGrid x:Name="usersGrid" Grid.Row="1" Style="{StaticResource HealthGrid}">
                     <DataGrid.Columns>
