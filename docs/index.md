@@ -51,28 +51,87 @@ hide:
   }
   .hero .subtitle {
     color: var(--md-default-fg-color--light);
-    font-size: 1.15rem;
+    font-size: .75rem;
   }
   .hero-buttons {
     display: flex;
     gap: 12px;
     justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: 1.5rem;
+    margin: 0 0 0.5rem;
+  }
+  .hero-buttons p {
+    margin: 0;
   }
   .hero-buttons .md-button {
+    margin-top: 0;
     font-weight: 600;
+  }
+  .hero-buttons--secondary {
+    gap: 10px;
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+  }
+  .hero-buttons--secondary .md-button {
+    padding: 0.35em 0.9em;
+    font-size: 0.62rem;
+    font-weight: 500;
   }
   .disclaimer {
     font-size: 0.78rem;
     color: var(--md-default-fg-color--lighter);
     max-width: 520px;
     margin: 0 auto;
+    margin-top: 50px;
   }
 
   @media (max-width: 700px) {
     .hero h1 { font-size: 2rem; }
   }
+
+.issue-button,
+.feature-button,
+.d-button {
+  background-color: #0d0d0d !important;
+  color: #ffffff !important;
+  font-weight: 400 !important;
+
+  border-width: 2px !important;
+  border-style: solid !important;
+  box-shadow: none !important;
+}
+
+.issue-button {
+  border-color: #ff9800 !important;
+}
+
+.issue-button:hover {
+  background-color: #fb8c00 !important;
+  border-color: #fb8c00 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+.feature-button {
+  border-color: #7e57c2 !important;
+}
+
+.feature-button:hover {
+  background-color: #7e57c2 !important;
+  border-color: #7e57c2 !important;
+  color: #ffffff !important;
+}
+
+.d-button {
+  border-color: #1976d2 !important;
+}
+
+.d-button:hover {
+  background-color: #1565c0 !important;
+  border-color: #1565c0 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
 </style>
 
 <div class="hero" markdown>
@@ -83,8 +142,9 @@ hide:
 
 <div class="hero-buttons" markdown>
 
-[:material-download: Download Installer](getting-started/installation.md){ .md-button .md-button--primary }
-
+[:material-download: Download](getting-started/installation.md){ .md-button .d-button }
+[:material-bug: Report an issue](https://github.com/Cacsjep/mscp/issues/new?template=bug_report.md){ .md-button .issue-button }
+[:material-test-tube: Feature Request](https://github.com/Cacsjep/mscp/issues/new?template=feature_request.md){ .md-button .feature-button }
 </div>
 
 <p class="disclaimer">This is an independent open source project and is not affiliated with, endorsed by, or supported by Milestone Systems. XProtect™ is a trademark of Milestone Systems A/S.</p>
