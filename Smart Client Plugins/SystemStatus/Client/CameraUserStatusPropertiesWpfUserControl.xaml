@@ -6,14 +6,42 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     mc:Ignorable="d"
-    d:DesignHeight="200" d:DesignWidth="250">
+    d:DesignHeight="220" d:DesignWidth="260">
     <Grid Margin="5">
         <GroupBox Header="Folder &amp; Role">
-            <StackPanel Margin="5">
-                <CheckBox x:Name="showPrefixCheckBox"
-                          Content="Show recording server prefix in folder names"
-                          Margin="0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,6,0,0"
+            <StackPanel Margin="6">
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="78"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Selection:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="summarySelection" Text="All" Foreground="White" TextTrimming="CharacterEllipsis"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Sections:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="summarySections" Text="Folders + Roles" Foreground="White" TextTrimming="CharacterEllipsis"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Prefix:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="summaryPrefix" Text="On" Foreground="White"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Text size:" Foreground="#FFCFD7DA"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="summaryTextSize" Text="13" Foreground="White"/>
+                </Grid>
+
+                <Button x:Name="openConfigButton"
+                        Content="Open configuration..."
+                        Padding="10,4"
+                        HorizontalAlignment="Left"
+                        Click="OnOpenConfigClick"/>
+
+                <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,8,0,0"
                            Text="Note: changes may take a few seconds to reflect."/>
             </StackPanel>
         </GroupBox>
