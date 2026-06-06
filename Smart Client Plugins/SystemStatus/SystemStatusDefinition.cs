@@ -22,6 +22,7 @@ namespace SystemStatus
         private static VideoOSIconSourceBase _pluginIcon;
         private readonly List<BackgroundPlugin> _backgroundPlugins = new List<BackgroundPlugin>();
         private readonly List<WorkSpaceToolbarPlugin> _toolbarPlugins = new List<WorkSpaceToolbarPlugin>();
+        private readonly List<ViewItemPlugin> _viewItemPlugins = new List<ViewItemPlugin>();
 
         internal static VideoOSIconSourceBase PluginIconSource => _pluginIcon;
 
@@ -48,6 +49,7 @@ namespace SystemStatus
 
             _backgroundPlugins.Add(new SystemStatusBackgroundPlugin());
             _toolbarPlugins.Add(new SystemStatusToolbarPlugin());
+            _viewItemPlugins.Add(new CameraUserStatusViewItemPlugin());
             Log.Info("Plugin initialized");
         }
 
@@ -55,9 +57,11 @@ namespace SystemStatus
         {
             _backgroundPlugins.Clear();
             _toolbarPlugins.Clear();
+            _viewItemPlugins.Clear();
         }
 
         public override List<BackgroundPlugin> BackgroundPlugins => _backgroundPlugins;
         public override List<WorkSpaceToolbarPlugin> WorkSpaceToolbarPlugins => _toolbarPlugins;
+        public override List<ViewItemPlugin> ViewItemPlugins => _viewItemPlugins;
     }
 }

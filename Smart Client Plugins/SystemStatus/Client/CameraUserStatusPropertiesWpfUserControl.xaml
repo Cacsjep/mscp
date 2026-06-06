@@ -1,0 +1,21 @@
+<external:PropertiesWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="SystemStatus.Client.CameraUserStatusPropertiesWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="200" d:DesignWidth="250">
+    <Grid Margin="5">
+        <GroupBox Header="Folder &amp; Role">
+            <StackPanel Margin="5">
+                <CheckBox x:Name="showPrefixCheckBox"
+                          Content="Show recording server prefix in folder names"
+                          Margin="0,4"/>
+                <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,6,0,0"
+                           Text="Note: changes may take a few seconds to reflect."/>
+            </StackPanel>
+        </GroupBox>
+    </Grid>
+</external:PropertiesWpfUserControl>
