@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.4.11] - 2026-06-06
+- Add System Status: **Folder & Role - Camera User Status** view item - a tile with two live lists, **Camera Folders** (online / total cameras per device-tree folder) and **Roles** (logged-in / total users per role). In setup mode the tile shows a centered **Open configuration...** button that opens a split window with the settings on the left and a live preview of the tile on the right.
+- Improve System Status: The view item is fully configurable - show all folders and roles or pick them individually, a **Show** mode (all / cameras only / roles only), recording-server prefix toggle, sort (alphabetical or most-offline-first), and styling (text size, count color, offline highlight, row spacing). A **Render mode** switches between **List** (rows) and **Dashboard** (rectangular cards) with a configurable card minimum width.
+
 ## [3.4.10] - 2026-06-05
 - Fix System Status: Camera recording traversal
 - Improve System Status: Allow camera grouping by folders
