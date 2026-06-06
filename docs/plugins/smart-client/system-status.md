@@ -1,6 +1,6 @@
 ---
 title: "System Status Plugin for Milestone XProtect"
-description: "System Status plugin for Milestone XProtect Smart Client - a toolbar button that opens a System Health window with three tables: recording servers and their storage, every enabled camera with live stream statistics (FPS, bitrate, resolution, codec), used storage and recording span, and the currently connected users."
+description: "System Status plugin for Milestone XProtect Smart Client - a toolbar button that opens a System Health window with three tables: recording servers and their storage, every enabled camera with live stream statistics (FPS, bitrate, resolution, codec), used storage and recording span, and the currently connected users. Also ships a Folder & Role view item showing online cameras per device-tree folder and logged-in users per role, as a list or as dashboard cards."
 ---
 
 <div class="show-title" markdown>
@@ -8,6 +8,8 @@ description: "System Status plugin for Milestone XProtect Smart Client - a toolb
 # System Status
 
 Adds a **System Status** button to the Smart Client toolbar. Hovering the button shows a live summary such as `3/19 Cameras  4 Users`. Clicking it opens the **System Health** window, a resizable overview with three tables: recording servers and their storage, cameras with live stream statistics, and connected users.
+
+The plugin also ships a **Folder & Role - Camera User Status** view item you can drop into any view, showing online cameras per folder and logged-in users per role. See [Folder & Role view item](#folder--role-view-item).
 
 ## Quick Start
 
@@ -83,6 +85,44 @@ Background services such as the Event Server and the Log Server are filtered out
 ## Live auto-refresh
 
 The **Auto 2s** button toggles live updates. While it is on, the camera stream figures (FPS, bitrate, resolution, online state, used storage) refresh every two seconds. The update is merged in place, so your selection, scroll position, and sort order are preserved and the recording-range cells are not re-queried on every tick. Storage figures and recorder state refresh on a slower cycle and on a manual **Refresh** (or **F5**). Turn auto off to hold the current view. All querying stops the moment the window is closed.
+
+## Folder & Role view item
+
+Alongside the toolbar button, the plugin ships a **Folder & Role - Camera User Status** view item you can drop into any Smart Client view. It shows two live lists:
+
+- **Camera Folders** - one row per Management Client device-group folder, with the number of online cameras out of the total, for example `5 / 8 Devices`.
+- **Roles** - one row per role, with how many of its assigned users are currently logged in, for example `1 / 4 Users`.
+
+The online and logged-in number is coloured so a glance tells you coverage, and the counts update live from the same background layer that feeds the toolbar.
+
+### Setting it up
+
+In setup mode the tile shows a centered **Open configuration...** button. It opens a configuration window with the settings on the left and a live preview of the tile on the right, so every change is visible before you apply it.
+
+| Setting | What it does |
+|---|---|
+| Selection | Show every folder and role, or tick **Show only the folders / roles I pick** to choose them individually from two lists. |
+| Recording-server prefix | Keep or drop the leading `server /` segment from folder names. Same-named groups across recorders merge into one row when the prefix is off. |
+| Render mode | **List** shows stacked rows; **Dashboard** shows rectangular cards that wrap to fill the tile. |
+| Show | All sections, **Cameras only**, or **Roles only**. |
+| Folders section on top | Choose which of the two sections comes first when both are shown. |
+| Sort rows | Alphabetical, or most-offline-first for monitoring at a glance. |
+| Row spacing | Comfortable or compact, in list mode. |
+| Card min width | Minimum card width in dashboard mode. Cards grow past it to fit long folder names, so set a larger value for uniform cards. |
+| Text size | Size of the row and card text. |
+| Count colour | Colour of the online and logged-in number. |
+| Offline highlight | Optionally colour the count when some members are offline, with its own colour. |
+
+### How the counts are worked out
+
+| Question | Source |
+|---|---|
+| Which folders exist and which cameras they hold | The Management Client device-group tree (user-defined folders). |
+| Which cameras are online | The current device state reported by the Event Server. |
+| Which roles exist and their users | The configuration role and user lists. |
+| Which users are logged in | The MIP environments currently connected to the Event Server, matched to role members. |
+
+Role membership is matched to logins by user name, since the connected-client list does not expose a SID. Active Directory users are matched on account and display name.
 
 ## How it works
 

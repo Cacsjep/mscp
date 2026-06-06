@@ -79,6 +79,19 @@ namespace SystemStatus.Background
         // ObjectId -> last reported state string, merged from ProvideCurrentState responses.
         private readonly Dictionary<Guid, string> _deviceStates = new Dictionary<Guid, string>();
         private List<UserRow> _users = new List<UserRow>();
+        // Roles + their assigned members (enumerated from config), and the match-keys of the users
+        // currently connected (from WhoAreOnline). Used by the "Folder & Role" view item to show, per
+        // role, how many assigned users are logged in.
+        private List<RoleInfo> _roles = new List<RoleInfo>();
+        private HashSet<string> _connectedUserKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>One role and the identity match-keys of each assigned user (built once from config).</summary>
+        private sealed class RoleInfo
+        {
+            public string Name;
+            public readonly List<HashSet<string>> Members = new List<HashSet<string>>();
+            public int Total => Members.Count;
+        }
 
         private ServerId _serverId;
         private object _whoFilter;
@@ -104,6 +117,7 @@ namespace SystemStatus.Background
             Log.Info("Init - log: %ProgramData%\\Milestone\\XProtect Smart Client\\MIPLog.txt");
 
             LoadEnabledCameras();
+            LoadRoles();
 
             // Reload the enabled-camera set when the configuration changes.
             _configReceiver = EnvironmentManager.Instance.RegisterReceiver(
@@ -213,6 +227,7 @@ namespace SystemStatus.Background
                 // Standalone, Service, ManagementServer. Service endpoints are hidden. A single client
                 // can register several endpoints, so we count them per (user, type).
                 var groups = new Dictionary<string, UserGroup>(StringComparer.OrdinalIgnoreCase);
+                var connected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var o in rawObjs)
                 {
                     try
@@ -230,6 +245,9 @@ namespace SystemStatus.Background
                         if (serverType.Equals("Standalone", StringComparison.OrdinalIgnoreCase) &&
                             user.IndexOf("network service", StringComparison.OrdinalIgnoreCase) >= 0)
                             continue;
+
+                        // Remember the connected identity (pre-relabel) for role membership matching.
+                        connected.UnionWith(IdentityKeys(user));
 
                         // Relabel the server's "Unknown OAuth user" placeholder for standalone OAuth
                         // sessions (see the constant above) to a friendlier integration label.
@@ -261,7 +279,7 @@ namespace SystemStatus.Background
 
                 Log.Info($"WhoAreOnline: {rawObjs.Count} endpoint(s) -> {users.Count} user/client row(s)");
 
-                lock (_lock) { _users = users; }
+                lock (_lock) { _users = users; _connectedUserKeys = connected; }
                 RaiseStatusChanged();
             }
             catch (Exception ex)
@@ -304,7 +322,7 @@ namespace SystemStatus.Background
 
         private object OnConfigurationChanged(Message message, FQID destination, FQID sender)
         {
-            if (!_closing) LoadEnabledCameras();
+            if (!_closing) { LoadEnabledCameras(); LoadRoles(); }
             RaiseStatusChanged();
             return null;
         }
@@ -456,6 +474,9 @@ namespace SystemStatus.Background
         private static readonly HashSet<string> FolderWrapperNodes =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "All Cameras", "Camera Groups" };
 
+        // Bucket for cameras that belong to no device group.
+        private const string NoFolderLabel = "(no folder)";
+
         /// <summary>
         /// Records each enabled camera's folder path from the device-group tree - the camera "folders"
         /// laid out in Management Client (Devices, Cameras). MIP exposes that tree as the
@@ -500,6 +521,124 @@ namespace SystemStatus.Background
                 if (kids != null)
                     foreach (var k in kids) stack.Push(new KeyValuePair<Item, string>(k, childPath));
             }
+        }
+
+        // ── Roles (assigned users vs currently logged in) ─────────────────────
+        /// <summary>
+        /// Enumerates all roles and their assigned users from the Management Server config (RoleFolder),
+        /// caching each member's identity match-keys for the "Folder &amp; Role" view item. Heavy config
+        /// call; runs on Init and on configuration changes, off the UI thread. Includes empty roles.
+        /// </summary>
+        private void LoadRoles()
+        {
+            try
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                var site = EnvironmentManager.Instance.MasterSite;
+                var ms = new ManagementServer(site);
+                var serverId = site.ServerId;
+                var list = new List<RoleInfo>();
+
+                foreach (var role in ms.RoleFolder.Roles)
+                {
+                    if (role == null) continue;
+                    var info = new RoleInfo { Name = string.IsNullOrWhiteSpace(role.DisplayName) ? role.Name : role.DisplayName };
+                    try
+                    {
+                        var full = new Role(serverId, role.Path);
+                        foreach (var u in full.UserFolder.Users)
+                        {
+                            if (u == null) continue;
+                            var keys = IdentityKeys(u.Name);
+                            keys.UnionWith(IdentityKeys(u.DisplayName));
+                            if (keys.Count > 0) info.Members.Add(keys);
+                        }
+                    }
+                    catch (Exception ex) { Log.Error($"Role members failed for '{info.Name}'", ex); }
+                    list.Add(info);
+                }
+
+                lock (_lock) { _roles = list; }
+                sw.Stop();
+                Log.Info($"Loaded {list.Count} role(s), {list.Sum(r => r.Total)} member assignment(s) in {sw.ElapsedMilliseconds} ms");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("LoadRoles failed", ex);
+            }
+        }
+
+        // Normalized identity match-keys: the raw string plus the bare account (after "DOMAIN\" or
+        // before "@"), so a connected "DOMAIN\jdoe" / "jdoe@dom" / "jdoe" all match a role member.
+        private static HashSet<string> IdentityKeys(string identity)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(identity)) return set;
+            var s = identity.Trim();
+            set.Add(s);
+            int bs = s.LastIndexOf('\\');
+            if (bs >= 0 && bs < s.Length - 1) set.Add(s.Substring(bs + 1));
+            int at = s.IndexOf('@');
+            if (at > 0) set.Add(s.Substring(0, at));
+            return set;
+        }
+
+        // ── View-item data (folder camera status + role user status) ──────────
+        /// <summary>
+        /// Per camera-folder online/total device counts (for the "Folder &amp; Role" view item). When
+        /// <paramref name="includeServerPrefix"/> is false the leading "server / " segment is dropped,
+        /// so same-named groups across recorders merge into one row.
+        /// </summary>
+        public IReadOnlyList<FolderStatusRow> GetFolderCameraStatus(bool includeServerPrefix)
+        {
+            var snap = CurrentSnapshot;
+            var folderMap = SnapshotFolderMap();
+            var online = new Dictionary<string, int>();
+            var total = new Dictionary<string, int>();
+            foreach (var c in snap.Cameras)
+            {
+                folderMap.TryGetValue(c.Id, out var f);
+                var key = FolderLabel(f, includeServerPrefix);
+                total[key] = total.TryGetValue(key, out var t) ? t + 1 : 1;
+                if (c.Online) online[key] = online.TryGetValue(key, out var o) ? o + 1 : 1;
+            }
+            return total.Keys
+                .OrderBy(k => k == NoFolderLabel)   // real folders first, "(no folder)" last
+                .ThenBy(k => k, StringComparer.CurrentCultureIgnoreCase)
+                .Select(k => new FolderStatusRow
+                {
+                    Folder = k,
+                    Online = online.TryGetValue(k, out var o) ? o : 0,
+                    Total = total[k]
+                })
+                .ToList();
+        }
+
+        // The folder grouping key/label: the full device-group path, or - when the server prefix is
+        // off - the path with its leading "server" segment removed (cameras directly under the server
+        // with no real group then fall under "(no folder)").
+        private static string FolderLabel(string fullPath, bool includeServerPrefix)
+        {
+            if (string.IsNullOrEmpty(fullPath)) return NoFolderLabel;
+            if (includeServerPrefix) return fullPath;
+            int i = fullPath.IndexOf(" / ", StringComparison.Ordinal);
+            return i >= 0 ? fullPath.Substring(i + 3) : NoFolderLabel;
+        }
+
+        /// <summary>Per role, how many assigned users are currently logged in (for the view item).</summary>
+        public IReadOnlyList<RoleStatusRow> GetRoleUserStatus()
+        {
+            List<RoleInfo> roles; HashSet<string> connected;
+            lock (_lock) { roles = _roles; connected = _connectedUserKeys; }
+            return roles
+                .OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Select(r => new RoleStatusRow
+                {
+                    Role = r.Name,
+                    Total = r.Total,
+                    LoggedIn = r.Members.Count(m => m.Overlaps(connected))
+                })
+                .ToList();
         }
 
         private void RaiseStatusChanged()

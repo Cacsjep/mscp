@@ -1,0 +1,94 @@
+<UserControl
+    x:Class="SystemStatus.Client.CameraUserStatusListView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="500" d:DesignWidth="360">
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="Subtle" Color="#FF9A9A9A"/>
+        <SolidColorBrush x:Key="Text"   Color="#FFE6E6E6"/>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin"     Value="2,0,0,6"/>
+        </Style>
+
+        <!-- One "Name ........ X / Y Devices" row; every brush/size comes from the display row so the
+             same template renders both the live tile and the configuration preview. -->
+        <DataTemplate x:Key="StatusRow">
+            <DockPanel Margin="{Binding RowMargin}">
+                <TextBlock DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center"
+                           FontSize="{Binding FontSize}"><Run Text="{Binding Online, Mode=OneWay}" Foreground="{Binding CountBrush}" FontWeight="SemiBold"/><Run Text=" / " Foreground="{Binding SubtleBrush}"/><Run Text="{Binding Total, Mode=OneWay}" Foreground="{Binding SubtleBrush}"/><Run Text="{Binding Suffix, Mode=OneWay}" Foreground="{Binding SubtleBrush}"/></TextBlock>
+                <TextBlock Text="{Binding Name}" Foreground="{Binding TextBrush}" FontSize="{Binding FontSize}"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- Dashboard card: a rectangle with name on top, a big "X / Y" number, and a unit caption. -->
+        <DataTemplate x:Key="StatusCard">
+            <Border MinWidth="{Binding CardMinWidth}"
+                    Margin="5" Padding="12,10" CornerRadius="6"
+                    Background="#FF232323" BorderBrush="#FF3C3C3C" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding Name}" Foreground="{Binding TextBrush}" FontWeight="SemiBold"
+                               FontSize="{Binding FontSize}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Margin="0,8,0,0" FontSize="{Binding BigFontSize}"><Run Text="{Binding Online, Mode=OneWay}" Foreground="{Binding CountBrush}" FontWeight="SemiBold"/><Run Text=" / " Foreground="{Binding SubtleBrush}"/><Run Text="{Binding Total, Mode=OneWay}" Foreground="{Binding SubtleBrush}"/></TextBlock>
+                    <TextBlock Text="{Binding Unit}" Foreground="{Binding SubtleBrush}" Margin="0,4,0,0"
+                               FontSize="11"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <ItemsPanelTemplate x:Key="StackPanelTemplate">
+            <StackPanel/>
+        </ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="WrapPanelTemplate">
+            <WrapPanel Orientation="Horizontal"/>
+        </ItemsPanelTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition x:Name="row0"   Height="*"/>
+            <RowDefinition x:Name="spacer"  Height="12"/>
+            <RowDefinition x:Name="row2"   Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Folders : Cameras -->
+        <Border x:Name="folderSection" Grid.Row="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="CAMERA FOLDERS" Style="{StaticResource SectionLabel}"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="folderList"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Roles : Users -->
+        <Border x:Name="roleSection" Grid.Row="2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="ROLES" Style="{StaticResource SectionLabel}"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="roleList"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Empty / loading overlay -->
+        <TextBlock x:Name="emptyLabel" Grid.RowSpan="3" Text="Loading…" Foreground="{StaticResource Subtle}"
+                   FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+    </Grid>
+</UserControl>

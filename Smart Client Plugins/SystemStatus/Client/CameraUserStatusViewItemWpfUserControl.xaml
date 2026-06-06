@@ -1,0 +1,54 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="SystemStatus.Client.CameraUserStatusViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:SystemStatus.Client"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    PreviewMouseLeftButtonUp="OnMouseLeftUp"
+    d:DesignHeight="500" d:DesignWidth="360">
+
+    <Border Background="#FF1B1B1B">
+        <Grid>
+            <!-- Live / playback: the two status lists. -->
+            <local:CameraUserStatusListView x:Name="listView" Margin="14"/>
+
+            <!-- Setup mode: a centered card with a summary + Open-configuration button. -->
+            <Viewbox x:Name="setupPanel" Stretch="Uniform" StretchDirection="DownOnly"
+                     Margin="12" Visibility="Collapsed"
+                     HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel MaxWidth="460" HorizontalAlignment="Center">
+                    <TextBlock Text="Folder &amp; Role - Camera User Status"
+                               Foreground="#FFE6EAEC" FontSize="14" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,10"/>
+                    <Grid x:Name="setupSummary" HorizontalAlignment="Center" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Selection" Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,4"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="summarySelection" Foreground="#FFCFD7DA" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Sections" Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,4"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="summarySections" Foreground="#FFCFD7DA" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Prefix" Foreground="#FF7A8388" FontSize="12" Margin="0,0,16,0"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="summaryPrefix" Foreground="#FFCFD7DA" FontSize="12"/>
+                    </Grid>
+                    <Border x:Name="openConfigButton"
+                            Background="#FF2A2A2A" BorderBrush="#FF555555" BorderThickness="1"
+                            CornerRadius="3" Padding="16,8" Cursor="Hand"
+                            HorizontalAlignment="Center"
+                            MouseLeftButtonUp="OnOpenConfigClick">
+                        <TextBlock Text="Open configuration..." Foreground="#FFD0D0D0" FontSize="13"/>
+                    </Border>
+                </StackPanel>
+            </Viewbox>
+        </Grid>
+    </Border>
+</external:ViewItemWpfUserControl>

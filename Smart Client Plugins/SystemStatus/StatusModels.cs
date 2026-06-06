@@ -23,6 +23,28 @@ namespace SystemStatus
         public string Secondary { get; set; }
     }
 
+    /// <summary>One camera folder (device group) with its online/total device counts.</summary>
+    public sealed class FolderStatusRow
+    {
+        public string Folder { get; set; }
+        public int Online { get; set; }
+        public int Total { get; set; }
+
+        public string CountText => $"{Online} / {Total} Devices";
+        public double Fraction => Total > 0 ? (double)Online / Total : 0;
+    }
+
+    /// <summary>One role with how many of its assigned users are currently logged in.</summary>
+    public sealed class RoleStatusRow
+    {
+        public string Role { get; set; }
+        public int LoggedIn { get; set; }
+        public int Total { get; set; }
+
+        public string CountText => $"{LoggedIn} / {Total} Users";
+        public double Fraction => Total > 0 ? (double)LoggedIn / Total : 0;
+    }
+
     /// <summary>
     /// Immutable view of system status produced by the background plugin and consumed by the
     /// toolbar label and the flyout. Counts are precomputed so consumers do no work.
