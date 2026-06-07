@@ -266,10 +266,41 @@ jobs:
             MSCPlugins-*-Setup.msi
             *-${{ github.ref_name }}.zip
 
+      # SHA-256 checksums of every release artifact, signed with cosign
+      # (keyless, using the job's OIDC token). Scorecard's Signed-Releases
+      # check looks for a signature asset on the release; checksums.txt.sig
+      # satisfies it, and users can verify their downloads against it.
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -File | Where-Object {
+            $_.Name -like "*-${{ github.ref_name }}.zip" -or $_.Name -like "MSCPlugins-*-Setup.msi"
+          }
+          $lines = foreach ($f in ($files | Sort-Object Name)) {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $f.FullName).Hash.ToLower()
+            "$hash  $($f.Name)"
+          }
+          $lines | Set-Content -Encoding ascii checksums.txt
+          Get-Content checksums.txt
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Sign checksums with cosign (keyless)
+        shell: pwsh
+        run: |
+          cosign sign-blob --yes checksums.txt `
+            --output-signature checksums.txt.sig `
+            --output-certificate checksums.txt.pem
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             *-${{ github.ref_name }}.zip
             MSCPlugins-*-Setup.msi
+            checksums.txt
+            checksums.txt.sig
+            checksums.txt.pem
           generate_release_notes: true
