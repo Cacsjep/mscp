@@ -5,8 +5,9 @@ on:
     tags:
       - 'v*'
 
+# Least privilege: read-only by default. Only the release job elevates to write.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # ── Generate build matrix from plugins.json ──
@@ -142,6 +143,11 @@ jobs:
   release:
     needs: [setup, build]
     runs-on: windows-latest
+    # This job publishes the release and attests build provenance.
+    permissions:
+      contents: write      # publish the GitHub Release
+      id-token: write      # OIDC for keyless signing (Sigstore)
+      attestations: write  # store the build provenance attestation
 
     steps:
       - name: Checkout
@@ -158,7 +164,7 @@ jobs:
       - name: Install WiX Toolset
         shell: pwsh
         run: |
-          dotnet tool install --global wix --version 5.*
+          dotnet tool install --global wix --version 5.0.2
           wix extension add WixToolset.UI.wixext/5 -g
           wix extension add WixToolset.Util.wixext/5 -g
           wix extension add WixToolset.Iis.wixext/5.0.2 -g
@@ -247,6 +253,15 @@ jobs:
           foreach ($name in $names) {
             Copy-Item "artifacts\$name\*.zip" -Destination .
           }
+
+      # Generate a signed SLSA provenance attestation for the installer and
+      # ZIPs. Verifiable later with: gh attestation verify <file> -R Cacsjep/mscp
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: |
+            MSCPlugins-*-Setup.msi
+            *-${{ github.ref_name }}.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
