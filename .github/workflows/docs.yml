@@ -24,6 +24,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install mkdocs-material==9.7.6 mkdocs-glightbox==0.5.2
+      # Hash-pinned install (Scorecard Pinned-Dependencies). Regenerate with:
+      #   pip-compile --generate-hashes docs/requirements.in
+      - run: pip install --require-hashes -r docs/requirements.txt
 
       - run: mkdocs gh-deploy --force
