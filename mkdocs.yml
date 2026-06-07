@@ -93,13 +93,6 @@ markdown_extensions:
   - toc:
       permalink: true
 
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/Cacsjep/mscp
-    - icon: fontawesome/brands/discord
-      link: https://discord.gg/Geu5daeGPE
-
 copyright: >
   MSC Community Plugins | Not affiliated with or supported by Milestone Systems.
   XProtect&trade; is a trademark of Milestone Systems A/S.

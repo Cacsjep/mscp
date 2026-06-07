@@ -9,7 +9,9 @@ hide:
 <style>
   .issue-button,
 .feature-button,
-.d-button {
+.d-button,
+.discuss-button,
+.discord-button {
   background-color: #0d0d0d !important;
   color: #ffffff !important;
   font-weight: 400 !important;
@@ -50,6 +52,28 @@ hide:
   color: #ffffff !important;
   font-weight: 500 !important;
 }
+
+.discuss-button {
+  border-color: #3fb950 !important;
+}
+
+.discuss-button:hover {
+  background-color: #2ea043 !important;
+  border-color: #2ea043 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+.discord-button {
+  border-color: #5865f2 !important;
+}
+
+.discord-button:hover {
+  background-color: #5865f2 !important;
+  border-color: #5865f2 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
 </style>
 
 <div class="show-title" markdown>
@@ -68,11 +92,11 @@ New Feature ? Just tell us what you want =)
 
 Use GitHub Discussions:
 
-**[Start a new discussion](https://github.com/Cacsjep/mscp/discussions)**
+[:material-forum: Start a new discussion](https://github.com/Cacsjep/mscp/discussions){ .md-button .discuss-button }
 
 ## Community Discord
 
 You can also reach us on the **Milestone Developer Community** Discord server. Ask questions, discuss features, or get help with plugin issues.
 
-**[Join Discord](https://discord.gg/EU2HX4Qc)**
+[:fontawesome-brands-discord: Join Discord](https://discord.gg/EU2HX4Qc){ .md-button .discord-button }
 

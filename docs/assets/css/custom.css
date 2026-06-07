@@ -36,30 +36,54 @@
   display: block !important;
 }
 
-/* ── Header: GitHub + Discord icons ── */
-.md-header__source {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
+/* ── Header + drawer: GitHub + Discord + LinkedIn icons ── */
+/* Desktop: icons live in the header (.md-header__source). Material hides this
+   on mobile, so only force the row layout from the breakpoint up. */
+@media screen and (min-width: 60em) {
+  .md-header__source {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    width: auto !important;
+    max-width: none !important;
+  }
 }
 
-.md-header__source .md-header-icon {
+/* Mobile: icons live in the navigation drawer (.md-nav__source) — keep them
+   in a single horizontal row instead of stacking. */
+.md-nav__source {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  padding: 0.45rem 0.6rem !important;
+}
+
+.md-header__source .md-header-icon,
+.md-nav__source .md-header-icon {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
   color: currentColor;
   opacity: 0.7;
   transition: opacity 0.2s;
 }
 
-.md-header__source .md-header-icon:hover {
+.md-header__source .md-header-icon:hover,
+.md-nav__source .md-header-icon:hover {
   opacity: 1;
 }
 
-.md-header__source .md-header-icon svg {
+.md-header__source .md-header-icon svg,
+.md-nav__source .md-header-icon svg {
   width: 1.2rem;
   height: 1.2rem;
 }
 
-.md-header-icon--discord {
-  margin-left: 5px !important;
+.md-header-icon--discord,
+.md-header-icon--linkedin {
+  margin-left: 8px !important;
 }
 
 /* ── Smaller body text ── */

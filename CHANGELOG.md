@@ -5,80 +5,80 @@
 - Improve System Status: The view item is fully configurable - show all folders and roles or pick them individually, a **Show** mode (all / cameras only / roles only), recording-server prefix toggle, sort (alphabetical or most-offline-first), and styling (text size, count color, offline highlight, row spacing). A **Render mode** switches between **List** (rows) and **Dashboard** (rectangular cards) with a configurable card minimum width.
 
 ## [3.4.10] - 2026-06-05
-- Fix System Status: Camera recording traversal
-- Improve System Status: Allow camera grouping by folders
+- Fix System Status: Camera recording traversal.
+- Improve System Status: Allow camera grouping by folders.
 
 ## [3.4.8] - 2026-06-05
 - Fix System Status: Camera bitrate now shows kB/s, matching the per-stream value.
 - Improve System Status: First / last recording and span are now shown as chips.
 - Improve System Status: Standalone SDK logins show as **Integration / SDK client** instead of "Unknown OAuth user".
-- Maintenance: Dependency updates (WebView2, Newtonsoft.Json, BouncyCastle, LiveChartsCore, ILRepack).
+- Maintenance Deps: Dependency updates (WebView2, Newtonsoft.Json, BouncyCastle, LiveChartsCore, ILRepack).
 
 ## [3.4.4] - 2026-06-04
-- Add System Status: **System Health** window - the toolbar button now opens a near-fullscreen, resizable window with three tables: **Recording Servers** (per-storage usage bar coloured green/orange/red, attach/connection state), **Cameras** (live FPS / bitrate / resolution / codec, used storage and its **% of the recorder's configured storage**, first/last recording and a compact recorded **span**), and **Users**. 
+- Add System Status: **System Health** window - the toolbar button now opens a near-fullscreen, resizable window with three tables: **Recording Servers** (per-storage usage bar coloured green/orange/red, attach/connection state), **Cameras** (live FPS / bitrate / resolution / codec, used storage and its **% of the recorder's configured storage**, first/last recording and a compact recorded **span**), and **Users**.
 
 ## [3.4.3] - 2026-06-02
-- Improve: System Status - Now its a fully status overview around **RS**, **Cameras**, **Streams** and **Users**.
+- Improve System Status: Now a full status overview around **RS**, **Cameras**, **Streams** and **Users**.
 
 ## [3.4.2] - 2026-06-02
-- Improve: Flex View - Pane copy
+- Improve Flex View: Pane copy.
 
 ## [3.4.1] - 2026-05-29
-- Add: Auto Export Standalone
-- Add: SC System Help Toolbar Plugin
+- Add Auto Exporter: New standalone application for scheduled and rule-triggered exports.
+- Add System Help: New Smart Client toolbar plugin.
 
 ## [3.2.9] - 2026-05-28
-- Remove Metadata Display: **Learn mode**, **Inspect packet**, and the per-channel packet cache are gone. The configuration window is now driven entirely by **Pick packet** (renamed from History) and **Import packet** - both populate Topic and Field from a real packet, and the live source keeps the preview updating after a pick. Additional series rows lose their per-row Learn buttons and gain their own Pick packet alongside Import packet. 
+- Remove Metadata Display: **Learn mode**, **Inspect packet**, and the per-channel packet cache are gone. The configuration window is now driven entirely by **Pick packet** (renamed from History) and **Import packet** - both populate Topic and Field from a real packet, and the live source keeps the preview updating after a pick. Additional series rows lose their per-row Learn buttons and gain their own Pick packet alongside Import packet.
 - Fix Metadata Display: **Pick packet** and **Import packet** now switch to the picked packet's topic even when a topic was already selected. Previously the prior topic was preserved silently and the operator had to reopen the Topic dropdown to select the new one.
 - Improve Metadata Display: Setup-mode pane collapses the Channel / Render / Topic / Data key summary on slots smaller than 300x220 px, leaving only the plugin title and **Open configuration...** button so small left-column slots stay readable.
-- Improve FlexView: Edit mode now labels non-camera plugin slots with the plugin's display name (e.g. "Metadata Display", "Remote Manager"). Camera slots keep their camera-name label; built-in view items (Hotspot, Carousel, etc.) and tiny slots stay unlabeled.
+- Improve Flex View: Edit mode now labels non-camera plugin slots with the plugin's display name (e.g. "Metadata Display", "Remote Manager"). Camera slots keep their camera-name label; built-in view items (Hotspot, Carousel, etc.) and tiny slots stay unlabeled.
 
 ## [3.2.5] - 2026-05-27
 - Add Metadata Display: **History** button next to Import packet. Opens a browser of recorded packets from the selected channel (1h / 6h / 24h / 7d lookback) with search, an XML preview pane, and a "Use selected packet" action that populates Topics and Fields exactly like Import packet. Useful for cameras that publish events rarely, where Start Learn would otherwise sit idle. The status text under the buttons moved to its own row to make space.
-- Fix FlexView: Edit and Save As no longer drop plugin view items (Metadata Display, Remote Manager, etc.) from the layout. 
+- Fix Flex View: Edit and Save As no longer drop plugin view items (Metadata Display, Remote Manager, etc.) from the layout.
 
 ## [3.2.3] - 2026-05-27
-- Add Metadata Display: **Import packet** button in the configuration window's "What to read" section and on every Additional series row. 
+- Add Metadata Display: **Import packet** button in the configuration window's "What to read" section and on every Additional series row.
 - Add Installer: **Extras folder** on the Local Download Page. Anything dropped into `C:\inetpub\wwwroot\mscp\extras\` on the management server appears as an "Additional downloads" card on `/mscp/`. Wiped on uninstall, preserved across Major Upgrade.
 
 ## [3.2.1] - 2026-05-22
-- Add Todo List: New Smart Client view-item plugin. 
-- Improve Remote Manager: Add option to hide toolbar so password cant copied or displayed.
+- Add Todo List: New Smart Client view-item plugin.
+- Improve Remote Manager: Add option to hide the toolbar so the password can't be copied or displayed.
 
 ## [3.1.3] - 2026-05-21
 - Add Metadata Display: **Base64 Image** render type. Renders an image carried in the metadata value as a base64-encoded string (raw or `data:image/...;base64,...` form). Empty payloads show "No Image"; non-decodable payloads show "Decode error: <reason>" in the Bad color so the operator can distinguish a missing value from a malformed one.
 
 ## [3.1.2] - 2026-05-21
-- Add Live Exporter: New Smart Client toolbar plugin for Live workspace. Opens a flyout that mirrors the most recently clicked camera (tile click, legacy Map click, Smart Map click, camera-tree pick) in independent playback with its own scrubber. Operator scrubs to the desired start, clicks Set start, scrubs to the end, clicks Set end, and Add to Export drops the (camera, start to end) pair into the Smart Client's built-in export list with a native confirmation toast. Reset clears the captured times. The flyout follows further camera clicks live so the operator can rapidly mark ranges across multiple cameras.
+- Add Live Exporter: New Smart Client toolbar plugin for the Live workspace. Opens a flyout that mirrors the most recently clicked camera (tile click, legacy Map click, Smart Map click, camera-tree pick) in independent playback with its own scrubber. Operator scrubs to the desired start, clicks Set start, scrubs to the end, clicks Set end, and Add to Export drops the (camera, start to end) pair into the Smart Client's built-in export list with a native confirmation toast. Reset clears the captured times. The flyout follows further camera clicks live so the operator can rapidly mark ranges across multiple cameras.
 
 ## [3.0.2] - 2026-05-19
-- Fix PKI: Security Issue - Any milestone user was able to extract key material, role permission was in place but was not correctly applied. Thanks to Josh for this finding.
-  
+- Security PKI: Any Milestone user was able to extract key material. The role permission was in place but was not correctly applied. Thanks to Josh for this finding.
+
 ## [3.0.1] - 2026-05-16
-- Improve Snap Reporter: Add PDF Split possibility
-- Improve Snap Reporter: Add Progress Bar 
-- Fix Snap Reporter: Aspect Ratio was not preserved
-- Add SC Remote Control: **SVG Overlay API** - External systems can now draw complex overlays via HTTP API. 
-- Add PKI Plugin: Encryption is now easy as hell =)
+- Add Remote Control: **SVG Overlay API** - external systems can now draw complex overlays via HTTP API.
+- Add PKI: Encryption is now easy as hell =)
+- Improve Snapshot Report: Add PDF split possibility.
+- Improve Snapshot Report: Add progress bar.
+- Fix Snapshot Report: Aspect ratio was not preserved.
 
 ## [2.9.2] - 2026-05-07
 - Improve Timeline Jump: Add possibility (and setting) for auto switch to current time when entering playback, or on start.
-- Improve Carousel: Works now with all possible mip items that are not internal, Like Maps, Hotspot, Matrix, Alarm List, Alarm Preview - But with metadata display or other widget from us or other MIP defined one.
+- Improve View Carousel: Works now with all possible MIP items that are not internal, like Maps, Hotspot, Matrix, Alarm List, and Alarm Preview - plus Metadata Display or other widgets from us or any other MIP-defined one.
 
 ## [2.9.0] - 2026-05-06
-- Add Metadata Display: **Export to CSV** for every render type (Lamp, Number, Gauge, Text, Line Chart, Table). 
-- Add Metadata Display: **Trend render type**. Compact tile that pairs a big current value with an up / down / neutral arrow, a Δ% versus a configurable baseline, and an inline sparkline of the recent history. 
-- Add Metadata Display: **Multi-series Line Chart**. A single Line Chart widget can now plot up to 8 series
+- Add Metadata Display: **Export to CSV** for every render type (Lamp, Number, Gauge, Text, Line Chart, Table).
+- Add Metadata Display: **Trend render type**. Compact tile that pairs a big current value with an up / down / neutral arrow, a Δ% versus a configurable baseline, and an inline sparkline of the recent history.
+- Add Metadata Display: **Multi-series Line Chart**. A single Line Chart widget can now plot up to 8 series.
 
 ## [2.8.0] - 2026-05-05
-- Add Metadata Display: **Table** render type. 
+- Add Metadata Display: **Table** render type.
 
 ## [2.7.4] - 2026-05-05
 - Fix Web Viewer: Plugin was missing from CI ZIP artifacts and the unified MSI installer because it had no entry in `plugins.json` (the manifest that drives both the build matrix and `installer/generate-wix.ps1`). Added the WebViewer entry under the SmartClient category; the existing `bin/Release/net48` staging rule picks up the WebView2 native loaders (`runtimes/win-{x86,x64,arm64}/native/WebView2Loader.dll`) automatically, no extra staging directives needed.
-- Improve BarcodeReader: Quieter helper assembly-resolve logging. Successful resolves no longer write an `AssemblyResolve hit` info line, and `.resources` satellite-assembly probes (e.g. `VideoOS.Platform.resources`) are excluded from the miss-error filter — those are CLR localization lookups expected to miss on unlocalized binaries. Real misses for `VideoOS.*`, `ZXing.*` and `CommunitySDK` still fire as errors.
+- Improve Barcode Reader: Quieter helper assembly-resolve logging. Successful resolves no longer write an `AssemblyResolve hit` info line, and `.resources` satellite-assembly probes (e.g. `VideoOS.Platform.resources`) are excluded from the miss-error filter — those are CLR localization lookups expected to miss on unlocalized binaries. Real misses for `VideoOS.*`, `ZXing.*` and `CommunitySDK` still fire as errors.
 
 ## [2.7.3] - 2026-05-05
-- Fix Barcode Helper crash: The issue of helper crash, was that the helper was unable to find the correct decoding dll that are in event server folder.
+- Fix Barcode Reader: Helper crash. The helper was unable to find the correct decoding DLLs, which live in the Event Server folder.
 
 ## [2.7.2] - 2026-05-04
 - Fix Metadata Display: `TypeLoadException` for `LiveChartsCore.CoreAxis`2` `LiveChartsCore`, `LiveChartsCore.SkiaSharpView` and `LiveChartsCore.SkiaSharpView.WPF` are now ILRepacked /internalize'd into `MetadataDisplay.dll` so the chart code resolves against its own private copy regardless of what other plugins ship. SkiaSharp / HarfBuzz remain external (large + native libs).
@@ -103,146 +103,133 @@
 - Improve Metadata Display: Diagnostic logging under the `MetadataDisplay` category for chart backfill (start, sample counts, cancellations, faults), playback seeding, and window-picker overrides.
 
 ## [2.6.0] - 2026-05-02
-- Add Metadata Display: A new Smart Client plugin (View Item Plugin) to display metadata contained data in live and also recording mode.
+- Add Metadata Display: New Smart Client View Item plugin to display metadata in live and playback mode.
 
 ## [2.5.0] - 2026-05-01
-- Add Timeline Jump: New Smart Client toolbar plugin (partner request) for jumping the playback timeline backward or forward by a chosen increment without dragging or scrubbing. 
+- Add Timeline Jump: New Smart Client toolbar plugin (partner request) for jumping the playback timeline backward or forward by a chosen increment without dragging or scrubbing.
 
 ## [2.4.2] - 2026-04-30
-- Fix RTMP Driver: Stuttering / dropped recording when the publisher's RTMP timestamps drift ahead of wall-clock.
 - Add Timelapse: **Apply time window per day** option restricts frames to a daily time-of-day window across the full date range. Use for daylight-only timelapses (e.g. 2 weeks, 08:00 to 17:00 each day) or night-only timelapses with wrap-around windows (e.g. 22:00 to 06:00). Segments are clipped in memory after the server query, so the Recording Sequences card and Output Estimate update without extra round-trips.
+- Fix RTMP Driver: Stuttering / dropped recording when the publisher's RTMP timestamps drift ahead of wall-clock.
 
 ## [2.3.1] - 2026-04-29
 - Add Colored Timeline: New per-camera selectable-event ribbon plugin (successor to EdgeMotionTimeline). Includes icon picker, marker support, display-name aware rule UI with reduced table footprint, and demo video in the docs.
-- Fix BarcodeReader (#84): Structured diagnostics for helper failures. Last-chance `UnhandledException` and `UnobservedTaskException` handlers, chatty `OnAssemblyResolve` (logs hits, load failures, and our-dep misses plus the full search-dir list), per-channel on-disk helper log mirrored to `C:\ProgramData\Milestone\BarcodeReader\helper-{itemId}.log` with 5 MB rotation, and typed exit codes (`BackgroundPlugin.MapExitCode` decodes 255 as `NativeCrash`, dumps the last stderr lines and the on-disk log path on death).
+- Security Installer: Zip-slip hardening (CodeQL #3, `cs/zipslip`, CWE-22 high). `ExtractZipToFolder` now resolves each entry path via `Path.GetFullPath` and validates it is contained within the resolved destination directory (with trailing separator) before extracting. Entries that escape are skipped and logged.
+- Fix Barcode Reader: Structured diagnostics for helper failures (#84). Last-chance `UnhandledException` and `UnobservedTaskException` handlers, chatty `OnAssemblyResolve` (logs hits, load failures, and our-dep misses plus the full search-dir list), per-channel on-disk helper log mirrored to `C:\ProgramData\Milestone\BarcodeReader\helper-{itemId}.log` with 5 MB rotation, and typed exit codes (`BackgroundPlugin.MapExitCode` decodes 255 as `NativeCrash`, dumps the last stderr lines and the on-disk log path on death).
 - Fix Installer: Management Client process kill targets the actual EXE name. Old image name `VideoOS.Platform.Administration.exe` does not match modern Milestone builds where Management Client runs as `VideoOS.Administration.exe`, so the kill silently no-opped and left the client holding plugin DLLs. Both names are now killed.
-- Fix Installer (CodeQL #3, `cs/zipslip`, CWE-22 high): `ExtractZipToFolder` now resolves each entry path via `Path.GetFullPath` and validates it is contained within the resolved destination directory (with trailing separator) before extracting. Entries that escape are skipped and logged.
-- Improve Dependabot: Monthly cadence with major-version bumps ignored, reducing churn from breaking upgrades.
-- Bump ZXing.Net 0.16.9 to 0.16.11 (#93).
-- Bump GitHub Actions: `softprops/action-gh-release` 2.6.1 to 2.6.2 (#95), `actions/upload-artifact` 7.0.0 to 7.0.1 (#66), `NuGet/setup-nuget` 3.0.0 to 3.1.0 (#65).
+- Improve Deps: Dependabot monthly cadence with major-version bumps ignored, reducing churn from breaking upgrades.
+- Maintenance Deps: Bump ZXing.Net 0.16.9 → 0.16.11 (#93).
+- Maintenance CI: Bump GitHub Actions - `softprops/action-gh-release` 2.6.1 → 2.6.2 (#95), `actions/upload-artifact` 7.0.0 → 7.0.1 (#66), `NuGet/setup-nuget` 3.0.0 → 3.1.0 (#65).
 
 ## [2.2.3] - 2026-04-26
-- Fix FlexView: Saving an opened view no longer clears camera assignments. Smart Client rejects `ViewAndLayoutItem.Layout` mutation on an existing view; FlexView now recreates the view and re-attaches each slot's built-in content (Camera, Hotspot, Carousel, Matrix, HTML) via `InsertBuiltinViewItem`.
-- Fix FlexView: A `Save` with no edits is now a no-op (was destructively recreating the view).
-- Add FlexView: **Save As** button (visible only when editing an existing view) — duplicates the current view to a new name/folder and carries over camera assignments.
-- Add FlexView: Search field in the view picker to filter views by name as you type. Folders auto-expand to reveal matches.
-- Add FlexView: Confirmation dialog before opening an existing view explains that saving recreates the view..
-- Improve FlexView: Save success and error notifications use a custom dark themed dialog matching the rest of the FlexView UI.
-- Improve FlexView: Heavy diagnostic logging under the `FlexView` category in `MIPLog.txt` for load and save flows (per-slot snapshot/restore, recreate phases, success/failure summaries).
+- Add Flex View: **Save As** button (visible only when editing an existing view) — duplicates the current view to a new name/folder and carries over camera assignments.
+- Add Flex View: Search field in the view picker to filter views by name as you type. Folders auto-expand to reveal matches.
+- Add Flex View: Confirmation dialog before opening an existing view explains that saving recreates the view.
 - Add RTMP Driver: Per-stream statistics block emitted to the driver log every 30 seconds.
+- Add Installer: Optional **Local download page** feature for the management server.
+- Fix Flex View: Saving an opened view no longer clears camera assignments. Smart Client rejects `ViewAndLayoutItem.Layout` mutation on an existing view; FlexView now recreates the view and re-attaches each slot's built-in content (Camera, Hotspot, Carousel, Matrix, HTML) via `InsertBuiltinViewItem`.
+- Fix Flex View: A `Save` with no edits is now a no-op (was destructively recreating the view).
+- Improve Flex View: Save success and error notifications use a custom dark themed dialog matching the rest of the FlexView UI.
+- Improve Flex View: Heavy diagnostic logging under the `FlexView` category in `MIPLog.txt` for load and save flows (per-slot snapshot/restore, recreate phases, success/failure summaries).
 - Improve RTMP Driver: Parse AMF `@setDataFrame onMetaData` messages so source-declared metadata (width, height, framerate, video / audio bitrate, audio codec, sample rate) ends up in the stats block. Previously the driver silently ignored these messages.
 - Improve RTMP Driver: Replaced the per-150-frame and per-20-second ad-hoc log lines with the new periodic stats block.
-- Add Installer: Optional **Local download page** feature for the management server.
 - Improve Installer: Service stop/start is now gated on the feature action state. Smart Client-only installs no longer stop the Recording Server; admin-plugin-only installs no longer stop the Event Server; driver-only installs no longer stop the Event Server. Process kills (Smart Client, Management Client, Driver Framework) still run unconditionally because they're cheap.
 
 ## [2.2.0] - 2026-04-25
-- Improve Timelapse: Continuous and Event-based modes backed by MIP SequenceDataSource (RecordingSequence)
-- Improve Timelapse: Preflight card shows sequences, recorded time, and coverage with per-camera breakdown and loading spinner
-- Improve Timelapse: Live segment-aware output estimate (real frame counts, not naive window ÷ interval)
-- Improve Timelapse: Multi-camera union timeline with mode-dependent fallbacks (dimmed last frame + badge for Continuous, black "no event" placeholder for Event-based)
-- Improve Timelapse: UTC-normalized MIP queries with lookback to catch sequences that span the start of the window
-- Improve Timelapse: Redesigned idle view with card-style layout, bold-Run tooltips, and close-preview button
-- Improve Timelapse: Logging to MIPLog.txt under `Timelapse` and `Timelapse.SequenceQuery` categories
+- Improve Timelapse: Continuous and Event-based modes backed by MIP SequenceDataSource (RecordingSequence).
+- Improve Timelapse: Preflight card shows sequences, recorded time, and coverage with per-camera breakdown and loading spinner.
+- Improve Timelapse: Live segment-aware output estimate (real frame counts, not naive window ÷ interval).
+- Improve Timelapse: Multi-camera union timeline with mode-dependent fallbacks (dimmed last frame + badge for Continuous, black "no event" placeholder for Event-based).
+- Improve Timelapse: UTC-normalized MIP queries with lookback to catch sequences that span the start of the window.
+- Improve Timelapse: Redesigned idle view with card-style layout, bold-Run tooltips, and close-preview button.
+- Improve Timelapse: Logging to MIPLog.txt under `Timelapse` and `Timelapse.SequenceQuery` categories.
 
 ## [2.1.0] - 2026-04-24
-- Add: Metadata Viewer Plugin
+- Add Metadata Viewer: New plugin.
 
 ## [2.0.2] - 2026-04-23
-- Add: QR Code Barcode Scanner Plugin
-- Improve: Installer regarding to OEM installations
-- Improve CertWatchdog: Discovery drivers that are using https but have not default fields from milestone drivers (custom drivers)
-- Improve CertWatchdog: Discovery also failovers servers in failover groups or hotstandby
-- 
+- Add Barcode Reader: QR code / barcode scanner plugin.
+- Improve Installer: OEM installation handling.
+- Improve Cert Watchdog: Discover drivers that use HTTPS but lack the default fields of Milestone drivers (custom drivers).
+- Improve Cert Watchdog: Discover failover servers in failover groups or hot standby.
+
 ## [1.9.1] - 2026-04-04
-- Add: Remote Manager Smart Client Plugin (replaces RDP plugins)
-- Fix: Flex View: Modification of existing views was not possible #58.
+- Add Remote Manager: New Smart Client plugin (replaces the RDP plugins).
+- Fix Flex View: Modification of existing views was not possible (#58).
 
 ## [1.8.0] - 2026-03-31
-- Add: Timelapse Smart Client Plugin
+- Add Timelapse: New Smart Client plugin.
 
 ## [1.7.0] - 2026-03-27
-- Add: Remote Control Smart Client Plugin
+- Add Remote Control: New Smart Client plugin.
 
 ## [1.6.0] - 2026-03-25
-- Add: View Carousel Smart Client Plugin
+- Add View Carousel: New Smart Client plugin.
 
 ## [1.5.5] - 2026-03-21
-
-- Add: Smart Bar Col Layout 
-- Add: Smart Bar settings added "Restore defaults" button to reset all settings
-- Add: Smart Bar item tooltips show full name on hover for truncated entries
-- Improve: Smart Bar dimensions now can configured
-- Improve: Smart Bar category ordering available in both standard and column layout modes
-- Improve: Smart Bar settings removed redundant Save button (framework handles save)
-- Fix: Smart Bar workspace commands did not work. Now uses ChangeWorkSpaceStateCommand for Normal/Setup and dynamically enumerates all workspaces via GetWorkSpaceItems()
-- Fix: Smart Bar column layout mode no longer overrides configured dimensions with hardcoded screen percentages
+- Add Smart Bar: Column layout.
+- Add Smart Bar: Settings "Restore defaults" button to reset all settings.
+- Add Smart Bar: Item tooltips show the full name on hover for truncated entries.
+- Improve Smart Bar: Dimensions can now be configured.
+- Improve Smart Bar: Category ordering available in both standard and column layout modes.
+- Improve Smart Bar: Removed the redundant Save button (framework handles save).
+- Fix Smart Bar: Workspace commands did not work. Now uses ChangeWorkSpaceStateCommand for Normal/Setup and dynamically enumerates all workspaces via GetWorkSpaceItems().
+- Fix Smart Bar: Column layout mode no longer overrides configured dimensions with hardcoded screen percentages.
 
 ## [1.5.3] - 2026-03-20
-
-- Improve: Weather Smart Client Plugin now have unit selectors and forcast options.
-- Improve: Auditor Plugin now have reasons, and more time logging for playback ops.
+- Improve Weather: Now has unit selectors and forecast options.
+- Improve Auditor: Now has reasons, and more time logging for playback ops.
 
 ## [1.5.1] - 2026-03-15
-
-- Add: RTSP Driver multi-stream and audio support (ADTS header)
-- Add: ILRepack to merge CommunitySDK into plugin DLLs
-- Fix: Mask RTMP stream keys in logs and improve RTMP URL regex
-- Improve: Installer custom action and reduced installer verbosity
+- Add RTSP Driver: Multi-stream and audio support (ADTS header).
+- Add CommunitySDK: ILRepack to merge CommunitySDK into plugin DLLs.
+- Fix RTMP Driver: Mask RTMP stream keys in logs and improve the RTMP URL regex.
+- Improve Installer: Custom action and reduced installer verbosity.
 
 ## [1.5.0] - 2026-03-13
-
-- Add: Flex View - Dynamic View Builder
+- Add Flex View: Dynamic view builder.
 
 ## [1.4.3] - 2026-03-12
-
-- Improve: Auditor - Introduce optional camera filtering for audit rules.
+- Improve Auditor: Introduce optional camera filtering for audit rules.
 
 ## [1.4.2] - 2026-03-10
-
-- Add: WiX v5 MSI installer (replaces NSIS)
-- Add: Dev build CI workflow (`d*` tags for development releases)
-- Add: Auto-incrementing build version for local MSI builds
-- Fix: Icon rendering skipped in Service environment (eliminates STA thread errors)
-- Fix: Duplicate event type registration in HTTP Requests plugin
-- Fix: `LogMessage.CategoryName` compatibility with older XProtect versions (pre-2025R2)
-- Improve: Reduced plugin output size by filtering Milestone SDK DLLs from build output
-- Remove: Unnecessary `MilestoneSystems.VideoOS.Platform.SDK` references from CommunitySDK, SnapReport, Auditor, CertWatchdog
+- Add Installer: WiX v5 MSI installer (replaces NSIS).
+- Add CI: Dev build workflow (`d*` tags for development releases).
+- Add Installer: Auto-incrementing build version for local MSI builds.
+- Fix Installer: Icon rendering skipped in Service environment (eliminates STA thread errors).
+- Fix HTTP Requests: Duplicate event type registration.
+- Fix CommunitySDK: `LogMessage.CategoryName` compatibility with older XProtect versions (pre-2025R2).
+- Improve Installer: Reduced plugin output size by filtering Milestone SDK DLLs from build output.
+- Remove CommunitySDK: Unnecessary `MilestoneSystems.VideoOS.Platform.SDK` references from CommunitySDK, Snapshot Report, Auditor, and Cert Watchdog.
 
 ## [1.4.1] - 2026-03-09
-
-- Add: Command line args for Smart Bar Programms
-- Change: Use 6 args logclient ctor for broader compatiblity
+- Add Smart Bar: Command-line args for Smart Bar programs.
+- Change CommunitySDK: Use the 6-arg LogClient ctor for broader compatibility.
 
 ## [1.4.0] - 2026-03-09
-
-- Add: HTTP Requests Plugin
+- Add HTTP Requests: New plugin.
 
 ## [1.3.0] - 2026-03-08
-
-- Add: RTSP Driver
-- Add: Smart Bar Plugin
+- Add RTSP Driver: New driver.
+- Add Smart Bar: New plugin.
 
 ## [1.1.0] - 2026-03-07
-
-- Add: Auditor Plugin
-- Add: CommunitySDK shared library (CrossMessageHandler, SystemLogBase, PluginLog)
-- Add: Help page to CertWatchdog
-- Update: Migrate plugins to CommunitySDK (CrossMessageHandler, PluginLog)
-- Update: Improve monitor capture via GDI capture
-- Update: Change icons to FontAwesome
-- Update: Clean up dead code and convert RTMPDriver to SDK-style project
-- Update: Docs
+- Add Auditor: New plugin.
+- Add CommunitySDK: Shared library (CrossMessageHandler, SystemLogBase, PluginLog).
+- Add Cert Watchdog: Help page.
+- Update CommunitySDK: Migrate plugins to CommunitySDK (CrossMessageHandler, PluginLog).
+- Improve Monitor RTMP Streamer: Improve monitor capture via GDI capture.
+- Change Icons: Change icons to FontAwesome.
+- Maintenance CommunitySDK: Clean up dead code and convert the RTMP Driver to an SDK-style project.
+- Update Docs: Documentation updates.
 
 ## [1.0.1] - 2026-03-06
-
-- Add: RDP Port (RDP Smart Client Plugin)
-
+- Add RDP: RDP port (RDP Smart Client plugin).
 
 ## [1.0.0] - 2026-03-05
-
-- Add: Snaphshot Reporter Plugin
-- Add: RTMP Desktop Streamer Plugin
-- Update: Optimize Github Workflows
-- Update: Docs
+- Add Snapshot Report: New plugin.
+- Add Monitor RTMP Streamer: RTMP desktop streamer plugin.
+- Maintenance CI: Optimize GitHub workflows.
+- Update Docs: Documentation.
 
 Previous Changes are on Github
