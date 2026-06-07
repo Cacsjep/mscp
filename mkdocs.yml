@@ -71,6 +71,7 @@ nav:
       - Auto Exporter: standalone-applications/auto-exporter.md
     - Local Download Page: getting-started/local-download-page.md
   - Support: support/reporting-bugs.md
+  - Security & Trust: support/security.md
   - Changelog: support/changelog.md
   - Third-Party Notices: support/third-party-notices.md
 

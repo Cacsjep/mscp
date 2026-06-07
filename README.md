@@ -1,7 +1,10 @@
 # MSC Community Plugins for Milestone XProtect™
 
 [![Build & Release](../../actions/workflows/build-release.yml/badge.svg)](../../actions/workflows/build-release.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Cacsjep/mscp/badge)](https://scorecard.dev/viewer/?uri=github.com/Cacsjep/mscp)
+[![Latest release](https://img.shields.io/github/v/release/Cacsjep/mscp?label=release)](../../releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](.github/SECURITY.md)
 
 > [!IMPORTANT]
 > This is an independent open source project and is **not affiliated with, endorsed by, or supported by Milestone Systems**. XProtect™ is a trademark of Milestone Systems A/S.

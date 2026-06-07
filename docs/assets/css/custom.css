@@ -50,7 +50,7 @@
   }
 }
 
-/* Mobile: icons live in the navigation drawer (.md-nav__source) — keep them
+/* Mobile: icons live in the navigation drawer (.md-nav__source), keep them
    in a single horizontal row instead of stacking. */
 .md-nav__source {
   display: flex !important;

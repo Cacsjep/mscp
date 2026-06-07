@@ -1,6 +1,6 @@
 ---
-title: "Catalog — All Milestone XProtect Plugins, Drivers & Apps"
-description: "Browse all free Milestone XProtect add-ons — Smart Client extensions, admin tools, device drivers, and standalone applications for video surveillance."
+title: "Catalog - All Milestone XProtect Plugins, Drivers & Apps"
+description: "Browse all free Milestone XProtect add-ons: Smart Client extensions, admin tools, device drivers, and standalone applications for video surveillance."
 hide:
   - navigation
   - toc

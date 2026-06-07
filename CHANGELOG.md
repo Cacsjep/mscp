@@ -75,7 +75,7 @@
 
 ## [2.7.4] - 2026-05-05
 - Fix Web Viewer: Plugin was missing from CI ZIP artifacts and the unified MSI installer because it had no entry in `plugins.json` (the manifest that drives both the build matrix and `installer/generate-wix.ps1`). Added the WebViewer entry under the SmartClient category; the existing `bin/Release/net48` staging rule picks up the WebView2 native loaders (`runtimes/win-{x86,x64,arm64}/native/WebView2Loader.dll`) automatically, no extra staging directives needed.
-- Improve Barcode Reader: Quieter helper assembly-resolve logging. Successful resolves no longer write an `AssemblyResolve hit` info line, and `.resources` satellite-assembly probes (e.g. `VideoOS.Platform.resources`) are excluded from the miss-error filter — those are CLR localization lookups expected to miss on unlocalized binaries. Real misses for `VideoOS.*`, `ZXing.*` and `CommunitySDK` still fire as errors.
+- Improve Barcode Reader: Quieter helper assembly-resolve logging. Successful resolves no longer write an `AssemblyResolve hit` info line, and `.resources` satellite-assembly probes (e.g. `VideoOS.Platform.resources`) are excluded from the miss-error filter, since those are CLR localization lookups expected to miss on unlocalized binaries. Real misses for `VideoOS.*`, `ZXing.*` and `CommunitySDK` still fire as errors.
 
 ## [2.7.3] - 2026-05-05
 - Fix Barcode Reader: Helper crash. The helper was unable to find the correct decoding DLLs, which live in the Event Server folder.
@@ -122,7 +122,7 @@
 - Maintenance CI: Bump GitHub Actions - `softprops/action-gh-release` 2.6.1 → 2.6.2 (#95), `actions/upload-artifact` 7.0.0 → 7.0.1 (#66), `NuGet/setup-nuget` 3.0.0 → 3.1.0 (#65).
 
 ## [2.2.3] - 2026-04-26
-- Add Flex View: **Save As** button (visible only when editing an existing view) — duplicates the current view to a new name/folder and carries over camera assignments.
+- Add Flex View: **Save As** button (visible only when editing an existing view) that duplicates the current view to a new name/folder and carries over camera assignments.
 - Add Flex View: Search field in the view picker to filter views by name as you type. Folders auto-expand to reveal matches.
 - Add Flex View: Confirmation dialog before opening an existing view explains that saving recreates the view.
 - Add RTMP Driver: Per-stream statistics block emitted to the driver log every 30 seconds.
