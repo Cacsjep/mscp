@@ -32,6 +32,11 @@ jobs:
         with:
           results_file: results.sarif
           results_format: sarif
+          # Fine-grained PAT with "Administration: read" on this repo, stored as
+          # the SCORECARD_TOKEN secret. The default GITHUB_TOKEN cannot read
+          # branch-protection settings, so without this the Branch-Protection
+          # check scores 0 even when protection is configured.
+          repo_token: ${{ secrets.SCORECARD_TOKEN }}
           # Publish results to the OpenSSF REST API so the badge resolves.
           publish_results: true
 
