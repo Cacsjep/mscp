@@ -139,6 +139,7 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}.zip
+          retention-days: 1
 
   # ── Build installer and upload as artifacts (no release) ──
   installer:
@@ -264,3 +265,4 @@ jobs:
         with:
           name: MSI-Installer
           path: MSCPlugins-dev-Setup.msi
+          retention-days: 1

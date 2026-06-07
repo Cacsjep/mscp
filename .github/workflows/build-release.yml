@@ -138,6 +138,9 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}-${{ github.ref_name }}.zip
+          # Intermediate build artifact; the release assets live on the
+          # GitHub Release, so these can expire quickly.
+          retention-days: 1
 
   # ── Collect all artifacts, build unified installer, create release ──
   release:
