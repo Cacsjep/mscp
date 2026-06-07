@@ -54,6 +54,8 @@ hide:
 
 <div class="show-title" markdown>
 
+# Support
+
 Found a bug? We appreciate you taking the time to report it. Good bug reports help us fix issues faster.
 
 [:material-bug: Report an issue](https://github.com/Cacsjep/mscp/issues/new?template=bug_report.md){ .md-button .issue-button }

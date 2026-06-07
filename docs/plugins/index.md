@@ -1,6 +1,6 @@
 ---
-title: "All Milestone XProtect Plugins and Drivers"
-description: "Browse all free Milestone XProtect plugins — Smart Client extensions, admin tools, and device drivers for video surveillance."
+title: "Catalog — All Milestone XProtect Plugins, Drivers & Apps"
+description: "Browse all free Milestone XProtect add-ons — Smart Client extensions, admin tools, device drivers, and standalone applications for video surveillance."
 hide:
   - navigation
   - toc
@@ -44,6 +44,7 @@ hide:
   .pi.sc { background: #1e3a2a; color: #3fb950; }
   .pi.dd { background: #3a2e1a; color: #d29922; }
   .pi.ap { background: #2a1e3a; color: #bc8cff; }
+  .pi.sa { background: #16273a; color: #58a6ff; }
   .pt { flex: 1; min-width: 0; }
   .pn {
     display: block;
@@ -182,5 +183,14 @@ hide:
   <a class="pr" href="admin/rtmp-streamer/">
     <div class="pi ap"><i class="mdi mdi-broadcast"></i></div>
     <div class="pt"><span class="pn">RTMP Streamer</span><span class="pd">Stream cameras to RTMP destinations (YouTube, Twitch, Facebook)</span></div>
+  </a>
+</div>
+
+### Standalone Applications
+
+<div class="plugin-list">
+  <a class="pr" href="../standalone-applications/auto-exporter/">
+    <div class="pi sa"><i class="mdi mdi-export-variant"></i></div>
+    <div class="pt"><span class="pn">Auto Exporter</span><span class="pd">Standalone app for scheduled and rule-triggered video exports (AVI, XProtect database, or timelapse MP4), with per-agent size and age limits, managed from the Management Client.</span></div>
   </a>
 </div>

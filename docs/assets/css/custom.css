@@ -68,6 +68,10 @@
   line-height: 1.5;
 }
 
+.md-typeset p {
+  font-size: 0.7rem;
+}
+
 
 /* ── Visually hidden but crawlable by search engines ── */
 .seo-only {
@@ -82,15 +86,23 @@
   border: 0;
 }
 
+/* ── Heading hierarchy: descending shades of Material blue ── */
+.md-typeset h1 {
+  color: #2196f3;
+}
+
 .md-typeset h2 {
   font-size: 1.1rem;
+  color: #42a5f5;
 }
 
 .md-typeset h3 {
   font-size: 0.9rem;
+  color: #64b5f6;
 }
 
 .md-typeset h4 {
   font-size: 0.8rem;
+  color: #90caf9;
 }
 

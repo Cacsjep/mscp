@@ -55,6 +55,13 @@ hide:
   </div>
 </div>
 
+<div class="download-card" style="margin-bottom:1.5rem">
+  <h3>Auto Exporter <span class="rec" style="background:rgba(88,166,255,0.15);color:#58a6ff">Standalone App</span></h3>
+  <small>Scheduled and rule-triggered video exports. A separate standalone application with its own installer and release feed.</small>
+  <a id="autoexp-download" href="https://github.com/Cacsjep/mscp-auto-exporter/releases/latest" class="md-button" style="width:100%;text-align:center;font-weight:400">Download MSCPAutoExport-Setup.msi</a>
+  <small>Minimum Version: Milestone XProtect&trade; 2023 R3 &middot; <a href="../../standalone-applications/auto-exporter/">Documentation &amp; setup</a></small>
+</div>
+
 !!! info "Windows SmartScreen"
     The installer is not code-signed, so Windows SmartScreen may show a **"Windows protected your PC"** dialog when you run it. This is normal for unsigned open-source software. Click **More info** and then **Run anyway** to proceed with the installation.
 
@@ -116,4 +123,22 @@ fetch("https://api.github.com/repos/Cacsjep/mscp/releases/latest")
       btn.textContent = "Go to " + data.tag_name + " Release";
     }
   });
+
+fetch("https://api.github.com/repos/Cacsjep/mscp-auto-exporter/releases/latest")
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var btn = document.getElementById("autoexp-download");
+    if (!btn || !data) return;
+    var asset = (data.assets || []).find(function(a) {
+      return /MSCPAutoExport.*\.msi$/i.test(a.name);
+    });
+    if (asset) {
+      btn.href = asset.browser_download_url;
+      btn.textContent = "Download " + asset.name;
+    } else if (data.html_url) {
+      btn.href = data.html_url;
+      btn.textContent = data.tag_name ? ("Go to " + data.tag_name + " Release") : "Browse Releases";
+    }
+  })
+  .catch(function() {});
 </script>

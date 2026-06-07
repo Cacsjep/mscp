@@ -3,6 +3,8 @@ title: "Local Download Page"
 description: "Optional MSI feature that turns the management server into an internal download portal for the MSC Community Plugins MSI, every plugin ZIP, the PKI Cert Installer, and any extras the admin drops into a folder."
 ---
 
+<div class="show-title" markdown>
+
 # Local Download Page
 
 The MSI ships with an optional feature called **Local download page on this server**. When picked at install time on a box that has IIS, the installer publishes the MSI, every per-plugin ZIP, the [PKI Cert Installer](../plugins/admin/pki.md), and any admin-supplied extras to `http://<this-server>/mscp/`. Other admins on the same network browse the page and download what they need without going through GitHub.

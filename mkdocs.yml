@@ -15,7 +15,6 @@ theme:
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.sections
-    - navigation.expand
     - navigation.top
     - navigation.indexes
     - navigation.instant
@@ -35,41 +34,42 @@ extra_css:
 
 nav:
   - Home: index.md
-  - Plugins & Drivers: plugins/index.md
+  - Catalog: plugins/index.md
   - Download: getting-started/installation.md
-  - Local Download Page: getting-started/local-download-page.md
-  - Plugins:
-    - Admin Plugins:
-      - Auditor: plugins/admin/auditor.md
-      - Barcode Reader: plugins/admin/barcode-reader.md
-      - Certificate Watchdog: plugins/admin/cert-watchdog.md
-      - Colored Timeline: plugins/admin/colored-timeline.md
-      - HTTP Requests: plugins/admin/http-requests.md
-      - Metadata Viewer: plugins/admin/metadata-viewer.md
-      - PKI: plugins/admin/pki.md
-      - RTMP Streamer: plugins/admin/rtmp-streamer.md
-    - Smart Client:
-      - Flex Viewer: plugins/smart-client/flexview.md
-      - Live Exporter: plugins/smart-client/live-exporter.md
-      - Metadata Display: plugins/smart-client/metadata-display.md
-      - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
-      - Notepad: plugins/smart-client/notepad.md
-      - Remote Control: plugins/smart-client/sc-remote-control.md
-      - Remote Manager: plugins/smart-client/remote-manager.md
-      - Smart Bar: plugins/smart-client/smartbar.md
-      - Snapshot Report: plugins/smart-client/snapreport.md
-      - System Status: plugins/smart-client/system-status.md
-      - Timelapse: plugins/smart-client/timelapse.md
-      - Timeline Jump: plugins/smart-client/timeline-jump.md
-      - Todo List: plugins/smart-client/todo-list.md
-      - View Carousel: plugins/smart-client/view-carousel.md
-      - Weather: plugins/smart-client/weather.md
-      - Web Viewer: plugins/smart-client/web-viewer.md
-  - Device Drivers:
-    - RTMP Push Driver: plugins/device-drivers/rtmp.md
-    - RTSP Driver: plugins/device-drivers/rtsp.md
-  - Standalone Applications:
-    - Auto Exporter: standalone-applications/auto-exporter.md
+  - Documentation:
+    - Plugins:
+      - Admin Plugins:
+        - Auditor: plugins/admin/auditor.md
+        - Barcode Reader: plugins/admin/barcode-reader.md
+        - Certificate Watchdog: plugins/admin/cert-watchdog.md
+        - Colored Timeline: plugins/admin/colored-timeline.md
+        - HTTP Requests: plugins/admin/http-requests.md
+        - Metadata Viewer: plugins/admin/metadata-viewer.md
+        - PKI: plugins/admin/pki.md
+        - RTMP Streamer: plugins/admin/rtmp-streamer.md
+      - Smart Client:
+        - Flex Viewer: plugins/smart-client/flexview.md
+        - Live Exporter: plugins/smart-client/live-exporter.md
+        - Metadata Display: plugins/smart-client/metadata-display.md
+        - Monitor RTMP Streamer: plugins/smart-client/monitor-rtmp-streamer.md
+        - Notepad: plugins/smart-client/notepad.md
+        - Remote Control: plugins/smart-client/sc-remote-control.md
+        - Remote Manager: plugins/smart-client/remote-manager.md
+        - Smart Bar: plugins/smart-client/smartbar.md
+        - Snapshot Report: plugins/smart-client/snapreport.md
+        - System Status: plugins/smart-client/system-status.md
+        - Timelapse: plugins/smart-client/timelapse.md
+        - Timeline Jump: plugins/smart-client/timeline-jump.md
+        - Todo List: plugins/smart-client/todo-list.md
+        - View Carousel: plugins/smart-client/view-carousel.md
+        - Weather: plugins/smart-client/weather.md
+        - Web Viewer: plugins/smart-client/web-viewer.md
+    - Device Drivers:
+      - RTMP Push Driver: plugins/device-drivers/rtmp.md
+      - RTSP Driver: plugins/device-drivers/rtsp.md
+    - Standalone Applications:
+      - Auto Exporter: standalone-applications/auto-exporter.md
+    - Local Download Page: getting-started/local-download-page.md
   - Support: support/reporting-bugs.md
   - Changelog: support/changelog.md
   - Third-Party Notices: support/third-party-notices.md
