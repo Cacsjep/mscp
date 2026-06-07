@@ -1,0 +1,262 @@
+name: PR Build
+
+# Gate every pull request on a clean build of all plugins and the installer.
+# Artifacts are uploaded for inspection but expire after 1 day.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A newer push to the same PR cancels the in-flight run.
+concurrency:
+  group: pr-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Generate the build matrix from plugins.json
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.gen.outputs.matrix }}
+      names: ${{ steps.gen.outputs.names }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: gen
+        shell: pwsh
+        run: |
+          $plugins = Get-Content plugins.json -Raw | ConvertFrom-Json
+          $include = @()
+          $names = @()
+
+          foreach ($p in $plugins) {
+            $project = if ($p.project) { $p.project } else { "$($p.name).csproj" }
+            $platform = if ($p.platform) { $p.platform } else { 'AnyCPU' }
+            $outputPath = if ($p.outputPath) { $p.outputPath }
+                          elseif ($platform -eq 'x64') { 'bin/x64/Release/net48' }
+                          else { 'bin/Release/net48' }
+
+            $projects = @("$($p.path)/$project" -replace '/', '\')
+            if ($p.extraProjects) {
+              foreach ($ep in $p.extraProjects) {
+                $projects += ($ep -replace '/', '\')
+              }
+            }
+
+            $include += @{
+              name       = $p.name
+              projects   = $projects -join ';'
+              platform   = $platform
+              stage_from = ("$($p.path)/$outputPath" -replace '/', '\')
+              stage_to   = $p.name
+            }
+            $names += $p.name
+          }
+
+          $matrix = @{ include = $include } | ConvertTo-Json -Depth 5 -Compress
+          $namesList = $names | ConvertTo-Json -Compress
+
+          "matrix=$matrix" >> $env:GITHUB_OUTPUT
+          "names=$namesList" >> $env:GITHUB_OUTPUT
+
+  # Matrix build: each plugin compiles in parallel
+  build:
+    needs: setup
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@b26b823c478ee115be5c9403e62c90b0bf943843 # v3.1.0
+
+      - name: Restore NuGet packages
+        run: nuget restore MSCPlugins.sln
+
+      - name: Build ${{ matrix.name }}
+        run: |
+          $projects = "${{ matrix.projects }}" -split ";"
+          foreach ($proj in $projects) {
+            msbuild $proj /p:Configuration=Release /p:Platform="${{ matrix.platform }}" /p:CIBuild=true
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+        shell: pwsh
+
+      - name: Publish PKI Cert Installer (PKI matrix entry only)
+        if: matrix.name == 'PKI'
+        shell: pwsh
+        run: |
+          dotnet publish Installer\Mscp.PkiCertInstaller\Mscp.PkiCertInstaller.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:CIBuild=true /v:minimal /nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Stage ${{ matrix.name }}
+        run: |
+          New-Item -ItemType Directory -Path staging\${{ matrix.stage_to }} -Force
+          Copy-Item -Path "${{ matrix.stage_from }}\*" -Destination staging\${{ matrix.stage_to }} -Recurse
+        shell: pwsh
+
+      - name: Extra staging for ${{ matrix.name }}
+        shell: pwsh
+        run: |
+          $plugins = Get-Content plugins.json -Raw | ConvertFrom-Json
+          $p = $plugins | Where-Object { $_.name -eq '${{ matrix.name }}' }
+          if ($p.extraStagingDirs) {
+            foreach ($dir in $p.extraStagingDirs) {
+              $src = $dir -replace '/', '\'
+              Copy-Item -Path "$src\*" -Destination "staging\${{ matrix.stage_to }}" -Recurse -Force
+              Write-Host "Extra staging dir: $src"
+            }
+          }
+          if ($p.extraStagingFiles) {
+            foreach ($file in $p.extraStagingFiles) {
+              $src = $file -replace '/', '\'
+              Copy-Item -Path $src -Destination "staging\${{ matrix.stage_to }}" -Force
+              Write-Host "Extra staging file: $src"
+            }
+          }
+
+      - name: Create ZIP
+        run: Compress-Archive -Path staging\${{ matrix.stage_to }} -DestinationPath ${{ matrix.name }}.zip
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}.zip
+          retention-days: 1
+
+  # Build the unified installer (no release) to validate packaging
+  installer:
+    needs: [setup, build]
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: artifacts
+
+      - name: Install WiX Toolset
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          wix extension add WixToolset.UI.wixext/5 -g
+          wix extension add WixToolset.Util.wixext/5 -g
+          wix extension add WixToolset.Iis.wixext/5.0.2 -g
+
+      - name: Generate WiX components
+        shell: pwsh
+        run: |
+          pwsh installer/generate-wix.ps1
+
+      - name: Build installer custom actions
+        shell: pwsh
+        run: |
+          msbuild installer\customactions\InstallerCustomActions.csproj `
+            /restore `
+            /p:Configuration=Release `
+            /t:Rebuild `
+            /v:minimal
+
+      - name: Stage IIS hosting payload
+        shell: pwsh
+        run: |
+          $version = "0.0.${{ github.run_number }}"
+          $publicStaged = Join-Path (Get-Location) 'public-staged'
+          pwsh installer/stage-iis-hosting.ps1 `
+            -ManifestPath plugins.json `
+            -PublicSrc installer/public `
+            -PublicStaged $publicStaged `
+            -Version $version
+
+      - name: Collect per-plugin ZIPs for WiX bindpath
+        shell: pwsh
+        run: |
+          $version = "0.0.${{ github.run_number }}"
+          $zipsRoot = Join-Path (Get-Location) 'zips-flat'
+          if (Test-Path $zipsRoot) { Remove-Item $zipsRoot -Recurse -Force }
+          New-Item -ItemType Directory -Path $zipsRoot -Force | Out-Null
+          Get-ChildItem 'artifacts' -Directory | ForEach-Object {
+            $name = $_.Name
+            $src = Join-Path $_.FullName "$name.zip"
+            if (Test-Path $src) {
+              Copy-Item $src -Destination (Join-Path $zipsRoot "$name-v$version.zip") -Force
+            }
+          }
+
+      - name: Stage PKI Cert Installer EXE (versioned) for WiX
+        shell: pwsh
+        run: |
+          $version = "0.0.${{ github.run_number }}"
+          $zipsRoot = Join-Path (Get-Location) 'zips-flat'
+          $pkiZip = Join-Path (Get-Location) 'artifacts\PKI\PKI.zip'
+          if (-not (Test-Path $pkiZip)) { throw "PKI artifact not found at $pkiZip" }
+          $tmp = Join-Path $env:RUNNER_TEMP 'pki-extract'
+          if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+          New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+          Expand-Archive -Path $pkiZip -DestinationPath $tmp -Force
+          $exe = Get-ChildItem $tmp -Filter 'Mscp.PkiCertInstaller.exe' -Recurse | Select-Object -First 1
+          if (-not $exe) { throw "Mscp.PkiCertInstaller.exe not found inside PKI.zip" }
+          Copy-Item $exe.FullName -Destination (Join-Path $zipsRoot "Mscp.PkiCertInstaller-v$version.exe") -Force
+          Write-Host "Staged Mscp.PkiCertInstaller-v$version.exe ($([math]::Round($exe.Length/1MB,1)) MB)"
+
+      - name: Build MSI installer
+        shell: pwsh
+        run: |
+          $version = "0.0.${{ github.run_number }}"
+          $publicStaged = Join-Path (Get-Location) 'public-staged'
+          $zipsRoot = Join-Path (Get-Location) 'zips-flat'
+          wix build installer/wix/Product.wxs installer/wix/Components.wxs installer/wix/IisHosting.wxs `
+            -ext WixToolset.UI.wixext `
+            -ext WixToolset.Util.wixext `
+            -ext WixToolset.Iis.wixext `
+            -d Version=$version `
+            -arch x64 `
+            -b installer/wix `
+            -bindpath "publicroot=$publicStaged" `
+            -bindpath "zips=$zipsRoot" `
+            -pdbtype none `
+            -o "MSCPlugins-pr-Setup.msi"
+
+      - name: Upload MSI installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: MSI-Installer
+          path: MSCPlugins-pr-Setup.msi
+          retention-days: 1
+
+  # Single, stable status check to require in branch protection. It passes only
+  # when every plugin built and the installer built. Require "PR Build / ci-success"
+  # in the ruleset instead of the churning per-plugin matrix job names.
+  ci-success:
+    if: always()
+    needs: [build, installer]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all build jobs succeeded
+        run: |
+          if [ "${{ needs.build.result }}" != "success" ] || [ "${{ needs.installer.result }}" != "success" ]; then
+            echo "Build failed: build=${{ needs.build.result }}, installer=${{ needs.installer.result }}"
+            exit 1
+          fi
+          echo "All build jobs succeeded."
