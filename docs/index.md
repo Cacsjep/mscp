@@ -61,11 +61,18 @@ hide:
     margin: 0 0 0.5rem;
   }
   .hero-buttons p {
+    display: contents;
     margin: 0;
   }
   .hero-buttons .md-button {
     margin-top: 0;
     font-weight: 600;
+  }
+  .hero-buttons:not(.hero-buttons--secondary) .md-button {
+    min-width: 200px;
+    padding: 0.625em 1.2em;
+    white-space: nowrap;
+    text-align: center;
   }
   .hero-buttons--secondary {
     gap: 10px;
@@ -73,6 +80,8 @@ hide:
     margin-bottom: 0.25rem;
   }
   .hero-buttons--secondary .md-button {
+    min-width: 190px;
+    text-align: center;
     padding: 0.35em 0.9em;
     font-size: 0.62rem;
     font-weight: 500;
@@ -91,7 +100,8 @@ hide:
 
 .issue-button,
 .feature-button,
-.d-button {
+.d-button,
+.sponsor-button {
   background-color: #0d0d0d !important;
   color: #ffffff !important;
   font-weight: 400 !important;
@@ -99,6 +109,13 @@ hide:
   border-width: 2px !important;
   border-style: solid !important;
   box-shadow: none !important;
+}
+
+.sponsor-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4em;
 }
 
 .issue-button {
@@ -132,6 +149,26 @@ hide:
   color: #ffffff !important;
   font-weight: 500 !important;
 }
+
+.sponsor-button {
+  border-color: #db61a2 !important;
+}
+
+.sponsor-button:hover {
+  background-color: #db61a2 !important;
+  border-color: #db61a2 !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+.sponsor-button .twemoji,
+.sponsor-button:hover .twemoji {
+  color: #db61a2 !important;
+}
+
+.sponsor-button:hover .twemoji {
+  color: #ffffff !important;
+}
 </style>
 
 <div class="hero" markdown>
@@ -143,8 +180,13 @@ hide:
 <div class="hero-buttons" markdown>
 
 [:material-download: Download](getting-started/installation.md){ .md-button .d-button }
-[:material-bug: Report an issue](https://github.com/Cacsjep/mscp/issues/new?template=bug_report.md){ .md-button .issue-button }
+[:material-bug: Bug Report](https://github.com/Cacsjep/mscp/issues/new?template=bug_report.md){ .md-button .issue-button }
 [:material-test-tube: Feature Request](https://github.com/Cacsjep/mscp/issues/new?template=feature_request.md){ .md-button .feature-button }
+</div>
+
+<div class="hero-buttons hero-buttons--secondary" markdown>
+
+[:octicons-heart-fill-16: Sponsor this project](https://github.com/sponsors/Cacsjep){ .md-button .sponsor-button }
 </div>
 
 <p class="disclaimer">This is an independent open source project and is not affiliated with, endorsed by, or supported by Milestone Systems. XProtect™ is a trademark of Milestone Systems A/S.</p>
