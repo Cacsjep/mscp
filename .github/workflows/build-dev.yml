@@ -160,7 +160,7 @@ jobs:
       - name: Install WiX Toolset
         shell: pwsh
         run: |
-          dotnet tool install --global wix --version 5.*
+          dotnet tool install --global wix --version 5.0.2
           wix extension add WixToolset.UI.wixext/5 -g
           wix extension add WixToolset.Util.wixext/5 -g
           wix extension add WixToolset.Iis.wixext/5.0.2 -g
