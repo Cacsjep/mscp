@@ -156,7 +156,7 @@ function Add-RollupFeature($featureId, $title, $description, $categoryPlugins) {
         Id             = $featureId
         Title          = $title
         Description    = $description
-        Level          = '1'
+        Level          = '2'
         Display        = 'expand'
         AllowAbsent    = 'yes'
         AllowAdvertise = 'no'
@@ -166,7 +166,7 @@ function Add-RollupFeature($featureId, $title, $description, $categoryPlugins) {
             Id             = (Get-FeatureId $p.name)
             Title          = $p.displayName
             Description    = $p.description
-            Level          = '1'
+            Level          = '2'
             AllowAbsent    = 'yes'
             AllowAdvertise = 'no'
         }
