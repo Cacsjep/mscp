@@ -66,6 +66,7 @@ hide:
     The installer is not code-signed, so Windows SmartScreen may show a **"Windows protected your PC"** dialog when you run it. This is normal for unsigned open-source software. Click **More info** and then **Run anyway** to proceed with the installation.
 
 ## Installation Video
+**Since V3.4.16 you need to enable what you want to install.**
 <video controls width="100%">
   <source src="../vids/installation.mp4" type="video/mp4">
 </video>
@@ -76,7 +77,7 @@ hide:
 
 1. Download `MSCPlugins-vX.X-Setup.msi` from the [Releases](https://github.com/Cacsjep/mscp/releases) page
 2. Run as **Administrator**
-3. Select the plugins and drivers you want to install
+3. Select the plugins and drivers you want to install, **since V3.4.16 you need to enable what you want to install.**
 
 !!! note
     The installer handles stopping/starting the required Milestone services automatically. It only stops the Recording Server when device drivers are being installed or removed, and only stops the Event Server when admin plugins are being installed or removed. Smart Client-only or driver-only installs leave the other service untouched.
