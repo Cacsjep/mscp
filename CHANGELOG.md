@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.4.15] - 2026-06-11
+- Fix Metadata Display: Revert LiveChartsCore.SkiaSharpView.WPF version because it introduce a DLL loading issue. GH Issue: #146
+
+## [3.4.14] - 2026-06-07
+- Improve Project: Various internal CI and GH repo improvments regarding to openssf.
+
 ## [3.4.11] - 2026-06-06
 - Add System Status: **Folder & Role - Camera User Status** view item - a tile with two live lists, **Camera Folders** (online / total cameras per device-tree folder) and **Roles** (logged-in / total users per role). In setup mode the tile shows a centered **Open configuration...** button that opens a split window with the settings on the left and a live preview of the tile on the right.
 - Improve System Status: The view item is fully configurable - show all folders and roles or pick them individually, a **Show** mode (all / cameras only / roles only), recording-server prefix toggle, sort (alphabetical or most-offline-first), and styling (text size, count color, offline highlight, row spacing). A **Render mode** switches between **List** (rows) and **Dashboard** (rectangular cards) with a configurable card minimum width.

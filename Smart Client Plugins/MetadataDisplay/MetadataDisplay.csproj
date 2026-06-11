@@ -22,7 +22,7 @@
          each carrying a different rc collide in Smart Client's AppDomain and the
          second one to need a type hits TypeLoadException. SkiaSharp/HarfBuzz stay
          external (large + native libSkiaSharp.dll / libHarfBuzzSharp.dll). -->
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.4" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc5.4" />
   </ItemGroup>
 
   <ItemGroup>
