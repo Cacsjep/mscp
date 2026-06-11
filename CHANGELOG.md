@@ -1,8 +1,9 @@
 # Changelog
 
-## [3.4.16] - 2026-06-11
+## [3.4.18] - 2026-06-11
 - Fix Metadata Display: Revert LiveChartsCore.SkiaSharpView.WPF version because it introduce a DLL loading issue. GH Issue: #146
 - Improve Installer: Made all components OPT-In. GH Feature Request: #144
+- Improve Metadata Viewer: Add more filters and exclusion topic via context menus like wireshark: #145
 
 ## [3.4.14] - 2026-06-07
 - Improve Project: Various internal CI and GH repo improvments regarding to openssf.

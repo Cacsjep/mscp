@@ -37,9 +37,16 @@ namespace MetadataViewer.Admin
         private TextBox _txtFilter;
         private Button _btnApplyFilter;
         private Button _btnClearFilter;
+        private CheckBox _chkHideAnalytics;
+        private CheckBox _chkHideNonEvent;
+        private Label _lblTopicFilters;
         private SplitContainer _split;
         private DataGridView _dgv;
         private RichTextBox _rtbPreview;
+        private ContextMenuStrip _dgvMenu;
+        private ToolStripMenuItem _miExcludeTopic;
+        private ToolStripMenuItem _miShowOnlyTopic;
+        private ToolStripMenuItem _miClearTopicFilters;
 
         private Item _selectedMetadataItem;
         private MetadataLiveSource _liveSource;
@@ -49,6 +56,12 @@ namespace MetadataViewer.Admin
         private int _seqCounter;
         private bool _suppressUserChange;
         private string _currentFilter = "";
+
+        // Session-only display filters (not persisted to item config).
+        private bool _hideAnalytics = true;
+        private bool _hideNonEvent = true;
+        private readonly HashSet<string> _excludedTopics = new HashSet<string>(StringComparer.Ordinal);
+        private string _showOnlyTopic; // null = no include-lock; overrides _excludedTopics when set
         private System.Windows.Forms.Timer _heartbeatTimer;
         private DateTime _subscribeStartUtc;
 
@@ -124,14 +137,51 @@ namespace MetadataViewer.Admin
             _btnApplyFilter = new Button { Text = "Apply", Location = new Point(385, 100), Width = 70 };
             _btnApplyFilter.Click += (s, e) => ApplyFilter();
             _btnClearFilter = new Button { Text = "Clear", Location = new Point(460, 100), Width = 70 };
-            _btnClearFilter.Click += (s, e) => { _txtFilter.Text = ""; ApplyFilter(); };
+            _btnClearFilter.Click += (s, e) =>
+            {
+                // Clear the text filter and any topic rules added via right-click.
+                _txtFilter.Text = "";
+                _excludedTopics.Clear();
+                _showOnlyTopic = null;
+                ApplyFilter();
+            };
+
+            _chkHideAnalytics = new CheckBox
+            {
+                Text = "Hide bounding-box / analytics frames",
+                Location = new Point(545, 103),
+                AutoSize = true,
+                Checked = _hideAnalytics
+            };
+            _chkHideAnalytics.CheckedChanged += (s, e) => { _hideAnalytics = _chkHideAnalytics.Checked; RebuildGrid(); };
+
+            _chkHideNonEvent = new CheckBox
+            {
+                Text = "Hide non-event packets",
+                Location = new Point(810, 103),
+                AutoSize = true,
+                Checked = _hideNonEvent
+            };
+            _chkHideNonEvent.CheckedChanged += (s, e) => { _hideNonEvent = _chkHideNonEvent.Checked; RebuildGrid(); };
+
+            _lblTopicFilters = new Label
+            {
+                Text = "",
+                Location = new Point(12, 126),
+                Size = new Size(1180, 16),
+                AutoEllipsis = true,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                ForeColor = Color.DarkBlue
+            };
+
+            BuildContextMenu();
 
             _split = new SplitContainer
             {
                 Orientation = Orientation.Horizontal,
-                Location = new Point(12, 130),
+                Location = new Point(12, 150),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
-                Size = new Size(1180, 470),
+                Size = new Size(1180, 450),
                 SplitterDistance = 260,
                 SplitterWidth = 6,
                 FixedPanel = FixedPanel.None
@@ -153,6 +203,8 @@ namespace MetadataViewer.Admin
                 AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(245, 245, 245) }
             };
             _dgv.SelectionChanged += (s, e) => RenderPreviewFromSelection();
+            _dgv.CellMouseDown += OnDgvCellMouseDown;
+            _dgv.ContextMenuStrip = _dgvMenu;
             _dgv.Columns.Add(new DataGridViewTextBoxColumn { Name = "Seq",     HeaderText = "Seq#",               Width = 60  });
             _dgv.Columns.Add(new DataGridViewTextBoxColumn { Name = "Capture", HeaderText = "Capture Time (UTC)", Width = 170 });
             _dgv.Columns.Add(new DataGridViewTextBoxColumn { Name = "Topic",   HeaderText = "Event Topic Tree",   Width = 380 });
@@ -192,6 +244,9 @@ namespace MetadataViewer.Admin
             Controls.Add(_txtFilter);
             Controls.Add(_btnApplyFilter);
             Controls.Add(_btnClearFilter);
+            Controls.Add(_chkHideAnalytics);
+            Controls.Add(_chkHideNonEvent);
+            Controls.Add(_lblTopicFilters);
             Controls.Add(_split);
 
             Name = "MetadataViewerUserControl";
@@ -444,12 +499,20 @@ namespace MetadataViewer.Admin
                 var rows = ParseOnvifEvents(xml);
                 if (rows.Count == 0)
                 {
+                    // No ONVIF event parsed. Classify the raw packet so the
+                    // default-on checkboxes can hide the noisy analytics frames
+                    // (bounding boxes) separately from other non-event XML.
+                    bool isAnalytics =
+                        xml.IndexOf("BoundingBox", StringComparison.Ordinal) >= 0 ||
+                        xml.IndexOf("VideoAnalytics", StringComparison.Ordinal) >= 0;
+
                     rows.Add(new MetaRow
                     {
                         Topic = "",
                         CaptureTimeUtc = null,
                         Data = xml,
-                        Info = ""
+                        Info = "",
+                        Kind = isAnalytics ? RowKind.Analytics : RowKind.NonEvent
                     });
                 }
 
@@ -558,12 +621,9 @@ namespace MetadataViewer.Admin
                 {
                     row.Seq = ++_seqCounter;
                     _rows.Add(row);
-                    // Trim oldest from backing store + bottom of grid (oldest is at the bottom since we insert newest on top)
+                    // Trim oldest from the backing store and its matching grid row.
                     while (_rows.Count > MaxRows)
-                    {
-                        _rows.RemoveAt(0);
-                        if (_dgv.Rows.Count > 0) _dgv.Rows.RemoveAt(_dgv.Rows.Count - 1);
-                    }
+                        EvictOldestRow();
 
                     if (PassesFilter(row))
                         InsertDgvRowAtTop(row);
@@ -596,6 +656,14 @@ namespace MetadataViewer.Admin
         private void ApplyFilter()
         {
             _currentFilter = (_txtFilter.Text ?? "").Trim();
+            RebuildGrid();
+        }
+
+        // Rebuilds the grid from the backing store under the current set of
+        // display filters (text box, kind checkboxes, topic include/exclude).
+        // Called whenever any filter changes.
+        private void RebuildGrid()
+        {
             _dgv.SuspendLayout();
             _dgv.Rows.Clear();
             // Iterate oldest → newest and insert at top, so newest ends up on top
@@ -604,16 +672,143 @@ namespace MetadataViewer.Admin
                 if (PassesFilter(r)) InsertDgvRowAtTop(r);
             }
             _dgv.ResumeLayout();
+            UpdateTopicFilterLabel();
             _lblCounter.Text = $"Received: {_packetsReceived} packet(s) · {_rows.Count} row(s) · {_dgv.Rows.Count} visible";
         }
 
         private bool PassesFilter(MetaRow r)
         {
+            // Kind checkboxes (default on) hide the noisy fallback packets.
+            if (r.Kind == RowKind.Analytics && _hideAnalytics) return false;
+            if (r.Kind == RowKind.NonEvent && _hideNonEvent) return false;
+
+            // Topic rules: a single "show only" lock overrides the exclude set.
+            if (_showOnlyTopic != null)
+            {
+                if (!string.Equals(r.Topic ?? "", _showOnlyTopic, StringComparison.Ordinal)) return false;
+            }
+            else if (_excludedTopics.Count > 0 && _excludedTopics.Contains(r.Topic ?? ""))
+            {
+                return false;
+            }
+
+            // Free-text substring filter.
             if (string.IsNullOrEmpty(_currentFilter)) return true;
             var needle = _currentFilter;
             return IndexOfIgnoreCase(r.Topic, needle) ||
                    IndexOfIgnoreCase(r.Info, needle) ||
                    IndexOfIgnoreCase(r.Data, needle);
+        }
+
+        // Removes the oldest backing row and its matching grid row (if visible).
+        // Oldest visible rows sit at the bottom since newest is inserted on top,
+        // so the search runs bottom-up and usually hits on the first row.
+        private void EvictOldestRow()
+        {
+            var oldest = _rows[0];
+            _rows.RemoveAt(0);
+            for (int i = _dgv.Rows.Count - 1; i >= 0; i--)
+            {
+                if (ReferenceEquals(_dgv.Rows[i].Tag, oldest))
+                {
+                    _dgv.Rows.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+
+        // ─────────── Topic context menu ───────────
+
+        private void BuildContextMenu()
+        {
+            _dgvMenu = new ContextMenuStrip();
+            _miExcludeTopic = new ToolStripMenuItem("Exclude this topic");
+            _miExcludeTopic.Click += OnExcludeTopicClick;
+            _miShowOnlyTopic = new ToolStripMenuItem("Show only this topic");
+            _miShowOnlyTopic.Click += OnShowOnlyTopicClick;
+            _miClearTopicFilters = new ToolStripMenuItem("Clear topic filters");
+            _miClearTopicFilters.Click += OnClearTopicFiltersClick;
+
+            _dgvMenu.Items.Add(_miExcludeTopic);
+            _dgvMenu.Items.Add(_miShowOnlyTopic);
+            _dgvMenu.Items.Add(new ToolStripSeparator());
+            _dgvMenu.Items.Add(_miClearTopicFilters);
+            _dgvMenu.Opening += OnDgvMenuOpening;
+        }
+
+        // Select the right-clicked row before the menu opens so the actions
+        // operate on it (and the preview pane follows).
+        private void OnDgvCellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right || e.RowIndex < 0) return;
+            _dgv.ClearSelection();
+            _dgv.Rows[e.RowIndex].Selected = true;
+            if (e.ColumnIndex >= 0)
+                _dgv.CurrentCell = _dgv.Rows[e.RowIndex].Cells[e.ColumnIndex];
+        }
+
+        private void OnDgvMenuOpening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var row = SelectedMetaRow();
+            var topic = row?.Topic ?? "";
+            bool hasTopic = !string.IsNullOrEmpty(topic);
+
+            // Topic actions only apply to rows with a real topic; analytics /
+            // non-event rows (empty topic) are governed by the checkboxes.
+            _miExcludeTopic.Enabled = hasTopic && _showOnlyTopic == null && !_excludedTopics.Contains(topic);
+            _miShowOnlyTopic.Enabled = hasTopic && !string.Equals(_showOnlyTopic, topic, StringComparison.Ordinal);
+            _miClearTopicFilters.Enabled = _excludedTopics.Count > 0 || _showOnlyTopic != null;
+
+            _miExcludeTopic.Text = hasTopic ? "Exclude topic: " + Ellipsize(topic) : "Exclude this topic";
+            _miShowOnlyTopic.Text = hasTopic ? "Show only topic: " + Ellipsize(topic) : "Show only this topic";
+
+            if (!_miExcludeTopic.Enabled && !_miShowOnlyTopic.Enabled && !_miClearTopicFilters.Enabled)
+                e.Cancel = true;
+        }
+
+        private void OnExcludeTopicClick(object sender, EventArgs e)
+        {
+            var row = SelectedMetaRow();
+            if (row == null || string.IsNullOrEmpty(row.Topic)) return;
+            _excludedTopics.Add(row.Topic);
+            RebuildGrid();
+        }
+
+        private void OnShowOnlyTopicClick(object sender, EventArgs e)
+        {
+            var row = SelectedMetaRow();
+            if (row == null || string.IsNullOrEmpty(row.Topic)) return;
+            _showOnlyTopic = row.Topic;
+            RebuildGrid();
+        }
+
+        private void OnClearTopicFiltersClick(object sender, EventArgs e)
+        {
+            _excludedTopics.Clear();
+            _showOnlyTopic = null;
+            RebuildGrid();
+        }
+
+        private MetaRow SelectedMetaRow()
+        {
+            if (_dgv.SelectedRows.Count == 0) return null;
+            return _dgv.SelectedRows[0].Tag as MetaRow;
+        }
+
+        private void UpdateTopicFilterLabel()
+        {
+            if (_showOnlyTopic != null)
+                _lblTopicFilters.Text = "Show only topic: " + _showOnlyTopic;
+            else if (_excludedTopics.Count > 0)
+                _lblTopicFilters.Text = $"Excluded topics ({_excludedTopics.Count}): " + string.Join(", ", _excludedTopics);
+            else
+                _lblTopicFilters.Text = "";
+        }
+
+        private static string Ellipsize(string s, int max = 48)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            return s.Length <= max ? s : s.Substring(0, max) + "…";
         }
 
         private static bool IndexOfIgnoreCase(string haystack, string needle)
@@ -815,6 +1010,13 @@ namespace MetadataViewer.Admin
 
         // ─────────── Row DTO ───────────
 
+        private enum RowKind
+        {
+            Event,     // parsed ONVIF tt:Event / NotificationMessage
+            Analytics, // fallback packet carrying tt:VideoAnalytics / BoundingBox frames
+            NonEvent   // fallback packet that is neither an event nor analytics
+        }
+
         private class MetaRow
         {
             public int Seq;
@@ -823,6 +1025,7 @@ namespace MetadataViewer.Admin
             public DateTime ReceivedUtc;     // set when the packet hit the plugin
             public string Data;
             public string Info;
+            public RowKind Kind = RowKind.Event;
         }
     }
 }
