@@ -384,33 +384,54 @@ namespace SystemStatus.Background
                 int rsCount = 0;
                 foreach (var rs in management.RecordingServerFolder.RecordingServers)
                 {
-                    if (rs == null || !rs.Enabled) continue;
-                    var baseUri = RecorderBaseUri(rs);
-                    if (baseUri == null) { Log.Info($"Recording server '{rs.Name}' has no usable web Uri - skipped"); continue; }
-                    rsCount++;
-                    if (!recorders.ContainsKey(baseUri))
-                        recorders[baseUri] = string.IsNullOrEmpty(rs.Name) ? baseUri.Host : rs.Name;
-
-                    int cams = 0;
-                    foreach (var hw in rs.HardwareFolder.Hardwares)
+                    // Per-recorder isolation: a single offline / half-configured recording server
+                    // (whose property or hardware/camera access throws) must not abort enumeration
+                    // of the others, nor discard the recorders already collected. Without this, one
+                    // bad recorder forced a full fall back to the login-scoped device-tree walk,
+                    // which surfaced fewer recording servers than actually exist.
+                    try
                     {
-                        if (hw == null || !hw.Enabled) continue;
-                        foreach (var cam in hw.CameraFolder.Cameras)
+                        if (rs == null || !rs.Enabled) continue;
+                        var baseUri = RecorderBaseUri(rs);
+                        if (baseUri == null) { Log.Info($"Recording server '{rs.Name}' has no usable web Uri - skipped"); continue; }
+                        rsCount++;
+                        if (!recorders.ContainsKey(baseUri))
+                            recorders[baseUri] = string.IsNullOrEmpty(rs.Name) ? baseUri.Host : rs.Name;
+
+                        int cams = 0;
+                        foreach (var hw in rs.HardwareFolder.Hardwares)
                         {
-                            if (cam == null || !cam.Enabled) continue;
-                            if (!Guid.TryParse(cam.Id, out var id)) continue;
-                            map[id] = cam.Name;
-                            recMap[id] = baseUri;
-                            cams++;
+                            if (hw == null || !hw.Enabled) continue;
+                            foreach (var cam in hw.CameraFolder.Cameras)
+                            {
+                                if (cam == null || !cam.Enabled) continue;
+                                if (!Guid.TryParse(cam.Id, out var id)) continue;
+                                map[id] = cam.Name;
+                                recMap[id] = baseUri;
+                                cams++;
+                            }
                         }
+                        Log.Info($"Recording server '{rs.Name}' @ {baseUri} : {cams} enabled camera(s)");
                     }
-                    Log.Info($"Recording server '{rs.Name}' @ {baseUri} : {cams} enabled camera(s)");
+                    catch (Exception rex)
+                    {
+                        string name = "?";
+                        try { name = rs?.Name ?? "?"; } catch { }
+                        // Fold the exception text into the message: the SDK's exception-array
+                        // overload does not surface in MIPLog at this level, so the bare reason
+                        // would otherwise be lost.
+                        var reason = rex.Message;
+                        if (rex.InnerException != null) reason += " -> " + rex.InnerException.Message;
+                        Log.Error($"Recording server '{name}' enumeration failed - skipped: {rex.GetType().Name}: {reason}", rex);
+                    }
                 }
                 return rsCount > 0;
             }
             catch (Exception ex)
             {
-                Log.Error("Config API recorder enumeration failed - falling back to device-tree walk", ex);
+                var reason = ex.Message;
+                if (ex.InnerException != null) reason += " -> " + ex.InnerException.Message;
+                Log.Error($"Config API recorder enumeration failed - falling back to device-tree walk: {ex.GetType().Name}: {reason}", ex);
                 return false;
             }
         }

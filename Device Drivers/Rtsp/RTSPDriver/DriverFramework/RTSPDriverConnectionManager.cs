@@ -116,7 +116,7 @@ namespace RTSPDriver
             StopChannel(channelIndex, streamIndex);
 
             var buffer = GetOrCreateBuffer(channelIndex, streamIndex);
-            string rtspUrl = BuildRtspUrl(port, rtspPath);
+            string rtspUrl = BuildRtspUrl(port, rtspPath, transport);
 
             // Audio buffer only on the primary stream
             RtspAudioBuffer audioBuffer = streamIndex == 0 ? GetOrCreateAudioBuffer(channelIndex) : null;
@@ -174,7 +174,7 @@ namespace RTSPDriver
                 connectionTimeoutSec, reconnectIntervalSec, rtpBufferSizeKB);
         }
 
-        private string BuildRtspUrl(int port, string path)
+        private string BuildRtspUrl(int port, string path, string transport)
         {
             string credentials = "";
             if (!string.IsNullOrEmpty(_userName))
@@ -187,7 +187,11 @@ namespace RTSPDriver
             if (!path.StartsWith("/"))
                 path = "/" + path;
 
-            return $"rtsp://{credentials}{_host}:{port}{path}";
+            // RTSPS variants use the TLS scheme; everything else is plain RTSP.
+            transport = (transport ?? "auto").ToLowerInvariant();
+            string scheme = (transport == "rtsps" || transport == "rtsps-untrusted") ? "rtsps" : "rtsp";
+
+            return $"{scheme}://{credentials}{_host}:{port}{path}";
         }
 
         public override void Close()

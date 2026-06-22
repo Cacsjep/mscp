@@ -7,7 +7,7 @@ namespace RTSPDriver
     {
         public const string DriverVersion = "1.0";
         public const string DriverDisplayName = "RTSP-Driver";
-        public const int MaxDevices = 4;
+        public const int MaxDevices = 16;
 
         public static readonly ProductDefinition Product1 = new ProductDefinition
         {
@@ -62,6 +62,18 @@ namespace RTSPDriver
             new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8002"),
             new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8003"),
             new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8004"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8005"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8006"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8007"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8008"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8009"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a800a"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a800b"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a800c"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a800d"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a800e"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a800f"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8010"),
         };
 
         /// <summary>
@@ -74,6 +86,18 @@ namespace RTSPDriver
             new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8012"),
             new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8013"),
             new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8014"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8015"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8016"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8017"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8018"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8019"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a801a"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a801b"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a801c"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a801d"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a801e"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a801f"),
+            new Guid("a4c7e291-3f5b-4d8a-9c1e-7b2d4f6a8020"),
         };
 
         /// <summary>

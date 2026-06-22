@@ -16,7 +16,7 @@ namespace RTSPDriver.Rtsp
     {
         private readonly int _channelIndex;
         private readonly string _rtspUrl;
-        private readonly string _transport; // "tcp", "udp", or "auto"
+        private readonly string _transport; // "tcp", "udp", "auto", "rtsps", or "rtsps-untrusted"
         private readonly int _connectionTimeoutSec;
         private readonly int _reconnectIntervalSec;
         private readonly int _rtpBufferSizeKB;
@@ -153,11 +153,21 @@ namespace RTSPDriver.Rtsp
 
                 // Set RTSP options
                 AVDictionary* opts = null;
-                if (_transport == "tcp")
+                bool isTls = _transport == "rtsps" || _transport == "rtsps-untrusted";
+                if (_transport == "tcp" || isTls)
+                    // RTSPS is TLS-tunneled and must use interleaved TCP transport.
                     ffmpeg.av_dict_set(&opts, "rtsp_transport", "tcp", 0);
                 else if (_transport == "udp")
                     ffmpeg.av_dict_set(&opts, "rtsp_transport", "udp", 0);
                 // else "auto": FFmpeg defaults to UDP, which is preferred for LAN surveillance
+
+                if (isTls)
+                {
+                    // TLS via Windows SChannel (bundled FFmpeg is built with --enable-schannel).
+                    // The "untrusted" variant skips certificate validation for self-signed camera certs.
+                    string tlsVerify = _transport == "rtsps-untrusted" ? "0" : "1";
+                    ffmpeg.av_dict_set(&opts, "tls_verify", tlsVerify, 0);
+                }
 
                 long timeoutUs = _connectionTimeoutSec * 1_000_000L;
                 ffmpeg.av_dict_set(&opts, "stimeout", timeoutUs.ToString(), 0);     // RTSP socket connect/setup timeout
@@ -458,8 +468,14 @@ namespace RTSPDriver.Rtsp
             if (ffmpegMsg.Contains("Connection refused"))
                 return $"Connection refused ({_transport.ToUpper()}) - device unreachable or port blocked";
 
-            if (ffmpegMsg.Contains("Connection timed out") || ffmpegMsg.Contains("Timed out"))
-                return $"Connection timed out after {_connectionTimeoutSec}s - check network and IP address";
+            // Windows' av_strerror has no readable text for ETIMEDOUT, so it surfaces as the raw
+            // "Error number -138 occurred". Match the numeric code too: AVERROR(ETIMEDOUT) == -138
+            // on Windows (MSVC defines errno ETIMEDOUT == 138). This is the timeout from the
+            // Connection Timeout setting expiring during the RTSP handshake or first read.
+            const int AverrorETimedOutWin = -138;
+            if (errorCode == AverrorETimedOutWin
+                || ffmpegMsg.Contains("Connection timed out") || ffmpegMsg.Contains("Timed out"))
+                return $"Connection timed out after {_connectionTimeoutSec}s - check network/IP and increase Connection Timeout";
 
             // Check 404 before 401 — some cameras return 401 for invalid paths
             if (ffmpegMsg.Contains("404") || ffmpegMsg.Contains("Not Found"))

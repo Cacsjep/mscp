@@ -104,8 +104,9 @@ namespace RTSPDriver
 
             var transportSetting = _settingsManager.GetSetting(new DeviceSetting(Constants.TransportProtocol, _deviceId, "auto"));
             string newTransport = (transportSetting?.Value ?? "auto").Trim().ToLowerInvariant();
-            // Normalize: only "tcp", "udp", or "auto" are valid
-            if (newTransport != "tcp" && newTransport != "udp")
+            // Normalize: only "tcp", "udp", "auto", "rtsps", or "rtsps-untrusted" are valid
+            if (newTransport != "tcp" && newTransport != "udp" &&
+                newTransport != "rtsps" && newTransport != "rtsps-untrusted")
                 newTransport = "auto";
 
             var enabledSetting = _settingsManager.GetSetting(new DeviceSetting(Constants.ChannelEnabled, _deviceId, "true"));
