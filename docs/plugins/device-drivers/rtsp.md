@@ -1,6 +1,6 @@
 ---
 title: "RTSP Driver for Milestone XProtect"
-description: "RTSP Driver for Milestone XProtect — pull RTSP streams with H.264/H.265, audio support, dual streams, and visual diagnostics."
+description: "RTSP Driver for Milestone XProtect - pull RTSP streams with H.264/H.265, audio support, dual streams, and visual diagnostics."
 ---
 
 <div class="show-title" markdown>
@@ -165,7 +165,7 @@ To monitor more than 16 cameras, add multiple driver instances with different po
 | DLLs blocked / driver not loading | Right-click the ZIP before extracting → Properties → Unblock. |
 | No audio | Verify the RTSP path includes audio. Some paths (e.g. `?videocodec=h265`) are video-only. Check the driver log for "No audio stream in RTSP source". |
 | Microphone shows error | Audio is only sourced from Stream 1. If Stream 1 has no audio track, the microphone will show an error state. |
-| Stream 2 not working | Verify the secondary RTSP path is valid. Stream 2 is independent — Stream 1 will continue working even if Stream 2 fails. |
+| Stream 2 not working | Verify the secondary RTSP path is valid. Stream 2 is independent - Stream 1 will continue working even if Stream 2 fails. |
 
 ### Testing with VLC
 
