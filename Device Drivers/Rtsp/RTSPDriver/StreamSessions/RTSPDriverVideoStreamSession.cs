@@ -66,7 +66,11 @@ namespace RTSPDriver
         {
             Toolbox.Log.Trace("RTSPVideoStreamSession: Closing channel={0} stream={1} frames={2}", _channelIndex + 1, _streamIndex + 1, _frameCount);
             _settingsManager.OnSettingsChanged -= OnSettingsChanged;
-            _connectionManager.StopChannel(_channelIndex, _streamIndex);
+            // Deliberately do NOT stop the worker here. The RTSP pull is owned by the hardware
+            // connection, not by individual stream sessions. Milestone opens a session per consumer
+            // and re-subscribes (close + reopen) on config changes, live-view toggles, etc.; stopping
+            // the worker on each session close would reconnect the camera every time. The worker is
+            // stopped on a real config change, channel disable (RestartChannel), or Container.Close.
             base.Close();
         }
 
