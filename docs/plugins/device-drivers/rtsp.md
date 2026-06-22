@@ -1,6 +1,6 @@
 ---
 title: "RTSP Driver for Milestone XProtect"
-description: "RTSP Driver for Milestone XProtect — pull RTSP streams with H.264/H.265, audio support, dual streams, and visual diagnostics."
+description: "RTSP Driver for Milestone XProtect - pull RTSP streams with H.264/H.265, audio support, dual streams, and visual diagnostics."
 ---
 
 <div class="show-title" markdown>
@@ -88,7 +88,7 @@ The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). Th
 | **RTSP Port** | `554` | RTSP port on the camera. Standard is 554. Shared by both streams. |
 | **RTSP Path (Stream 1)** | *(empty)* | Primary stream path (e.g. `/axis-media/media.amp`). Channel stays idle until configured. Audio is sourced from this stream. |
 | **RTSP Path (Stream 2)** | *(empty)* | Secondary stream path for adaptive streaming (e.g. lower resolution). Leave empty to disable. |
-| **Transport Protocol** | `Auto (prefer UDP)` | `Auto` uses UDP (standard for LAN surveillance). `TCP` forces interleaved RTP-over-TCP. `UDP` forces RTP-over-UDP. Applies to both streams. |
+| **Transport Protocol** | `Auto (prefer UDP)` | `Auto` uses UDP (standard for LAN surveillance). `TCP` forces interleaved RTP-over-TCP. `UDP` forces RTP-over-UDP. Two RTSPS (RTSP over TLS) options are also available for secure connections. Applies to both streams. |
 | **Channel Enabled** | `true` | Disable to stop pulling from this channel without removing the configuration. |
 
 ### Transport Protocol
@@ -98,6 +98,11 @@ The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). Th
 | **Auto (prefer UDP)** | Uses UDP by default, the standard for LAN video surveillance | Default, works with most cameras on local networks |
 | **TCP (interleaved)** | Forces RTP interleaved over the RTSP TCP connection | Firewalls blocking UDP, NAT traversal, reliable delivery |
 | **UDP** | Forces RTP over separate UDP ports | Low-latency requirements, local networks with no packet loss |
+| **RTSPS (TLS, verify certificate)** | RTSP tunneled over TLS, with the camera certificate validated against the Windows certificate store | Cameras with a CA-signed (trusted) certificate |
+| **RTSPS Untrusted (TLS, skip certificate check)** | RTSP over TLS without certificate validation | Cameras with a self-signed certificate (the common case) |
+
+!!! info "RTSPS uses TLS over TCP"
+    Both RTSPS options always use interleaved TCP transport, since TLS does not apply to UDP. Set the **RTSP Port** to the camera's secure RTSP port (commonly 322 or 443, camera-specific).
 
 ### Events
 
@@ -125,9 +130,9 @@ When the channel is not streaming live video, the driver shows rich JPEG status 
 | **No Video Track** | Warning that the RTSP source has no video stream |
 | **Channel Disabled** | "Channel Disabled" with instructions to enable |
 
-## 4-Channel Architecture
+## 16-Channel Architecture
 
-Each driver instance supports **4 independent channels**. Each channel:
+Each driver instance supports **16 independent channels**. Each channel:
 
 - Supports **2 video streams** (primary + secondary) for adaptive streaming
 - Has a **microphone device** for audio from the primary stream
@@ -136,7 +141,10 @@ Each driver instance supports **4 independent channels**. Each channel:
 - Maintains its own frame buffer and reconnection logic
 - Can connect to a different camera or stream
 
-To monitor more than 4 cameras, add multiple driver instances with different ports in the Add Hardware wizard.
+To monitor more than 16 cameras, add multiple driver instances with different ports in the Add Hardware wizard.
+
+!!! note "Channel count and licensing"
+    Each enabled channel is a separate camera device in XProtect and consumes a device license. Running many channels at once is real CPU and memory load on the Recording Server (FFmpeg demux per stream), so size the server for the number of streams you intend to pull.
 
 ## Troubleshooting
 
@@ -146,7 +154,8 @@ To monitor more than 4 cameras, add multiple driver instances with different por
 | "Not Configured" shown | Set the RTSP Path in Management Client for the channel. |
 | "Authentication Failed" | Verify username/password match the camera's RTSP credentials. |
 | "Stream not found (404)" | Check RTSP path - try accessing the full URL with VLC first. |
-| "Connection timed out" | Verify camera IP is reachable. Check firewall rules. |
+| "Connection timed out after Ns" | The RTSP handshake or first read did not finish within the **Connection Timeout**. Verify the camera IP/port is reachable and increase **Connection Timeout** (e.g. to 10s). |
+| RTSPS fails with a certificate error | Use the **RTSPS Untrusted** transport option for cameras with self-signed certificates. The plain **RTSPS** option validates the certificate against the Windows certificate store. |
 | "Connection refused" | Camera is not responding on the configured RTSP port. Check port setting. |
 | "Unsupported Codec" | Camera is sending a codec other than H.264 or H.265. Change camera settings. |
 | Shows 401 for wrong path | Some cameras (e.g. Axis) run authentication before path lookup, returning 401 for invalid paths instead of 404. This is camera behavior (same with VLC/ffprobe). Verify the path is correct first. |
@@ -156,7 +165,7 @@ To monitor more than 4 cameras, add multiple driver instances with different por
 | DLLs blocked / driver not loading | Right-click the ZIP before extracting → Properties → Unblock. |
 | No audio | Verify the RTSP path includes audio. Some paths (e.g. `?videocodec=h265`) are video-only. Check the driver log for "No audio stream in RTSP source". |
 | Microphone shows error | Audio is only sourced from Stream 1. If Stream 1 has no audio track, the microphone will show an error state. |
-| Stream 2 not working | Verify the secondary RTSP path is valid. Stream 2 is independent — Stream 1 will continue working even if Stream 2 fails. |
+| Stream 2 not working | Verify the secondary RTSP path is valid. Stream 2 is independent - Stream 1 will continue working even if Stream 2 fails. |
 
 ### Testing with VLC
 

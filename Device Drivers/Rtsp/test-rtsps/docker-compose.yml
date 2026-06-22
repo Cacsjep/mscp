@@ -1,0 +1,8 @@
+services:
+  rtsps-test:
+    build: .
+    container_name: mscp-rtsps-test
+    ports:
+      - "8554:8554"   # plain RTSP
+      - "8322:8322"   # RTSPS (RTSP over TLS)
+    restart: unless-stopped

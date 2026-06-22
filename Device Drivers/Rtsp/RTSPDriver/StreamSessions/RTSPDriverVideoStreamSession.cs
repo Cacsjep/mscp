@@ -66,7 +66,11 @@ namespace RTSPDriver
         {
             Toolbox.Log.Trace("RTSPVideoStreamSession: Closing channel={0} stream={1} frames={2}", _channelIndex + 1, _streamIndex + 1, _frameCount);
             _settingsManager.OnSettingsChanged -= OnSettingsChanged;
-            _connectionManager.StopChannel(_channelIndex, _streamIndex);
+            // Deliberately do NOT stop the worker here. The RTSP pull is owned by the hardware
+            // connection, not by individual stream sessions. Milestone opens a session per consumer
+            // and re-subscribes (close + reopen) on config changes, live-view toggles, etc.; stopping
+            // the worker on each session close would reconnect the camera every time. The worker is
+            // stopped on a real config change, channel disable (RestartChannel), or Container.Close.
             base.Close();
         }
 
@@ -104,8 +108,9 @@ namespace RTSPDriver
 
             var transportSetting = _settingsManager.GetSetting(new DeviceSetting(Constants.TransportProtocol, _deviceId, "auto"));
             string newTransport = (transportSetting?.Value ?? "auto").Trim().ToLowerInvariant();
-            // Normalize: only "tcp", "udp", or "auto" are valid
-            if (newTransport != "tcp" && newTransport != "udp")
+            // Normalize: only "tcp", "udp", "auto", "rtsps", or "rtsps-untrusted" are valid
+            if (newTransport != "tcp" && newTransport != "udp" &&
+                newTransport != "rtsps" && newTransport != "rtsps-untrusted")
                 newTransport = "auto";
 
             var enabledSetting = _settingsManager.GetSetting(new DeviceSetting(Constants.ChannelEnabled, _deviceId, "true"));
@@ -261,7 +266,7 @@ namespace RTSPDriver
                     Thread.Sleep(sleepMs);
             }
 
-            // Re-check after idle sleep — stream may have gone live during the wait
+            // Re-check after idle sleep - stream may have gone live during the wait
             if (_streamBuffer != null && _streamBuffer.IsLive &&
                 _streamBuffer.TryGetFrame(out byte[] liveData, out bool liveKey, out bool liveHevc, out DateTime liveTs))
             {

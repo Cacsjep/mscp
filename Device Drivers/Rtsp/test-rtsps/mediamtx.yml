@@ -1,0 +1,35 @@
+# MediaMTX config for the MSC RTSP Driver RTSPS test server.
+# Serves one path "/test" (generated H.264 + AAC) over:
+#   - plain RTSP  on 8554
+#   - RTSPS (TLS) on 8322  (self-signed cert baked in by the Dockerfile)
+
+logLevel: info
+
+# --- RTSP / RTSPS ---
+rtsp: true
+rtspTransports: [tcp]          # RTSPS is TLS-over-TCP; keep TCP for both to work cleanly through Docker
+rtspEncryption: "optional"     # accept both rtsp:// (8554) and rtsps:// (8322)
+rtspAddress: :8554
+rtspsAddress: :8322
+rtspServerCert: /server.crt
+rtspServerKey: /server.key
+
+# --- disable everything else ---
+rtmp: false
+hls: false
+webrtc: false
+srt: false
+
+# --- test stream ---
+paths:
+  test:
+    # Generate a continuous 1280x720@15 H.264 test pattern with a 1 kHz AAC tone
+    # and publish it into this path. ffmpeg is bundled in the -ffmpeg image.
+    runOnInit: >
+      ffmpeg -re
+      -f lavfi -i testsrc=size=1280x720:rate=15
+      -f lavfi -i sine=frequency=1000:sample_rate=48000
+      -c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p -g 30
+      -c:a aac -b:a 128k
+      -f rtsp -rtsp_transport tcp rtsp://localhost:8554/$MTX_PATH
+    runOnInitRestart: true

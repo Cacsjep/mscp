@@ -154,6 +154,8 @@ namespace RTSPDriver
                     new StringSetupField { Key = "auto", DisplayName = "Auto (prefer UDP)" },
                     new StringSetupField { Key = "tcp", DisplayName = "TCP (interleaved)" },
                     new StringSetupField { Key = "udp", DisplayName = "UDP" },
+                    new StringSetupField { Key = "rtsps", DisplayName = "RTSPS (TLS, verify certificate)" },
+                    new StringSetupField { Key = "rtsps-untrusted", DisplayName = "RTSPS Untrusted (TLS, skip certificate check)" },
                 }
             });
 
