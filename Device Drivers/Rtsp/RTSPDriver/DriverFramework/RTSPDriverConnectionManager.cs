@@ -23,6 +23,13 @@ namespace RTSPDriver
         private readonly ConcurrentDictionary<int, RtspStreamBuffer> _buffers = new ConcurrentDictionary<int, RtspStreamBuffer>();
         private readonly ConcurrentDictionary<int, RtspAudioBuffer> _audioBuffers = new ConcurrentDictionary<int, RtspAudioBuffer>();
 
+        // Effective config the running worker for each key was started with. Used to skip
+        // redundant restarts: Milestone opens a session per consumer (live, recording, each
+        // client) and every session's init triggers RestartChannel. Without this guard each
+        // new consumer would tear down a working stream and reconnect to the camera.
+        private readonly ConcurrentDictionary<int, WorkerConfig> _workerConfigs = new ConcurrentDictionary<int, WorkerConfig>();
+        private readonly object _restartLock = new object();
+
         /// <summary>
         /// Compute a flat key from channel index + stream index.
         /// </summary>
@@ -135,6 +142,7 @@ namespace RTSPDriver
             if (_workers.TryAdd(key, worker))
             {
                 worker.Start();
+                _workerConfigs[key] = BuildWorkerConfig(port, rtspPath, transport);
                 Toolbox.Log.Trace("RTSPDriverConnectionManager: Started channel {0} stream {1} url={2} transport={3} audio={4}",
                     channelIndex + 1, streamIndex + 1, worker.DisplayUrl, transport, audioBuffer != null ? "yes" : "no");
             }
@@ -146,6 +154,7 @@ namespace RTSPDriver
         internal void StopChannel(int channelIndex, int streamIndex = 0)
         {
             int key = WorkerKey(channelIndex, streamIndex);
+            _workerConfigs.TryRemove(key, out _);
             if (_workers.TryRemove(key, out var worker))
             {
                 worker.Stop();
@@ -154,12 +163,30 @@ namespace RTSPDriver
         }
 
         /// <summary>
-        /// Restart a channel stream with new settings.
+        /// Restart a channel stream with new settings. Skips the stop/start cycle when a worker
+        /// is already running with identical config, so additional consumers (extra live/recording
+        /// sessions) reuse the existing connection instead of bouncing the camera.
         /// </summary>
         internal void RestartChannel(int channelIndex, int streamIndex, int port, string rtspPath, string transport, bool enabled)
         {
-            StopChannel(channelIndex, streamIndex);
-            StartChannel(channelIndex, streamIndex, port, rtspPath, transport, enabled);
+            int key = WorkerKey(channelIndex, streamIndex);
+            bool shouldRun = enabled && !string.IsNullOrWhiteSpace(rtspPath);
+
+            lock (_restartLock)
+            {
+                if (shouldRun
+                    && _workers.ContainsKey(key)
+                    && _workerConfigs.TryGetValue(key, out var running)
+                    && running.Matches(BuildWorkerConfig(port, rtspPath, transport)))
+                {
+                    Toolbox.Log.Trace("RTSPDriverConnectionManager: Channel {0} stream {1} already running with same config, skipping restart",
+                        channelIndex + 1, streamIndex + 1);
+                    return;
+                }
+
+                StopChannel(channelIndex, streamIndex);
+                StartChannel(channelIndex, streamIndex, port, rtspPath, transport, enabled);
+            }
         }
 
         /// <summary>
@@ -194,6 +221,43 @@ namespace RTSPDriver
             return $"{scheme}://{credentials}{_host}:{port}{path}";
         }
 
+        private WorkerConfig BuildWorkerConfig(int port, string rtspPath, string transport)
+            => new WorkerConfig(port, rtspPath, transport, _connectionTimeoutSec, _reconnectIntervalSec, _rtpBufferSizeKB);
+
+        /// <summary>
+        /// Snapshot of the settings a worker was started with, used to detect whether a
+        /// RestartChannel request actually changes anything. Includes the hardware-level
+        /// timeouts since those are baked into the worker at construction.
+        /// </summary>
+        private sealed class WorkerConfig
+        {
+            private readonly int _port;
+            private readonly string _path;
+            private readonly string _transport;
+            private readonly int _timeoutSec;
+            private readonly int _reconnectSec;
+            private readonly int _bufferKB;
+
+            public WorkerConfig(int port, string path, string transport, int timeoutSec, int reconnectSec, int bufferKB)
+            {
+                _port = port;
+                _path = path ?? "";
+                _transport = (transport ?? "auto").ToLowerInvariant();
+                _timeoutSec = timeoutSec;
+                _reconnectSec = reconnectSec;
+                _bufferKB = bufferKB;
+            }
+
+            public bool Matches(WorkerConfig other)
+                => other != null
+                   && _port == other._port
+                   && string.Equals(_path, other._path, StringComparison.Ordinal)
+                   && string.Equals(_transport, other._transport, StringComparison.Ordinal)
+                   && _timeoutSec == other._timeoutSec
+                   && _reconnectSec == other._reconnectSec
+                   && _bufferKB == other._bufferKB;
+        }
+
         public override void Close()
         {
             Toolbox.Log.Trace("RTSPDriverConnectionManager: Closing all channels");
@@ -202,6 +266,7 @@ namespace RTSPDriver
                 kvp.Value.Stop();
             }
             _workers.Clear();
+            _workerConfigs.Clear();
             _connected = false;
             Toolbox.Log.Trace("RTSPDriverConnectionManager: Closed");
         }
