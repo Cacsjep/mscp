@@ -154,7 +154,7 @@ To monitor more than 16 cameras, add multiple driver instances with different po
 | "Not Configured" shown | Set the RTSP Path in Management Client for the channel. |
 | "Authentication Failed" | Verify username/password match the camera's RTSP credentials. |
 | "Stream not found (404)" | Check RTSP path - try accessing the full URL with VLC first. |
-| "Connection timed out after Ns" | The RTSP handshake or first read did not finish within the **Connection Timeout** window (FFmpeg `ETIMEDOUT`, shown as error -138 in the log). Verify the camera IP/port is reachable and increase **Connection Timeout** (e.g. to 10s). |
+| "Connection timed out after Ns" | The RTSP handshake or first read did not finish within the **Connection Timeout**. Verify the camera IP/port is reachable and increase **Connection Timeout** (e.g. to 10s). |
 | RTSPS fails with a certificate error | Use the **RTSPS Untrusted** transport option for cameras with self-signed certificates. The plain **RTSPS** option validates the certificate against the Windows certificate store. |
 | "Connection refused" | Camera is not responding on the configured RTSP port. Check port setting. |
 | "Unsupported Codec" | Camera is sending a codec other than H.264 or H.265. Change camera settings. |
