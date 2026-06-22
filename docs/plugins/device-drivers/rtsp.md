@@ -102,7 +102,7 @@ The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). Th
 | **RTSPS Untrusted (TLS, skip certificate check)** | RTSP over TLS without certificate validation | Cameras with a self-signed certificate (the common case) |
 
 !!! info "RTSPS uses TLS over TCP"
-    Both RTSPS options always use interleaved TCP transport, since TLS does not apply to UDP. Set the **RTSP Port** to the camera's secure RTSP port (commonly 322 or 443, camera-specific). TLS is handled by the bundled FFmpeg build (Windows SChannel), so no extra components are required. Use **RTSPS Untrusted** for cameras with self-signed certificates, otherwise the connection fails certificate validation.
+    Both RTSPS options always use interleaved TCP transport, since TLS does not apply to UDP. Set the **RTSP Port** to the camera's secure RTSP port (commonly 322 or 443, camera-specific).
 
 ### Events
 

@@ -1,11 +1,9 @@
 # Changelog
 
-## [3.4.20] - 2026-06-22
+## [3.4.21] - 2026-06-22
 - Add RTSP Driver: RTSPS (RTSP over TLS) transport. The per-channel Transport Protocol now offers "RTSPS (TLS, verify certificate)" and "RTSPS Untrusted (TLS, skip certificate check)" for cameras that serve RTSP over TLS, including those with self-signed certificates. TLS is handled by the bundled FFmpeg build (Windows SChannel), so no extra components are required.
 - Improve RTSP Driver: Raised the maximum number of channels per driver instance from 4 to 16.
 - Improve RTSP Driver: Connection timeouts now show a readable "Connection timed out after Ns" message instead of the raw "Error number -138 occurred" (FFmpeg ETIMEDOUT on Windows).
-
-## [3.4.19] - 2026-06-17
 - Fix System Status: Recording servers could be undercounted in the overview (e.g. 2 shown of 3 present). The config-based recorder enumeration aborted on the first problematic recording server, discarded the recorders already collected, and fell back to the login-scoped device-tree walk - which surfaces fewer recorders than exist. Each recording server is now enumerated in isolation, so one offline or misconfigured recorder is skipped without hiding the others.
 - Improve System Status: The exact reason a recording server is skipped is now written to MIPLog (exception type and message, plus inner exception), instead of only a generic "enumeration failed" line.
 
