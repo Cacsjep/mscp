@@ -39,7 +39,7 @@ namespace RTSPDriver
                 return false;
             }
 
-            // Wait for audio data to appear. Enforce minimum 5s — the Recording Server
+            // Wait for audio data to appear. Enforce minimum 5s - the Recording Server
             // sometimes gives only 1s timeout which isn't enough for initial connection.
             int remainingMs = Math.Max((int)timeout.TotalMilliseconds, 5000);
             while (remainingMs > 0)
@@ -58,7 +58,7 @@ namespace RTSPDriver
                     uint codecType = _audioBuffer.CodecType;
                     uint codecSubtype = _audioBuffer.CodecSubtype;
 
-                    // For compressed codecs (AAC, G.711), bitsPerSample may be 0 — use raw byte length
+                    // For compressed codecs (AAC, G.711), bitsPerSample may be 0 - use raw byte length
                     int sampleCount = 0;
                     int bytesPerSample = bitsPerSample > 0 ? bitsPerSample / 8 : 0;
                     if (bytesPerSample > 0 && channels > 0)
@@ -85,13 +85,13 @@ namespace RTSPDriver
                 remainingMs -= waitMs;
             }
 
-            // Timed out — no audio. Log once per state change to avoid spam.
+            // Timed out - no audio. Log once per state change to avoid spam.
             if (!_loggedNoAudio)
             {
                 _loggedNoAudio = true;
                 var worker = _connectionManager.GetWorker(_channelIndex, 0);
                 string url = worker?.DisplayUrl ?? "no worker";
-                Toolbox.Log.Trace("RTSPAudioStreamSession[ch{0}]: No audio data from {1} — isLive={2}. " +
+                Toolbox.Log.Trace("RTSPAudioStreamSession[ch{0}]: No audio data from {1} - isLive={2}. " +
                     "Check your RTSP path includes audio.", _channelIndex + 1, url, _audioBuffer.IsLive);
             }
             return false;

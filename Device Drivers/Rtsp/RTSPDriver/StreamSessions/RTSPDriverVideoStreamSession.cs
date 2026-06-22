@@ -262,7 +262,7 @@ namespace RTSPDriver
                     Thread.Sleep(sleepMs);
             }
 
-            // Re-check after idle sleep — stream may have gone live during the wait
+            // Re-check after idle sleep - stream may have gone live during the wait
             if (_streamBuffer != null && _streamBuffer.IsLive &&
                 _streamBuffer.TryGetFrame(out byte[] liveData, out bool liveKey, out bool liveHevc, out DateTime liveTs))
             {

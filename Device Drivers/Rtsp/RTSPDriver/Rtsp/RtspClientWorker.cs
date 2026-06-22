@@ -126,7 +126,7 @@ namespace RTSPDriver.Rtsp
                 if (!_running) break;
 
                 _state = RtspWorkerState.Reconnecting;
-                Toolbox.Log.Trace("RtspClientWorker[{0}]: {1} — reconnecting in {2}s (attempt {3})",
+                Toolbox.Log.Trace("RtspClientWorker[{0}]: {1} - reconnecting in {2}s (attempt {3})",
                     _channelIndex + 1, _lastError ?? "Disconnected", _reconnectIntervalSec, _reconnectAttempt);
 
                 // Wait for reconnect interval, checking _running periodically
@@ -301,7 +301,7 @@ namespace RTSPDriver.Rtsp
                 int audioFrames = 0;
                 bool gotFirstKeyFrame = false;
 
-                // Read loop — packets are already Annex B from RTSP demuxer
+                // Read loop - packets are already Annex B from RTSP demuxer
                 pkt = ffmpeg.av_packet_alloc();
                 while (_running)
                 {
@@ -370,7 +370,7 @@ namespace RTSPDriver.Rtsp
                     totalFrames++;
                     if (isKeyFrame) keyFrames++;
 
-                    // Skip all frames until first keyframe — decoder can't start without SPS/PPS + IDR
+                    // Skip all frames until first keyframe - decoder can't start without SPS/PPS + IDR
                     if (!gotFirstKeyFrame)
                     {
                         if (!isKeyFrame)
@@ -477,7 +477,7 @@ namespace RTSPDriver.Rtsp
                 || ffmpegMsg.Contains("Connection timed out") || ffmpegMsg.Contains("Timed out"))
                 return $"Connection timed out after {_connectionTimeoutSec}s - check network/IP and increase Connection Timeout";
 
-            // Check 404 before 401 — some cameras return 401 for invalid paths
+            // Check 404 before 401 - some cameras return 401 for invalid paths
             if (ffmpegMsg.Contains("404") || ffmpegMsg.Contains("Not Found"))
                 return "Stream not found (404) - check RTSP path";
 
@@ -540,7 +540,7 @@ namespace RTSPDriver.Rtsp
             hdr[1] = 0xF1;                                                       // Sync word low + MPEG-4 + Layer 0 + no CRC
             hdr[2] = (byte)((profile << 6) | (freqIndex << 2) | ((chanConfig >> 2) & 0x01)); // Profile + freq + channel high
             hdr[3] = (byte)((chanConfig & 0x03) << 6);                           // Channel low + frame length will be patched
-            hdr[4] = 0;                                                           // Frame length mid — patched per packet
+            hdr[4] = 0;                                                           // Frame length mid - patched per packet
             hdr[5] = 0x1F;                                                        // Frame length low + buffer fullness high
             hdr[6] = 0xFC;                                                        // Buffer fullness low + 0 raw frames
             return hdr;
