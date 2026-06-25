@@ -177,9 +177,6 @@ Place your project in the correct category folder:
 
 Based on the Weather, RDP, and Notepad plugin patterns.
 
-<details>
-<summary><b>Show the full Smart Client walkthrough</b> (GUIDs, folder layout, project files, and code templates)</summary>
-
 **GUIDs needed**
 
 | GUID | Purpose | Used In |
@@ -273,7 +270,8 @@ Cannot find resource named 'FontAwesome5FreeSolid'. Resource names are case sens
 
 FontAwesome icons are only available **via code** through the CommunitySDK `PluginIcon.RenderIconSource()` / `PluginIcon.Render()` methods (used in `PluginDefinition` for the plugin icon). For XAML UI, use Unicode characters (e.g. `&#x21BB;` for a rotation arrow) or WPF Path/Geometry instead.
 
-**PluginDefinition**
+<details>
+<summary><b>PluginDefinition (C#)</b></summary>
 
 ```csharp
 using System;
@@ -322,7 +320,10 @@ namespace MyPlugin
 
 Three internal static GUIDs: `PluginId`, `ViewItemKind`, `BackgroundPluginId`. Icon loaded via WPF pack URI from embedded resource.
 
-**ViewItemPlugin**
+</details>
+
+<details>
+<summary><b>ViewItemPlugin (C#)</b></summary>
 
 ```csharp
 using System;
@@ -351,7 +352,10 @@ namespace MyPlugin.Client
 }
 ```
 
-**ViewItemManager**
+</details>
+
+<details>
+<summary><b>ViewItemManager (C#)</b></summary>
 
 ```csharp
 using VideoOS.Platform.Client;
@@ -384,7 +388,10 @@ namespace MyPlugin.Client
 
 Property storage: `GetProperty(key) ?? defaultValue` / `SetProperty(key, value)` / `SaveProperties()`.
 
-**ViewItemWpfUserControl**
+</details>
+
+<details>
+<summary><b>ViewItemWpfUserControl (XAML + C#)</b></summary>
 
 ```xml
 <external:ViewItemWpfUserControl
@@ -466,7 +473,10 @@ Key patterns:
 - Use `Dispatcher.BeginInvoke` for mode change handler (non-UI thread)
 - `FireClickEvent()`/`FireDoubleClickEvent()` for Smart Client selection
 
-**PropertiesWpfUserControl**
+</details>
+
+<details>
+<summary><b>PropertiesWpfUserControl (XAML + C#)</b></summary>
 
 ```xml
 <external:PropertiesWpfUserControl
@@ -516,7 +526,10 @@ namespace MyPlugin.Client
 
 `Init()` loads from manager, `Close()` saves back.
 
-**BackgroundPlugin (Smart Client)**
+</details>
+
+<details>
+<summary><b>BackgroundPlugin (Smart Client) (C#)</b></summary>
 
 ```csharp
 using System;
@@ -540,6 +553,8 @@ namespace MyPlugin.Background
 }
 ```
 
+</details>
+
 **launchSettings.json**
 
 ```json
@@ -553,14 +568,9 @@ namespace MyPlugin.Background
 }
 ```
 
-</details>
-
 #### Admin Plugin (Management Client + Event Server)
 
 Based on the HttpRequests, CertWatchdog, and Auditor plugin patterns.
-
-<details>
-<summary><b>Show the full Admin plugin walkthrough</b> (GUIDs, folder layout, project files, and code templates)</summary>
 
 **GUIDs needed**
 
@@ -656,7 +666,8 @@ Key differences from Smart Client:
 - Admin UI is WinForms (not WPF), so `System.Windows.Forms` is required
 - `HelpPage.html` is `Content` with `CopyToOutputDirectory=Always`
 
-**PluginDefinition (Admin)**
+<details>
+<summary><b>PluginDefinition (Admin) (C#)</b></summary>
 
 ```csharp
 using System;
@@ -781,7 +792,10 @@ namespace MyPlugin
 
 **Critical: ItemNode nesting** - child ItemNodes go in the parent's children list parameter, NOT as separate entries in the flat `_itemNodes` list. This is required for the Rules engine to offer folder/individual/all targeting.
 
-**ItemManager (Admin - parent folder)**
+</details>
+
+<details>
+<summary><b>ItemManager (Admin - parent folder) (C#)</b></summary>
 
 ```csharp
 using System;
@@ -938,7 +952,10 @@ namespace MyPlugin.Admin
 
 **Critical: event registration on the parent ItemManager.** `GetKnownEventGroups`, `GetKnownEventTypes`, `GetKnownStateGroups` must be on the top-level (folder) ItemManager for the Rules engine to discover them.
 
-**ItemManager (Admin - child item)**
+</details>
+
+<details>
+<summary><b>ItemManager (Admin - child item) (C#)</b></summary>
 
 Same pattern as parent but without event registration overrides. Add validation, duplicate support:
 
@@ -978,7 +995,10 @@ private void OnDuplicateRequested(object sender, EventArgs e)
 
 FQID constructor: `new FQID(ServerId, ParentId, ObjectId, FolderType, Kind)` - 5 parameters.
 
-**ActionManager (Rules integration)**
+</details>
+
+<details>
+<summary><b>ActionManager (Rules integration) (C#)</b></summary>
 
 ```csharp
 using System;
@@ -1037,7 +1057,10 @@ namespace MyPlugin.Background
 
 One action definition is sufficient - the Rules engine automatically provides individual / folder / all targeting in the UI.
 
-**BackgroundPlugin (Event Server)**
+</details>
+
+<details>
+<summary><b>BackgroundPlugin (Event Server) (C#)</b></summary>
 
 ```csharp
 using System;
@@ -1118,7 +1141,10 @@ Key patterns:
 - `ThreadPool.QueueUserWorkItem` for async action execution
 - Register `ConfigurationChangedIndication` to reload config on changes
 
-**Admin UserControl (WinForms)**
+</details>
+
+<details>
+<summary><b>Admin UserControl (WinForms) (C#)</b></summary>
 
 Admin plugins use WinForms UserControls (not WPF). Use the Designer for layout.
 
@@ -1139,6 +1165,8 @@ public partial class MyItemUserControl : UserControl
 
 Property storage uses `item.Properties["Key"] = "value"` (string dictionary).
 
+</details>
+
 **Context menu**
 
 The MIP SDK admin tree only supports three context menu commands:
@@ -1147,8 +1175,6 @@ The MIP SDK admin tree only supports three context menu commands:
 - `RENAME` - F2 inline rename
 
 Override `IsContextMenuValid(string command)` in ItemManager to enable/disable these. Custom context menu items are NOT supported. Use buttons in the detail UserControl instead (e.g. Duplicate).
-
-</details>
 
 #### Common steps (both plugin types)
 
