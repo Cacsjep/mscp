@@ -67,8 +67,10 @@ project.
 ## Adding a new plugin or driver
 
 New components are registered in `plugins.json`, which drives both the CI build
-matrix and the installer generation. See [`new_plugin.md`](new_plugin.md) for the
-step-by-step on wiring up a new plugin, driver, or Smart Client extension.
+matrix and the installer generation. See
+[Adding a New Plugin or Driver](README.md#adding-a-new-plugin-or-driver) in the
+README for the step-by-step on wiring up a new plugin, driver, or Smart Client
+extension.
 
 ## Coding style
 

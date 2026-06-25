@@ -9,22 +9,6 @@ description: "Colored Timeline plugin for Milestone XProtect: render any pair of
 
 Built-in timeline only paints sequences in RED for motion or event/permanent recording. Edge motion and other camera-fired events do not appear visual diffrent on the playback timeline at all. This plugin closes that gap.
 
-## Quick Start
-
-1. Open the **Management Client**
-2. Navigate to the **Timeline Rules** node in the sidebar
-3. Right-click and **Create New** to add a rule
-4. Give the rule a name and pick a ribbon color (or tick **Markers only** for marker-only rendering)
-5. Click **Add Camera...** and select the cameras the rule applies to
-6. Pick the **Start event** (and **Stop event** if you want a paired ribbon). You can also double-click a row in the **Events from the last 24 h** table to use it as the Start event; Shift+double-click sets the Stop event
-7. Optionally tick **Marker** under either event side and choose an icon and color
-8. Optionally tick **Auto-close** to cap unmatched Starts at a fixed timeout (the Stop event becomes optional)
-9. Save. Smart Client picks up the change within a few seconds
-
-<video controls width="100%">
-  <source src="../vids/timeline.mp4" type="video/mp4">
-</video>
-
 ## Prerequisites
 
 ### Device-event retention
@@ -39,6 +23,27 @@ In Smart Client open **Settings > Timeline** and set both of:
 - **Additional markers** to **Show** (required for marker rendering)
 
 Without these, the plugin's ribbons and markers are silently suppressed by Smart Client. To enforce them across an installation, set the same two values in **Management Client > Smart Client Profiles > (your profile) > Timeline**. Profile values take effect once each operator's Smart Client reconnects.
+
+!!! tip "Multipart Plugin"
+    This plugin consists of **two parts**: one for the **Management Client**, used to configure the rules, and one for the **Smart Client**. This means you also need to install the plugin on **each dedicated Smart Client machine**.
+
+## Quick Start
+
+1. Open the **Management Client**
+2. Navigate to the **Timeline Rules** node in the sidebar
+3. Right-click and **Create New** to add a rule
+4. Give the rule a name and pick a ribbon color (or tick **Markers only** for marker-only rendering)
+5. Click **Add Camera...** and select the cameras the rule applies to
+6. Pick the **Start event** (and **Stop event** if you want a paired ribbon). You can also double-click a row in the **Events from the last 24 h** table to use it as the Start event; Shift+double-click sets the Stop event
+7. Optionally tick **Marker** under either event side and choose an icon and color
+8. Optionally tick **Auto-close** to cap unmatched Starts at a fixed timeout (the Stop event becomes optional)
+9. Save. Smart Client on same machine and verify, if its a diffrent machine get sure you also install the plugin there.
+
+<video controls width="100%">
+  <source src="../vids/timeline.mp4" type="video/mp4">
+</video>
+
+
 
 ## Camera Selection
 
