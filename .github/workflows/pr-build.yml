@@ -9,14 +9,42 @@ on:
 permissions:
   contents: read
 
+# Docs-only PRs (docs/**, *.md, mkdocs.yml) skip the heavy Windows build
+# matrix. The build/installer jobs are gated on the "changes" filter, while
+# ci-success always runs and reports green, so the required
+# "PR Build / ci-success" check is satisfied without compiling anything.
+
 # A newer push to the same PR cancels the in-flight run.
 concurrency:
   group: pr-build-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Detect whether any non-docs file changed. Docs-only PRs skip the build.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+        id: filter
+        with:
+          # 'every' = a file is a code change only if it matches ALL patterns,
+          # i.e. it is not under docs/, not a *.md, and not mkdocs.yml. With the
+          # default 'some' quantifier the leading '**' would match every file
+          # (including docs) and the negations would be ignored.
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!docs/**'
+              - '!**/*.md'
+              - '!mkdocs.yml'
+
   # Generate the build matrix from plugins.json
   setup:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.gen.outputs.matrix }}
@@ -63,7 +91,8 @@ jobs:
 
   # Matrix build: each plugin compiles in parallel
   build:
-    needs: setup
+    needs: [changes, setup]
+    if: needs.changes.outputs.code == 'true'
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -141,7 +170,8 @@ jobs:
 
   # Build the unified installer (no release) to validate packaging
   installer:
-    needs: [setup, build]
+    needs: [changes, setup, build]
+    if: needs.changes.outputs.code == 'true'
     runs-on: windows-latest
 
     steps:
@@ -250,11 +280,15 @@ jobs:
   # in the ruleset instead of the churning per-plugin matrix job names.
   ci-success:
     if: always()
-    needs: [build, installer]
+    needs: [changes, build, installer]
     runs-on: ubuntu-latest
     steps:
       - name: Verify all build jobs succeeded
         run: |
+          if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
+            echo "Docs-only change, build skipped."
+            exit 0
+          fi
           if [ "${{ needs.build.result }}" != "success" ] || [ "${{ needs.installer.result }}" != "success" ]; then
             echo "Build failed: build=${{ needs.build.result }}, installer=${{ needs.installer.result }}"
             exit 1
