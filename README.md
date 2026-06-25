@@ -11,6 +11,27 @@
 
 A collection of community-built plugins and drivers for Milestone XProtect™, maintained as a single repository with a unified build and installer.
 
+## Contents
+
+- [Installation](#installation)
+  - [Unified Installer (Recommended)](#unified-installer-recommended)
+  - [Manual (ZIP)](#manual-zip)
+- [Building from Source](#building-from-source)
+  - [Local Release Build](#local-release-build)
+- [Development Workflow](#development-workflow)
+  - [Shared Build Infrastructure](#shared-build-infrastructure)
+  - [Launch Profiles](#launch-profiles)
+- [Releasing](#releasing)
+- [Contributing](#contributing)
+  - [Pull Request Guidelines](#pull-request-guidelines)
+  - [Adding a New Plugin or Driver](#adding-a-new-plugin-or-driver)
+    - [Smart Client Plugin](#smart-client-plugin)
+    - [Admin Plugin (Management Client + Event Server)](#admin-plugin-management-client--event-server)
+    - [Common steps (both plugin types)](#common-steps-both-plugin-types)
+- [License](#license)
+
+> Tip: use the outline button (the list icon at the top-right of this file on GitHub) for a live, scrollable navigation tree of every heading.
+
 ## Installation
 
 ### Unified Installer (Recommended)
@@ -155,6 +176,9 @@ Place your project in the correct category folder:
 #### Smart Client Plugin
 
 Based on the Weather, RDP, and Notepad plugin patterns.
+
+<details>
+<summary><b>Show the full Smart Client walkthrough</b> (GUIDs, folder layout, project files, and code templates)</summary>
 
 **GUIDs needed**
 
@@ -529,9 +553,14 @@ namespace MyPlugin.Background
 }
 ```
 
+</details>
+
 #### Admin Plugin (Management Client + Event Server)
 
 Based on the HttpRequests, CertWatchdog, and Auditor plugin patterns.
+
+<details>
+<summary><b>Show the full Admin plugin walkthrough</b> (GUIDs, folder layout, project files, and code templates)</summary>
 
 **GUIDs needed**
 
@@ -1118,6 +1147,8 @@ The MIP SDK admin tree only supports three context menu commands:
 - `RENAME` - F2 inline rename
 
 Override `IsContextMenuValid(string command)` in ItemManager to enable/disable these. Custom context menu items are NOT supported. Use buttons in the detail UserControl instead (e.g. Duplicate).
+
+</details>
 
 #### Common steps (both plugin types)
 
