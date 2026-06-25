@@ -98,5 +98,5 @@ Use GitHub Discussions:
 
 You can also reach us on the **Milestone Developer Community** Discord server. Ask questions, discuss features, or get help with plugin issues.
 
-[:fontawesome-brands-discord: Join Discord](https://discord.gg/EU2HX4Qc){ .md-button .discord-button }
+[:fontawesome-brands-discord: Join Discord](https://discord.gg/Geu5daeGPE){ .md-button .discord-button }
 

@@ -11,7 +11,7 @@ or supported by Milestone Systems.
 
 - **Report a bug:** open a [bug report](https://github.com/Cacsjep/mscp/issues/new?template=bug_report.md).
 - **Request a feature:** open a [feature request](https://github.com/Cacsjep/mscp/issues/new?template=feature_request.md).
-- **Ask or discuss:** use [GitHub Discussions](https://github.com/Cacsjep/mscp/discussions) or the [Discord](https://discord.gg/EU2HX4Qc).
+- **Ask or discuss:** use [GitHub Discussions](https://github.com/Cacsjep/mscp/discussions) or the [Discord](https://discord.gg/Geu5daeGPE).
 - **Report a vulnerability:** do **not** open a public issue. Follow the
   [Security Policy](.github/SECURITY.md) (private reporting via the Security tab).
 

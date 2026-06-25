@@ -25,7 +25,7 @@ Report privately through GitHub's **Private Vulnerability Reporting**:
 3. Describe the issue, affected component/version, and steps to reproduce.
 
 This opens a private channel visible only to the maintainers. If you cannot use
-GitHub, reach out via the [Discord](https://discord.gg/EU2HX4Qc) and ask a
+GitHub, reach out via the [Discord](https://discord.gg/Geu5daeGPE) and ask a
 maintainer to open a private advisory, and **do not post details publicly**.
 
 ## What to include
