@@ -30,6 +30,21 @@ namespace SystemStatus
             if (bytesPerSec <= 0) return "-";
             return (bytesPerSec / 1024.0).ToString("#,0") + " kB/s";
         }
+
+        /// <summary>
+        /// Byte-rate that scales its unit with magnitude (kB/s, MB/s, GB/s, TB/s), keeping the same
+        /// byte base as <see cref="Bitrate"/> so it stays comparable with the per-camera figures.
+        /// Used for the recorder-aggregate bandwidth, which can run into MB/s or GB/s.
+        /// </summary>
+        public static string BitrateScaled(double bytesPerSec)
+        {
+            if (bytesPerSec <= 0) return "-";
+            double v = bytesPerSec / 1024.0; // start in kB/s
+            string[] u = { "kB/s", "MB/s", "GB/s", "TB/s" };
+            int i = 0;
+            while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
+            return (i == 0 ? v.ToString("#,0") : v.ToString("#,0.0")) + " " + u[i];
+        }
     }
 
     /// <summary>
@@ -67,6 +82,44 @@ namespace SystemStatus
                 nameof(UsedPercentValue), nameof(UsageTooltip) })
                 h(this, new PropertyChangedEventArgs(n));
         }
+
+        // Total live bandwidth of all cameras on this recorder (bytes/sec). Computed in the health
+        // window from the camera rows (which know their RecorderHost) and pushed onto every storage
+        // row of the recorder, so each recorder's table row shows its aggregate throughput.
+        private double _recorderBps;
+        public double RecorderBandwidthValue
+        {
+            get => _recorderBps;
+            set
+            {
+                if (_recorderBps == value) return;
+                _recorderBps = value;
+                var h = PropertyChanged;
+                if (h == null) return;
+                h(this, new PropertyChangedEventArgs(nameof(RecorderBandwidthValue)));
+                h(this, new PropertyChangedEventArgs(nameof(RecorderBandwidthText)));
+            }
+        }
+        public string RecorderBandwidthText => _recorderBps > 0 ? ByteFormat.BitrateScaled(_recorderBps) : "-";
+
+        // Online / total camera counts for this recorder (e.g. "69/72"), computed in the health window
+        // and pushed onto every storage row of the recorder.
+        private int _camOnline, _camTotal;
+        public void SetRecorderCameraCounts(int online, int total)
+        {
+            if (_camOnline == online && _camTotal == total) return;
+            _camOnline = online; _camTotal = total;
+            var h = PropertyChanged;
+            if (h == null) return;
+            foreach (var n in new[] { nameof(RecorderCamerasText), nameof(RecorderCamerasOnlineText),
+                nameof(RecorderCamerasTotalText), nameof(RecorderCamerasTotalValue) })
+                h(this, new PropertyChangedEventArgs(n));
+        }
+        public string RecorderCamerasText => _camTotal > 0 ? $"{_camOnline}/{_camTotal}" : "-";
+        // Split parts so the table can show the online count in green and "/total" in accent blue.
+        public string RecorderCamerasOnlineText => _camTotal > 0 ? _camOnline.ToString() : "-";
+        public string RecorderCamerasTotalText => _camTotal > 0 ? "/" + _camTotal : "";
+        public int RecorderCamerasTotalValue => _camTotal;
 
         public string Kind => IsArchive ? "Archive" : "Recording";
         public ulong TotalBytes => UsedBytes + FreeBytes;
@@ -170,7 +223,7 @@ namespace SystemStatus
             }
         }
         public string Fps => Primary != null ? Primary.Fps.ToString("0.0") : "-";
-        public string Bitrate => Streams.Count == 0 ? "-" : ByteFormat.Bitrate(Streams.Sum(s => (double)s.Bps));
+        public string Bitrate => Streams.Count == 0 ? "-" : ByteFormat.BitrateScaled(Streams.Sum(s => (double)s.Bps));
 
         // Numeric backing values for DataGrid column sorting (SortMemberPath).
         public double BitrateValue => Streams.Sum(s => (double)s.Bps);

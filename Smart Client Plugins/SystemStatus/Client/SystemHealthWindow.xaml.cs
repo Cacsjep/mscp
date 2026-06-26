@@ -37,6 +37,7 @@ namespace SystemStatus.Client
         private readonly ObservableCollection<UserRow> _users = new ObservableCollection<UserRow>();
         private readonly Dictionary<Guid, CameraHealthRow> _cameraById = new Dictionary<Guid, CameraHealthRow>();
         private readonly Dictionary<string, StorageRow> _storageByKey = new Dictionary<string, StorageRow>();
+        private int _recorderCount;
         private ICollectionView _camView;
         private ICollectionView _streamView;
         private int _tickCount;
@@ -128,6 +129,8 @@ namespace SystemStatus.Client
                 ReplaceList(_users, result.Users);
                 MergeCameras(result.Cameras, resetRanges: true);
                 RenderErrors(result);
+                _recorderCount = result.RecorderCount;
+                UpdateDashboard();
                 if (_cameras.Count == 0 && _storages.Count == 0 && _users.Count == 0)
                     ShowOverlay(result.Errors.Count > 0 ? "No data - see details below." : "No data.");
                 else
@@ -167,12 +170,15 @@ namespace SystemStatus.Client
                     ReplaceList(_users, snap.Users);
                     MergeCameras(snap.Cameras, resetRanges: false);
                     RenderErrors(snap);
+                    _recorderCount = snap.RecorderCount;
+                    UpdateDashboard();
                 }
                 else
                 {
                     var fresh = await Task.Run(() => plugin.FetchLiveCameraStats());
                     if (_closing || !_autoRefresh) return;
                     MergeCameras(fresh, resetRanges: false);
+                    UpdateDashboard();
                 }
             }
             catch (Exception ex)
@@ -275,6 +281,77 @@ namespace SystemStatus.Client
         {
             target.Clear();
             foreach (var x in source) target.Add(x);
+        }
+
+        // ── Header KPI chips ──────────────────────────────────────────────────
+        // A storage at/above this fill counts as a "Storage Alert" (matches PercentToBrushConverter's orange band).
+        private const double StorageAlertPercent = 90;
+
+        // Recompute the header summary chips from the current in-memory collections. Cheap; called
+        // after every merge.
+        private void UpdateDashboard()
+        {
+            int offline = _cameras.Count(c => c.ConnectivityState == "Offline");
+
+            int storageAlert = _storages.Count(s => s.HasTotal && s.UsedPercentValue >= StorageAlertPercent);
+
+            int recorders = _recorderCount > 0
+                ? _recorderCount
+                : _storages.Select(s => s.RecorderHost).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+
+            kpiRecorders.Text = recorders.ToString();
+            kpiCameras.Text = _cameras.Count.ToString();
+            kpiOffline.Text = offline.ToString();
+            kpiAlert.Text = storageAlert.ToString();
+
+            // The "problem" chips appear only when there is something to report.
+            chipOffline.Visibility = offline > 0 ? Visibility.Visible : Visibility.Collapsed;
+            chipAlert.Visibility = storageAlert > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            UpdateRecorderAggregates();
+        }
+
+        // Per recorder, sum live camera bandwidth and count online/total cameras, then push both onto
+        // every storage row of that recorder so the servers table shows throughput and a "online/all"
+        // camera count.
+        private void UpdateRecorderAggregates()
+        {
+            var bpsByHost = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var onlineByHost = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var totalByHost = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in _cameras)
+            {
+                if (string.IsNullOrEmpty(c.RecorderHost)) continue;
+                bpsByHost.TryGetValue(c.RecorderHost, out var sum);
+                bpsByHost[c.RecorderHost] = sum + c.BitrateValue;
+
+                totalByHost.TryGetValue(c.RecorderHost, out var tot);
+                totalByHost[c.RecorderHost] = tot + 1;
+                if (c.ConnectivityState == "Online")
+                {
+                    onlineByHost.TryGetValue(c.RecorderHost, out var on);
+                    onlineByHost[c.RecorderHost] = on + 1;
+                }
+            }
+            foreach (var s in _storages)
+            {
+                var host = s.RecorderHost ?? "";
+                bpsByHost.TryGetValue(host, out var bps);
+                s.RecorderBandwidthValue = bps;
+                onlineByHost.TryGetValue(host, out var online);
+                totalByHost.TryGetValue(host, out var total);
+                s.SetRecorderCameraCounts(online, total);
+            }
+        }
+
+        private void OnAboutClick(object sender, RoutedEventArgs e)
+        {
+            var ver = GetType().Assembly.GetName().Version;
+            MessageBox.Show(this,
+                "System Health" + Environment.NewLine +
+                "Live recorder, camera and storage overview for XProtect Smart Client." + Environment.NewLine +
+                Environment.NewLine + "Version " + ver,
+                "About System Health", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // ── Recording ranges (throttled, cancellable with the window) ─────────
@@ -464,8 +541,8 @@ namespace SystemStatus.Client
         {
             var rows = serversGrid.Items.OfType<StorageRow>()
                 .Select(s => (IReadOnlyList<string>)new[]
-                { s.RecorderHost, s.State, s.Kind, s.StorageName, s.Path, s.Used, s.Free, s.Total, s.UsedPercent, s.AvailableText });
-            ExportSafely("recording-servers", new[] { "Recorder", "State", "Kind", "Storage", "Path", "Used", "Free", "Total", "Used %", "Available" }, rows);
+                { s.RecorderHost, s.State, s.Kind, s.StorageName, s.Path, s.RecorderCamerasText, s.RecorderBandwidthText, s.Used, s.Free, s.Total, s.UsedPercent, s.AvailableText });
+            ExportSafely("recording-servers", new[] { "Recorder", "State", "Kind", "Storage", "Path", "Cameras", "Bandwidth", "Used", "Free", "Total", "Used %", "Available" }, rows);
         }
 
         private void OnExportCameras(object sender, RoutedEventArgs e)

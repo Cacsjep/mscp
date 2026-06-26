@@ -34,9 +34,9 @@ namespace SystemStatus
         public string FpsText => Fps.ToString("0.0");
         public string FpsRequestedText => FpsRequested > 0 ? FpsRequested.ToString("0.0") : "-";
 
-        // Recorder reports BPS as bytes/sec; the Smart Client video-diagnostics overlay shows kB/s.
+        // Recorder reports BPS as bytes/sec; shown as a byte rate that scales its unit (kB/s, MB/s...).
         // Same formatter as the per-camera aggregate (CameraHealthRow.Bitrate) so they stay in sync.
-        public string BitrateText => ByteFormat.Bitrate(Bps);
+        public string BitrateText => ByteFormat.BitrateScaled(Bps);
         public string FrameSizeText => FrameSizeBytes > 0 ? (FrameSizeBytes / 1024.0).ToString("#,0.0") + " kB" : "-";
 
         public string RoleText

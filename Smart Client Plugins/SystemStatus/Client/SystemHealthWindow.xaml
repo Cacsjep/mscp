@@ -85,6 +85,23 @@
             <Setter Property="Margin"     Value="10,0,0,0"/>
         </Style>
 
+        <!-- KPI summary chip (rounded pill) shown in the header: a bold colored count + a subtle label. -->
+        <Style x:Key="KpiChip" TargetType="Border">
+            <Setter Property="CornerRadius"        Value="4"/>
+            <Setter Property="Padding"             Value="10,4"/>
+            <Setter Property="BorderThickness"     Value="1"/>
+            <Setter Property="Margin"              Value="0,0,8,0"/>
+            <Setter Property="VerticalAlignment"   Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+        <!-- Count + label share one TextBlock at a single font size so the two Runs sit on the same
+             line (auto-centered); only weight/color distinguish the count from the label. -->
+        <Style x:Key="KpiText" TargetType="TextBlock">
+            <Setter Property="FontSize"            Value="12"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment"   Value="Center"/>
+        </Style>
+
         <Style x:Key="FilterButton" TargetType="Button">
             <Setter Property="Background"      Value="Transparent"/>
             <Setter Property="Foreground"      Value="{StaticResource ScSubtle}"/>
@@ -322,10 +339,31 @@
             <Border x:Name="headerBar" Grid.Row="0" Background="Transparent" Margin="0,0,0,12" Cursor="SizeAll">
                 <DockPanel LastChildFill="False">
                     <TextBlock Text="System Health" Style="{StaticResource HeaderText}"
-                               DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                               DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,16,0"/>
+
+                    <!-- KPI summary chips (counts filled in by UpdateDashboard). -->
+                    <Border DockPanel.Dock="Left" Style="{StaticResource KpiChip}"
+                            Background="Transparent" BorderBrush="#552A8FE0">
+                        <TextBlock Style="{StaticResource KpiText}"><Run x:Name="kpiRecorders" Text="-" FontWeight="SemiBold" Foreground="#FF6FB7EE"/><Run Text=" Recorders" Foreground="{StaticResource ScSubtle}"/></TextBlock>
+                    </Border>
+                    <Border DockPanel.Dock="Left" Style="{StaticResource KpiChip}"
+                            Background="Transparent" BorderBrush="#552A8FE0">
+                        <TextBlock Style="{StaticResource KpiText}"><Run x:Name="kpiCameras" Text="-" FontWeight="SemiBold" Foreground="#FF6FB7EE"/><Run Text=" Cameras" Foreground="{StaticResource ScSubtle}"/></TextBlock>
+                    </Border>
+                    <Border x:Name="chipOffline" DockPanel.Dock="Left" Style="{StaticResource KpiChip}"
+                            Background="Transparent" BorderBrush="#55E04545">
+                        <TextBlock Style="{StaticResource KpiText}"><Run x:Name="kpiOffline" Text="-" FontWeight="SemiBold" Foreground="#FFE07A7A"/><Run Text=" Cameras Offline" Foreground="{StaticResource ScSubtle}"/></TextBlock>
+                    </Border>
+                    <Border x:Name="chipAlert" DockPanel.Dock="Left" Style="{StaticResource KpiChip}"
+                            Background="Transparent" BorderBrush="#55E0A23F">
+                        <TextBlock Style="{StaticResource KpiText}"><Run x:Name="kpiAlert" Text="-" FontWeight="SemiBold" Foreground="#FFE0B86F"/><Run Text=" Storage Alerts" Foreground="{StaticResource ScSubtle}"/></TextBlock>
+                    </Border>
+
                     <Button x:Name="closeButton" Content="&#x2715;" Width="28" Height="28" Padding="0"
                             DockPanel.Dock="Right" HorizontalAlignment="Right"
                             Style="{StaticResource CloseButton}" Click="OnCloseClick" ToolTip="Close (Esc)"/>
+                    <Button x:Name="aboutButton" DockPanel.Dock="Right" Content="About" Margin="0,0,8,0"
+                            Style="{StaticResource FilterButton}" Click="OnAboutClick"/>
                     <Button x:Name="refreshButton" DockPanel.Dock="Right" Content="Refresh" Margin="0,0,8,0"
                             Style="{StaticResource FilterButton}" Click="OnRefreshClick"/>
                     <Button x:Name="autoButton" DockPanel.Dock="Right" Margin="0,0,8,0"
@@ -367,6 +405,21 @@
                         <DataGridTextColumn Header="STATE"    Binding="{Binding State}" Width="Auto"/>
                         <DataGridTextColumn Header="STORAGE"  Binding="{Binding StorageName}" Width="1.2*"/>
                         <DataGridTextColumn Header="PATH"     Binding="{Binding Path}" Width="1.8*"/>
+                        <DataGridTemplateColumn Header="CAMERAS" SortMemberPath="RecorderCamerasTotalValue" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                ToolTip="Online / total cameras on this recorder">
+                                        <TextBlock Text="{Binding RecorderCamerasOnlineText}"
+                                                   Foreground="{StaticResource DotOnline}"/>
+                                        <TextBlock Text="{Binding RecorderCamerasTotalText}"
+                                                   Foreground="{StaticResource ScAccent}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="BANDWIDTH" Binding="{Binding RecorderBandwidthText}"
+                                            SortMemberPath="RecorderBandwidthValue" Width="Auto"/>
                         <DataGridTemplateColumn Header="STORAGE USAGE" Width="200" SortMemberPath="UsedPercentValue">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
