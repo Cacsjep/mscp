@@ -159,6 +159,11 @@ namespace RTSPDriver.Rtsp
                     ffmpeg.av_dict_set(&opts, "rtsp_transport", "tcp", 0);
                 else if (_transport == "udp")
                     ffmpeg.av_dict_set(&opts, "rtsp_transport", "udp", 0);
+                else if (_transport == "udp_multicast")
+                    // Join the camera's multicast RTP group. Maps to RTSP_LOWER_TRANSPORT_UDP_MULTICAST.
+                    // The camera must publish a multicast destination in its SETUP/SDP; FFmpeg does not
+                    // fall back to unicast if it does not.
+                    ffmpeg.av_dict_set(&opts, "rtsp_transport", "udp_multicast", 0);
                 // else "auto": FFmpeg defaults to UDP, which is preferred for LAN surveillance
 
                 if (isTls)

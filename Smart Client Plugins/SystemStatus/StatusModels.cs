@@ -9,6 +9,8 @@ namespace SystemStatus
         public Guid Id { get; set; }
         public string Name { get; set; }
         public bool Online { get; set; }
+        // The federated site the camera belongs to ("" / master name on a non-federated system).
+        public string SiteName { get; set; }
 
         // Display-ready so the XAML needs no value converters.
         public string StatusText => Online ? "Online" : "Offline";
@@ -21,6 +23,8 @@ namespace SystemStatus
         // Display-ready secondary line: the client type (e.g. "Smart Client") when known,
         // otherwise a cleaned location. Never a raw IPv6 link-local address.
         public string Secondary { get; set; }
+        // The federated site this session was reported by (empty on a non-federated system).
+        public string SiteName { get; set; }
     }
 
     /// <summary>One camera folder (device group) with its online/total device counts.</summary>

@@ -402,6 +402,8 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="RECORDER" Binding="{Binding RecorderHost}" Width="180" MinWidth="120"/>
+                        <!-- Shown only on a federated system (toggled in UpdateSiteColumns). -->
+                        <DataGridTextColumn x:Name="siteColServers" Header="SITE" Binding="{Binding SiteName}" Width="Auto" Visibility="Collapsed"/>
                         <DataGridTextColumn Header="STATE"    Binding="{Binding State}" Width="Auto"/>
                         <DataGridTextColumn Header="STORAGE"  Binding="{Binding StorageName}" Width="1.2*"/>
                         <DataGridTextColumn Header="PATH"     Binding="{Binding Path}" Width="1.8*"/>
@@ -504,6 +506,8 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
+                        <!-- Shown only on a federated system (toggled in UpdateSiteColumns). -->
+                        <DataGridTextColumn x:Name="siteColCameras" Header="SITE" Binding="{Binding SiteName}" Width="Auto" Visibility="Collapsed"/>
                         <DataGridTextColumn Header="STREAMS"    Binding="{Binding StreamCountText}" SortMemberPath="StreamCount" Width="Auto"/>
                         <DataGridTextColumn Header="RESOLUTION" Binding="{Binding Resolution}" SortMemberPath="PixelValue" Width="Auto"/>
                         <DataGridTextColumn Header="CODEC"      Binding="{Binding Codec}" Width="Auto"/>

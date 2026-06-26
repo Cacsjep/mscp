@@ -1,6 +1,6 @@
 ---
 title: "System Status Plugin for Milestone XProtect"
-description: "System Status plugin for Milestone XProtect Smart Client - a toolbar button that opens a System Health window with three tables: recording servers and their storage, every enabled camera with live stream statistics (FPS, bitrate, resolution, codec), used storage and recording span, and the currently connected users. Also ships a Folder & Role view item showing online cameras per device-tree folder and logged-in users per role, as a list or as dashboard cards."
+description: "System Status plugin for Milestone XProtect Smart Client - a toolbar button that opens a System Health window with three tables: recording servers and their storage, every enabled camera with live stream statistics (FPS, bitrate, resolution, codec), used storage and recording span, and the currently connected users. Works across Milestone Federated Architecture, showing the master and all child sites. Also ships a Folder & Role view item showing online cameras per device-tree folder and logged-in users per role, as a list or as dashboard cards."
 ---
 
 <div class="show-title" markdown>
@@ -46,6 +46,7 @@ One row per storage on each recording server, plus the recorder's attach and con
 | Column | Meaning |
 |---|---|
 | Status dot | Green when the recorder is attached and connected, red otherwise. |
+| Site | The federated site the recorder belongs to. Shown only when more than one site is present. |
 | Recorder | The recording server host. |
 | State | The attach and connection state reported by the recorder. |
 | Storage | The recording or archive storage name. |
@@ -63,13 +64,14 @@ In **Cameras** mode each row aggregates the camera and its streams:
 | Column | Meaning |
 |---|---|
 | Status dot | Green online, red offline, gray when the camera's recorder did not answer (state unknown). |
+| Site | The federated site the camera belongs to. Shown only when more than one site is present. |
 | Camera | The camera name. |
 | Recorder | The owning recording server. Shown in red when that recorder is offline. |
 | Streams | How many video streams the recorder is currently serving for the camera. |
 | Resolution, Codec, FPS, Bitrate | Live figures for the camera's primary stream (FPS and bitrate update on the live refresh). Bitrate is the sum across the camera's streams, with the unit scaling to the value (kB/s, MB/s, GB/s). |
 | Storage used | How much recording space the camera occupies on its recorder. |
 | Storage % | That used space as a percentage of the recorder's total configured storage. |
-| First rec, Last rec | The oldest and newest recorded timestamps, loaded when the window opens or refreshes. |
+| First rec, Last rec | The oldest and newest recorded timestamps. These are pre-loaded in the background from the moment the Smart Client starts, so they are usually already present when the window opens. A cell still being loaded shows **Loading**. |
 | Span | The recorded coverage between first and last, shown compactly (for example `89.9 Days`). |
 
 In **Streams** mode the table flattens to one row per stream across all cameras, so you can see every stream at once without expanding anything. It lists camera, recorder, stream name, resolution, codec, FPS, requested FPS, bitrate, and the stream role (recording, live, or both).
@@ -84,7 +86,7 @@ One row per connected user, with the client type.
 | **Management Client** | An administrator running the Management Client. |
 | **Standalone** | A standalone MIP application or integration. |
 
-Background services such as the Event Server and the Log Server are filtered out, so the list reflects real people and integrations rather than system accounts. When one user holds more than one session, the row shows a count such as `Smart Client (x2)`.
+Background services such as the Event Server and the Log Server are filtered out, so the list reflects real people and integrations rather than system accounts. When one user holds more than one session, the row shows a count such as `Smart Client (x2)`. On a federated system a **Site** column shows which site each session is connected to.
 
 ## Working with the tables
 
@@ -99,7 +101,7 @@ Background services such as the Event Server and the Log Server are filtered out
 
 ## Live auto-refresh
 
-The **Auto 2s** button toggles live updates. While it is on, the camera stream figures (FPS, bitrate, resolution, online state, used storage) refresh every two seconds. The update is merged in place, so your selection, scroll position, and sort order are preserved and the recording-range cells are not re-queried on every tick. Storage figures and recorder state refresh on a slower cycle and on a manual **Refresh** (or **F5**). Turn auto off to hold the current view. All querying stops the moment the window is closed.
+The **Auto 2s** button toggles live updates. While it is on, the camera stream figures (FPS, bitrate, resolution, online state, used storage) refresh every two seconds. The update is merged in place, so your selection, scroll position, and sort order are preserved. The first / last recording cells are read from the background range cache and refresh on the slower cycle, not on every tick. Storage figures and recorder state refresh on a slower cycle and on a manual **Refresh** (or **F5**). Turn auto off to hold the current view. All per-recorder querying stops the moment the window is closed; the background range cache keeps refreshing for the session.
 
 ## Folder & Role view item
 
@@ -139,23 +141,34 @@ In setup mode the tile shows a centered **Open configuration...** button. It ope
 
 Role membership is matched to logins by user name, since the connected-client list does not expose a SID. Active Directory users are matched on account and display name.
 
+## Federated Architecture
+
+The plugin supports Milestone Federated Architecture. On startup it enumerates the master site and every federated child site, so a parent site that has no recording server of its own still shows the recorders, cameras, storage and users of its child sites.
+
+Each site is queried with its own session token (the Smart Client already holds the federated logins) and gets its own message channel for online state and connected users. Recorders, cameras and users are tagged with the site they came from, and on a multi-site system a **Site** column appears in each table and in the CSV exports. On a single, non-federated site the Site columns stay hidden and the window behaves exactly as before.
+
+The discovered sites are logged once at startup (`Sites: N (names)`) under category `SystemStatus - SC BG`, which is the quickest way to confirm all expected child sites were found.
+
 ## How it works
 
-Two layers feed the window.
+Three layers feed the window.
 
-A background component runs for the whole Smart Client session and talks to the Event Server over one message channel. It keeps the per-camera online state and the connected-user list current, which powers the toolbar tooltip and the online dots even before the window is opened. This layer is light and does not talk to the recording servers.
+A background component runs for the whole Smart Client session and talks to each site's Event Server over a per-site message channel. It keeps the per-camera online state and the connected-user list current, which powers the toolbar tooltip and the online dots even before the window is opened. This layer is light and does not talk to the recording servers.
 
-While the System Health window is open, it queries each recording server's status service directly for storage, recorder state, and the live video statistics of that recorder's cameras. These per-recorder calls run in parallel. First and last recorded timestamps are read from the recorded-sequence data for each camera when the window opens or refreshes.
+A second background layer pre-loads the first and last recorded timestamp of every camera. It starts as soon as the Smart Client starts, walks the cameras at a gentle pace (two recorders at a time) into a cache, and rescans the whole cache every 30 minutes. Loading the ranges up front and in small batches avoids the `SequencesGetAroundWithSpan` request timeout that a single all-cameras-at-once query can hit on large systems. The window simply reads this cache.
+
+While the System Health window is open, it queries each recording server's status service directly for storage, recorder state, and the live video statistics of that recorder's cameras. These per-recorder calls run in parallel, across all sites.
 
 | Question | Source |
 |---|---|
-| Which cameras are enabled | The configuration device tree, walked down to the real camera devices. |
-| Which cameras are online | The current device state reported by the Event Server. |
+| Which sites exist | The master site and its federated child sites. |
+| Which cameras are enabled | The configuration device tree of each site, walked down to the real camera devices. |
+| Which cameras are online | The current device state reported by each site's Event Server. |
 | FPS, bitrate, resolution, codec, used storage | The recording server's status service (video device statistics). |
 | Per-recorder bandwidth and camera count | Derived in the client by summing and counting that recorder's cameras. |
 | Storage used and free per server | The recording server's recording and archive storage status. |
-| First and last recording, span | The recorded-sequence data for the camera. |
-| Who is connected, and client type | The MIP environments currently connected to the Event Server. |
+| First and last recording, span | The recorded-sequence data for the camera, pre-loaded into the background range cache. |
+| Who is connected, and client type | The MIP environments currently connected to each site's Event Server. |
 
 ## When a recording server is offline
 
@@ -180,7 +193,8 @@ The connected user needs the rights to read device status, storage and recorder 
 | Cameras show but stream statistics are empty | A camera only reports statistics while it is actively streaming or recording. An enabled but idle camera shows online with no live figures. |
 | A whole recorder's cameras are gray | That recording server did not answer. Confirm it is running and reachable from the client, then check `MIPLog.txt` under category `SystemStatus - SC BG`. |
 | Storage % is empty for a camera | The percentage needs the recorder's total configured storage, which arrives with the storage refresh. It fills in once a full refresh completes. |
-| First and last recording read as a dash | Ranges load on open and refresh, and are skipped for offline recorders. A failed query reads as `error` in `MIPLog.txt`. |
-| Performance on large systems | The log records per-recorder timings on each full fetch and flags any recorder slower than 1.5 seconds, which helps pinpoint a slow or unreachable server. |
+| First and last recording read as a dash or stay on Loading | Ranges are pre-loaded in the background and skipped for offline recorders. A cell shows **Loading** until its background query returns; a failed query reads as `error` in `MIPLog.txt`. The cache is rescanned every 30 minutes. |
+| A child site is missing | Check the startup `Sites: N (names)` line under category `SystemStatus - SC BG` to confirm the site was enumerated. The connected account must have access to that federated site. |
+| Performance on large systems | The log records per-recorder status-service timings on each full fetch (with a per-call breakdown for slow recorders) and a batch summary (min / avg / max / p95 / slowest) for each background range sweep, which helps pinpoint a slow or unreachable server. |
 
 </div>

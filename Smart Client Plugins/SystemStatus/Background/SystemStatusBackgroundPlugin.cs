@@ -73,11 +73,24 @@ namespace SystemStatus.Background
         // Server configuration. Drives the storage panel so every recording server shows up - even
         // ones whose cameras this login can't see (the device tree only surfaced one recorder).
         private Dictionary<Uri, string> _recorders = new Dictionary<Uri, string>();
+        // Recording-server base Uri -> the federated site that owns it. Used to pick the per-site
+        // session token for that recorder's status service and to label rows by site.
+        private Dictionary<Uri, SiteRef> _recorderSite = new Dictionary<Uri, SiteRef>();
+        // ObjectId -> the federated site that owns the camera (display label / grouping).
+        private Dictionary<Guid, string> _cameraSiteName = new Dictionary<Guid, string>();
         // ObjectId -> device-tree folder path (e.g. "video-hq-rec1 / Building A"), captured by walking
         // the Management Client system hierarchy. Optional enrichment for the "Folder" grouping.
         private Dictionary<Guid, string> _cameraFolder = new Dictionary<Guid, string>();
-        // ObjectId -> last reported state string, merged from ProvideCurrentState responses.
+        // ObjectId -> last reported state string, merged from ProvideCurrentState responses (all sites).
         private readonly Dictionary<Guid, string> _deviceStates = new Dictionary<Guid, string>();
+        // The master site plus every federated child site, walked at Init. One entry on a standalone
+        // system; the recorder/camera/user/role enumeration and message channels run once per entry.
+        private List<SiteRef> _sites = new List<SiteRef>();
+        // Connected users and their match-keys bucketed by the site (ServerId.Id) that reported them,
+        // so each site's WhoAreOnline response replaces only its own bucket. Combined into _users /
+        // _connectedUserKeys whenever a bucket changes.
+        private readonly Dictionary<Guid, List<UserRow>> _usersBySite = new Dictionary<Guid, List<UserRow>>();
+        private readonly Dictionary<Guid, HashSet<string>> _connectedKeysBySite = new Dictionary<Guid, HashSet<string>>();
         private List<UserRow> _users = new List<UserRow>();
         // Roles + their assigned members (enumerated from config), and the match-keys of the users
         // currently connected (from WhoAreOnline). Used by the "Folder & Role" view item to show, per
@@ -93,10 +106,23 @@ namespace SystemStatus.Background
             public int Total => Members.Count;
         }
 
-        private ServerId _serverId;
-        private object _whoFilter;
-        private object _stateFilter;
-        private object _endPointChangedFilter;
+        /// <summary>One site in the (possibly federated) hierarchy: the master or a child site.</summary>
+        private sealed class SiteRef
+        {
+            public string Name;
+            public FQID Fqid;         // the site FQID - used for ManagementServer + LoginSettingsCache
+            public ServerId ServerId; // the site's server - used for the message channel
+        }
+
+        /// <summary>One per-site Event Server message channel and its registered filter handles.</summary>
+        private sealed class ChannelReg
+        {
+            public ServerId ServerId;
+            public object Who, State, EndPoint;
+        }
+
+        // One message channel per site (master + federated children). Built at Init, torn down at Close.
+        private readonly List<ChannelReg> _channels = new List<ChannelReg>();
         private object _configReceiver;
         private Timer _timer;
         private volatile bool _closing;
@@ -116,6 +142,10 @@ namespace SystemStatus.Background
             Instance = this;
             Log.Info("Init - log: %ProgramData%\\Milestone\\XProtect Smart Client\\MIPLog.txt");
 
+            // Walk the (possibly federated) site hierarchy once; everything below runs per site.
+            _sites = EnumerateSites();
+            Log.Info($"Sites: {_sites.Count} ({string.Join(", ", _sites.Select(s => s.Name))})");
+
             LoadEnabledCameras();
             LoadRoles();
 
@@ -124,45 +154,26 @@ namespace SystemStatus.Background
                 OnConfigurationChanged,
                 new MessageIdFilter(MessageId.Server.ConfigurationChangedIndication));
 
-            try
-            {
-                _serverId = EnvironmentManager.Instance.MasterSite?.ServerId;
-                if (_serverId == null)
-                {
-                    Log.Error("MasterSite not available - cannot start message communication");
-                }
-                else
-                {
-                    MessageCommunicationManager.Start(_serverId);
-                    var mc = MessageCommunicationManager.Get(_serverId);
+            // One Event Server message channel per site (WhoAreOnline + ProvideCurrentState). Child
+            // sites are already authenticated by the Smart Client, so no explicit AddServer/Login here.
+            foreach (var site in _sites) StartChannel(site);
 
-                    _whoFilter = mc.RegisterCommunicationFilter(
-                        OnWhoAreOnlineResponse,
-                        new CommunicationIdFilter(MessageCommunication.WhoAreOnlineResponse));
-                    _stateFilter = mc.RegisterCommunicationFilter(
-                        OnProvideCurrentStateResponse,
-                        new CommunicationIdFilter(MessageCommunication.ProvideCurrentStateResponse));
-                    // The set of connected endpoints changing is a good trigger to re-ask who is online.
-                    _endPointChangedFilter = mc.RegisterCommunicationFilter(
-                        OnEndPointTableChanged,
-                        new CommunicationIdFilter(MessageCommunication.EndPointTableChangedIndication));
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Failed to start message communication", ex);
-            }
+            // Pre-warm every camera's recording range in the background, gently, starting now - so the
+            // health window shows ranges already loaded (or "pending") instead of stampeding the
+            // recorders with one query per camera the moment the window opens.
+            StartRangePrewarm();
 
             // Periodic refresh + an immediate first poll (timer fires immediately, then every interval).
             _timer = new Timer(_ => SafeRefresh(), null, TimeSpan.FromSeconds(1), RefreshInterval);
 
             RaiseStatusChanged(); // publish the initial (cameras known, nothing online yet) snapshot
-            Log.Info($"Initialized - {_enabledCameras.Count} enabled camera(s), refresh every {RefreshInterval.TotalSeconds:0}s");
+            Log.Info($"Initialized - {_enabledCameras.Count} enabled camera(s) across {_sites.Count} site(s), refresh every {RefreshInterval.TotalSeconds:0}s");
         }
 
         public override void Close()
         {
             _closing = true;
+            StopRangePrewarm();
             try { _timer?.Dispose(); } catch { }
             _timer = null;
 
@@ -172,19 +183,22 @@ namespace SystemStatus.Background
                 _configReceiver = null;
             }
 
-            if (_serverId != null)
+            foreach (var ch in _channels)
             {
                 try
                 {
-                    var mc = MessageCommunicationManager.Get(_serverId);
-                    if (_whoFilter != null) mc.UnRegisterCommunicationFilter(_whoFilter);
-                    if (_stateFilter != null) mc.UnRegisterCommunicationFilter(_stateFilter);
-                    if (_endPointChangedFilter != null) mc.UnRegisterCommunicationFilter(_endPointChangedFilter);
+                    var mc = MessageCommunicationManager.Get(ch.ServerId);
+                    if (mc != null)
+                    {
+                        if (ch.Who != null) mc.UnRegisterCommunicationFilter(ch.Who);
+                        if (ch.State != null) mc.UnRegisterCommunicationFilter(ch.State);
+                        if (ch.EndPoint != null) mc.UnRegisterCommunicationFilter(ch.EndPoint);
+                    }
                 }
                 catch { }
-                try { MessageCommunicationManager.Stop(_serverId); } catch { }
+                try { MessageCommunicationManager.Stop(ch.ServerId); } catch { }
             }
-            _whoFilter = _stateFilter = _endPointChangedFilter = null;
+            _channels.Clear();
             Log.Info("Closed");
         }
 
@@ -193,21 +207,115 @@ namespace SystemStatus.Background
         private void SafeRefresh()
         {
             if (_closing) return;
+            // Ask every site's Event Server who is online and for the current device states. A site
+            // whose channel is down is skipped silently and retried on the next tick.
+            foreach (var ch in _channels)
+            {
+                try
+                {
+                    var mc = MessageCommunicationManager.Get(ch.ServerId);
+                    if (mc == null || !mc.IsConnected) continue;
+
+                    // Both requests broadcast to the server (null destination/source), matching the
+                    // WhoAreOnline / StatusViewer sample pattern.
+                    mc.TransmitMessage(new Message(MessageCommunication.WhoAreOnlineRequest), null, null, null);
+                    mc.TransmitMessage(new Message(MessageCommunication.ProvideCurrentStateRequest), null, null, null);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Refresh request failed for a site channel", ex);
+                }
+            }
+        }
+
+        // Start one Event Server message channel for a site and register the three response filters.
+        private void StartChannel(SiteRef site)
+        {
+            if (site?.ServerId == null) return;
             try
             {
-                if (_serverId == null) return;
-                var mc = MessageCommunicationManager.Get(_serverId);
-                if (mc == null || !mc.IsConnected) return;
-
-                // Both requests broadcast to the server (null destination/source), matching the
-                // WhoAreOnline / StatusViewer sample pattern.
-                mc.TransmitMessage(new Message(MessageCommunication.WhoAreOnlineRequest), null, null, null);
-                mc.TransmitMessage(new Message(MessageCommunication.ProvideCurrentStateRequest), null, null, null);
+                MessageCommunicationManager.Start(site.ServerId);
+                var mc = MessageCommunicationManager.Get(site.ServerId);
+                var reg = new ChannelReg { ServerId = site.ServerId };
+                reg.Who = mc.RegisterCommunicationFilter(
+                    OnWhoAreOnlineResponse,
+                    new CommunicationIdFilter(MessageCommunication.WhoAreOnlineResponse));
+                reg.State = mc.RegisterCommunicationFilter(
+                    OnProvideCurrentStateResponse,
+                    new CommunicationIdFilter(MessageCommunication.ProvideCurrentStateResponse));
+                // The set of connected endpoints changing is a good trigger to re-ask who is online.
+                reg.EndPoint = mc.RegisterCommunicationFilter(
+                    OnEndPointTableChanged,
+                    new CommunicationIdFilter(MessageCommunication.EndPointTableChangedIndication));
+                _channels.Add(reg);
             }
             catch (Exception ex)
             {
-                Log.Error("Refresh request failed", ex);
+                Log.Error($"Failed to start message channel for site '{site.Name}'", ex);
             }
+        }
+
+        // Walk the master site and, in a federated hierarchy, its child sites (recursively). A site
+        // Item's GetChildren() returns its federated child-site Items; the Smart Client has already
+        // loaded and authenticated them, so no explicit login is needed here.
+        private List<SiteRef> EnumerateSites()
+        {
+            var list = new List<SiteRef>();
+            var masterFqid = EnvironmentManager.Instance.MasterSite;
+            if (masterFqid == null)
+            {
+                Log.Error("MasterSite not available - no sites to enumerate");
+                return list;
+            }
+
+            // The site walk needs the master Item (FQID has no GetChildren). If that lookup fails we
+            // still run single-site against the master FQID directly.
+            Item masterItem = null;
+            try { masterItem = Configuration.Instance.GetItem(masterFqid); }
+            catch (Exception ex) { Log.Error("GetItem(MasterSite) failed", ex); }
+
+            if (masterItem == null)
+            {
+                if (masterFqid.ServerId != null)
+                    list.Add(new SiteRef { Name = masterFqid.ServerId.ServerHostname, Fqid = masterFqid, ServerId = masterFqid.ServerId });
+                return list;
+            }
+
+            CollectSites(masterItem, list, new HashSet<Guid>(), 0);
+            return list;
+        }
+
+        // Distinct sites are kept by ServerId: a site Item's GetChildren returns its federated child
+        // sites (each with its own ServerId), while content items share the parent's ServerId and are
+        // skipped by the "seen" set - so no Kind filter is needed (there is no Kind.Site).
+        private void CollectSites(Item site, List<SiteRef> acc, HashSet<Guid> seen, int depth)
+        {
+            var fqid = site?.FQID;
+            if (fqid?.ServerId == null || depth > 8) return;
+            var sid = fqid.ServerId;
+            if (!seen.Add(sid.Id)) return;
+            acc.Add(new SiteRef
+            {
+                Name = string.IsNullOrWhiteSpace(site.Name) ? sid.ServerHostname : site.Name,
+                Fqid = fqid,
+                ServerId = sid
+            });
+
+            bool hasKids;
+            try { hasKids = site.HasChildren != HasChildren.No; } catch { hasKids = true; }
+            if (!hasKids) return;
+
+            List<Item> kids = null;
+            try { kids = site.GetChildren(); }
+            catch (Exception ex) { Log.Error($"GetChildren failed for site '{site.Name}'", ex); }
+            if (kids == null) return;
+            foreach (var k in kids)
+                CollectSites(k, acc, seen, depth + 1);
+        }
+
+        private List<SiteRef> SnapshotSites()
+        {
+            lock (_lock) { return _sites; }
         }
 
         // ── Responses (run on MIP communication threads) ──────────────────────
@@ -267,19 +375,31 @@ namespace SystemStatus.Background
                     }
                 }
 
+                // The site (federated child or master) whose Event Server sent this response. Each
+                // site replaces only its own bucket, so responses from different sites accumulate.
+                Guid siteKey = Guid.Empty;
+                try { siteKey = message?.ExternalMessageSourceEndPoint?.ServerId?.Id ?? Guid.Empty; } catch { }
+                var siteName = SiteNameByServerId(siteKey);
+
                 var users = groups.Values
                     .OrderBy(g => g.User, StringComparer.CurrentCultureIgnoreCase)
                     .ThenBy(g => g.Type, StringComparer.CurrentCultureIgnoreCase)
                     .Select(g => new UserRow
                     {
                         DisplayName = g.User,
-                        Secondary = g.Count > 1 ? $"{g.Type} (x{g.Count})" : g.Type
+                        Secondary = g.Count > 1 ? $"{g.Type} (x{g.Count})" : g.Type,
+                        SiteName = siteName
                     })
                     .ToList();
 
-                Log.Info($"WhoAreOnline: {rawObjs.Count} endpoint(s) -> {users.Count} user/client row(s)");
+                Log.Info($"WhoAreOnline ({(string.IsNullOrEmpty(siteName) ? "?" : siteName)}): {rawObjs.Count} endpoint(s) -> {users.Count} user/client row(s)");
 
-                lock (_lock) { _users = users; _connectedUserKeys = connected; }
+                lock (_lock)
+                {
+                    _usersBySite[siteKey] = users;
+                    _connectedKeysBySite[siteKey] = connected;
+                    RecombineUsersLocked();
+                }
                 RaiseStatusChanged();
             }
             catch (Exception ex)
@@ -335,17 +455,25 @@ namespace SystemStatus.Background
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
+                var sites = SnapshotSites();
                 var map = new Dictionary<Guid, string>();
                 var recMap = new Dictionary<Guid, Uri>();
                 var recorders = new Dictionary<Uri, string>();
+                var recorderSite = new Dictionary<Uri, SiteRef>();
+                var cameraSite = new Dictionary<Guid, string>();
 
                 // Authoritative path: enumerate every recording server (and its cameras) from the
-                // Management Server configuration. This is independent of the device-tree scoping
-                // that was only surfacing one recorder. Fall back to the device-tree walk only if
-                // the config API yields nothing (older sites / restricted config access).
-                bool viaConfig = LoadFromConfig(map, recMap, recorders);
-                if (!viaConfig || map.Count == 0)
-                    LoadFromDeviceTree(map, recMap);
+                // Management Server configuration of EACH site (master + federated children). This is
+                // independent of the device-tree scoping that was only surfacing one recorder. Fall
+                // back to the device-tree walk only if no site's config yielded anything (older sites
+                // / restricted config access / a recorder-less parent with no readable children).
+                int viaConfigSites = 0;
+                foreach (var site in sites)
+                    if (LoadFromConfig(site, map, recMap, recorders, recorderSite, cameraSite))
+                        viaConfigSites++;
+
+                if (viaConfigSites == 0 || map.Count == 0)
+                    LoadFromDeviceTree(map, recMap);   // login-scoped fallback (no per-site labels)
 
                 // Best-effort: capture each camera's device-tree folder path for the "Folder" grouping.
                 // Independent of the camera source above; cameras the walk misses just have no path.
@@ -356,11 +484,12 @@ namespace SystemStatus.Background
                 lock (_lock)
                 {
                     _enabledCameras = map; _cameraRecorderUri = recMap;
-                    _recorders = recorders; _cameraFolder = folders;
+                    _recorders = recorders; _recorderSite = recorderSite;
+                    _cameraSiteName = cameraSite; _cameraFolder = folders;
                 }
                 sw.Stop();
-                Log.Info($"Loaded {map.Count} enabled camera(s) across {recorders.Count} recorder(s) " +
-                         $"(source: {(viaConfig ? "config" : "device tree")}); {folders.Count} folder path(s) " +
+                Log.Info($"Loaded {map.Count} enabled camera(s) across {recorders.Count} recorder(s) / " +
+                         $"{sites.Count} site(s) (config sites: {viaConfigSites}); {folders.Count} folder path(s) " +
                          $"in {sw.ElapsedMilliseconds} ms");
             }
             catch (Exception ex)
@@ -375,12 +504,14 @@ namespace SystemStatus.Background
         /// per-camera recorder Uri, and the recorder list (base Uri -> display name). Returns false
         /// (logged) if the config API is unavailable, so the caller can fall back to the device tree.
         /// </summary>
-        private bool LoadFromConfig(Dictionary<Guid, string> map, Dictionary<Guid, Uri> recMap,
-                                    Dictionary<Uri, string> recorders)
+        private bool LoadFromConfig(SiteRef site, Dictionary<Guid, string> map, Dictionary<Guid, Uri> recMap,
+                                    Dictionary<Uri, string> recorders, Dictionary<Uri, SiteRef> recorderSite,
+                                    Dictionary<Guid, string> cameraSite)
         {
+            if (site?.Fqid == null) return false;
             try
             {
-                var management = new ManagementServer(EnvironmentManager.Instance.MasterSite);
+                var management = new ManagementServer(site.Fqid);
                 int rsCount = 0;
                 foreach (var rs in management.RecordingServerFolder.RecordingServers)
                 {
@@ -393,10 +524,12 @@ namespace SystemStatus.Background
                     {
                         if (rs == null || !rs.Enabled) continue;
                         var baseUri = RecorderBaseUri(rs);
-                        if (baseUri == null) { Log.Info($"Recording server '{rs.Name}' has no usable web Uri - skipped"); continue; }
+                        if (baseUri == null) { Log.Info($"[{site.Name}] Recording server '{rs.Name}' has no usable web Uri - skipped"); continue; }
                         rsCount++;
                         if (!recorders.ContainsKey(baseUri))
                             recorders[baseUri] = string.IsNullOrEmpty(rs.Name) ? baseUri.Host : rs.Name;
+                        if (!recorderSite.ContainsKey(baseUri))
+                            recorderSite[baseUri] = site;
 
                         int cams = 0;
                         foreach (var hw in rs.HardwareFolder.Hardwares)
@@ -408,10 +541,11 @@ namespace SystemStatus.Background
                                 if (!Guid.TryParse(cam.Id, out var id)) continue;
                                 map[id] = cam.Name;
                                 recMap[id] = baseUri;
+                                cameraSite[id] = site.Name;
                                 cams++;
                             }
                         }
-                        Log.Info($"Recording server '{rs.Name}' @ {baseUri} : {cams} enabled camera(s)");
+                        Log.Info($"[{site.Name}] Recording server '{rs.Name}' @ {baseUri} : {cams} enabled camera(s)");
                     }
                     catch (Exception rex)
                     {
@@ -422,7 +556,7 @@ namespace SystemStatus.Background
                         // would otherwise be lost.
                         var reason = rex.Message;
                         if (rex.InnerException != null) reason += " -> " + rex.InnerException.Message;
-                        Log.Error($"Recording server '{name}' enumeration failed - skipped: {rex.GetType().Name}: {reason}", rex);
+                        Log.Error($"[{site.Name}] Recording server '{name}' enumeration failed - skipped: {rex.GetType().Name}: {reason}", rex);
                     }
                 }
                 return rsCount > 0;
@@ -431,7 +565,7 @@ namespace SystemStatus.Background
             {
                 var reason = ex.Message;
                 if (ex.InnerException != null) reason += " -> " + ex.InnerException.Message;
-                Log.Error($"Config API recorder enumeration failed - falling back to device-tree walk: {ex.GetType().Name}: {reason}", ex);
+                Log.Error($"[{site.Name}] Config API recorder enumeration failed: {ex.GetType().Name}: {reason}", ex);
                 return false;
             }
         }
@@ -555,33 +689,45 @@ namespace SystemStatus.Background
             try
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                var site = EnvironmentManager.Instance.MasterSite;
-                var ms = new ManagementServer(site);
-                var serverId = site.ServerId;
+                var sites = SnapshotSites();
+                bool federated = sites.Count > 1;
                 var list = new List<RoleInfo>();
 
-                foreach (var role in ms.RoleFolder.Roles)
+                foreach (var site in sites)
                 {
-                    if (role == null) continue;
-                    var info = new RoleInfo { Name = string.IsNullOrWhiteSpace(role.DisplayName) ? role.Name : role.DisplayName };
+                    if (site?.Fqid == null) continue;
                     try
                     {
-                        var full = new Role(serverId, role.Path);
-                        foreach (var u in full.UserFolder.Users)
+                        var ms = new ManagementServer(site.Fqid);
+                        var serverId = site.ServerId;
+                        foreach (var role in ms.RoleFolder.Roles)
                         {
-                            if (u == null) continue;
-                            var keys = IdentityKeys(u.Name);
-                            keys.UnionWith(IdentityKeys(u.DisplayName));
-                            if (keys.Count > 0) info.Members.Add(keys);
+                            if (role == null) continue;
+                            var roleName = string.IsNullOrWhiteSpace(role.DisplayName) ? role.Name : role.DisplayName;
+                            // On a federated system the same role name can exist on several sites, so
+                            // qualify it with the site to keep the view-item rows distinct.
+                            var info = new RoleInfo { Name = federated ? $"{site.Name} / {roleName}" : roleName };
+                            try
+                            {
+                                var full = new Role(serverId, role.Path);
+                                foreach (var u in full.UserFolder.Users)
+                                {
+                                    if (u == null) continue;
+                                    var keys = IdentityKeys(u.Name);
+                                    keys.UnionWith(IdentityKeys(u.DisplayName));
+                                    if (keys.Count > 0) info.Members.Add(keys);
+                                }
+                            }
+                            catch (Exception ex) { Log.Error($"[{site.Name}] Role members failed for '{info.Name}'", ex); }
+                            list.Add(info);
                         }
                     }
-                    catch (Exception ex) { Log.Error($"Role members failed for '{info.Name}'", ex); }
-                    list.Add(info);
+                    catch (Exception ex) { Log.Error($"[{site.Name}] LoadRoles (site) failed", ex); }
                 }
 
                 lock (_lock) { _roles = list; }
                 sw.Stop();
-                Log.Info($"Loaded {list.Count} role(s), {list.Sum(r => r.Total)} member assignment(s) in {sw.ElapsedMilliseconds} ms");
+                Log.Info($"Loaded {list.Count} role(s) across {sites.Count} site(s), {list.Sum(r => r.Total)} member assignment(s) in {sw.ElapsedMilliseconds} ms");
             }
             catch (Exception ex)
             {
@@ -602,6 +748,27 @@ namespace SystemStatus.Background
             int at = s.IndexOf('@');
             if (at > 0) set.Add(s.Substring(0, at));
             return set;
+        }
+
+        // Rebuild the combined user list and connected-key set from the per-site buckets. Caller holds _lock.
+        private void RecombineUsersLocked()
+        {
+            _users = _usersBySite.Values
+                .SelectMany(x => x)
+                .OrderBy(u => u.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(u => u.SiteName, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var set in _connectedKeysBySite.Values) keys.UnionWith(set);
+            _connectedUserKeys = keys;
+        }
+
+        private string SiteNameByServerId(Guid id)
+        {
+            if (id == Guid.Empty) return "";
+            foreach (var s in _sites)
+                if (s.ServerId != null && s.ServerId.Id == id) return s.Name;
+            return "";
         }
 
         // ── View-item data (folder camera status + role user status) ──────────
@@ -671,11 +838,13 @@ namespace SystemStatus.Background
                     .Select(kv =>
                     {
                         _deviceStates.TryGetValue(kv.Key, out var state);
+                        _cameraSiteName.TryGetValue(kv.Key, out var siteName);
                         return new CameraRow
                         {
                             Id = kv.Key,
                             Name = kv.Value,
-                            Online = string.Equals(state, StateResponding, StringComparison.OrdinalIgnoreCase)
+                            Online = string.Equals(state, StateResponding, StringComparison.OrdinalIgnoreCase),
+                            SiteName = siteName ?? ""
                         };
                     })
                     .OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase)
