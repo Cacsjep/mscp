@@ -70,14 +70,12 @@ namespace SystemStatus.Client
 
     /// <summary>
     /// Styles the first/last-recording timestamp "chips" (Vuetify label style). Given the cell's
-    /// display text, returns a brush per role (ConverterParameter): "fill" / "border" / "fg". For a
-    /// real timestamp the chip is a tinted accent label; for a placeholder ("-", "…", "error",
-    /// "(none)", empty) the fill/border are transparent and the text is dimmed, so empty cells read
-    /// as plain text rather than empty chips.
+    /// display text, returns a brush per role (ConverterParameter): "fill" / "border" / "fg". A real
+    /// timestamp gets a thin outline (no fill) and bright text; a placeholder ("-", "…", "error",
+    /// "(none)", empty) gets no outline and dimmed text, so empty cells read as plain text.
     /// </summary>
     public sealed class TimestampChipConverter : IValueConverter
     {
-        private static readonly Brush Fill = Freeze(Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF));   // neutral white @ ~10%
         private static readonly Brush Border = Freeze(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)); // neutral white @ ~20%
         private static readonly Brush Text = Freeze(Color.FromRgb(0xE6, 0xE6, 0xE6));          // ScText
         private static readonly Brush Dim = Freeze(Color.FromRgb(0x8C, 0x8C, 0x8C));           // ScSubtle
@@ -91,7 +89,7 @@ namespace SystemStatus.Client
             {
                 case "fg":     return real ? Text : Dim;
                 case "border": return real ? Border : Clear;
-                default:       return real ? Fill : Clear;   // "fill"
+                default:       return Clear;   // "fill" - no background fill on the chips
             }
         }
 
