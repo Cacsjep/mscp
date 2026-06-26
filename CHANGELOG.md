@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.4.23] - 2026-06-26
+- Add System Status: Summary header chips on the **System Health** window - **Recorders**, **Cameras**, **Cameras Offline** and **Storage Alerts**. The two problem chips appear only when their count is above zero. An **About** button shows the plugin version.
+- Add System Status: Recording Servers table gains a **Cameras** column (online / total per recorder, online in green and total in blue) and a **Bandwidth** column (the recorder's aggregate live bandwidth, summed across its cameras).
+- Improve System Status: Bitrate and bandwidth figures now scale their unit with the value (kB/s, MB/s, GB/s) across the camera, stream and recorder tables, so large totals stay readable.
+
 ## [3.4.21] - 2026-06-22
 - Add RTSP Driver: RTSPS (RTSP over TLS) transport. The per-channel Transport Protocol now offers "RTSPS (TLS, verify certificate)" and "RTSPS Untrusted (TLS, skip certificate check)" for cameras that serve RTSP over TLS, including those with self-signed certificates. TLS is handled by the bundled FFmpeg build (Windows SChannel), so no extra components are required.
 - Improve RTSP Driver: Raised the maximum number of channels per driver instance from 4 to 16.
