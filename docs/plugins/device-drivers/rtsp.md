@@ -88,7 +88,7 @@ The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). Th
 | **RTSP Port** | `554` | RTSP port on the camera. Standard is 554. Shared by both streams. |
 | **RTSP Path (Stream 1)** | *(empty)* | Primary stream path (e.g. `/axis-media/media.amp`). Channel stays idle until configured. Audio is sourced from this stream. |
 | **RTSP Path (Stream 2)** | *(empty)* | Secondary stream path for adaptive streaming (e.g. lower resolution). Leave empty to disable. |
-| **Transport Protocol** | `Auto (prefer UDP)` | `Auto` uses UDP (standard for LAN surveillance). `TCP` forces interleaved RTP-over-TCP. `UDP` forces RTP-over-UDP. Two RTSPS (RTSP over TLS) options are also available for secure connections. Applies to both streams. |
+| **Transport Protocol** | `Auto (prefer UDP)` | `Auto` uses UDP (standard for LAN surveillance). `TCP` forces interleaved RTP-over-TCP. `UDP` forces RTP-over-UDP. `UDP Multicast` joins the camera's multicast RTP group. Two RTSPS (RTSP over TLS) options are also available for secure connections. Applies to both streams. |
 | **Channel Enabled** | `true` | Disable to stop pulling from this channel without removing the configuration. |
 
 ### Transport Protocol
@@ -98,11 +98,15 @@ The RTSP Path is the path portion of the RTSP URL (without `rtsp://ip:port`). Th
 | **Auto (prefer UDP)** | Uses UDP by default, the standard for LAN video surveillance | Default, works with most cameras on local networks |
 | **TCP (interleaved)** | Forces RTP interleaved over the RTSP TCP connection | Firewalls blocking UDP, NAT traversal, reliable delivery |
 | **UDP** | Forces RTP over separate UDP ports | Low-latency requirements, local networks with no packet loss |
+| **UDP Multicast** | Joins the camera's multicast RTP group instead of receiving a unicast stream | Many viewers sharing one camera on a multicast-enabled LAN; the camera must publish a multicast destination |
 | **RTSPS (TLS, verify certificate)** | RTSP tunneled over TLS, with the camera certificate validated against the Windows certificate store | Cameras with a CA-signed (trusted) certificate |
 | **RTSPS Untrusted (TLS, skip certificate check)** | RTSP over TLS without certificate validation | Cameras with a self-signed certificate (the common case) |
 
 !!! info "RTSPS uses TLS over TCP"
     Both RTSPS options always use interleaved TCP transport, since TLS does not apply to UDP. Set the **RTSP Port** to the camera's secure RTSP port (commonly 322 or 443, camera-specific).
+
+!!! info "UDP Multicast requires camera and network support"
+    The camera must be configured to publish a multicast stream (group address, port and TTL set per-stream in the camera). If the camera offers only unicast, this option fails to connect instead of falling back. The network must also allow multicast end to end: IGMP snooping on switches, and multicast routing if the stream crosses subnets. On a flat LAN it usually works without extra configuration.
 
 ### Events
 
@@ -161,6 +165,7 @@ To monitor more than 16 cameras, add multiple driver instances with different po
 | Shows 401 for wrong path | Some cameras (e.g. Axis) run authentication before path lookup, returning 401 for invalid paths instead of 404. This is camera behavior (same with VLC/ffprobe). Verify the path is correct first. |
 | Camera unplug not detected | Increase or decrease **Connection Timeout**. Default 2s should detect quickly. |
 | Choppy video over UDP | Increase **RTP Buffer Size** or switch to TCP transport. |
+| UDP Multicast fails to connect | The camera likely publishes only unicast, or the network blocks multicast. Confirm the camera has multicast enabled for the stream, and that switches have IGMP snooping (plus multicast routing if it crosses subnets). Fall back to **UDP** or **Auto** to confirm the camera otherwise works. |
 | "Hardware not responding" | Verify Recording Server is running. Check that driver DLLs are not blocked. |
 | DLLs blocked / driver not loading | Right-click the ZIP before extracting → Properties → Unblock. |
 | No audio | Verify the RTSP path includes audio. Some paths (e.g. `?videocodec=h265`) are video-only. Check the driver log for "No audio stream in RTSP source". |
