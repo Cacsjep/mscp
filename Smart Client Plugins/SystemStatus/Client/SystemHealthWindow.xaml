@@ -405,6 +405,19 @@
                         <DataGridTextColumn Header="STATE"    Binding="{Binding State}" Width="Auto"/>
                         <DataGridTextColumn Header="STORAGE"  Binding="{Binding StorageName}" Width="1.2*"/>
                         <DataGridTextColumn Header="PATH"     Binding="{Binding Path}" Width="1.8*"/>
+                        <DataGridTemplateColumn Header="CAMERAS" SortMemberPath="RecorderCamerasTotalValue" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                ToolTip="Online / total cameras on this recorder">
+                                        <TextBlock Text="{Binding RecorderCamerasOnlineText}"
+                                                   Foreground="{StaticResource DotOnline}"/>
+                                        <TextBlock Text="{Binding RecorderCamerasTotalText}"
+                                                   Foreground="{StaticResource ScAccent}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTextColumn Header="BANDWIDTH" Binding="{Binding RecorderBandwidthText}"
                                             SortMemberPath="RecorderBandwidthValue" Width="Auto"/>
                         <DataGridTemplateColumn Header="STORAGE USAGE" Width="200" SortMemberPath="UsedPercentValue">

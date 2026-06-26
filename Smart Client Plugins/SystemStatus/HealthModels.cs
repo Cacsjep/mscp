@@ -102,6 +102,25 @@ namespace SystemStatus
         }
         public string RecorderBandwidthText => _recorderBps > 0 ? ByteFormat.BitrateScaled(_recorderBps) : "-";
 
+        // Online / total camera counts for this recorder (e.g. "69/72"), computed in the health window
+        // and pushed onto every storage row of the recorder.
+        private int _camOnline, _camTotal;
+        public void SetRecorderCameraCounts(int online, int total)
+        {
+            if (_camOnline == online && _camTotal == total) return;
+            _camOnline = online; _camTotal = total;
+            var h = PropertyChanged;
+            if (h == null) return;
+            foreach (var n in new[] { nameof(RecorderCamerasText), nameof(RecorderCamerasOnlineText),
+                nameof(RecorderCamerasTotalText), nameof(RecorderCamerasTotalValue) })
+                h(this, new PropertyChangedEventArgs(n));
+        }
+        public string RecorderCamerasText => _camTotal > 0 ? $"{_camOnline}/{_camTotal}" : "-";
+        // Split parts so the table can show the online count in green and "/total" in accent blue.
+        public string RecorderCamerasOnlineText => _camTotal > 0 ? _camOnline.ToString() : "-";
+        public string RecorderCamerasTotalText => _camTotal > 0 ? "/" + _camTotal : "";
+        public int RecorderCamerasTotalValue => _camTotal;
+
         public string Kind => IsArchive ? "Archive" : "Recording";
         public ulong TotalBytes => UsedBytes + FreeBytes;
         public string Used => ByteFormat.Size(UsedBytes);

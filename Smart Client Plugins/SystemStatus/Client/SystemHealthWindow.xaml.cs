@@ -308,24 +308,39 @@ namespace SystemStatus.Client
             chipOffline.Visibility = offline > 0 ? Visibility.Visible : Visibility.Collapsed;
             chipAlert.Visibility = storageAlert > 0 ? Visibility.Visible : Visibility.Collapsed;
 
-            UpdateRecorderBandwidth();
+            UpdateRecorderAggregates();
         }
 
-        // Sum each recorder's live camera bandwidth (bytes/sec) and push the total onto every storage
-        // row of that recorder, so the servers table shows aggregate throughput per recorder.
-        private void UpdateRecorderBandwidth()
+        // Per recorder, sum live camera bandwidth and count online/total cameras, then push both onto
+        // every storage row of that recorder so the servers table shows throughput and a "online/all"
+        // camera count.
+        private void UpdateRecorderAggregates()
         {
             var bpsByHost = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var onlineByHost = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var totalByHost = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             foreach (var c in _cameras)
             {
                 if (string.IsNullOrEmpty(c.RecorderHost)) continue;
                 bpsByHost.TryGetValue(c.RecorderHost, out var sum);
                 bpsByHost[c.RecorderHost] = sum + c.BitrateValue;
+
+                totalByHost.TryGetValue(c.RecorderHost, out var tot);
+                totalByHost[c.RecorderHost] = tot + 1;
+                if (c.ConnectivityState == "Online")
+                {
+                    onlineByHost.TryGetValue(c.RecorderHost, out var on);
+                    onlineByHost[c.RecorderHost] = on + 1;
+                }
             }
             foreach (var s in _storages)
             {
-                bpsByHost.TryGetValue(s.RecorderHost ?? "", out var bps);
+                var host = s.RecorderHost ?? "";
+                bpsByHost.TryGetValue(host, out var bps);
                 s.RecorderBandwidthValue = bps;
+                onlineByHost.TryGetValue(host, out var online);
+                totalByHost.TryGetValue(host, out var total);
+                s.SetRecorderCameraCounts(online, total);
             }
         }
 
@@ -526,8 +541,8 @@ namespace SystemStatus.Client
         {
             var rows = serversGrid.Items.OfType<StorageRow>()
                 .Select(s => (IReadOnlyList<string>)new[]
-                { s.RecorderHost, s.State, s.Kind, s.StorageName, s.Path, s.RecorderBandwidthText, s.Used, s.Free, s.Total, s.UsedPercent, s.AvailableText });
-            ExportSafely("recording-servers", new[] { "Recorder", "State", "Kind", "Storage", "Path", "Bandwidth", "Used", "Free", "Total", "Used %", "Available" }, rows);
+                { s.RecorderHost, s.State, s.Kind, s.StorageName, s.Path, s.RecorderCamerasText, s.RecorderBandwidthText, s.Used, s.Free, s.Total, s.UsedPercent, s.AvailableText });
+            ExportSafely("recording-servers", new[] { "Recorder", "State", "Kind", "Storage", "Path", "Cameras", "Bandwidth", "Used", "Free", "Total", "Used %", "Available" }, rows);
         }
 
         private void OnExportCameras(object sender, RoutedEventArgs e)

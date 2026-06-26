@@ -7,7 +7,7 @@ description: "System Status plugin for Milestone XProtect Smart Client - a toolb
 
 # System Status
 
-Adds a **System Status** button to the Smart Client toolbar. Hovering the button shows a live summary such as `3/19 Cameras  4 Users`. Clicking it opens the **System Health** window, a resizable overview with three tables: recording servers and their storage, cameras with live stream statistics, and connected users.
+Adds a **System Status** button to the Smart Client toolbar. Hovering the button shows a live summary such as `3/19 Cameras  4 Users`. Clicking it opens the **System Health** window, a resizable overview with a summary header and three tables: recording servers and their storage, cameras with live stream statistics, and connected users.
 
 The plugin also ships a **Folder & Role - Camera User Status** view item you can drop into any view, showing online cameras per folder and logged-in users per role. See [Folder & Role view item](#folder--role-view-item).
 
@@ -26,6 +26,19 @@ The plugin also ships a **Folder & Role - Camera User Status** view item you can
 
 The window stacks three tables, each with its own section header, summary line, and CSV export button. The dividers between them can be dragged to give a table more room, and the whole window can be enlarged up to your screen.
 
+### Summary header
+
+The header carries a row of summary chips that update live with the tables:
+
+| Chip | Meaning |
+|---|---|
+| Recorders | Number of recording servers. |
+| Cameras | Total number of enabled cameras. |
+| Cameras Offline | Cameras currently offline. Shown only when at least one is offline. |
+| Storage Alerts | Storages at or above 90 percent used. Shown only when at least one is in alert. |
+
+The **About** button next to **Refresh** shows the plugin version.
+
 ### Recording Servers
 
 One row per storage on each recording server, plus the recorder's attach and connection state.
@@ -37,6 +50,8 @@ One row per storage on each recording server, plus the recorder's attach and con
 | State | The attach and connection state reported by the recorder. |
 | Storage | The recording or archive storage name. |
 | Path | The media database path. |
+| Cameras | Online and total cameras on this recorder, for example `14/16`. The online count is green and the total is blue. |
+| Bandwidth | The recorder's aggregate live bandwidth, summed across its cameras. The unit scales with the value (kB/s, MB/s, GB/s). |
 | Storage usage | A bar showing used percent, green under 90, orange under 95, red at 95 and above. Hover for the used, free, and total figures. |
 
 ### Cameras
@@ -51,7 +66,7 @@ In **Cameras** mode each row aggregates the camera and its streams:
 | Camera | The camera name. |
 | Recorder | The owning recording server. Shown in red when that recorder is offline. |
 | Streams | How many video streams the recorder is currently serving for the camera. |
-| Resolution, Codec, FPS, Bitrate | Live figures for the camera's primary stream (FPS and bitrate update on the live refresh). |
+| Resolution, Codec, FPS, Bitrate | Live figures for the camera's primary stream (FPS and bitrate update on the live refresh). Bitrate is the sum across the camera's streams, with the unit scaling to the value (kB/s, MB/s, GB/s). |
 | Storage used | How much recording space the camera occupies on its recorder. |
 | Storage % | That used space as a percentage of the recorder's total configured storage. |
 | First rec, Last rec | The oldest and newest recorded timestamps, loaded when the window opens or refreshes. |
@@ -137,6 +152,7 @@ While the System Health window is open, it queries each recording server's statu
 | Which cameras are enabled | The configuration device tree, walked down to the real camera devices. |
 | Which cameras are online | The current device state reported by the Event Server. |
 | FPS, bitrate, resolution, codec, used storage | The recording server's status service (video device statistics). |
+| Per-recorder bandwidth and camera count | Derived in the client by summing and counting that recorder's cameras. |
 | Storage used and free per server | The recording server's recording and archive storage status. |
 | First and last recording, span | The recorded-sequence data for the camera. |
 | Who is connected, and client type | The MIP environments currently connected to the Event Server. |
