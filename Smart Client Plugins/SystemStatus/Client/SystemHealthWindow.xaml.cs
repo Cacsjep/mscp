@@ -17,7 +17,6 @@ namespace SystemStatus.Client
 {
     public partial class SystemHealthWindow : Window
     {
-        private const int RangeConcurrency = 6;             // parallel recording-range queries
         private const int StorageRefreshEveryTicks = 5;     // every 5th 2s tick (~10s) do a full fetch
         private static readonly TimeSpan LiveInterval = TimeSpan.FromSeconds(2);
 
@@ -43,10 +42,6 @@ namespace SystemStatus.Client
         private int _tickCount;
 
         private DispatcherTimer _liveTimer;
-        // _masterCts cancels EVERYTHING when the window closes. _rangeCts (linked to it) is recreated
-        // on each full refresh so a new refresh cancels the previous range-loading sweep.
-        private readonly CancellationTokenSource _masterCts = new CancellationTokenSource();
-        private CancellationTokenSource _rangeCts;
 
         public SystemHealthWindow()
         {
@@ -95,7 +90,6 @@ namespace SystemStatus.Client
             _closing = true;
             _autoRefresh = false;
             try { _liveTimer.Stop(); _liveTimer.Tick -= OnLiveTick; } catch { }
-            try { _masterCts.Cancel(); } catch { }
         }
 
         // ── Full refresh (storage + state + stats + reload ranges) ────────────
@@ -127,21 +121,18 @@ namespace SystemStatus.Client
             {
                 MergeStorages(result.Storages);
                 ReplaceList(_users, result.Users);
-                MergeCameras(result.Cameras, resetRanges: true);
+                MergeCameras(result.Cameras);
                 RenderErrors(result);
                 _recorderCount = result.RecorderCount;
                 UpdateDashboard();
+                UpdateSiteColumns(result.SiteCount);
                 if (_cameras.Count == 0 && _storages.Count == 0 && _users.Count == 0)
                     ShowOverlay(result.Errors.Count > 0 ? "No data - see details below." : "No data.");
                 else
                     HideOverlay();
-                // Cancel any prior range sweep, then (re)load ranges - but only for cameras whose
-                // recorder answered. Querying sequences against an offline recorder throws an
-                // UnreachableServer exception (and hangs), so skip those (they show "-").
-                try { _rangeCts?.Cancel(); } catch { }
-                _rangeCts = CancellationTokenSource.CreateLinkedTokenSource(_masterCts.Token);
-                LoadRanges(_cameras.Where(c => c.RecorderReachable
-                                            && c.RangeStatus == CameraHealthRow.RangeState.NotLoaded).ToList());
+                // Recording ranges are pre-warmed in the background plugin; reflect whatever it has
+                // so far (loaded / pending / error) instead of querying per camera from here.
+                ApplyRangesFromCache();
             }
 
             _fullLoading = false;
@@ -168,16 +159,19 @@ namespace SystemStatus.Client
                     if (_closing || !_autoRefresh) return;
                     MergeStorages(snap.Storages);
                     ReplaceList(_users, snap.Users);
-                    MergeCameras(snap.Cameras, resetRanges: false);
+                    MergeCameras(snap.Cameras);
                     RenderErrors(snap);
                     _recorderCount = snap.RecorderCount;
                     UpdateDashboard();
+                    UpdateSiteColumns(snap.SiteCount);
+                    // Pick up ranges the background pre-warm / rescan has produced (every ~10s).
+                    ApplyRangesFromCache();
                 }
                 else
                 {
                     var fresh = await Task.Run(() => plugin.FetchLiveCameraStats());
                     if (_closing || !_autoRefresh) return;
-                    MergeCameras(fresh, resetRanges: false);
+                    MergeCameras(fresh);
                     UpdateDashboard();
                 }
             }
@@ -205,32 +199,20 @@ namespace SystemStatus.Client
             }
         }
 
-        // Reconcile the persistent camera collection with a freshly-fetched set (UI thread).
-        private void MergeCameras(IReadOnlyList<CameraHealthRow> fresh, bool resetRanges)
+        // Reconcile the persistent camera collection with a freshly-fetched set (UI thread). Recording
+        // ranges are owned by the background pre-warm cache and applied separately (ApplyRangesFromCache).
+        private void MergeCameras(IReadOnlyList<CameraHealthRow> fresh)
         {
             var seen = new HashSet<Guid>();
-            var newlyAdded = new List<CameraHealthRow>();
-            var recovered = new List<CameraHealthRow>();
-
             foreach (var f in fresh)
             {
                 seen.Add(f.Id);
                 if (_cameraById.TryGetValue(f.Id, out var existing))
-                {
-                    bool wasReachable = existing.RecorderReachable;
                     existing.ApplyLiveFrom(f);
-                    if (resetRanges)
-                        existing.RangeStatus = CameraHealthRow.RangeState.NotLoaded;
-                    else if (!wasReachable && existing.RecorderReachable
-                             && existing.RangeStatus != CameraHealthRow.RangeState.Loaded
-                             && existing.RangeStatus != CameraHealthRow.RangeState.Loading)
-                        recovered.Add(existing); // recorder came back - its range was never loaded
-                }
                 else
                 {
                     _cameras.Add(f);
                     _cameraById[f.Id] = f;
-                    newlyAdded.Add(f);
                 }
             }
 
@@ -242,13 +224,50 @@ namespace SystemStatus.Client
             }
 
             SyncStreams();
+        }
 
-            // On live ticks, load ranges for brand-new and recovered cameras on reachable recorders.
-            if (!resetRanges)
+        // Reflect the background plugin's pre-warmed recording ranges on the rows: loaded values show
+        // immediately, cameras still being walked show "pending" (…), failures show "error". Cameras
+        // on an unreachable recorder keep "-" since their range is unknown.
+        private void ApplyRangesFromCache()
+        {
+            var plugin = SystemStatusBackgroundPlugin.Instance;
+            if (plugin == null) return;
+            foreach (var c in _cameras)
             {
-                var loadable = newlyAdded.Concat(recovered).Where(c => c.RecorderReachable).ToList();
-                if (loadable.Count > 0) LoadRanges(loadable);
+                if (!c.RecorderReachable)
+                {
+                    if (c.RangeStatus != CameraHealthRow.RangeState.NotLoaded)
+                        c.RangeStatus = CameraHealthRow.RangeState.NotLoaded;
+                    continue;
+                }
+                var r = plugin.GetCameraRange(c.Id);
+                switch (r.State)
+                {
+                    case RangeLoadState.Loaded:
+                        // Always apply: the 30-minute background rescan updates last-rec / span, and
+                        // only realized (visible) rows have live bindings, so this stays cheap.
+                        c.SetRange(r.First, r.Last);
+                        break;
+                    case RangeLoadState.Failed:
+                        if (c.RangeStatus != CameraHealthRow.RangeState.Failed)
+                            c.RangeStatus = CameraHealthRow.RangeState.Failed;
+                        break;
+                    default: // Pending - still being walked in the background
+                        if (c.RangeStatus != CameraHealthRow.RangeState.Loaded
+                            && c.RangeStatus != CameraHealthRow.RangeState.Loading)
+                            c.RangeStatus = CameraHealthRow.RangeState.Loading; // shows "…"
+                        break;
+                }
             }
+        }
+
+        // Show the Site column / grouping only on a federated system (more than one site contributing).
+        private void UpdateSiteColumns(int siteCount)
+        {
+            var vis = siteCount > 1 ? Visibility.Visible : Visibility.Collapsed;
+            if (siteColCameras != null) siteColCameras.Visibility = vis;
+            if (siteColServers != null) siteColServers.Visibility = vis;
         }
 
         // Keep the flat stream collection's membership in sync with the cameras' (stable) stream objects.
@@ -352,41 +371,6 @@ namespace SystemStatus.Client
                 "Live recorder, camera and storage overview for XProtect Smart Client." + Environment.NewLine +
                 Environment.NewLine + "Version " + ver,
                 "About System Health", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        // ── Recording ranges (throttled, cancellable with the window) ─────────
-        private void LoadRanges(IReadOnlyList<CameraHealthRow> rows)
-        {
-            var plugin = SystemStatusBackgroundPlugin.Instance;
-            if (plugin == null || rows == null || rows.Count == 0 || _closing) return;
-            var token = (_rangeCts ?? _masterCts).Token;
-
-            foreach (var r in rows) r.RangeStatus = CameraHealthRow.RangeState.Loading;
-
-            Task.Run(() =>
-            {
-                using (var sem = new SemaphoreSlim(RangeConcurrency))
-                {
-                    var tasks = rows.Select(cam => Task.Run(() =>
-                    {
-                        try { sem.Wait(token); } catch { return; }
-                        try
-                        {
-                            if (token.IsCancellationRequested) return;
-                            var res = plugin.FetchRecordingRange(cam.Id);
-                            if (token.IsCancellationRequested) return;
-                            Dispatcher.BeginInvoke(new Action(() =>
-                            {
-                                if (_closing) return;
-                                if (res != null && res.Ok) cam.SetRange(res.First, res.Last);
-                                else cam.RangeStatus = CameraHealthRow.RangeState.Failed;
-                            }));
-                        }
-                        finally { try { sem.Release(); } catch { } }
-                    }, token)).ToArray();
-                    try { Task.WaitAll(tasks); } catch { /* cancelled */ }
-                }
-            }, token);
         }
 
         // ── Filtering ────────────────────────────────────────────────────────
@@ -541,8 +525,8 @@ namespace SystemStatus.Client
         {
             var rows = serversGrid.Items.OfType<StorageRow>()
                 .Select(s => (IReadOnlyList<string>)new[]
-                { s.RecorderHost, s.State, s.Kind, s.StorageName, s.Path, s.RecorderCamerasText, s.RecorderBandwidthText, s.Used, s.Free, s.Total, s.UsedPercent, s.AvailableText });
-            ExportSafely("recording-servers", new[] { "Recorder", "State", "Kind", "Storage", "Path", "Cameras", "Bandwidth", "Used", "Free", "Total", "Used %", "Available" }, rows);
+                { s.SiteName, s.RecorderHost, s.State, s.Kind, s.StorageName, s.Path, s.RecorderCamerasText, s.RecorderBandwidthText, s.Used, s.Free, s.Total, s.UsedPercent, s.AvailableText });
+            ExportSafely("recording-servers", new[] { "Site", "Recorder", "State", "Kind", "Storage", "Path", "Cameras", "Bandwidth", "Used", "Free", "Total", "Used %", "Available" }, rows);
         }
 
         private void OnExportCameras(object sender, RoutedEventArgs e)
@@ -558,17 +542,17 @@ namespace SystemStatus.Client
             {
                 var rows = camerasGrid.Items.OfType<CameraHealthRow>()
                     .Select(c => (IReadOnlyList<string>)new[]
-                    { c.Name, c.RecorderHost, c.OnlineText, c.StreamCountText, c.Resolution, c.Codec, c.Fps, c.Bitrate,
+                    { c.SiteName, c.Name, c.RecorderHost, c.OnlineText, c.StreamCountText, c.Resolution, c.Codec, c.Fps, c.Bitrate,
                       c.UsedSpaceText, c.StoragePercentText, c.FirstRecordingText, c.LastRecordingText, c.SpanText });
-                ExportSafely("cameras", new[] { "Camera", "Recorder", "Status", "Streams", "Resolution", "Codec", "FPS", "Bitrate", "Storage used", "Storage %", "First rec", "Last rec", "Span" }, rows);
+                ExportSafely("cameras", new[] { "Site", "Camera", "Recorder", "Status", "Streams", "Resolution", "Codec", "FPS", "Bitrate", "Storage used", "Storage %", "First rec", "Last rec", "Span" }, rows);
             }
         }
 
         private void OnExportUsers(object sender, RoutedEventArgs e)
         {
             var rows = usersGrid.Items.OfType<UserRow>()
-                .Select(u => (IReadOnlyList<string>)new[] { u.DisplayName, u.Secondary });
-            ExportSafely("users", new[] { "User", "Client" }, rows);
+                .Select(u => (IReadOnlyList<string>)new[] { u.SiteName, u.DisplayName, u.Secondary });
+            ExportSafely("users", new[] { "Site", "User", "Client" }, rows);
         }
 
         private void ExportSafely(string name, IReadOnlyList<string> headers, IEnumerable<IReadOnlyList<string>> rows)

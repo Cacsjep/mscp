@@ -57,6 +57,8 @@ namespace SystemStatus
         public event PropertyChangedEventHandler PropertyChanged;
 
         public string RecorderHost { get; set; }
+        // The federated site this recorder belongs to (empty on a non-federated system).
+        public string SiteName { get; set; }
         public string State { get; set; }          // e.g. "Attached / Connected"
         public bool RecorderOk { get; set; }
         public Guid StorageId { get; set; }
@@ -163,6 +165,22 @@ namespace SystemStatus
         public DateTime? Last { get; set; }
     }
 
+    /// <summary>State of a camera's recording range in the background pre-warm cache.</summary>
+    public enum RangeLoadState { Pending, Loaded, Failed }
+
+    /// <summary>
+    /// A camera's first/last recording as held in the background cache. The health window reads this
+    /// on open / refresh: <see cref="RangeLoadState.Pending"/> = still being walked in the background,
+    /// <see cref="RangeLoadState.Loaded"/> = values ready, <see cref="RangeLoadState.Failed"/> = the
+    /// query failed (e.g. recorder timeout).
+    /// </summary>
+    public struct CameraRange
+    {
+        public RangeLoadState State;
+        public DateTime? First;
+        public DateTime? Last;
+    }
+
     /// <summary>
     /// One enabled camera with online state, live stream statistics, used recording space, the
     /// camera's share of its recorder's configured storage, and lazily-loaded first/last recording
@@ -177,6 +195,10 @@ namespace SystemStatus
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string RecorderHost { get; set; }
+        // The federated site the camera belongs to (empty on a non-federated system). Drives the
+        // optional "Site" column / grouping in the health window.
+        public string SiteName { get; set; }
+        public string SiteGroup => string.IsNullOrEmpty(SiteName) ? "(local)" : SiteName;
         // Device-tree folder path from the Management Client system hierarchy, e.g.
         // "video-hq-rec1 / Building A". Drives the optional "Folder" grouping in the health window.
         // Null when the camera wasn't reached by the device-tree walk (then it groups under "(no folder)").
@@ -237,6 +259,7 @@ namespace SystemStatus
         public void ApplyLiveFrom(CameraHealthRow f)
         {
             RecorderHost = f.RecorderHost;
+            SiteName = f.SiteName;
             FolderPath = f.FolderPath;
             Online = f.Online;
             RecorderReachable = f.RecorderReachable;
@@ -247,7 +270,7 @@ namespace SystemStatus
             MergeStreams(f.Streams);
 
             Raise(nameof(Online), nameof(OnlineText), nameof(ConnectivityState), nameof(RecorderReachable),
-                  nameof(RecorderHost), nameof(FolderGroup), nameof(UsedSpaceText), nameof(StoragePercentText),
+                  nameof(RecorderHost), nameof(SiteName), nameof(SiteGroup), nameof(FolderGroup), nameof(UsedSpaceText), nameof(StoragePercentText),
                   nameof(StreamCountText), nameof(HasStreams), nameof(Resolution), nameof(Codec), nameof(Fps), nameof(Bitrate));
         }
 
@@ -338,13 +361,14 @@ namespace SystemStatus
     public sealed class SystemHealthSnapshot
     {
         public SystemHealthSnapshot(IReadOnlyList<StorageRow> storages, IReadOnlyList<CameraHealthRow> cameras,
-            IReadOnlyList<UserRow> users, IReadOnlyList<string> errors, int recorderCount)
+            IReadOnlyList<UserRow> users, IReadOnlyList<string> errors, int recorderCount, int siteCount)
         {
             Storages = storages ?? Array.Empty<StorageRow>();
             Cameras = cameras ?? Array.Empty<CameraHealthRow>();
             Users = users ?? Array.Empty<UserRow>();
             Errors = errors ?? Array.Empty<string>();
             RecorderCount = recorderCount;
+            SiteCount = siteCount;
         }
 
         public IReadOnlyList<StorageRow> Storages { get; }
@@ -352,5 +376,8 @@ namespace SystemStatus
         public IReadOnlyList<UserRow> Users { get; }
         public IReadOnlyList<string> Errors { get; }
         public int RecorderCount { get; }
+        // Number of federated sites contributing to this snapshot. 1 on a standalone system; the
+        // health window shows its Site column/grouping only when this is greater than 1.
+        public int SiteCount { get; }
     }
 }
