@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="FontAwesome5" Version="2.1.11" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
     <PackageReference Include="System.Text.Json" Version="10.*" />
   </ItemGroup>
