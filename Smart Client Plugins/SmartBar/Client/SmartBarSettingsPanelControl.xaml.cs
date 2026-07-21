@@ -379,6 +379,10 @@ namespace SmartBar.Client
 
             SmartBarConfig.Save();
             SmartBarHistory.ApplyMaxHistory(SmartBarConfig.MaxHistory);
+
+            // Category toggles affect what the cache loads, so rebuild it.
+            SmartBarItemCache.Invalidate();
+            SmartBarItemCache.EnsureFresh();
         }
     }
 }

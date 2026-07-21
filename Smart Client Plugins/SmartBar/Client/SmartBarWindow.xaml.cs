@@ -9,7 +9,6 @@ using System.Windows.Media;
 using CommunitySDK;
 using VideoOS.Platform;
 using VideoOS.Platform.Client;
-using VideoOS.Platform.ConfigurationItems;
 using VideoOS.Platform.Messaging;
 
 namespace SmartBar.Client
@@ -74,6 +73,40 @@ namespace SmartBar.Client
             ApplyFilter();
             if (SmartBarConfig.ColumnLayout)
                 columnHint.Visibility = Visibility.Visible;
+
+            if (SmartBarItemCache.IsLoaded)
+            {
+                // Cached items are already on screen; refresh quietly for the next open.
+                SmartBarItemCache.EnsureFresh();
+            }
+            else
+            {
+                loadingBar.Visibility = Visibility.Visible;
+                SmartBarItemCache.Progress += OnCacheProgress;
+                SmartBarItemCache.EnsureFresh(() => Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    SmartBarItemCache.Progress -= OnCacheProgress;
+                    if (_closing) return;
+                    loadingBar.Visibility = Visibility.Collapsed;
+                    LoadItems();
+                    ApplyFilter();
+                })));
+            }
+        }
+
+        private void OnCacheProgress(string status)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!_closing)
+                    loadingText.Text = status;
+            }));
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            SmartBarItemCache.Progress -= OnCacheProgress;
+            base.OnClosed(e);
         }
 
         private System.Windows.Forms.Screen GetActiveScreen()
@@ -173,15 +206,6 @@ namespace SmartBar.Client
 
             try
             {
-                var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
-                var mgmt = new ManagementServer(EnvironmentManager.Instance.MasterSite);
-
-                if (SmartBarConfig.IsEnabled(ItemCategory.Camera))
-                {
-                    foreach (var group in mgmt.CameraGroupFolder.CameraGroups)
-                        CollectCameras(group, serverId);
-                }
-
                 if (SmartBarConfig.IsEnabled(ItemCategory.View))
                 {
                     var viewGroups = ClientControl.Instance.GetViewGroupItems();
@@ -198,38 +222,14 @@ namespace SmartBar.Client
                     LoadCommands();
                 if (SmartBarConfig.IsEnabled(ItemCategory.Program))
                     LoadPrograms();
-                if (SmartBarConfig.IsEnabled(ItemCategory.Output))
-                    LoadOutputs();
-                if (SmartBarConfig.IsEnabled(ItemCategory.Event))
-                    LoadEvents();
                 if (SmartBarConfig.IsEnabled(ItemCategory.Undo))
                     LoadUndoHistory();
+
+                // Cameras, outputs and events need server round-trips, so they
+                // come from the background cache instead of being enumerated here.
+                _allItems.AddRange(SmartBarItemCache.GetItems());
             }
             catch (Exception ex) { Log.Error("LoadItems failed", ex); }
-        }
-
-        private void CollectCameras(CameraGroup group, ServerId serverId, string parentPath = null)
-        {
-            var path = parentPath == null ? group.Name : parentPath + " \u203A " + group.Name;
-
-            foreach (var cam in group.CameraFolder.Cameras)
-            {
-                if (!cam.Enabled) continue;
-                var cameraId = new Guid(cam.Id);
-                var item = Configuration.Instance.GetItem(serverId, cameraId, Kind.Camera);
-                if (item == null) continue;
-
-                _allItems.Add(new CommandItem
-                {
-                    Name = cam.Name,
-                    Group = path,
-                    Category = ItemCategory.Camera,
-                    PlatformItem = item
-                });
-            }
-
-            foreach (var sub in group.CameraGroupFolder.CameraGroups)
-                CollectCameras(sub, serverId, path);
         }
 
         private void CollectViews(Item viewGroup, string parentPath = null)
@@ -359,113 +359,16 @@ namespace SmartBar.Client
             }
         }
 
-        private void LoadOutputs()
-        {
-            try
-            {
-                var outputs = Configuration.Instance.GetItemsByKind(Kind.Output);
-                foreach (var output in outputs)
-                    CollectOutputItems(output);
-            }
-            catch (Exception ex) { Log.Error("LoadOutputs failed", ex); }
-        }
-
-        private void CollectOutputItems(Item item)
-        {
-            if (item.FQID.FolderType == FolderType.No)
-            {
-                var fqid = item.FQID;
-                _allItems.Add(new CommandItem
-                {
-                    Name = "Output: " + item.Name + " Activate",
-                    Group = "Outputs",
-                    Category = ItemCategory.Output,
-                    Execute = () =>
-                    {
-                        try
-                        {
-                            EnvironmentManager.Instance.SendMessage(
-                                new Message(MessageId.Control.OutputActivate) { RelatedFQID = fqid }, fqid);
-                            Log.Info($"Output activated: {item.Name}");
-                        }
-                        catch (Exception ex) { Log.Error($"OutputActivate failed: {item.Name}", ex); }
-                    }
-                });
-                _allItems.Add(new CommandItem
-                {
-                    Name = "Output: " + item.Name + " Deactivate",
-                    Group = "Outputs",
-                    Category = ItemCategory.Output,
-                    Execute = () =>
-                    {
-                        try
-                        {
-                            EnvironmentManager.Instance.SendMessage(
-                                new Message(MessageId.Control.OutputDeactivate) { RelatedFQID = fqid }, fqid);
-                            Log.Info($"Output deactivated: {item.Name}");
-                        }
-                        catch (Exception ex) { Log.Error($"OutputDeactivate failed: {item.Name}", ex); }
-                    }
-                });
-            }
-            else
-            {
-                foreach (var child in item.GetChildren())
-                    CollectOutputItems(child);
-            }
-        }
-
-        private void LoadEvents()
-        {
-            try
-            {
-                var events = Configuration.Instance.GetItemsByKind(Kind.TriggerEvent);
-                foreach (var ev in events)
-                    CollectEventItems(ev);
-            }
-            catch (Exception ex) { Log.Error("LoadEvents failed", ex); }
-        }
-
-        private void CollectEventItems(Item item)
-        {
-            if (item.FQID.FolderType == FolderType.No)
-            {
-                var fqid = item.FQID;
-                _allItems.Add(new CommandItem
-                {
-                    Name = "Event: " + item.Name,
-                    Group = "Events",
-                    Category = ItemCategory.Event,
-                    Execute = () =>
-                    {
-                        try
-                        {
-                            EnvironmentManager.Instance.SendMessage(
-                                new Message(MessageId.Control.TriggerCommand) { RelatedFQID = fqid }, fqid);
-                            Log.Info($"Event triggered: {item.Name}");
-                        }
-                        catch (Exception ex) { Log.Error($"TriggerEvent failed: {item.Name}", ex); }
-                    }
-                });
-            }
-            else
-            {
-                foreach (var child in item.GetChildren())
-                    CollectEventItems(child);
-            }
-        }
-
         private void LoadRecentItems()
         {
             var recents = SmartBarHistory.GetRecentItems();
             if (recents.Count == 0) return;
 
-            var serverId = EnvironmentManager.Instance.MasterSite.ServerId;
             foreach (var r in recents)
             {
                 if (r.Type == RecentType.Camera)
                 {
-                    var item = Configuration.Instance.GetItem(serverId, r.ObjectId, Kind.Camera);
+                    var item = SmartBarItemCache.FindCamera(r.ObjectId);
                     if (item == null) continue;
                     _allItems.Add(new CommandItem
                     {

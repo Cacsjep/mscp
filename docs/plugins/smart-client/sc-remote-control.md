@@ -29,47 +29,222 @@ All endpoints require a `Bearer` token in the `Authorization` header. Use the Sw
 Authorization: Bearer <your-token>
 ```
 
-### Discovery
-
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/views` | List all views with FQID and path |
-| `GET` | `/api/cameras` | List all cameras with FQID and group path |
+| `GET` | `/api/views` | List all views |
+| `GET` | `/api/cameras` | List all enabled cameras |
 | `GET` | `/api/workspaces` | List all workspaces |
 | `GET` | `/api/windows` | List Smart Client windows |
 | `GET` | `/api/status` | Server status and current SC mode |
-
-Use the `id` field from discovery endpoints in all action requests.
-
-### Actions
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/views/switch` | Switch to a view |
+| `POST` | `/api/views/switch` | Switch a window to a view |
 | `POST` | `/api/cameras/show` | Show N cameras with auto-layout |
 | `POST` | `/api/cameras/set` | Set a camera in a specific view slot |
 | `POST` | `/api/workspaces/switch` | Switch workspace |
-| `POST` | `/api/application/control` | Application commands |
-| `POST` | `/api/windows/close` | Close window(s) |
-| `POST` | `/api/clear` | Clear/blank the view |
+| `POST` | `/api/application/control` | Fullscreen, side panel, window state |
+| `POST` | `/api/windows/close` | Close one or all windows |
+| `POST` | `/api/clear` | Switch a window to an empty 1x1 view |
 | `POST` / `GET` / `DELETE` | `/api/overlays[/{id}]` | Draw SVG overlays on cameras |
 
-### Dynamic Camera Layout
+Use the `id` field from the discovery endpoints in all action requests.
 
-Send an array of camera IDs to `/api/cameras/show` and a grid view is automatically created:
+### Conventions
+
+These apply to every endpoint and are easy to trip over.
+
+**Responses are camelCase, and null fields are omitted.** A field documented below as optional in a response is simply absent when it has no value, rather than present as `null`. JSON is the only supported format; the `Accept` header is ignored.
+
+**`200` means "accepted", not "done".** Every action endpoint hands its work to the Smart Client UI thread and returns immediately without waiting. A success response confirms the command was queued and its arguments validated, not that the client carried it out. A few internal failure paths (a missing grid view, no WPF application context) abandon the work silently after the response has already been sent. If an action must be confirmed, poll a discovery endpoint afterwards.
+
+**IDs are `ObjectId` GUIDs.** Every `id` in and out of the API is the FQID's ObjectId, not a serialized FQID. Cameras are always resolved against the master site, so **cameras on federated or child sites will not resolve**.
+
+**A malformed ID and an unknown ID both return `404`, never `400`.** Every resolver parses the GUID and returns "not found" on failure, so a typo and a deleted camera are indistinguishable in the response.
+
+**Error shapes are not uniform.** Validation failures return `400` with `{"message": "..."}`. Resolution failures return `404` with an **empty body** on most endpoints; `/api/cameras/show` is the exception and returns `{"error": "..."}`. Auth failures return `401` with `{"error": "..."}`.
+
+**Omitted integers become `0`, omitted booleans become `false`.** The request models use non-nullable types, so there is no way to distinguish "field omitted" from "field explicitly `0`". This matters most for `windowIndex`, where omission means the main window.
+
+### Window targeting
+
+`windowIndex` selects which Smart Client window an action applies to. Valid values are `0` to `count - 1`, where the count and ordering come from `GET /api/windows`. Index `0` is the main window.
+
+!!! warning "Out-of-range indices do not fail"
+    An index that is negative or past the end **silently falls back to window 0**, and the response echoes back the index you requested rather than the one actually used. `{"windowIndex": 99}` returns `{"success": true, "windowIndex": 99}` while acting on the main window. There is no error to detect this, so validate against `GET /api/windows` before sending.
+
+The index is positional within the live window enumeration, so it is **not stable**: opening or closing a floating window renumbers the others. Re-fetch `/api/windows` rather than caching indices.
+
+Only `views/switch`, `cameras/show`, `cameras/set`, `windows/close`, and `clear` accept `windowIndex`. `workspaces/switch` and `application/control` apply application-wide and take no target.
+
+A `404` on `windows/close` or `clear` means no windows exist at all, which in practice only happens during shutdown.
+
+### Discovery
+
+#### `GET /api/views`
+
+Returns a flat array of every view in the tree. View group folders are not included.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | View ObjectId GUID, for use as `viewId` |
+| `name` | string | View name |
+| `path` | string | Breadcrumb of **parent folders only**, joined with ` › `. Excludes the view's own name. |
+
+```json
+[
+  { "id": "3f2a...", "name": "Lobby Overview", "path": "Views › Private › Floor 1" }
+]
+```
+
+!!! note "Empty array is ambiguous"
+    All five discovery endpoints swallow internal errors and return `[]` rather than a `5xx`. An empty result means either "nothing configured" or "lookup failed"; check MIPLog.txt to tell them apart.
+
+#### `GET /api/cameras`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Camera ObjectId GUID, for use as `cameraId` |
+| `name` | string | Camera name from the Management Server |
+| `path` | string | Camera group breadcrumb, joined with ` › `. **Includes** the group's own name, unlike `/api/views`. |
+
+Built by walking the camera group tree on the master site, which has three consequences:
+
+- **Disabled cameras are omitted.**
+- **Cameras that belong to no camera group are omitted.**
+- **A camera in two groups appears twice**, once per group path, with the same `id`.
+
+Requires a live Management Server connection. Note that `/api/cameras/set` resolves cameras through a different path and will accept IDs this endpoint does not list.
+
+#### `GET /api/workspaces`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Workspace ObjectId GUID, for use as `workspaceId` |
+| `name` | string | Workspace name |
+
+No `path` field; workspaces are not nested.
+
+#### `GET /api/windows`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Window ObjectId GUID (informational; actions take `index`, not this) |
+| `name` | string | Window name |
+| `index` | int | Zero-based position, and the value to pass as `windowIndex` |
+
+`index` is assigned during enumeration and is not persisted. See [Window targeting](#window-targeting) for the stability caveat.
+
+#### `GET /api/status`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Always `"running"`. If you can reach this endpoint the server is up, so it has no other value. |
+| `mode` | string | Current Smart Client mode, for example `ClientLive` or `ClientPlayback`. Falls back to `"Unknown"` if the mode cannot be read. |
+| `listenUrl` | string | Configured listen URL. **Absent** if the server has been stopped. |
+| `version` | string | Plugin assembly version, falling back to `"1.0.0"`. |
+
+### Actions
+
+#### `POST /api/views/switch`
+
+Switches a window to an existing view.
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `viewId` | string | yes | - | ObjectId from `GET /api/views` |
+| `windowIndex` | int | no | `0` | See [Window targeting](#window-targeting) |
+
+```json
+POST /api/views/switch
+{ "viewId": "3f2a...", "windowIndex": 0 }
+```
+
+**`200`** `{"success": true, "viewId": "...", "windowIndex": 0}`
+**`400`** `{"message": "viewId is required"}` when the body or `viewId` is missing or empty.
+**`404`** empty body when `viewId` is not a valid GUID, or is a GUID that is not in the view tree.
+
+!!! note "Folder IDs are accepted but do nothing"
+    The lookup searches folders as well as views, so passing a view group's ObjectId returns `200`. The client has no view to load and nothing visible happens. Only use IDs from `GET /api/views`, which lists views only.
+
+#### `POST /api/cameras/show`
+
+Picks a grid layout that fits the camera count, switches the window to it, and fills the slots in order. This is the main entry point for ad-hoc camera display.
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `cameraIds` | string[] | yes | - | Non-empty, **maximum 20 entries**. Order determines slot order. |
+| `windowIndex` | int | no | `0` | See [Window targeting](#window-targeting) |
 
 ```json
 POST /api/cameras/show
-{
-  "cameraIds": ["cam-guid-1", "cam-guid-2", "cam-guid-3", "cam-guid-4"]
-}
+{ "cameraIds": ["cam-guid-1", "cam-guid-2", "cam-guid-3", "cam-guid-4"] }
 ```
 
-The smallest grid layout that fits is selected automatically (1x1, 1x2, 2x2, 2x3, 3x3, up to 4x5 = 20 cameras max). Grid views are created in a "Remote Control" folder under Private Views.
+**`200`** `{"success": true, "cameraCount": 4, "windowIndex": 0}`. Note the response returns a count, not the ID list.
+**`400`** `{"message": "cameraIds array is required and must not be empty"}`
+**`400`** `{"message": "Maximum 20 cameras per request"}`
+**`404`** `{"error": "Camera not found: <id>"}` naming the **first** unresolvable ID. Validation stops there, so IDs after it are unchecked. Nothing has been dispatched at this point, so a failed request changes nothing.
 
-### Application Commands
+The layout is the first one in this order whose capacity covers the request:
 
-Available values for `POST /api/application/control`:
+| Cameras | Layout |
+|---------|--------|
+| 1 | 1x1 |
+| 2 | 1x2 |
+| 3 | 1x3 |
+| 4 | 2x2 |
+| 5-6 | 2x3 |
+| 7-8 | 2x4 |
+| 9 | 3x3 |
+| 10-12 | 3x4 |
+| 13-16 | 4x4 |
+| 17-20 | 4x5 |
+
+Unused slots stay blank. Since the largest layout is 4x5, 20 is a hard ceiling rather than a tunable limit.
+
+!!! warning "This writes to the user's configuration"
+    On first use the plugin creates a view group named **Remote Control** under the user's first view group, containing ten saved views (`1x1` through `4x5`). These are persistent, visible in the Smart Client view tree, and are not removed when the plugin stops. They are created once and reused. `/api/clear` triggers the same setup.
+
+Slot fills are dispatched immediately after the view switch without waiting for it to complete. On a slow client the first request after a view change can occasionally land in the previous view; sending the same request twice is a safe workaround, since it is idempotent.
+
+#### `POST /api/cameras/set`
+
+Places one camera in one slot of whatever view the target window is **already showing**. Unlike `cameras/show`, it does not switch views and does not create anything.
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `cameraId` | string | yes | - | Camera ObjectId |
+| `slotIndex` | int | no | `0` | Zero-based slot in the current view. **Not validated.** |
+| `windowIndex` | int | no | `0` | See [Window targeting](#window-targeting) |
+
+```json
+POST /api/cameras/set
+{ "cameraId": "cam-guid-1", "slotIndex": 2, "windowIndex": 0 }
+```
+
+**`200`** `{"success": true, "cameraId": "...", "slotIndex": 2, "windowIndex": 0}`
+**`400`** `{"message": "cameraId is required"}`
+**`404`** empty body for a malformed or unresolvable `cameraId`.
+
+`slotIndex` is passed through with no bounds checking. A negative or out-of-range slot returns `200` and is discarded by the client. Confirm the current view's slot count via `GET /api/views` and your own layout knowledge before targeting a high index.
+
+This endpoint resolves cameras through the configuration API rather than the camera group tree, so it **accepts cameras that `GET /api/cameras` does not list**, including disabled ones and cameras outside any group.
+
+#### `POST /api/workspaces/switch`
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `workspaceId` | string | yes | - | ObjectId from `GET /api/workspaces` |
+
+Application-wide; takes no `windowIndex`.
+
+**`200`** `{"success": true, "workspaceId": "..."}`
+**`400`** `{"message": "workspaceId is required"}`
+**`404`** empty body for a malformed or unknown ID.
+
+#### `POST /api/application/control`
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `command` | string | yes | - | One of the values below. **Case-insensitive.** |
 
 | Command | Description |
 |---------|-------------|
@@ -82,19 +257,54 @@ Available values for `POST /api/application/control`:
 | `Minimize` | Minimize the window |
 | `Restore` | Restore the window |
 
-### Delayed Clear
+**`200`** `{"success": true, "command": "..."}` echoing your original casing.
+**`400`** `{"message": "command is required. Available: ToggleFullscreen, ..."}` - the same message is returned for a missing command and an unrecognized one, so there is no distinct "unknown command" error.
 
-Clear a view after a delay (useful for temporarily showing cameras then returning to blank):
+!!! note "These are not the MIP SDK constant names"
+    The API uses `ToggleFullscreen` / `EnterFullscreen` / `ExitFullscreen`, whereas the SDK spells the equivalents `ToggleFullScreenMode` / `EnterFullScreenMode` / `ExitFullScreenMode`. Sending the SDK spelling returns `400`.
+
+Applies to the main application window; there is no per-window targeting.
+
+#### `POST /api/windows/close`
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `all` | bool | no | `false` | When `true`, closes all floating windows and **`windowIndex` is ignored** |
+| `windowIndex` | int | no | `0` | See [Window targeting](#window-targeting) |
+
+**`200`** with `all: true` → `{"success": true, "message": "All floating windows closed"}`
+**`200`** otherwise → `{"success": true, "windowIndex": 0}`
+**`404`** empty body when no windows exist. Cannot occur with `all: true`, which is handled before the lookup.
+
+!!! danger "An empty body closes the main window"
+    An omitted `windowIndex` defaults to `0`, so `POST /api/windows/close` with no body at all is equivalent to `{"windowIndex": 0}` and targets the main Smart Client window. Always send an explicit body.
+
+#### `POST /api/clear`
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `windowIndex` | int | no | `0` | See [Window targeting](#window-targeting) |
+| `delaySeconds` | int | no | `0` | **Clamped to 0-300 without error.** Negative becomes `0`, over 300 becomes 300. |
 
 ```json
 POST /api/clear
-{
-  "windowIndex": 0,
-  "delaySeconds": 10
-}
+{ "windowIndex": 0, "delaySeconds": 10 }
 ```
 
-Maximum delay is 300 seconds (5 minutes).
+**`200`** immediate → `{"success": true, "message": "View cleared", "windowIndex": 0}`
+**`200`** delayed → `{"success": true, "message": "View will be cleared in 10 seconds", "windowIndex": 0}`, returned right away.
+**`404`** empty body when no windows exist.
+
+!!! warning "Clear switches views, it does not blank the current one"
+    Despite the name, this does not empty the view the user is on. It switches the window to the plugin's saved **1x1** view with an empty camera slot, creating the `Remote Control` view group first if needed, exactly as `/api/cameras/show` does. The user's previous view is left untouched but is no longer displayed, and afterwards the window sits on a plugin-owned view rather than a blank screen.
+
+Delayed clears are held in memory only:
+
+- They **cannot be cancelled** once scheduled. Sending a second `/api/clear` schedules a second one rather than replacing the first.
+- They are **lost if the Smart Client or plugin restarts** before firing.
+- The target window is resolved when the request arrives. If that window is closed during the wait, the delayed clear targets a window that no longer exists and does nothing.
+
+
 
 ### SVG Overlays
 
@@ -183,7 +393,7 @@ Shows whether the server is running, the listen URL, and any errors. Buttons:
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Listen Interface | Network interface to bind to | `127.0.0.1` (loopback) |
-| Port | HTTP port | `9500` |
+| Port | HTTP port, must be in the range 1024-65535 (falls back to `9500` if outside it) | `9500` |
 | Use HTTPS | Enable TLS encryption | Off |
 | PFX Certificate | Certificate file for HTTPS (`.pfx` format) | - |
 | PFX Password | Password for the PFX file | - |
@@ -204,10 +414,24 @@ Tokens authenticate API requests. At least one token is always required.
 
 ## Security
 
-- **Authentication**: All `/api/*` endpoints require a valid Bearer token. Swagger UI is accessible without authentication for convenience.
-- **CORS**: Only same-origin requests are allowed from browsers. Non-browser HTTP clients (scripts, automation) work from any machine.
+- **Authentication**: All `/api/*` endpoints require a valid Bearer token, except `OPTIONS` preflight requests. There is no way to disable authentication - an empty or missing token always fails. Tokens are compared in fixed time. A failure returns `401` with `{"error": "Unauthorized. Provide a valid Bearer token in the Authorization header."}`.
+- **Token header**: The documented form is `Authorization: Bearer <token>`. The raw form `Authorization: <token>` without a scheme is also accepted.
+- **CORS**: Browser requests are allowed only when `Origin` matches the configured listen URL or a `localhost` / `127.0.0.1` variant on the same port. There is no wildcard. The allowed methods are `GET`, `POST`, and `OPTIONS` - **`DELETE` is not included**, so browser-based overlay deletion from an allowed origin is blocked by preflight. Non-browser HTTP clients (scripts, automation) are unaffected and work from any machine.
 - **Token storage**: API tokens and PFX passwords are encrypted at rest using Windows DPAPI.
 - **Default loopback**: The server defaults to `127.0.0.1`, limiting access to the local machine until explicitly configured otherwise.
+
+### Unauthenticated routes
+
+Everything outside `/api/` is served without a token:
+
+| Path | Description |
+|------|-------------|
+| `/` | Redirects to `/swagger` |
+| `/swagger`, `/swagger/*` | Swagger UI and its bundled JS and CSS |
+| `/swagger/docs/v1` | Generated OpenAPI 2.0 specification |
+
+!!! warning "The API specification is publicly readable"
+    `/swagger/docs/v1` returns the full endpoint list, request schemas, and parameter names to any caller, with no token. On loopback this is harmless. If you bind to `0.0.0.0` or a routable address, anyone who can reach the port can enumerate the entire API surface even though they cannot call it. Restrict the port at the firewall when exposing the server beyond the local machine.
 
 ## Example: Python
 

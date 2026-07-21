@@ -1,5 +1,8 @@
 # Changelog
 
+## [3.4.26] - 2026-06-27
+- Smart Bar: Fix large camera loading freezing it.
+
 ## [3.4.25] - 2026-06-26
 - Add RTSP Driver: UDP Multicast transport. The per-channel Transport Protocol now offers "UDP Multicast", which joins the camera's multicast RTP group instead of receiving a unicast stream. Useful when many viewers share one camera on a multicast-enabled LAN. The camera must publish a multicast destination and the network must allow multicast end to end.
 - Add System Status: Milestone Federated Architecture support. The **System Health** window now enumerates the master site and all federated child sites, so a parent site with no recording server of its own still shows the recorders, cameras, storage and users of its child sites. Each site is queried with its own session token and message channel, and the recorder, camera and user tables gain a **Site** column (shown only when more than one site is present). CSV exports include the site.
