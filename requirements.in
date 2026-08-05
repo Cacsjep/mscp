@@ -1,0 +1,5 @@
+# Top-level docs build dependencies. Pinned exact versions; the full
+# hash-locked set is compiled into requirements.txt via:
+#   pip-compile --generate-hashes docs/requirements.in
+mkdocs-material==9.7.6
+mkdocs-glightbox==0.5.2
