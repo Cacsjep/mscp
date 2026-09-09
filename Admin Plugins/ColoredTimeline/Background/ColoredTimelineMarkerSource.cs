@@ -147,6 +147,8 @@ namespace ColoredTimeline.Background
                     return;
                 }
 
+                events = FilterToCamera(events);
+
                 _log.Info($"Marker '{Title}' cam={CameraFqid.ObjectId} window=" +
                           $"{interval.StartTime.ToLocalTime():HH:mm:ss}..{interval.EndTime.ToLocalTime():HH:mm:ss} -> {events.Length} marker(s)");
 
@@ -211,6 +213,26 @@ namespace ColoredTimeline.Background
                     _alarmClient = null;
                 }
             }
+        }
+
+        // Issue #196: some XProtect versions (seen on Professional+ 2026 R1) ignore the
+        // server-side Target.CameraId condition and return rows for every camera, so an
+        // identically named event on Cam A also drops a marker on Cam B. Re-apply the camera
+        // filter client-side, the same way the admin event preview does. Rows with an empty
+        // CameraId are kept - the server matched them on something we cannot re-check here.
+        private EventLine[] FilterToCamera(EventLine[] rows)
+        {
+            if (rows == null || rows.Length == 0) return Array.Empty<EventLine>();
+
+            var mine = rows.Where(r => r.CameraId == Guid.Empty || r.CameraId == CameraFqid.ObjectId).ToArray();
+            if (mine.Length != rows.Length)
+            {
+                var foreign = string.Join(", ", rows.Where(r => r.CameraId != Guid.Empty && r.CameraId != CameraFqid.ObjectId)
+                                                    .Select(r => r.CameraId).Distinct().Take(5));
+                _log.Info($"  server-side CameraId filter not honored for '{Title}': dropped " +
+                          $"{rows.Length - mine.Length} of {rows.Length} row(s) from other camera(s) [{foreign}]");
+            }
+            return mine;
         }
 
         private EventFilter BuildFilter(TimeInterval interval)
