@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http.Formatting;
 using System.Web.Http;
@@ -18,6 +20,11 @@ namespace SCRemoteControl.Server
 
         private INowinServer _server;
         private readonly object _lock = new object();
+
+        private static readonly HashSet<string> WebStackAssemblyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Microsoft.Owin", "Owin", "System.Web.Http", "System.Web.Http.Owin", "System.Net.Http.Formatting"
+        };
 
         public bool IsListening { get; private set; }
         public string ListenUrl { get; private set; }
@@ -60,6 +67,18 @@ namespace SCRemoteControl.Server
                     IsListening = false;
                     ErrorMessage = ex.Message;
                     SCRemoteControlDefinition.Log.Error("Failed to start HTTP server", ex);
+
+                    // The web stack is ILRepacked into this assembly, so a healthy process
+                    // lists nothing here. Any line means a loose copy got loaded alongside
+                    // ours and the types can split again - the only way to see that from a
+                    // customer's MIPLog.
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies()
+                                 .Where(a => WebStackAssemblyNames.Contains(a.GetName().Name)))
+                    {
+                        string location;
+                        try { location = asm.Location; } catch { location = "<dynamic>"; }
+                        SCRemoteControlDefinition.Log.Error($"  loaded: {asm.GetName().FullName} from {location}");
+                    }
                 }
             }
         }

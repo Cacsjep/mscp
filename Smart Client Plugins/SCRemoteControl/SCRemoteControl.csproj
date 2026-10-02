@@ -17,7 +17,10 @@
   <ItemGroup>
     <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Owin" Version="5.3.0" />
-    <PackageReference Include="Microsoft.Owin" Version="4.2.3" />
+    <!-- 4.2.2 is what Microsoft.AspNet.WebApi.Owin 5.3.0 is built against, and what every
+         Milestone component ships. Keeping the two in step means one Microsoft.Owin identity
+         is requested across the whole plugin. -->
+    <PackageReference Include="Microsoft.Owin" Version="4.2.2" />
     <PackageReference Include="Nowin" Version="0.26.0" />
     <PackageReference Include="MilestoneSystems.VideoOS.Platform" Version="*-*" />
     <PackageReference Include="Swashbuckle.Core" Version="5.6.0" />
@@ -42,10 +45,30 @@
     <EmbeddedResource Include="OpenApi\swagger-ui\swagger-ui.css" />
   </ItemGroup>
 
-  <Target Name="MergeSwashbuckle" AfterTargets="MergeCommunitySDK" BeforeTargets="MIPDeploy"
-          Condition="Exists('$(TargetDir)Swashbuckle.Core.dll')">
-    <Exec Command="&quot;$(PkgILRepack)\tools\ILRepack.exe&quot; /internalize /lib:&quot;$(TargetDir).&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)Swashbuckle.Core.dll&quot;" />
-    <Delete Files="$(TargetDir)Swashbuckle.Core.dll;$(TargetDir)Swashbuckle.Core.pdb" />
+  <!-- Merge the whole self-hosted web stack into the plugin DLL with /internalize.
+       The Smart Client folder ships System.Web.Http and System.Net.Http.Formatting 5.2.7,
+       and MIPDrivers\GisDriver ships Microsoft.Owin 4.2.2, so leaving these as loose files
+       beside the plugin makes it a load-order race which copy the process ends up with.
+       Lose that race and you get two OwinMiddleware types; AppBuilder keys its conversion
+       table on Type identity, the lookup misses, and Start() dies with
+       "No conversion available between System.Func`2[...] and Microsoft.Owin.OwinMiddleware.
+       Parameter name: signature" - on the customer's machine only, never in-house.
+       Internalizing gives the plugin one private, self-consistent stack whatever the host did. -->
+  <Target Name="MergeWebStack" AfterTargets="MergeCommunitySDK" BeforeTargets="MIPDeploy"
+          Condition="Exists('$(TargetDir)Swashbuckle.Core.dll') And Exists('$(TargetDir)Microsoft.Owin.dll')">
+    <ItemGroup>
+      <WebStackAssembly Include="$(TargetDir)Swashbuckle.Core.dll" />
+      <WebStackAssembly Include="$(TargetDir)System.Web.Http.dll" />
+      <WebStackAssembly Include="$(TargetDir)System.Web.Http.Owin.dll" />
+      <WebStackAssembly Include="$(TargetDir)System.Net.Http.Formatting.dll" />
+      <WebStackAssembly Include="$(TargetDir)Microsoft.Owin.dll" />
+      <WebStackAssembly Include="$(TargetDir)Owin.dll" />
+      <WebStackAssembly Include="$(TargetDir)Nowin.dll" />
+    </ItemGroup>
+    <Exec Command="&quot;$(PkgILRepack)\tools\ILRepack.exe&quot; /internalize /lib:&quot;$(TargetDir).&quot; /out:&quot;$(TargetPath)&quot; &quot;$(TargetPath)&quot; @(WebStackAssembly->'&quot;%(FullPath)&quot;', ' ')" />
+    <Delete Files="@(WebStackAssembly)" />
+    <Delete Files="@(WebStackAssembly->'%(RootDir)%(Directory)%(Filename).pdb')" />
+    <Delete Files="@(WebStackAssembly->'%(RootDir)%(Directory)%(Filename).xml')" />
   </Target>
 
 </Project>
