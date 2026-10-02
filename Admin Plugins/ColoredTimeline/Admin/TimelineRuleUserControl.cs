@@ -67,6 +67,10 @@ namespace ColoredTimeline.Admin
         private string _startIconColorHex = DefaultColor;
         private string _stopIconColorHex = DefaultColor;
 
+        // Newest-first cap applied both server-side (GetEventLines count) and client-side
+        // (Take), so the Event Server never has to serialize a whole busy day of rows.
+        private const int MaxRows = 500;
+
         private Label _lblEventsTable;
         private CheckBox _chkOnlySelectedCameras;
         private Button _btnRefreshEvents;
@@ -690,7 +694,11 @@ namespace ColoredTimeline.Admin
                     };
 
                     if (ct.IsCancellationRequested) return;
-                    var rows = alarmClient.GetEventLines(0, int.MaxValue, filter) ?? Array.Empty<EventLine>();
+                    // Discussion #190: int.MaxValue makes the Event Server serialize every row in
+                    // the window (15k+ on busy systems), which times out or aborts the WCF response
+                    // on 2026 R1. Rows are ordered newest-first, so asking for the newest MaxRows
+                    // is all this preview ever displays anyway.
+                    var rows = alarmClient.GetEventLines(0, MaxRows, filter) ?? Array.Empty<EventLine>();
                     if (ct.IsCancellationRequested) return;
 
                     // Optional client-side filter for "Show only events from selected cameras".
@@ -699,9 +707,8 @@ namespace ColoredTimeline.Admin
                     // post-filtering is fine.
                     HashSet<Guid> selectedSet = onlySelected ? new HashSet<Guid>(selectedSnapshot) : null;
 
-                    // No dedup - one row per EventLog entry. Cap at MaxRows newest-first so the
-                    // grid stays responsive on busy systems.
-                    const int MaxRows = 500;
+                    // No dedup - one row per EventLog entry. Already capped server-side, the
+                    // Take here just guards against a server that ignores the count argument.
                     var ordered = rows
                         .Where(r => !string.IsNullOrEmpty(r.Message))
                         .Where(r => selectedSet == null || selectedSet.Contains(r.CameraId))
@@ -741,9 +748,9 @@ namespace ColoredTimeline.Admin
                                 row.Tag = d.Message;
                                 _lvEvents.Items.Add(row);
                             }
-                            _lblEventsTable.Text = totalAfterFilter > MaxRows
-                                ? $"Events from the last 24 h - showing newest {MaxRows} of {totalAfterFilter} (double-click to use as Start, Shift+double-click for Stop):"
-                                : $"Events from the last 24 h - {totalAfterFilter} row(s) (double-click to use as Start, Shift+double-click for Stop):";
+                            _lblEventsTable.Text = totalAfterFilter >= MaxRows
+                                ? $"Newest {MaxRows} EventLog rows of the last 24 h (query cap - older rows not shown) (double-click to use as Start, Shift+double-click for Stop):"
+                                : $"Events from the last 24 h - {data.Count} row(s) (double-click to use as Start, Shift+double-click for Stop):";
                         }
                         finally { _lvEvents.EndUpdate(); }
                     });

@@ -121,20 +121,21 @@ namespace ColoredTimeline.Background
                     return;
                 }
 
-                var startCount = startEvents?.Length ?? 0;
-                var stopCount = stopEvents?.Length ?? 0;
+                startEvents = FilterToCamera(startEvents, "start");
+                stopEvents = FilterToCamera(stopEvents, "stop");
+
+                var startCount = startEvents.Length;
+                var stopCount = stopEvents.Length;
                 _log.Info($"  raw: {startCount} start event(s), {stopCount} stop event(s) for '{Title}' cam={CameraFqid.ObjectId}");
 
-                if (startCount > 0)
-                    foreach (var e in startEvents)
-                        _log.Info($"    START  [{e.Timestamp.ToLocalTime():HH:mm:ss.fff}] '{e.Message}' (UTC {e.Timestamp:HH:mm:ss.fff})");
-                if (stopCount > 0)
-                    foreach (var e in stopEvents)
-                        _log.Info($"    STOP   [{e.Timestamp.ToLocalTime():HH:mm:ss.fff}] '{e.Message}' (UTC {e.Timestamp:HH:mm:ss.fff})");
+                foreach (var e in startEvents)
+                    _log.Info($"    START  [{e.Timestamp.ToLocalTime():HH:mm:ss.fff}] '{e.Message}' " +
+                              $"srcCam={e.CameraId} src='{e.SourceName}' type='{e.Type}' (UTC {e.Timestamp:HH:mm:ss.fff})");
+                foreach (var e in stopEvents)
+                    _log.Info($"    STOP   [{e.Timestamp.ToLocalTime():HH:mm:ss.fff}] '{e.Message}' " +
+                              $"srcCam={e.CameraId} src='{e.SourceName}' type='{e.Type}' (UTC {e.Timestamp:HH:mm:ss.fff})");
 
-                var sequences = PairStartStop(startEvents ?? Array.Empty<EventLine>(),
-                                              stopEvents ?? Array.Empty<EventLine>(),
-                                              interval, out var pairLog);
+                var sequences = PairStartStop(startEvents, stopEvents, interval, out var pairLog);
 
                 var result = new TimelineSourceQueryResult(interval) { Sequences = sequences };
                 OnSequencesRetrieved(new List<TimelineSourceQueryResult> { result });
@@ -234,6 +235,26 @@ namespace ColoredTimeline.Background
                     _alarmClient = null;
                 }
             }
+        }
+
+        // Issue #196: some XProtect versions (seen on Professional+ 2026 R1) ignore the
+        // server-side Target.CameraId condition and return rows for every camera, so an
+        // identically named event on Cam A also paints on Cam B. Re-apply the camera filter
+        // client-side, the same way the admin event preview does. Rows with an empty CameraId
+        // are kept - the server matched them on something we cannot re-check here.
+        private EventLine[] FilterToCamera(EventLine[] rows, string label)
+        {
+            if (rows == null || rows.Length == 0) return Array.Empty<EventLine>();
+
+            var mine = rows.Where(r => r.CameraId == Guid.Empty || r.CameraId == CameraFqid.ObjectId).ToArray();
+            if (mine.Length != rows.Length)
+            {
+                var foreign = string.Join(", ", rows.Where(r => r.CameraId != Guid.Empty && r.CameraId != CameraFqid.ObjectId)
+                                                    .Select(r => r.CameraId).Distinct().Take(5));
+                _log.Info($"  server-side CameraId filter not honored for '{Title}' ({label}): dropped " +
+                          $"{rows.Length - mine.Length} of {rows.Length} row(s) from other camera(s) [{foreign}]");
+            }
+            return mine;
         }
 
         private EventFilter BuildFilter(string message, TimeInterval interval)
