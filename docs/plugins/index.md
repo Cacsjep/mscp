@@ -172,6 +172,10 @@ hide:
     <div class="pi ap"><i class="mdi mdi-send"></i></div>
     <div class="pt"><span class="pn">HTTP Requests</span><span class="pd">HTTP requests actions that are more powerful and flexible.</span></div>
   </a>
+  <a class="pr" href="admin/low-latency-video-wall/">
+    <div class="pi ap"><i class="mdi mdi-view-grid"></i></div>
+    <div class="pt"><span class="pn">Low Latency Video Wall</span><span class="pd">GPU rendered video wall that pulls H.264 straight off Axis cameras over RTSP, with rule actions to switch, clear or compose the wall</span></div>
+  </a>
   <a class="pr" href="admin/metadata-viewer/">
     <div class="pi ap"><i class="mdi mdi-file-tree"></i></div>
     <div class="pt"><span class="pn">Metadata Viewer</span><span class="pd">Subscribe to a metadata channel in the Management Client and inspect the live ONVIF event stream with a syntax-highlighted XML preview</span></div>
