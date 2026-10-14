@@ -1,0 +1,40 @@
+<external:ViewItemWpfUserControl
+    xmlns:external="clr-namespace:VideoOS.Platform.Client;assembly=VideoOS.Platform"
+    x:Class="LowLatencyVideoWall.Client.WallViewItemWpfUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    d:DesignHeight="900" d:DesignWidth="1600"
+    Focusable="True"
+    PreviewKeyDown="OnPreviewKeyDown"
+    Background="#FF000000">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- The only WPF chrome left. Everything that belongs to a pane is drawn into the
+             swapchain instead, because the hosted window always paints over WPF siblings.
+             This row disappears entirely when the operator turns the view selection off. -->
+        <Border Grid.Row="0" x:Name="selectorBar" Background="#FF0D1117" Padding="10,6"
+                BorderBrush="#FF30363D" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="View" Foreground="#FF8B949E" FontSize="11"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox x:Name="viewSelector" Width="240" MinHeight="26" FontSize="12"
+                          SelectionChanged="OnViewSelectionChanged"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" x:Name="wallArea" Background="#FF000000" ClipToBounds="True">
+            <TextBlock x:Name="placeholderText" Foreground="#FF6E7681" FontSize="15"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="700"
+                       Text="No view assigned.&#x0a;Pick one above, or assign a default view to this user in the Management Client."/>
+        </Grid>
+    </Grid>
+</external:ViewItemWpfUserControl>
