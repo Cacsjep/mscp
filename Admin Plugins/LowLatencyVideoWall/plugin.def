@@ -1,4 +1,0 @@
-<plugin>
-   <file name="LowLatencyVideoWall.dll"/>
-   <load env="Administration, Service, SmartClient"/>
-</plugin>
