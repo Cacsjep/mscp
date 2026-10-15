@@ -202,12 +202,5 @@
     "path": "Smart Client Plugins/TodoList",
     "category": "SmartClient",
     "description": "Operator checklist view item with free-form tasks or pre-defined shift templates"
-  },
-  {
-    "name": "LowLatencyVideoWall",
-    "displayName": "Low Latency Video Wall Plugin",
-    "path": "Admin Plugins/LowLatencyVideoWall",
-    "category": "AdminPlugin",
-    "description": "GPU rendered video wall streaming H.264 directly from Axis cameras over RTSP, driven by rules"
   }
 ]
