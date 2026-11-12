@@ -1,0 +1,132 @@
+/* ── Deep black theme ── */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0d0d0d;
+  --md-default-bg-color--light: #1a1a1a;
+  --md-default-bg-color--lighter: #1a1a1a;
+  --md-default-bg-color--lightest: #252525;
+  --md-code-bg-color: #1a1a1a;
+  --md-default-fg-color--lightest: #2e2e2e;
+}
+
+[data-md-color-scheme="slate"] .md-nav,
+[data-md-color-scheme="slate"] .md-sidebar {
+  background: #0d0d0d;
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  background: rgba(13, 13, 13, 0.95);
+  border-bottom: 1px solid #252525;
+}
+
+[data-md-color-scheme="slate"] .md-tabs {
+  background: #0d0d0d;
+  border-bottom: 1px solid #252525;
+}
+
+[data-md-color-scheme="slate"] .md-footer {
+  background: #0d0d0d;
+}
+
+/* ── Hide auto-generated h1 page title ── */
+.md-content__inner > h1 {
+  display: none !important;
+}
+/* ── Show h1 on pages that opt in ── */
+.show-title h1 {
+  display: block !important;
+}
+
+/* ── Header + drawer: GitHub + Discord + LinkedIn icons ── */
+/* Desktop: icons live in the header (.md-header__source). Material hides this
+   on mobile, so only force the row layout from the breakpoint up. */
+@media screen and (min-width: 60em) {
+  .md-header__source {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+/* Mobile: icons live in the navigation drawer (.md-nav__source), keep them
+   in a single horizontal row instead of stacking. */
+.md-nav__source {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  padding: 0.45rem 0.6rem !important;
+}
+
+.md-header__source .md-header-icon,
+.md-nav__source .md-header-icon {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  color: currentColor;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.md-header__source .md-header-icon:hover,
+.md-nav__source .md-header-icon:hover {
+  opacity: 1;
+}
+
+.md-header__source .md-header-icon svg,
+.md-nav__source .md-header-icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.md-header-icon--discord,
+.md-header-icon--linkedin {
+  margin-left: 8px !important;
+}
+
+/* ── Smaller body text ── */
+.md-typeset {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.md-typeset p {
+  font-size: 0.7rem;
+}
+
+
+/* ── Visually hidden but crawlable by search engines ── */
+.seo-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Heading hierarchy: descending shades of Material blue ── */
+.md-typeset h1 {
+  color: #2196f3;
+}
+
+.md-typeset h2 {
+  font-size: 1.1rem;
+  color: #42a5f5;
+}
+
+.md-typeset h3 {
+  font-size: 0.9rem;
+  color: #64b5f6;
+}
+
+.md-typeset h4 {
+  font-size: 0.8rem;
+  color: #90caf9;
+}
+

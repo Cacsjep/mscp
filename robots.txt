@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cacsjep.github.io/mscp/sitemap.xml
