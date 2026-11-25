@@ -1,5 +1,8 @@
 # Changelog
 
+## [3.6.2] - 2026-11-25
+- Improve Metadata Viewer: The channel picker now lists only enabled metadata channels. Disabled channels were shown alongside the enabled ones, which made the right channel harder to find on sites with many of them. The group tree is unchanged. GH Issue: #218
+
 ## [3.6.1] - 2026-11-12
 - Fix Project: Updated certifi to 2026.10.19 for the documentation build (GHSA-6q48-6c7w-9gw2). No plugin is affected.
 - Improve Project: Updated Microsoft.Web.WebView2 to 1.0.4314.35 (Remote Manager, Web Viewer) and the GitHub Actions dependencies.
