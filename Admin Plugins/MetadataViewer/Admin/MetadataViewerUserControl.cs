@@ -353,6 +353,8 @@ namespace MetadataViewer.Admin
             {
                 Items = Configuration.Instance.GetItemsByKind(Kind.Metadata),
                 KindsFilter = new List<Guid> { Kind.Metadata },
+                // Hide disabled metadata channels (issue #218).
+                IsVisibleCallback = item => item?.FQID?.Kind != Kind.Metadata || item.FQID.FolderType != FolderType.No || item.Enabled,
                 SelectionMode = SelectionModeOptions.AutoCloseOnSelect,
             };
             if (form.ShowDialog() == true && form.SelectedItems != null && form.SelectedItems.Any())
